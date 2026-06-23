@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Skill\\((task:)?(design|build|ship|auto-roadmap)\\)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh\" all"
+          }
+        ]
+      }
+    ]
+  }
+}

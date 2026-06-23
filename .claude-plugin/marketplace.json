@@ -1,0 +1,19 @@
+{
+  "name": "task-pipeline",
+  "description": "Linear task workflow as a Claude Code plugin (design → build → ship).",
+  "owner": {
+    "name": "Ilya Prymshyts (SpaiR)",
+    "email": "klimbetoo@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "task",
+      "source": "./",
+      "description": "Linear task workflow with explicit checkpoints (design → build → ship), plus the /task:auto-roadmap autopilot. 7 skills (3 orchestrators + bootstrap + 2 off-cycle + validate) + 8 subagents (3 read-only build-audit lenses + 3 read-only roadmap-refine lenses + 2 auto-roadmap runners — design half and build half, latter spawned with per-item model override from plan.md → Implement-Model).",
+      "homepage": "https://github.com/SpaiR/task-pipeline",
+      "repository": "https://github.com/SpaiR/task-pipeline",
+      "license": "MIT",
+      "keywords": ["workflow", "task", "pipeline", "audit", "subagents"]
+    }
+  ]
+}
