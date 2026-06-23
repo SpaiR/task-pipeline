@@ -125,7 +125,7 @@ Source of truth: [`CONTRIBUTING.md`](CONTRIBUTING.md). Summary:
 
 - Header: `<type>(<scope>): <short summary>` — under 72 chars, imperative, lowercase first letter, no trailing period.
 - Types: `feat | fix | refactor | docs | chore`. **Do not invent types.**
-- Scopes (optional but strongly preferred): skill names without `task:` prefix (`init`, `roadmap`, `auto`, `open`, `idea`, `plan`, `refine`, `implement`, `review`, `audit`, `commit`, `close`, `restore`, `validate`), agent names (`audit-reuse`, `audit-simplicity`, `audit-clarity`), or cross-cutting keys (`skills`, `hooks`, `plugin`, `readme`, `claudemd`, `changelog`). **Do not invent scopes.**
+- Scopes (optional but strongly preferred): skill names without `task:` prefix (`bootstrap`, `roadmap`, `auto`, `open`, `idea`, `blueprint`, `refine`, `implement`, `audit`, `commit`, `close`, `validate`), agent names (`audit-reuse`, `audit-simplicity`, `audit-clarity`), or cross-cutting keys (`skills`, `hooks`, `plugin`, `readme`, `claudemd`, `changelog`). **Do not invent scopes.**
 - Body: mandatory for all non-trivial commits; explain **why**, not what; 2–5 bullet list, imperative tense.
 - Footer: `BREAKING CHANGE:` when header carries `!`; `Fixes #N` / `Closes #N` for issues/PRs.
 - AI attribution: every Claude-assisted commit must carry `Co-Authored-By: Claude <noreply@anthropic.com>` as the last footer line.
