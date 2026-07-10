@@ -4,6 +4,11 @@ All notable changes to this project are documented here. Format — [Keep a Chan
 
 This file is maintained in **English** — see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-policy).
 
+## [Unreleased]
+
+### Fixed
+- **Pipeline root discovery** — `.task` is now located by a git-style upward walk (`find_ai_dir` in `_lib/resolve-ws.sh`) instead of being assumed at the current working directory. Skill bash helpers (`validate.sh`, `phase-detect.sh`, the context scripts, `close.sh`, `auto-roadmap-context.sh`) previously failed with `config.md not found` whenever the shell had drifted out of the project root; they now resolve `.task` from any subdirectory. Linked-worktree `.task` symlinks are preserved (so the local `.task-current` is still found), and a call from outside any project still fails cleanly with the same message.
+
 ## [1.0.0] — 2026-06-23
 
 First public release. A linear task pipeline for Claude Code — design → build → ship — with explicit, file-backed checkpoints and an off-cycle roadmap track.
