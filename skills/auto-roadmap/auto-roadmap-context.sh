@@ -97,6 +97,9 @@ if [[ -z "$ROADMAP_ARG" ]]; then
     found=0
     for f in "$AI_DIR/roadmap"/*.md; do
       [[ -f "$f" ]] || continue
+      # Skip sidecars — spec/refine files live here but are not roadmaps
+      # (no `### - [ ] N.` headings). Mirrors validate.sh's `all` carve-out.
+      case "$f" in *.refine.md|*.spec.md) continue ;; esac
       found=1
       slug=$(basename "$f" .md)
       if [[ -x "$VALIDATOR" ]] && ! bash "$VALIDATOR" roadmap "$f" >/dev/null 2>&1; then
