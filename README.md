@@ -49,6 +49,16 @@ Concretely, you get:
 - **Bounded auto-fix + filters.** `/task:build` applies the problems it finds (≤2 iterations), but only within the declared `Touches` scope. Weak or out-of-scope findings land in `### Filtered (low confidence)` for manual review.
 - **An archive.** `/task:ship` files completed subtasks under `.task/log/{task-id}/{N}-{slug}/` — six months later you can still see what was done, and when.
 
+## Why you can trust this
+
+It runs bash, edits files, and writes commits — so here is exactly what it will and won't touch:
+
+- **Nothing is committed until `/task:ship`.** Until then every change is just working-tree edits; back them out with plain `git restore` / `git checkout`.
+- **`/task:ship` only _stages_ task files, and never pushes.** It writes a local commit for you to review; nothing leaves your machine, and it never stages anything under `.task/`.
+- **The audit agents are read-only.** The three review lenses (Reuse / Simplicity / Clarity) run with a `Read`/`Grep`/`Glob` allowlist — they cannot edit your code.
+- **Auto-fix is bounded and scoped.** The build audit applies fixes for at most 2 iterations, and only within the files the plan declared under `Touches`; anything out of scope is flagged, not changed.
+- **The pipeline leaves no trace in the repo.** `.task/` is excluded via `.git/info/exclude` (not `.gitignore`), so it never shows up in `git status`; delete it with `rm -rf .task` and the repo is exactly as before.
+
 ## Requirements
 
 - [Claude Code](https://docs.claude.com/en/docs/claude-code) — this ships as a Claude Code plugin.
