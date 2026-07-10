@@ -184,10 +184,11 @@ English:>
 Recommended execution order: **1 → 2 → 4 → 3 → 5 → ...** <plus 1–2
 sentence justification>.
 
-<Per-task verification reminder, in config language. Example:>
-After each task: `cargo fmt` → `cargo clippy -- -D warnings` →
-`cargo test` (or equivalent project-specific check from `config.md`).
-Commit per task.
+<Per-task verification reminder, in config language. Use the project's own
+format → lint → test commands from `config.md` (whatever the stack is).
+Example shape:>
+After each task: format → lint → test (the project-specific commands from
+`config.md` → "Build and Tests"). Commit per task.
 
 ---
 

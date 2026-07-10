@@ -13,7 +13,7 @@ Source-of-truth for `/task:roadmap --refine`. Dispatched from `skills/roadmap/SK
 Parse `$ARGUMENTS` (with `--refine` stripped) for an optional slug positional. Two paths:
 
 1. **Explicit slug.** If a slug or roadmap path was passed (e.g. `--refine api-v2-migration` or `--refine .task/roadmap/api-v2-migration.md`), resolve it to `.task/roadmap/<slug>.md` via `_lib/roadmap.sh:resolve_roadmap_path`. If the file does not exist — stop with `ERROR: roadmap '<slug>' not found in .task/roadmap/. Existing roadmaps: <list>`.
-2. **No slug.** List `.task/roadmap/*.md`. If exactly one file exists — use it. Otherwise present them via `AskUserQuestion` (single-select, options = filenames with `<done>/<total>` progress; cancel option exits). Sort: incomplete first, complete last.
+2. **No slug.** List `.task/roadmap/*.md`, **excluding the `*.spec.md` / `*.refine.md` sidecars** (they are not roadmaps — same carve-out `validate.sh` applies). If exactly one roadmap remains — use it. Otherwise present them via `AskUserQuestion` (single-select, options = filenames with `<done>/<total>` progress; cancel option exits). Sort: incomplete first, complete last.
 
 Capture `ROADMAP_PATH`, `ROADMAP_SLUG` (basename without `.md`), and `REFINE_LOG_PATH := ".task/roadmap/<slug>.refine.md"` for the rest of the steps.
 
