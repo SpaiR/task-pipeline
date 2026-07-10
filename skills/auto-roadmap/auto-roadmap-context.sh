@@ -42,8 +42,11 @@ set_workspace_root
 # /task:auto-roadmap is forward-only — an existing .task-current means a
 # mid-flight umbrella (manual or from a prior failed run) that auto-roadmap must
 # not silently overwrite. Resume = user's manual job (/task:ship --full).
-if [[ -f .task-current ]]; then
-  CURRENT=$(head -n 1 .task-current | tr -d '[:space:]')
+# `.task-current` sits at the project root beside `.task` (never symlinked);
+# resolve it off the discovered root, not cwd, so a drifted shell still sees it.
+TASK_CURRENT="$(dirname "$AI_DIR")/.task-current"
+if [[ -f "$TASK_CURRENT" ]]; then
+  CURRENT=$(head -n 1 "$TASK_CURRENT" | tr -d '[:space:]')
   echo "ERROR: .task-current exists at the worktree root (points to '$CURRENT') — auto-roadmap is not for resume." >&2
   echo "  Either run /task:ship (default) to transition the current subtask," >&2
   echo "  or /task:ship --full to drop the umbrella entirely. Then rerun /task:auto-roadmap." >&2

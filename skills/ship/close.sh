@@ -221,7 +221,9 @@ if [[ "$FULL" -eq 1 ]]; then
   # survived a failed /task:auto-roadmap run — the manual `/task:ship` (default
   # full close) is the documented way to clean up after such a failure.
   rm -rf "$WS_DIR"
-  rm -f .task-current
+  # `.task-current` sits at the project root beside `.task` (never symlinked);
+  # key off the discovered root so a drifted cwd doesn't leave it behind.
+  rm -f "$(dirname "$AI_DIR")/.task-current"
 else
   rm -f "$WS_DIR/plan.md" "$WS_DIR/audit.md" "$WS_DIR/summary.md"
   # Clear the BODY of `## Description` only — header lines stay so the next

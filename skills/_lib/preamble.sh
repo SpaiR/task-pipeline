@@ -34,7 +34,16 @@
 # This file does NOT set `set -euo pipefail` — that is the caller's
 # responsibility (standard bash safety, every caller does it explicitly).
 
-: "${AI_DIR:=.task}"
+# Resolve AI_DIR up-front via the shared upward walk so every gate below
+# (require_config_md, resolve_ws, roadmap helpers) keys off the discovered
+# absolute `.task` root — not a cwd-relative `.task` that breaks the moment the
+# shell drifts out of the project root. `find_ai_dir` lives in resolve-ws.sh and
+# only acts when AI_DIR is unset; sourcing it here is idempotent with the later
+# `source_resolve_ws`. SCRIPT_DIR is set by the caller before this file is
+# sourced (see the bootstrap contract above).
+# shellcheck source=resolve-ws.sh
+source "$SCRIPT_DIR/../_lib/resolve-ws.sh"
+find_ai_dir
 
 # --- require_config_md ---
 # Hard-stop precondition. Exit code 1 with ERROR on stderr if config.md is

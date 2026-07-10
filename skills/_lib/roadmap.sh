@@ -17,8 +17,10 @@
 #   list_roadmap_items <path>        — tab-separated `<N>\t<status>\t<title>` per item
 #
 # Conventions:
-#   - $AI_DIR is expected to be set by the caller (preamble.sh sets it to
-#     `.task` by default). `validate.sh` sets it explicitly before sourcing.
+#   - $AI_DIR is expected to be resolved by the caller via `find_ai_dir`
+#     (preamble.sh / resolve-ws.sh / validate.sh all run it before sourcing this
+#     file). If this file is somehow sourced first, we call find_ai_dir when it
+#     is already defined, else fall back to the relative `.task` default.
 #   - Legacy `.task/todo/<slug>(.md)` fallback is silent by default. Set
 #     ROADMAP_WARN_ON_LEGACY=1 in the caller's environment to print a stderr
 #     WARN when the legacy path resolves the lookup. `validate.sh` opts in;
@@ -28,7 +30,11 @@
 #     class is the contract close.sh:Step 1.5 and `/task:design --from` auto-pick
 #     both depend on; do not narrow it to `[ x]` only.
 
-: "${AI_DIR:=.task}"
+if declare -F find_ai_dir >/dev/null 2>&1; then
+  find_ai_dir
+else
+  : "${AI_DIR:=.task}"
+fi
 
 # --- resolve_roadmap_path <arg> ---
 # Echoes the resolved roadmap path on stdout, or empty string if no match.

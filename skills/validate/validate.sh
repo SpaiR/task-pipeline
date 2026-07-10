@@ -27,7 +27,12 @@ set -u
 # Note: do NOT use `set -e` — we collect issues and report them all at once
 # rather than aborting on the first failure.
 
-AI_DIR=".task"
+# AI_DIR is resolved by `find_ai_dir` (defined in resolve-ws.sh, sourced below)
+# — a git-style upward walk so validation works from any subdir, not only the
+# project root. It is deliberately NOT hardcoded to `.task` here: pinning it
+# would pre-empt the walk. require_config() calls find_ai_dir explicitly because
+# on the `all` path it runs before resolve_ws.
+#
 # WS_DIR is populated by resolve_ws() (sourced below) before validate_task /
 # validate_plan run. The `all` subcommand calls resolve_ws() best-effort and
 # skips workspace validation if no .task-current is present.
@@ -57,6 +62,10 @@ source "$SCRIPT_DIR/../_lib/roadmap.sh"
 
 # --- Precondition: config.md ---
 require_config() {
+  # Resolve AI_DIR via the upward walk before reading config.md. On the `all`
+  # path this runs before resolve_ws, so it cannot rely on resolve_ws having
+  # set AI_DIR. find_ai_dir is idempotent (no-op once AI_DIR is set).
+  find_ai_dir
   if [[ ! -f "$AI_DIR/config/config.md" ]]; then
     echo "ERROR precondition: $AI_DIR/config/config.md not found. Run /task:bootstrap first." >&2
     exit 2
