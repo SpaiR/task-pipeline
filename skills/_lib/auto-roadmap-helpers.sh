@@ -7,19 +7,21 @@
 #   extract_implement_model <plan-path>
 #     Print the `Implement-Model:` value (`opus`/`sonnet`/`haiku`) on stdout
 #     and exit 0. Exit 1 with stderr message on miss / malformed / multiple
-#     matches. Used by Substep 3.5 between design-runner OK and build-runner
-#     spawn — the orchestrator passes the value as `Agent.model` override.
+#     matches. Used by the item-runner (its Step 3) between design-runner OK
+#     and build-runner spawn — it passes the value as `Agent.model` override.
 #
 #   refresh_roadmap_mtime <roadmap-path>
 #     Print the file's mtime as Unix epoch on stdout (BSD `stat -f '%m'` with
-#     GNU `stat -c '%Y'` fallback). Used by Substep 3.9 Branch A after a
-#     successful `--next` (subtask-transition) ship so the next iteration's
-#     Substep 3.1 race check sees the close-induced bump as legitimate.
+#     GNU `stat -c '%Y'` fallback). Used by the item-runner after a successful
+#     `--next` (subtask-transition) ship; the item-runner returns the value in
+#     its digest so the driver's next Substep 3.1 race check sees the
+#     close-induced bump as legitimate.
 #
 #   record_orchestrator_fail <error-log> <item> <reason>
 #     Thin wrapper around `fail-log.sh orchestrator-fail` for the two
-#     orchestrator-side failure sites that do not originate in a subagent
-#     (MODEL_EXTRACT in Substep 3.5 and AUDIT_LIMIT in Substep 3.8). The
+#     item-runner-side failure sites that do not originate in a child subagent
+#     (MODEL_EXTRACT at item-runner Step 3 and AUDIT_LIMIT at item-runner
+#     Step 5). The
 #     reason is passed in the `subagent_status` slot — reusing that slot
 #     keeps the on-disk shape uniform across postmortem readers, per
 #     `docs/spec/auto-roadmap.md` § Failure protocol. The error-log path

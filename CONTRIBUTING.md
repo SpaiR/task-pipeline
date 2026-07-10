@@ -37,7 +37,7 @@ skills/                          SKILL.md + companion phase files + bash helpers
                                    auto-fix loop) + phases/{implement,audit}.md +
                                    audit-context.sh
   ship/                          SKILL.md + close.sh + commit-context.sh
-  auto-roadmap/                  SKILL.md (per-item loop in the main thread) +
+  auto-roadmap/                  SKILL.md (driver loop; spawns one item-runner per item) +
                                    auto-roadmap-context.sh
   validate/                      SKILL.md + validate.sh (validator; not user-invocable)
 agents/                          named subagents
@@ -47,13 +47,16 @@ agents/                          named subagents
   audit-roadmap-coverage-auditor.md       roadmap-refine lens: end-to-end coverage / dependency graph (read-only)
   audit-roadmap-decomposition-auditor.md  roadmap-refine lens: atomicity / sizing / duplicate work (read-only)
   audit-roadmap-clarity-auditor.md        roadmap-refine lens: titles / Context-vs-Goal / testable AC (read-only)
-  auto-roadmap-design-runner.md  executor-class (narrow): design open+blueprint phases
+  auto-roadmap-item-runner.md    executor-class: whole per-item cycle (design→implement→
+                                   audit→ship); spawned once per item by the driver loop;
+                                   spawns the two runners below + the three build-audit lenses
+  auto-roadmap-design-runner.md  executor-class (narrow, leaf): design open+blueprint phases
                                    for one roadmap item (parent-session model)
-  auto-roadmap-build-runner.md   executor-class (narrow): build implement phase only,
+  auto-roadmap-build-runner.md   executor-class (narrow, leaf): build implement phase only,
                                    spawned with Agent.model from plan.md → Implement-Model
   _shared/audit-rules.md         shared prompt-layer rules for all six audit-*-auditor agents
                                    (build-audit family + roadmap-refine family)
-  _shared/runner-rules.md        shared registry of rules the two roadmap runners inherit
+  _shared/runner-rules.md        shared registry of rules the three roadmap runners inherit
                                    from nested phase files (sources in build/phases/implement.md,
                                    design/phases/blueprint.md § Step 3, docs/spec/invariants.md;
                                    edits must stay in sync)

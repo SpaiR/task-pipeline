@@ -31,7 +31,7 @@ You are a **read-only** auditor for the task-pipeline skills repository itself. 
 - `## Steps` in a plan template losing one of the three `Goal` / `Touches` / optional `Logic` layers, or `Touches` allowing `...` placeholders.
 - `/task:roadmap` blockquote sub-headings translated out of English (`### Context`, `### Goal`, `### Outcomes`, `### Acceptance criteria`), or `### Context` missing (it is mandatory and precedes `### Goal`).
 - `/task:design --from` task-id priority order changed (ticket in args → ticket in title → roadmap basename) — `_lib/derive-task-id.sh` is the single source of truth.
-- Subagent dispatch names for plugin-bundled agents (`task:audit-{reuse,simplicity,clarity}-auditor`, `task:auto-roadmap-design-runner`, `task:auto-roadmap-build-runner`) missing the `task:` plugin prefix.
+- Subagent dispatch names for plugin-bundled agents (`task:audit-{reuse,simplicity,clarity}-auditor`, `task:auto-roadmap-item-runner`, `task:auto-roadmap-design-runner`, `task:auto-roadmap-build-runner`) missing the `task:` plugin prefix.
 
 If `CLAUDE.md` lists an invariant you do not see in this list, treat the `CLAUDE.md` text as authoritative.
 
