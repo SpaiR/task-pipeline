@@ -107,8 +107,7 @@ Re-read the item's checkbox state from the roadmap (a manual edit between iterat
 Use the `Agent` tool with `subagent_type: "task:auto-roadmap-design-runner"` (plugin prefix is mandatory — unprefixed names do not resolve and the runtime silently falls back to the catch-all `claude` agent). Do **not** pass a `model:` override here — the design-runner inherits the parent-session model (typically the user's `/model` choice — usually opus). Prompt body (verbatim — keep field labels and English; parser-stable):
 
 ```
-roadmap_path: <resolved roadmap path>
-item_number: <N>
+from: <resolved roadmap path>#<N>
 working_dir: <abs cwd>
 
 Run the design half of the per-item cycle through Step b (Open → Blueprint).
@@ -125,7 +124,7 @@ Return your one-line status (OK or FAIL) per your agent prompt's "Return format"
 
 Wait for the subagent's reply. Take the **last non-empty line** of its message as the status line. Match it against:
 
-- `^OK: item #<N> ".*" — plan\.md ready, awaiting implement$` → success path. On the **first** OK of the run, fall through to Substep 3.4 (auto.lock) before continuing; on subsequent iterations skip 3.4 and proceed directly to Substep 3.5.
+- `^OK: .* — plan\.md ready, awaiting implement$` → success path. On the **first** OK of the run, fall through to Substep 3.4 (auto.lock) before continuing; on subsequent iterations skip 3.4 and proceed directly to Substep 3.5.
 - `^FAIL at <stage>: .*\. (See .*|No workspace was created — nothing to clean up\.)$` → failure path (Substep 3.7). The `See <path>` tail is the post-open shape (postmortem on disk); the `No workspace was created` tail is the pre-open shape (no postmortem written — the inline reason is the record).
 - Anything else → treat as malformed status; failure path with reason `design-runner returned malformed status: <raw last line>`.
 
@@ -180,8 +179,6 @@ When the regex matched, capture `IMPLEMENT_MODEL` for Substep 3.6's `Agent.model
 Use the `Agent` tool with `subagent_type: "task:auto-roadmap-build-runner"` and **`model: <IMPLEMENT_MODEL>`** (the value extracted in Substep 3.5). The per-spawn `model:` override takes precedence over the agent's frontmatter and is the mechanism by which implement runs under a different model than design / audit / ship. Prompt body (verbatim — keep field labels and English; parser-stable):
 
 ```
-roadmap_path: <resolved roadmap path>
-item_number: <N>
 working_dir: <abs cwd>
 implement_model: <IMPLEMENT_MODEL>
 
@@ -199,7 +196,7 @@ Return your one-line status (OK or FAIL) per your agent prompt's "Return format"
 
 Wait for the subagent's reply. Take the **last non-empty line** of its message as the status line. Match it against:
 
-- `^OK: item #<N> ".*" — diff uncommitted, ready for audit$` → success path (continue to Substep 3.8 audit; auto.lock already written by Substep 3.4 earlier in this iteration on the first item).
+- `^OK: .* — diff uncommitted, ready for audit$` → success path (continue to Substep 3.8 audit; auto.lock already written by Substep 3.4 earlier in this iteration on the first item).
 - `^FAIL at implement: .*\. See .*\.$` → failure path (Substep 3.7). Only the **post-open** shape is valid here — by the time build-runner is spawned, the workspace subfolder exists.
 - Anything else → treat as malformed status; failure path with reason `build-runner returned malformed status: <raw last line>`.
 

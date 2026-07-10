@@ -1,8 +1,8 @@
 # Shared rules for `auto-roadmap-{design,build}-runner`
 
-Rules inherited by the two roadmap runners from their nested phase files (`skills/design/phases/{open,blueprint}.md`, `skills/build/phases/implement.md`) and from project invariants. Centralized here so editors of either side see a single registry of cross-cutting constraints — a misread of a nested phase file in autopilot cannot silently degrade behavior if the rule is also restated here.
+The two executor-class runners are **shared** by `/task:auto-roadmap` (one roadmap item per spawn) and `/task:go --auto` (a single ad-hoc task); the `auto-roadmap-` file names are historical. Rules inherited by both runners from their nested phase files (`skills/design/phases/{open,blueprint}.md`, `skills/build/phases/implement.md`) and from project invariants. Centralized here so editors of either side see a single registry of cross-cutting constraints — a misread of a nested phase file in autopilot cannot silently degrade behavior if the rule is also restated here.
 
-The per-item cycle is split: `auto-roadmap-design-runner` runs Steps a + b (open + blueprint), then returns; the orchestrator's main thread reads `plan.md → Implement-Model:` and spawns `auto-roadmap-build-runner` with the matching `Agent.model` override (`opus`, `sonnet`, or `haiku`) to run Step c (implement). Rules below apply to whichever runner enters the corresponding nested phase.
+The per-task cycle is split: `auto-roadmap-design-runner` produces `plan.md` (open + blueprint for a roadmap item, or blueprint-only for an already-open task), then returns; the caller's main thread reads `plan.md → Implement-Model:` and spawns `auto-roadmap-build-runner` with the matching `Agent.model` override (`opus`, `sonnet`, or `haiku`) to run implement. Rules below apply to whichever runner enters the corresponding nested phase.
 
 When editing any rule below, **also update its source-of-truth file** — drift between this list and the source is itself a bug:
 
@@ -39,7 +39,7 @@ Rules common to both runners (per-runner OK/FAIL grammars live in each agent's o
 
 - **Stands alone.** No trailing prose, no Markdown decoration around the status line, no blank lines after it that contain anything but whitespace.
 - **English regardless of `config.md` → "Language".** The status lines are parser-stable identifiers, not user-facing prose.
-- **The trailing clause is part of the status string** (`"— plan.md ready, awaiting implement"` for design-runner; `"— diff uncommitted, ready for audit"` for build-runner). Load-bearing — the orchestrator pattern-matches on it to distinguish the two runners. Do not omit it.
+- **The trailing clause is part of the status string** (`"— plan.md ready, awaiting implement"` for design-runner; `"— diff uncommitted, ready for audit"` for build-runner). Load-bearing — the caller pattern-matches on it to distinguish the two runners. Do not omit it. The text **before** the em-dash is free-form log context (e.g. `design done`, `implement done`); parsers key off the `OK:` / `FAIL at` prefix plus this clause, never the middle — so runners must not carry roadmap-specific tokens (`item #<N> "<title>"`) that a shared caller can't produce.
 - **Closed enum for `<stage>`** — each runner's `## Return format` lists the exact accepted values. Never emit any other.
 - **Never improvise a third shape.** If you cannot construct a valid `OK:`, emit `FAIL at <stage>: …` instead. Anything else is malformed and the orchestrator follows the fail-stop protocol with reason `runner returned malformed status`.
 - **Error-log path naming.** On failure with an on-disk postmortem, name the actual path you wrote to (so the user can `cat` it directly).

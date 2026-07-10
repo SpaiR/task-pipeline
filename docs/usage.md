@@ -1,8 +1,38 @@
 # Usage scenarios
 
-The [README](../README.md) covers the basic single-task flow. This page collects the larger scenarios: multi-task initiatives via a roadmap, the `/task:auto-roadmap` autopilot, several subtasks under one umbrella, and returning to a closed task.
+The [README](../README.md) covers the basic single-task flow. This page collects the larger scenarios: the one-verb `/task:go` entry, multi-task initiatives via a roadmap, the `/task:auto-roadmap` autopilot, several subtasks under one umbrella, and returning to a closed task.
 
-Scenarios can be combined: some tasks via `/task:roadmap` + `--from`, small fixes directly via `/task:design`.
+Scenarios can be combined: some tasks via `/task:roadmap` + `--from`, small fixes directly via `/task:design` (or just `/task:go`).
+
+## One verb, start to finish — `/task:go`
+
+`/task:go` is the front door when you don't want to remember which stage comes next. It looks at `.task/` state and runs the next phase, then pauses for your OK before advancing.
+
+```text
+/task:bootstrap
+
+/task:go "fix the flaky retry logic"   # opens the task + drafts the Description,
+                                       # then asks: plan it now? [Continue / Edit / Stop]
+/task:go                               # → blueprint; then asks: build? (or refine the plan)
+/task:go                               # → implement; then asks: audit?
+/task:go                               # → audit; then asks: ship?
+/task:go                               # → ship (choose full close or --next)
+```
+
+Each call resumes from wherever you left off — stop after any checkpoint, hand-edit an artifact (`task.md` / `plan.md`), and run `/task:go` again to continue. You never have to know whether the next step is `design`, `build`, or `ship`.
+
+**Hands-off single task — `/task:go --auto`.** When a task is well-specified and you want it done without babysitting:
+
+```text
+/task:go --auto "add exponential backoff to the retry executor"
+#   1) main thread opens + drafts the Description
+#   2) confirms once: "proceed autonomously?"           ← the only checkpoint
+#   3) spawns the design runner (blueprint) in a subagent
+#   4) spawns the build runner (implement) with the plan's Implement-Model
+#   5) audits (3 lenses) + ships --full inline
+```
+
+This is an N=1 `/task:auto-roadmap`: same executor runners, no roadmap file. On any failure it stops and hands back a resumable task — just run `/task:go` to take over interactively. It is opt-in: plain `/task:go` never runs the whole pipeline unattended.
 
 ## A multi-stage initiative via a roadmap
 

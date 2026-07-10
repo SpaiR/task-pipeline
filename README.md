@@ -13,6 +13,8 @@ A linear task workflow for Claude Code: from intake to commit, through explicit 
   ↓
   ├─ [/task:auto-roadmap] ──┐            ← optional: autopilot over an approved roadmap
   ↓                          │
+/task:go      [--auto]       │           one verb: walk it all (--auto: hands-off)
+  ↓  or the explicit steps:  │
 /task:design  [--from …]     │           plan it out
   ↓                          │
 /task:build   [--auto]       │           implement + audit
@@ -27,13 +29,17 @@ A linear task workflow for Claude Code: from intake to commit, through explicit 
 /plugin install task@task-pipeline
 
 /task:bootstrap                              # once per project
+/task:go "fix the flaky retry logic"         # one verb — walks design → build → ship,
+                                             # pausing at each checkpoint for your OK
+
+# …or drive the stages yourself:
 /task:design "fix the flaky retry logic"     # opens the task + writes the Description
 /task:design                                 # run again → builds the plan
 /task:build --auto                           # implement + audit
 /task:ship                                   # commit + close
 ```
 
-`design → build → ship` is the whole core; everything else (`roadmap`, `auto-roadmap`, and the flags) is optional.
+`/task:go` is the one-verb front door; `design → build → ship` is the core it walks. Everything else (`roadmap`, `auto-roadmap`, the flags) is optional. `/task:go --auto` runs a single task hands-off (one confirmation, then plan + implement in subagents, audit + ship inline).
 
 ## Why
 
@@ -75,7 +81,7 @@ The pipeline ships as a Claude Code plugin (`task`) inside the `task-pipeline` m
 
 From then on, updates are a single command: `/plugin marketplace update task-pipeline`.
 
-After installation, Claude Code gains the commands `/task:bootstrap`, `/task:design`, `/task:build`, `/task:ship`, `/task:roadmap`, `/task:auto-roadmap`, plus eight named agents and a PreToolUse artifact-validator hook that activates automatically.
+After installation, Claude Code gains the commands `/task:go`, `/task:bootstrap`, `/task:design`, `/task:build`, `/task:ship`, `/task:roadmap`, `/task:auto-roadmap`, plus eight named agents and a PreToolUse artifact-validator hook that activates automatically.
 
 In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks two interactive questions (language, test policy), and writes `.task/config/config.md`.
 
@@ -102,6 +108,8 @@ In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks
                               (Coverage / Decomposition / Clarity, ≤2 iterations)
   ├─→ [/task:auto-roadmap] — optional; autopilot over an approved roadmap
   ↓                         in the current interactive session.
+/task:go [--auto]  — one-verb entry; runs the next phase and checkpoints between each
+  ↓                  (--auto: whole task hands-off via plan + implement subagents)
 /task:design  — open a task, write the Description, plan it out
   ↓             (phase auto-detect: open(quick-draft) → blueprint; [--idea] brainstorm, [--refine] opt.)
 /task:build [--auto] — implementation + audit with an auto-fix loop
@@ -112,7 +120,7 @@ In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks
                         --next  → transition to the next subtask (task.md stays)
 ```
 
-**Re-entry semantics:** `/task:design` and `/task:build` look at the state of `.task/workspace/<task-id>/` and automatically resume from the right phase. Override with `--phase <open|idea|blueprint|refine|implement|audit>`. `/task:build` additionally accepts `--auto` (opt-in one-shot: runs `implement → audit` in a single call, mutually exclusive with `--phase`).
+**Re-entry semantics:** `/task:design` and `/task:build` look at the state of `.task/workspace/<task-id>/` and automatically resume from the right phase. Override with `--phase <open|idea|blueprint|refine|implement|audit>`. `/task:build` additionally accepts `--auto` (opt-in one-shot: runs `implement → audit` in a single call, mutually exclusive with `--phase`). `/task:go` reads the same state and runs the next phase across all three skills, so a single `/task:go` (repeated) resumes the whole pipeline from wherever you left off.
 
 `validate` is an internal utility: the pipeline invokes it as a precondition gate, not via a slash command. For a manual check: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`.
 
@@ -127,6 +135,7 @@ In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks
 | `/task:bootstrap` | Initializes the pipeline in a project: creates `.task/config/config.md`, sets up the local git exclusion for `.task/`, and prints a short getting-started primer. Idempotent. |
 | `/task:roadmap <idea> \| --refine [<slug>]` *(opt.)* | Brainstorms an initiative roadmap → `.task/roadmap/<slug>.md` with ready-made task descriptions for `--from`. An optional sidecar `.task/roadmap/<slug>.spec.md` pins down key technical decisions (Blueprint reads them during planning). `--refine` — a parallel audit of an existing roadmap (Coverage / Decomposition / Clarity, ≤2 iterations; high → auto-applied, med/low → manual review). |
 | `/task:auto-roadmap [<roadmap>] [--next \| --from #<N> \| --items <spec>]` *(opt.)* | Autopilot over a roadmap in the current interactive Claude Code session: for each item — design → build → ship. `--next` — the first unclosed item; `--from #N` — start from item N; `--items 3-5` or `1,3-5,8` — a selection. |
+| `/task:go [<context>] [--auto]` | One-verb entry. Inspects the task state and runs the next phase (open → blueprint → implement → audit → ship), pausing at a checkpoint between each so you decide when to advance. `--auto` runs the whole task hands-off: opens + drafts the Description (one confirmation), then delegates plan + implement to subagents and audits + ships inline. Dispatches the other skills — adds no artifact of its own. |
 | `/task:design [<context>] [--from <path>[#<N>]] [--idea] [--phase <name>] [--refine]` | Open a task, write the Description, plan it out. Phase auto-detect (`open` → `blueprint`); `--phase` override. `--idea` — brainstorm the Description (architect from scratch / Socratic on a filled-in one). `--from <path>[#N]` — Description from a roadmap item. `--refine` — refine `plan.md`. |
 | `/task:build [--phase <name>] [--auto]` | Implementation (`implement`) + audit with bounded auto-fix (`audit`). `--auto` — both phases in one call (≤1 implement, ≤2 audit). `--phase` — override. Fixes outside `Touches` from `plan.md` are marked `Skipped: out-of-scope`. |
 | `/task:ship [--next] [<slug>]` | Commit + archiving under `.task/log/`. Default — full close: `workspace/<task-id>/` and `.task-current` are removed (`--full` is a backward-compatible alias). `--next` — `task.md` stays (Description cleared), transition to the next subtask. Auto-marks the roadmap item when `Roadmap:` + `Source item:` are present. |
@@ -179,6 +188,7 @@ Three references: default Claude Code (plan mode + TodoWrite), [obra/superpowers
 
 | | Default Claude Code | task-pipeline |
 |---|---|---|
+| **Getting started** | Zero commands, but no structure past the first prompt | One verb, `/task:go` — resumes from artifact state and runs the next phase with a checkpoint between each |
 | **Where the plan lives** | Text in chat; lost on `/clear` | `plan.md` as a file in `.task/workspace/`; editable by hand, readable by a colleague |
 | **Plan-step contract** | Arbitrary text | `### Step N` with three layers: `Goal` / `Touches` / opt. `Logic` |
 | **Step verification** | None | A step closes only if the `Touches` symbols are in `git diff` (+ RED→GREEN when `## Tests`) |
@@ -236,7 +246,7 @@ The pipeline is built on a few invariants; the full reasoning lives in [`docs/sp
 
 - **Artifacts.** Each `.task/` subfolder has one role — `config/`, `roadmap/`, `workspace/<task-id>/`, `log/<task-id>/<N>-<slug>/`. The pointer to the active umbrella is a one-line `.task-current` in the worktree root. Full producer/consumer contract: [docs/spec/artifact-contract.md](docs/spec/artifact-contract.md).
 - **Code-navigation tiers.** Each skill reads only as much of your code as its job needs — from `.task/`-only (`/task:ship`, `validate`) through a structural scan to MCP-first navigation (`/task:design` blueprint, `/task:build`). Details: [docs/spec/invariants.md § Three code-navigation tiers](docs/spec/invariants.md#three-code-navigation-tiers).
-- **Validator hook.** A PreToolUse hook intercepts `Skill(task:design|build|ship|auto-roadmap)` and runs `validate.sh all` before the skill body. `bootstrap` / `roadmap` are deliberately excluded (the intake phase). Disable with `/plugin disable task` or by removing [`hooks/hooks.json`](hooks/hooks.json) locally.
+- **Validator hook.** A PreToolUse hook intercepts `Skill(task:design|build|ship|auto-roadmap|go)` and runs `validate.sh all` before the skill body. `bootstrap` / `roadmap` are deliberately excluded (the intake phase). Disable with `/plugin disable task` or by removing [`hooks/hooks.json`](hooks/hooks.json) locally.
 - **Parallel worktrees.** `.task/` is excluded from git, so a fresh worktree gets a `.task` symlink to the main tree's state — `/task:bootstrap` wires it up. Discipline and edge cases: [docs/spec/auto-roadmap.md § Cross-worktree safety](docs/spec/auto-roadmap.md#cross-worktree-safety).
 
 ## Contributing

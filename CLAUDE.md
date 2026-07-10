@@ -6,7 +6,7 @@ This file carries a compact checklist of every invariant that must stay in activ
 
 ## Quick orient
 
-A collection of user-invocable Claude Code skills implementing a linear "task pipeline" — design → build → ship. Skills in `skills/<name>/SKILL.md`; phase-decomposed orchestrators (`design`, `build`, `roadmap`) carry companion phase files at `skills/<name>/phases/<phase>.md` (`roadmap` only for the `--refine` mode; ship and auto-roadmap stay single-file); subagents in `agents/`; plugin manifests in `.claude-plugin/`. No build/test/lint. Work here is editing markdown (occasional bash) and reasoning about pipeline semantics.
+A collection of user-invocable Claude Code skills implementing a linear "task pipeline" — design → build → ship. Skills in `skills/<name>/SKILL.md`; phase-decomposed orchestrators (`design`, `build`, `roadmap`) carry companion phase files at `skills/<name>/phases/<phase>.md` (`roadmap` only for the `--refine` mode; ship, auto-roadmap, and go stay single-file); subagents in `agents/`; plugin manifests in `.claude-plugin/`. No build/test/lint. Work here is editing markdown (occasional bash) and reasoning about pipeline semantics.
 
 ```
 /task:bootstrap
@@ -15,6 +15,8 @@ A collection of user-invocable Claude Code skills implementing a linear "task pi
   ↓
   ├─ [/task:auto-roadmap] ──┐         ← off-cycle autopilot
   ↓                          │
+/task:go  [--auto]           │        ← one-verb entry: walks design→build→ship inline
+  ↓  (or the explicit verbs) │          (checkpointed); --auto = hands-off single task
 /task:design [--from <roadmap>[#<N>]]
   ↓                          │
 /task:build [--auto]         │
@@ -22,7 +24,7 @@ A collection of user-invocable Claude Code skills implementing a linear "task pi
 /task:ship [--next]          │
 ```
 
-Phase auto-detect (`_lib/phase-detect.sh`): design → `open|idea|blueprint|refine`; build → `implement|audit`. `--phase` overrides. Build audit = bounded auto-fix ≤ 2 iter, scope-gated by `_lib/touches-gate.sh`. `--auto` chains both phases (budgets ≤ 1 / ≤ 2). Last item in an auto-roadmap run ships with `/task:ship --full` directly (slug from `summary.md`); no separate chore-finalize.
+Phase auto-detect (`_lib/phase-detect.sh`): design → `open|idea|blueprint|refine`; build → `implement|audit`. `--phase` overrides. Build audit = bounded auto-fix ≤ 2 iter, scope-gated by `_lib/touches-gate.sh`. `--auto` chains both phases (budgets ≤ 1 / ≤ 2). Last item in an auto-roadmap run ships with `/task:ship --full` directly (slug from `summary.md`); no separate chore-finalize. `/task:go` is a state-aware dispatcher over the two detectors — it runs no phase logic of its own, only routes to `/task:design` / `/task:build` / `/task:ship` inline; `/task:go --auto` is an N=1 auto-roadmap sharing the executor runners.
 
 ## Spec index
 
@@ -36,7 +38,7 @@ Phase auto-detect (`_lib/phase-detect.sh`): design → `open|idea|blueprint|refi
 
 ## Artifact contract
 
-Full producer/consumer table, identifier rules, `task.md` header structure, `.task/` layout (`config/`, `roadmap/`, `workspace/<task-id>/`, `log/<task-id>/<N>-<slug>/`), and `WS_DIR` resolver priority: [docs/spec/artifact-contract.md](docs/spec/artifact-contract.md). `task-id` comes from `# [TASK-ID] Title` line 1 of `task.md`; `Roadmap:` + `Source item: #<N>` headers are load-bearing for `close.sh` auto-mark. `/task:auto-roadmap` adds one per-umbrella sentinel `.task/workspace/<task-id>/auto.lock`. `/task:roadmap` brainstorm may write an optional spec sidecar `.task/roadmap/<slug>.spec.md` (numbered technical-decision anchors, cited from items via `### Spec references → <slug>.spec.md §N`, read by blueprint); not `validate.sh`-enforced.
+Full producer/consumer table, identifier rules, `task.md` header structure, `.task/` layout (`config/`, `roadmap/`, `workspace/<task-id>/`, `log/<task-id>/<N>-<slug>/`), and `WS_DIR` resolver priority: [docs/spec/artifact-contract.md](docs/spec/artifact-contract.md). `task-id` comes from `# [TASK-ID] Title` line 1 of `task.md`; `Roadmap:` + `Source item: #<N>` headers are load-bearing for `close.sh` auto-mark. `/task:auto-roadmap` and `/task:go --auto` each add one per-umbrella sentinel `.task/workspace/<task-id>/auto.lock` (distinguished by its `orchestrator=` field: `auto-roadmap` vs `go`). `/task:roadmap` brainstorm may write an optional spec sidecar `.task/roadmap/<slug>.spec.md` (numbered technical-decision anchors, cited from items via `### Spec references → <slug>.spec.md §N`, read by blueprint); not `validate.sh`-enforced.
 
 ## Invariants — don't break these when editing skills
 
@@ -59,7 +61,7 @@ Compact one-liners; full reasoning + edge cases in [docs/spec/invariants.md](doc
 
 | Tier | Skills | Scope |
 |------|--------|-------|
-| **A — No code nav** | `/task:ship`, `validate`, `/task:auto-roadmap`, design open header-only path (`--idea` / empty fresh call), `/task:roadmap --refine` | `.task/`, `CLAUDE.md`, commit-format doc, `git` |
+| **A — No code nav** | `/task:ship`, `validate`, `/task:auto-roadmap`, `/task:go` (dispatch only — routed phases/runners apply their own tier), design open header-only path (`--idea` / empty fresh call), `/task:roadmap --refine` | `.task/`, `CLAUDE.md`, commit-format doc, `git` |
 | **B — MCP-first** | design blueprint + refine, `/task:build` (both phases) | Tools from `config.md` priority order; built-ins fallback only |
 | **C — Shallow scan** | `/task:bootstrap`, `/task:roadmap` brainstorm, design idea, design open quick-draft | Manifests, top-level dirs, `docs/`; no source files |
 
@@ -68,7 +70,7 @@ Compact one-liners; full reasoning + edge cases in [docs/spec/invariants.md](doc
 ### Agent classes
 
 - **Auditor-class** — read-only `tools:` allowlist (`Read, Grep, Glob`); adding `Edit`/`Write` is a hard violation (runtime-enforced from frontmatter). Two families: build-audit lenses (`audit-{reuse,simplicity,clarity}-auditor.md`, consumed by `/task:build` audit, operate on diff) and roadmap-refine lenses (`audit-roadmap-{coverage,decomposition,clarity}-auditor.md`, consumed by `/task:roadmap --refine`, Tier A — no source nav). Shared prompt rules in `agents/_shared/audit-rules.md`; frontmatter `tools:` stays per-agent. Class declared in description; mixing roles requires redesign.
-- **Executor-class** — split: `auto-roadmap-design-runner.md` (open + blueprint, parent-session model) and `auto-roadmap-build-runner.md` (implement only, per-spawn `Agent.model` from `plan.md → Implement-Model:`). Both called from `/task:auto-roadmap` main thread; audit + ship stay in orchestrator main thread for lens fanout. Shared rules in `agents/_shared/runner-rules.md`. Neither declares `tools:` or `model:` in frontmatter.
+- **Executor-class** — split and **shared by `/task:auto-roadmap` and `/task:go --auto`** (the `auto-roadmap-` file names are historical): `auto-roadmap-design-runner.md` produces `plan.md` — open(`from: <roadmap>#N`) + blueprint for a roadmap item, or **blueprint-only** (`from: current`) for a task the caller already opened — under the parent-session model; `auto-roadmap-build-runner.md` runs implement only, per-spawn `Agent.model` from `plan.md → Implement-Model:`. Both spawned from the caller's main thread; audit + ship stay in that main thread for lens fanout. Return grammar is orchestrator-agnostic (OK keyed on the em-dash clause, no `item #<N>` token). Shared rules in `agents/_shared/runner-rules.md`. Neither declares `tools:` or `model:` in frontmatter.
 
 ### Per-skill
 
@@ -108,6 +110,12 @@ Shared mechanics (three Step 0 gates, `--items` grammar, lock shapes, failure pr
 - No hard cap on items. Auto-compact may start dropping items around ~15 on Sonnet 200k (~25 on Opus 1M). User narrows with `--items <range>`.
 - `ROADMAP_MTIME` refreshed in memory after every successful `--next` ship (Substep 3.9 Branch A) before next iteration's Substep 3.1; Branch B (last item, `--full`) skips the refresh.
 
+### `/task:go`
+
+- Single-file skill; no phase companions. It **dispatches** existing skills — it never re-implements phase logic. Since `/task:design` / `/task:build` / `/task:ship` are `disable-model-invocation: true`, it runs them **inline** (read their SKILL.md + phase file, execute Steps), exactly like `/task:auto-roadmap`. Two modes off a single `--auto` flag; takes no `--phase`.
+- **Interactive** (`/task:go`): a loop — detect the stage by chaining `phase-detect.sh design` (→ `open|idea|blueprint`, or `refine-prompt` = design done) then `phase-detect.sh build` (→ `implement|audit|done`=ship); run that stage inline; `AskUserQuestion` checkpoint (Continue / Edit / Stop) between stages. Never auto-advances a checkpoint. Design side is delegated whole to inline `/task:design` (auto-detect, incl. the open→idea chain); go only crosses to build when the design detector returns `refine-prompt`. The blueprint→build checkpoint surfaces `--refine` without auto-entering it. Tolerates a stray `auto.lock` (resumes a stopped autonomous run).
+- **Autonomous** (`/task:go --auto`): N=1 auto-roadmap. `go-context.sh` pre-gate (config / `.task-current` absent / no stale `auto.lock`) → inline open+quick-draft (≤1 elicitation) → one `AskUserQuestion` confirm → `auto.lock` (`orchestrator=go`) → `auto-roadmap-design-runner` (`from: current`, parent model) → `extract_implement_model` → `auto-roadmap-build-runner` (`Agent.model` override) → audit inline → ship `--full` inline. Failure = fail-stop hand-back: keep workspace + lock, resume via `/task:go`; no `chore-finalize`. Always `--full` (no roadmap auto-mark).
+
 ## Editing protocol — quick rules
 
 Full detail in [docs/spec/internals.md § Editing protocol](docs/spec/internals.md#editing-protocol).
@@ -126,7 +134,7 @@ Source of truth: [`CONTRIBUTING.md`](CONTRIBUTING.md). Summary:
 
 - Header: `<type>(<scope>): <short summary>` — under 72 chars, imperative, lowercase first letter, no trailing period.
 - Types: `feat | fix | refactor | docs | chore`. **Do not invent types.**
-- Scopes (optional but strongly preferred): skill names without `task:` prefix (`bootstrap`, `roadmap`, `auto`, `open`, `idea`, `blueprint`, `refine`, `implement`, `audit`, `commit`, `close`, `validate`), agent names (`audit-reuse`, `audit-simplicity`, `audit-clarity`), or cross-cutting keys (`skills`, `hooks`, `plugin`, `readme`, `claudemd`, `changelog`). **Do not invent scopes.**
+- Scopes (optional but strongly preferred): skill names without `task:` prefix (`bootstrap`, `roadmap`, `auto`, `go`, `open`, `idea`, `blueprint`, `refine`, `implement`, `audit`, `commit`, `close`, `validate`), agent names (`audit-reuse`, `audit-simplicity`, `audit-clarity`), or cross-cutting keys (`skills`, `hooks`, `plugin`, `readme`, `claudemd`, `changelog`). **Do not invent scopes.**
 - Body: mandatory for all non-trivial commits; explain **why**, not what; 2–5 bullet list, imperative tense.
 - Footer: `BREAKING CHANGE:` when header carries `!`; `Fixes #N` / `Closes #N` for issues/PRs.
 - AI attribution: every Claude-assisted commit must carry `Co-Authored-By: Claude <noreply@anthropic.com>` as the last footer line.

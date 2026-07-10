@@ -2,7 +2,7 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Skill\\((task:)?(design|build|ship|auto-roadmap)\\)",
+        "matcher": "Skill\\((task:)?(design|build|ship|auto-roadmap|go)\\)",
         "hooks": [
           {
             "type": "command",

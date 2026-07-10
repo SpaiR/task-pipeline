@@ -39,6 +39,8 @@ skills/                          SKILL.md + companion phase files + bash helpers
   ship/                          SKILL.md + close.sh + commit-context.sh
   auto-roadmap/                  SKILL.md (per-item loop in the main thread) +
                                    auto-roadmap-context.sh
+  go/                            SKILL.md (one-verb dispatcher over design→build→ship;
+                                   --auto = N=1 autonomous run) + go-context.sh (--auto pre-gate)
   validate/                      SKILL.md + validate.sh (validator; not user-invocable)
 agents/                          named subagents
   audit-reuse-auditor.md         build-audit lens: DRY / duplication / premature abstractions (read-only)
@@ -47,13 +49,14 @@ agents/                          named subagents
   audit-roadmap-coverage-auditor.md       roadmap-refine lens: end-to-end coverage / dependency graph (read-only)
   audit-roadmap-decomposition-auditor.md  roadmap-refine lens: atomicity / sizing / duplicate work (read-only)
   audit-roadmap-clarity-auditor.md        roadmap-refine lens: titles / Context-vs-Goal / testable AC (read-only)
-  auto-roadmap-design-runner.md  executor-class (narrow): design open+blueprint phases
-                                   for one roadmap item (parent-session model)
-  auto-roadmap-build-runner.md   executor-class (narrow): build implement phase only,
+  auto-roadmap-design-runner.md  executor-class (narrow, shared by auto-roadmap + go --auto):
+                                   produces plan.md — open+blueprint for a roadmap item, or
+                                   blueprint-only for an already-open task (parent-session model)
+  auto-roadmap-build-runner.md   executor-class (narrow, shared): build implement phase only,
                                    spawned with Agent.model from plan.md → Implement-Model
   _shared/audit-rules.md         shared prompt-layer rules for all six audit-*-auditor agents
                                    (build-audit family + roadmap-refine family)
-  _shared/runner-rules.md        shared registry of rules the two roadmap runners inherit
+  _shared/runner-rules.md        shared registry of rules the two shared runners inherit
                                    from nested phase files (sources in build/phases/implement.md,
                                    design/phases/blueprint.md § Step 3, docs/spec/invariants.md;
                                    edits must stay in sync)
@@ -129,7 +132,7 @@ Must be one of the following:
 
 **Do NOT invent new scopes.** Pick from the list below; if none fits, omit the scope entirely.
 
-* **A skill name** (no `task:` prefix): `bootstrap`, `roadmap`, `auto`, `open`, `idea`, `blueprint`, `refine`, `implement`, `audit`, `commit`, `close`, `validate`.
+* **A skill name** (no `task:` prefix): `bootstrap`, `roadmap`, `auto`, `go`, `open`, `idea`, `blueprint`, `refine`, `implement`, `audit`, `commit`, `close`, `validate`.
 * **An agent name**: `audit-reuse`, `audit-simplicity`, `audit-clarity`.
 * **`skills`** — cross-cutting change that touches several skills at once.
 * **`hooks`** — `hooks/hooks.json` and the PreToolUse validator wiring.
