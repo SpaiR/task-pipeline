@@ -1,6 +1,63 @@
 # Troubleshooting
 
-Edge cases you may hit when integrating with the pipeline or invoking its agents by hand.
+First-run problems you may hit as a new user, then edge cases when integrating with the pipeline or invoking its agents by hand.
+
+## First run
+
+### `/task:` commands don't appear after installing
+
+**Symptom** — typing `/task:` shows nothing; no `/task:bootstrap`, `/task:design`, etc.
+
+**Cause** — the `task` plugin isn't installed/enabled in this session, or the marketplace was never added.
+
+**Fix** —
+
+```text
+/plugin marketplace add https://github.com/SpaiR/task-pipeline.git
+/plugin install task@task-pipeline
+```
+
+Then reopen the `/` menu. If it was already installed, make sure it isn't disabled (`/plugin`).
+
+### `ERROR precondition: …/config.md not found. Run /task:bootstrap first.`
+
+**Symptom** — a skill stops immediately with `ERROR precondition: …/.task/config/config.md not found. Run /task:bootstrap first.`
+
+**Cause** — every skill except `/task:bootstrap` needs `.task/config/config.md`, and it hasn't been created in this project yet.
+
+**Fix** — run `/task:bootstrap` once; it writes the config. If you already ran it, you may be in a different git worktree — see "A linked worktree has no `.task/`" below.
+
+### `.task/` shows up in `git status`
+
+**Symptom** — `.task/` or `.task-current` appears as untracked in `git status`.
+
+**Cause** — the local git exclusion wasn't written (e.g. `.task/` was created before bootstrap, or bootstrap ran outside a git repo).
+
+**Fix** — re-run `/task:bootstrap` (idempotent); it adds `.task` and `.task-current` to `.git/info/exclude`. The pipeline uses `.git/info/exclude`, not `.gitignore`, on purpose — the state stays invisible to teammates.
+
+### `validate.sh` ends with `FAIL N error(s)`
+
+**Symptom** — an artifact check ends with `FAIL <N> error(s), <M> warning(s)`, preceded by one or more `ERROR <label>: <message>` lines.
+
+**Cause** — a `task.md` / `plan.md` / roadmap file drifted from the expected format (bad header, missing required section, wrong separator).
+
+**Fix** — read the `ERROR <label>:` lines (each names the file and the problem) and fix the artifact by hand — they are plain Markdown. Re-check with `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`. A `WARN` on its own does not block.
+
+### A linked worktree has no `.task/`
+
+**Symptom** — in a second git worktree, skills can't find the config or `.task-current`, or `.task` is missing.
+
+**Cause** — `.task/` lives in the main worktree and is git-excluded, so a fresh linked worktree doesn't inherit it.
+
+**Fix** — run `/task:bootstrap` in the linked worktree; in join-mode it symlinks `.task` → the main worktree's `.task/` and wires the exclusion. (Set up the main worktree first if it never was.)
+
+### `--auto stopped: <reason>`
+
+**Symptom** — `/task:build --auto` (or `/task:auto-roadmap`) prints `--auto stopped: <reason>. See <path>.` and halts.
+
+**Cause** — expected, not a crash: a per-phase budget was reached (implement runs once; audit stops after 2 non-converging iterations).
+
+**Fix** — open the named artifact (`audit.md` / `summary.md`), finish what's left by hand or with a plain `/task:build`, then continue. `--auto` is intentionally one-shot.
 
 ## Manual `Agent(...)` calls need the `task:` prefix
 
