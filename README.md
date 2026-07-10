@@ -147,7 +147,7 @@ In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks
 #   (alternative to the same entry: an empty /task:design when there's no task yet
 #    — the skill asks for the idea and drops into architect)
 
-/task:design                                     # phase=blueprint: a plan with steps
+/task:design                                     # run again → phase=blueprint: builds plan.md with steps
 /task:design --idea                              # opt.: idea(Socratic) — refine the Description
 /task:design --refine                            # opt.: phase=refine: plan alternatives
 
