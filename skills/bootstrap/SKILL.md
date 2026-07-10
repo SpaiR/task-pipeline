@@ -1,6 +1,6 @@
 ---
 name: bootstrap
-description: '[1·intake] Create or recreate the AI tools configuration for the project in `.task/config/config.md`.'
+description: 'Set up task-pipeline in this repo once — detects the stack, writes `.task/config/config.md`, and adds the local git exclusion. Run this first.'
 disable-model-invocation: true
 user-invocable: true
 model: haiku

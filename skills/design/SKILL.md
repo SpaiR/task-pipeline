@@ -1,6 +1,6 @@
 ---
 name: design
-description: '[1·design] Open task, write Description (quick-draft or --idea brainstorm), build implementation plan, optionally refine. Auto-detects re-entry phase from artifact state; --phase <open|idea|blueprint|refine> overrides.'
+description: 'Open a task and plan it — write the Description (quick-draft or `--idea` brainstorm), then build the implementation plan. Auto-resumes the right phase from artifact state; `--phase <open|idea|blueprint|refine>` / `--refine` override.'
 disable-model-invocation: true
 user-invocable: true
 ---
