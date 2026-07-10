@@ -20,13 +20,20 @@ A linear task workflow for Claude Code: from intake to commit, through explicit 
 /task:ship    [--next]  ─────┘           commit + close
 ```
 
-## TL;DR
+## Quickstart
 
 ```text
-/task:bootstrap                 # once per project
-/task:design "what we're doing" # open a task and write a plan
-/task:build   →   /task:ship    # implement, review, commit
+/plugin marketplace add https://github.com/SpaiR/task-pipeline.git
+/plugin install task@task-pipeline
+
+/task:bootstrap                              # once per project
+/task:design "fix the flaky retry logic"     # opens the task + writes the Description
+/task:design                                 # run again → builds the plan
+/task:build --auto                           # implement + audit
+/task:ship                                   # commit + close
 ```
+
+`design → build → ship` is the whole core; everything else (`roadmap`, `auto-roadmap`, and the flags) is optional.
 
 ## Why
 
@@ -75,7 +82,7 @@ In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks
 
 </details>
 
-## Quick start
+## Command reference
 
 ```text
 /task:bootstrap  — once per project; creates .task/config/config.md
