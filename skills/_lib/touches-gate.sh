@@ -151,7 +151,11 @@ while IFS= read -r touch; do
   resolved=0
 
   # Heuristic: path-like token (contains /) or has a known source extension.
-  if [[ "$touch" == */* ]] || [[ "$touch" =~ \.(ts|tsx|js|jsx|py|go|rs|java|kt|swift|cs|cpp|c|h|hpp|rb|php|sh|md|yaml|yml|json|toml)$ ]]; then
+  # The extension set is deliberately broad and language-agnostic — a bare
+  # filename in a language not listed here still falls through to the symbol
+  # search below, so the only cost of a missing extension is one skipped
+  # fast-path, not a wrong result. Keep it a superset of mainstream stacks.
+  if [[ "$touch" == */* ]] || [[ "$touch" =~ \.(ts|tsx|mts|cts|js|jsx|mjs|cjs|vue|svelte|astro|py|pyi|go|rs|java|kt|kts|scala|groovy|gradle|clj|cljs|cljc|swift|m|mm|cs|fs|fsx|vb|cpp|cc|cxx|c|h|hpp|hh|hxx|zig|nim|d|rb|php|pl|pm|lua|r|jl|dart|ex|exs|erl|hs|ml|mli|sh|bash|sql|proto|graphql|gql|css|scss|sass|less|html|htm|xml|md|yaml|yml|toml|json|tf|tfvars|ipynb)$ ]]; then
     if [[ -f "$touch" ]]; then
       printf '%s\n' "$(to_repo_relative "$touch")" >> "$WHITELIST"
       continue

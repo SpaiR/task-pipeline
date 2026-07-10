@@ -24,7 +24,8 @@
 # Filters applied to the diff bundle to cut noise:
 #   - .task/** (pipeline working artifacts)
 #   - lock files (package-lock.json, yarn.lock, pnpm-lock.yaml, Cargo.lock,
-#     go.sum, Gemfile.lock, Pipfile.lock, poetry.lock, composer.lock)
+#     go.sum, Gemfile.lock, Pipfile.lock, poetry.lock, composer.lock,
+#     Podfile.lock, pubspec.lock, mix.lock, gradle.lockfile, flake.lock)
 #   - snapshots (*.snap, **/__snapshots__/**)
 #   - generated dirs (dist/, build/, node_modules/, .next/, target/, vendor/)
 #   - binary files (detected via `git diff --numstat` "-\t-\t" rows)
@@ -107,6 +108,11 @@ EXCLUDES=(
   ':(exclude)Pipfile.lock'           ':(exclude)**/Pipfile.lock'
   ':(exclude)poetry.lock'            ':(exclude)**/poetry.lock'
   ':(exclude)composer.lock'          ':(exclude)**/composer.lock'
+  ':(exclude)Podfile.lock'           ':(exclude)**/Podfile.lock'
+  ':(exclude)pubspec.lock'           ':(exclude)**/pubspec.lock'
+  ':(exclude)mix.lock'               ':(exclude)**/mix.lock'
+  ':(exclude)gradle.lockfile'        ':(exclude)**/gradle.lockfile'
+  ':(exclude)flake.lock'             ':(exclude)**/flake.lock'
   ':(exclude)*.snap'                 ':(exclude)**/*.snap'
   ':(exclude)__snapshots__/**'       ':(exclude)**/__snapshots__/**'
   ':(exclude)dist/**'

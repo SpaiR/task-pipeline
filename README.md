@@ -38,14 +38,14 @@ Concretely, you get:
 - **Multilingual.** Task descriptions and discussion happen in your language (English, Russian, anything). The plan, audit, and commits follow the policy in `config.md`.
 - **Three explicit checkpoints.** `/task:design` (plan), `/task:build` (implementation + checks), `/task:ship` (commit + close). You decide when to move on; stop, fix an artifact by hand, and continue.
 - **A paper trail.** `task.md` (what and why), `plan.md` (how), `audit.md` (what the audit found), `summary.md` (the result). Plain Markdown, readable without an agent.
-- **Project-aware.** A single `/task:bootstrap` pins down the stack, the MCP tool priority (Serena, context7, ast-grep…), and the commit format. Every step follows it afterward.
+- **Project-aware.** A single `/task:bootstrap` pins down the stack, the MCP tool priority (whatever code-navigation / library-docs servers you happen to have connected), and the commit format. Every step follows it afterward.
 - **Bounded auto-fix + filters.** `/task:build` applies the problems it finds (≤2 iterations), but only within the declared `Touches` scope. Weak or out-of-scope findings land in `### Filtered (low confidence)` for manual review.
 - **An archive.** `/task:ship` files completed subtasks under `.task/log/{task-id}/{N}-{slug}/` — six months later you can still see what was done, and when.
 
 ## Requirements
 
 - [Claude Code](https://docs.claude.com/en/docs/claude-code) — this ships as a Claude Code plugin.
-- MCP code-navigation tools (Serena, context7, ast-grep…) are **optional**: `/task:bootstrap` records whichever you have, and the built-in `Grep`/`Glob`/`Read` are always the fallback.
+- MCP code-navigation tools are **optional** and the pipeline is agnostic about which one you use: `/task:bootstrap` records whichever servers you have connected (by role, not by product), and the built-in `Grep`/`Glob`/`Read` are always the fallback.
 
 ## Installation
 
@@ -218,7 +218,7 @@ All of this lives in `.task/config/config.md`, written by `/task:bootstrap`:
 The pipeline is built on a few invariants; the full reasoning lives in [`docs/spec/`](docs/spec/README.md).
 
 - **Artifacts.** Each `.task/` subfolder has one role — `config/`, `roadmap/`, `workspace/<task-id>/`, `log/<task-id>/<N>-<slug>/`. The pointer to the active umbrella is a one-line `.task-current` in the worktree root. Full producer/consumer contract: [docs/spec/artifact-contract.md](docs/spec/artifact-contract.md).
-- **Code-access tiers.** Each skill reads only as much of your code as its job needs — from `.task/`-only (`/task:ship`, `validate`) through a structural scan to MCP-first navigation (`/task:design` blueprint, `/task:build`). Details: [docs/spec/invariants.md § Three code-navigation tiers](docs/spec/invariants.md#three-code-navigation-tiers).
+- **Code-navigation tiers.** Each skill reads only as much of your code as its job needs — from `.task/`-only (`/task:ship`, `validate`) through a structural scan to MCP-first navigation (`/task:design` blueprint, `/task:build`). Details: [docs/spec/invariants.md § Three code-navigation tiers](docs/spec/invariants.md#three-code-navigation-tiers).
 - **Validator hook.** A PreToolUse hook intercepts `Skill(task:design|build|ship|auto-roadmap)` and runs `validate.sh all` before the skill body. `bootstrap` / `roadmap` are deliberately excluded (the intake phase). Disable with `/plugin disable task` or by removing [`hooks/hooks.json`](hooks/hooks.json) locally.
 - **Parallel worktrees.** `.task/` is excluded from git, so a fresh worktree gets a `.task` symlink to the main tree's state — `/task:bootstrap` wires it up. Discipline and edge cases: [docs/spec/auto-roadmap.md § Cross-worktree safety](docs/spec/auto-roadmap.md#cross-worktree-safety).
 

@@ -52,20 +52,20 @@ If no existing scope fits and neither reserved scope applies — omit scope enti
 ## Examples
 
 ```
-feat(editor-composition): add preset drag-and-drop reordering
+feat(editor): add preset drag-and-drop reordering
 
-- implement DnD for preset list using ImGui drag source/target
+- implement drag-and-drop for the preset list
 - fix tab focus loss during drag operations
 - add visual feedback for drop target position
 ```
 
 ```
-fix(editor-platform-redux): resolve NPE in window resize handler
+fix(api): resolve null dereference in resize handler
 
-- add null check for viewport dimensions before resize callback
-- guard against race condition during window initialization
+- add null check for viewport dimensions before the resize callback
+- guard against a race condition during initialization
 ```
 
 ```
-chore(deps): update imgui-java to 1.86.13
+chore(deps): update http-client to 1.86.13
 ```

@@ -74,7 +74,7 @@ Dispatch on `MODE` (never overwrite an existing `.task` silently):
    - **Build and test commands**: from `CLAUDE.md` or standard for the stack.
    - **Module structure**: single-module or multi-module.
    - **Convention documents**: paths to patterns.md, guardrails.md, etc. (if present).
-   - **MCP servers** available (Serena, context7, etc.) — from `CLAUDE.md` or system context.
+   - **MCP servers** available — discover whichever code-navigation, code-editing, or library-documentation servers are actually connected in this session (from `CLAUDE.md` or system context). Record them by their role, not by any assumed product; name none by default.
    - **Ticket format**: if the project has one (`DT-XXXX`, `PROJ-NNN`, etc.).
 3. Run `git log -10 --oneline` to determine commit style and language.
 4. Look for a project commit-format doc — check, in order: `CONTRIBUTING.md`, `docs/CONTRIBUTING.md`, `.github/CONTRIBUTING.md`. If one exists, record its path; the Commit Format section will emit a `**Source:**` pointer to it instead of paraphrasing rules that may drift.
@@ -160,11 +160,11 @@ Read code in ascending cost order:
 
 | Priority | Tool | When |
 |----------|------|------|
-{Fill: Serena -> Edit -> Write, or Edit -> Write if Serena is unavailable}
+{Fill with the project's editing tools in ascending cost order: a symbol-level editing MCP server (if one is connected) before the built-in `Edit`, and `Write` for new files. With no editing MCP server: `Edit` -> `Write`.}
 
 ## Library Documentation
 
-{If context7 is available — specify exact commands. If not — WebSearch / official docs.}
+{If a library-documentation MCP server is connected — specify its exact resolve/query commands. If not — WebSearch / official docs.}
 
 ## Project Conventions
 
@@ -229,10 +229,10 @@ When `tests_required` is `true`, `/task:design` (blueprint phase) emits a `## Te
 ```
 
 **Rules:**
-- Specify **only** actually available MCP tools. Do not guess.
-- If Serena is available — list specific tool names (`mcp__serena__find_symbol`, etc.).
-- If Serena is unavailable — navigation: Grep/Glob/Read; editing: Edit/Write.
-- If context7 is available — specify `mcp__context7__resolve-library-id` + `mcp__context7__query-docs`.
+- Specify **only** actually available MCP tools. Do not guess, and do not privilege any particular product — record whatever this session has connected, by role.
+- If a symbol-level code-navigation/editing MCP server is connected — list its specific tool names (e.g. `mcp__<server>__find_symbol`).
+- If no such server is connected — navigation: Grep/Glob/Read; editing: Edit/Write.
+- If a library-documentation MCP server is connected — list its specific resolve/query tool names.
 - Build/test commands — **exact**, from `CLAUDE.md`. Do not guess.
 - Commit format — determine from actual `git log`, do not impose a style.
 - **No decorative XML tags.** Use Markdown headers and formatting only. XML tags are allowed only when they carry semantic metadata that Markdown cannot express.
