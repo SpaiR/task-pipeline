@@ -1,6 +1,6 @@
 ---
 name: auto-roadmap
-description: '[0·drive] Roadmap autopilot — drives an approved `.task/roadmap/<slug>.md` through design → build → ship per-item inside the current session; the last item closes the umbrella via `/task:ship --full`.'
+description: 'Autopilot an approved `.task/roadmap/<slug>.md` — runs design → build → ship for each item inside the current session; the last item closes the umbrella.'
 disable-model-invocation: true
 user-invocable: true
 ---

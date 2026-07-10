@@ -1,6 +1,6 @@
 ---
 name: build
-description: '[2·build] Implement plan, then audit through 3 read-only lenses with bounded auto-fix loop. Auto-detects re-entry phase; --phase <implement|audit> overrides; --auto chains both phases in one invocation (opt-in).'
+description: 'Implement the plan, then audit the diff through three read-only lenses with a bounded auto-fix loop. Auto-resumes the phase; `--phase <implement|audit>` overrides; `--auto` runs both in one call.'
 disable-model-invocation: true
 user-invocable: true
 ---

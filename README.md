@@ -20,13 +20,20 @@ A linear task workflow for Claude Code: from intake to commit, through explicit 
 /task:ship    [--next]  ─────┘           commit + close
 ```
 
-## TL;DR
+## Quickstart
 
 ```text
-/task:bootstrap                 # once per project
-/task:design "what we're doing" # open a task and write a plan
-/task:build   →   /task:ship    # implement, review, commit
+/plugin marketplace add https://github.com/SpaiR/task-pipeline.git
+/plugin install task@task-pipeline
+
+/task:bootstrap                              # once per project
+/task:design "fix the flaky retry logic"     # opens the task + writes the Description
+/task:design                                 # run again → builds the plan
+/task:build --auto                           # implement + audit
+/task:ship                                   # commit + close
 ```
+
+`design → build → ship` is the whole core; everything else (`roadmap`, `auto-roadmap`, and the flags) is optional.
 
 ## Why
 
@@ -41,6 +48,16 @@ Concretely, you get:
 - **Project-aware.** A single `/task:bootstrap` pins down the stack, the MCP tool priority (whatever code-navigation / library-docs servers you happen to have connected), and the commit format. Every step follows it afterward.
 - **Bounded auto-fix + filters.** `/task:build` applies the problems it finds (≤2 iterations), but only within the declared `Touches` scope. Weak or out-of-scope findings land in `### Filtered (low confidence)` for manual review.
 - **An archive.** `/task:ship` files completed subtasks under `.task/log/{task-id}/{N}-{slug}/` — six months later you can still see what was done, and when.
+
+## Why you can trust this
+
+It runs bash, edits files, and writes commits — so here is exactly what it will and won't touch:
+
+- **Nothing is committed until `/task:ship`.** Until then every change is just working-tree edits; back them out with plain `git restore` / `git checkout`.
+- **`/task:ship` only _stages_ task files, and never pushes.** It writes a local commit for you to review; nothing leaves your machine, and it never stages anything under `.task/`.
+- **The audit agents are read-only.** The three review lenses (Reuse / Simplicity / Clarity) run with a `Read`/`Grep`/`Glob` allowlist — they cannot edit your code.
+- **Auto-fix is bounded and scoped.** The build audit applies fixes for at most 2 iterations, and only within the files the plan declared under `Touches`; anything out of scope is flagged, not changed.
+- **The pipeline leaves no trace in the repo.** `.task/` is excluded via `.git/info/exclude` (not `.gitignore`), so it never shows up in `git status`; delete it with `rm -rf .task` and the repo is exactly as before.
 
 ## Requirements
 
@@ -75,7 +92,7 @@ In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks
 
 </details>
 
-## Quick start
+## Command reference
 
 ```text
 /task:bootstrap  — once per project; creates .task/config/config.md
@@ -107,7 +124,7 @@ In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks
 
 | Command | In brief |
 |--------|--------|
-| `/task:bootstrap` | Initializes the pipeline in a project: creates `.task/config/config.md`, sets up the local git exclusion for `.task/`. Idempotent. |
+| `/task:bootstrap` | Initializes the pipeline in a project: creates `.task/config/config.md`, sets up the local git exclusion for `.task/`, and prints a short getting-started primer. Idempotent. |
 | `/task:roadmap <idea> \| --refine [<slug>]` *(opt.)* | Brainstorms an initiative roadmap → `.task/roadmap/<slug>.md` with ready-made task descriptions for `--from`. An optional sidecar `.task/roadmap/<slug>.spec.md` pins down key technical decisions (Blueprint reads them during planning). `--refine` — a parallel audit of an existing roadmap (Coverage / Decomposition / Clarity, ≤2 iterations; high → auto-applied, med/low → manual review). |
 | `/task:auto-roadmap [<roadmap>] [--next \| --from #<N> \| --items <spec>]` *(opt.)* | Autopilot over a roadmap in the current interactive Claude Code session: for each item — design → build → ship. `--next` — the first unclosed item; `--from #N` — start from item N; `--items 3-5` or `1,3-5,8` — a selection. |
 | `/task:design [<context>] [--from <path>[#<N>]] [--idea] [--phase <name>] [--refine]` | Open a task, write the Description, plan it out. Phase auto-detect (`open` → `blueprint`); `--phase` override. `--idea` — brainstorm the Description (architect from scratch / Socratic on a filled-in one). `--from <path>[#N]` — Description from a roadmap item. `--refine` — refine `plan.md`. |
@@ -130,7 +147,7 @@ In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks
 #   (alternative to the same entry: an empty /task:design when there's no task yet
 #    — the skill asks for the idea and drops into architect)
 
-/task:design                                     # phase=blueprint: a plan with steps
+/task:design                                     # run again → phase=blueprint: builds plan.md with steps
 /task:design --idea                              # opt.: idea(Socratic) — refine the Description
 /task:design --refine                            # opt.: phase=refine: plan alternatives
 

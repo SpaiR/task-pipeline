@@ -1,6 +1,6 @@
 ---
 name: ship
-description: '[3·ship] Commit changes then close (default: umbrella close + cleanup; --next: subtask transition). Slug auto-derived from summary.'
+description: 'Commit the change and close the task — default closes the umbrella and cleans up; `--next` transitions to the next subtask. Slug auto-derived from summary.'
 disable-model-invocation: true
 user-invocable: true
 model: haiku

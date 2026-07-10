@@ -65,28 +65,16 @@ No build/test/lint. Work here is editing markdown (occasional bash) and reasonin
 ```yaml
 ---
 name: <slug>
-description: '[<N>·<phase>] <one line>'
+description: '<one line — when to use → what it does>'
 disable-model-invocation: true
 user-invocable: true
 model: <claude-tier | inherit>   # optional; see deviations below
 ---
 ```
 
-### `description` phase prefix
+### `description` style
 
-Every user-invocable skill starts its `description` with a `[<N>·<phase>]` tag — a single token that names the pipeline phase the skill belongs to. The tag is the only place this taxonomy is captured, so list-views in Claude Code's plugin manager / autocomplete remain self-documenting.
-
-| `N` | Phase    | Skills                          |
-|-----|----------|---------------------------------|
-| 0   | `drive`  | `auto-roadmap`                  |
-| 1   | `intake` | `bootstrap`, `roadmap`          |
-| 1   | `design` | `design`                        |
-| 2   | `build`  | `build`                         |
-| 3   | `ship`   | `ship`                          |
-
-The tag is omitted from `validate`'s description because it isn't user-invocable.
-
-`N=1` is shared between `intake` (setup-time) and `design` (per-task) — they belong to different lifecycles (per-project vs per-umbrella) and never compete in the same UI list.
+Each user-invocable skill's `description` is one line, written for the person scanning Claude Code's `/` menu: lead with when to reach for the skill, then what it does, and name the literal command / flags where they matter. Keep it third-person and free of internal codes or phase taxonomy — the `/` menu is the first structural signal a new user sees, so it must read as "when do I need this", not as pipeline bookkeeping. `validate` is the only skill without a user-facing description (it is not user-invocable).
 
 ### Deviations from the template
 

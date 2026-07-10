@@ -91,7 +91,7 @@ Decide whether to fill the body of `## Description` in this call or leave it emp
 
 Branch the output by which Step 2a path was taken — the next-step hint differs:
 
-- **Quick-draft (Step 2a wrote a Description).** Print the path to the created file (`.task/workspace/<task-id-lc>/task.md`), the contents of `.task-current`, a brief summary of the header, and a 1–2 line summary of the drafted Description (or the list of `### …` sub-headers it contains). Note that the next `/task:design` call will auto-enter **blueprint** phase; suggest opening the file to review/edit the Description before that.
+- **Quick-draft (Step 2a wrote a Description).** Print the path to the created file (`.task/workspace/<task-id-lc>/task.md`), the contents of `.task-current`, a brief summary of the header, and a 1–2 line summary of the drafted Description (or the list of `### …` sub-headers it contains). Then print the explicit next step: **review or edit the Description in `task.md`, then run `/task:design` again to build the implementation plan (`plan.md`)** — the next call auto-enters the **blueprint** phase.
 - **Header-only (Description left empty).** Print the path, `.task-current` contents, and a brief header summary. State **why** Description is empty — either `--idea` was passed (brainstorm opt-out) or the input carried no paraphrasable prose (e.g. a bare ticket id). Next step by case: on the `--idea` path the orchestrator continues into the **idea** phase (**architect mode**) in the same call; on the bare-input path the **next** `/task:design` call auto-enters the **idea** phase (**architect mode**).
 
 ## Mode 2 — From roadmap (`--from`)

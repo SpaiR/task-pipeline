@@ -1,6 +1,6 @@
 ---
 name: bootstrap
-description: '[1·intake] Create or recreate the AI tools configuration for the project in `.task/config/config.md`.'
+description: 'Set up task-pipeline in this repo once — detects the stack, writes `.task/config/config.md`, and adds the local git exclusion. Run this first.'
 disable-model-invocation: true
 user-invocable: true
 model: haiku
@@ -283,3 +283,14 @@ Ensure:
 - List of sections emitted in **reference mode** (pointing into `CLAUDE.md`) vs. **full mode**.
 - Local git exclusion status: both `.task` and `.task-current` added to `.git/info/exclude`, already present, or skipped (not a git repo).
 - Remind the pipeline: `/task:design` → [design's idea phase] → `/task:design` (blueprint phase) → [design's refine phase] → `/task:build implement phase` → [`/task:build audit phase`] → `/task:ship` → `/task:ship`. Steps in brackets are optional.
+
+Then print this getting-started primer (translate to the `config.md` Language if it is not English; otherwise reproduce verbatim):
+
+> **You're set up.** task-pipeline runs in three steps — **design → build → ship** — each its own command:
+> - **`/task:design`** — open a task and plan it → writes `task.md` (what & why), then `plan.md` (how)
+> - **`/task:build`** — implement the plan, then audit it → `audit.md` (findings)
+> - **`/task:ship`** — commit and close → `summary.md` (result)
+>
+> Those four files are plain Markdown under `.task/` — read or edit them by hand any time. Re-running the same command resumes where you left off (phases are auto-detected from those files). One `task.md` is an *umbrella*; each design→build→ship cycle under it is a *subtask*, and `/task:ship --next` starts the next one.
+>
+> **Next step:** `/task:design "<what you want to do>"`

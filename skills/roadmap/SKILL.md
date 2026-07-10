@@ -1,6 +1,6 @@
 ---
 name: roadmap
-description: '[1·intake] Brainstorm a multi-stage roadmap for a large initiative; output `.task/roadmap/<slug>.md` with phase-grouped tasks feeding `/task:design --from`. `--refine` runs a parallel three-lens audit over an existing roadmap.'
+description: 'Brainstorm a multi-item roadmap for a large initiative into `.task/roadmap/<slug>.md`, with task descriptions ready for `/task:design --from`. `--refine` runs a parallel three-lens audit over an existing roadmap.'
 disable-model-invocation: true
 user-invocable: true
 ---
