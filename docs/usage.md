@@ -40,6 +40,34 @@ Scenarios can be combined: some tasks via `/task:roadmap` + `--from`, small fixe
 /task:design --from api-v2-migration#5
 ```
 
+### Building a roadmap from a prior discussion
+
+You don't have to brainstorm inside the skill. A common flow is to hash out an initiative in normal chat first — arguing over phases, pinning down details ("the settings button goes first in the panel") — and only then ask for the roadmap:
+
+```text
+# ...long free-chat discussion of the initiative...
+
+/task:roadmap "build the roadmap from what we just discussed"
+# Because the discussion already happened, authoring takes the HARVEST path:
+# it first prints a Decision Inventory — every decision it captured, small
+# details verbatim — and waits for you to confirm:
+#
+#   ## Roadmap Brainstorm — Decision Inventory
+#   ### Decisions locked so far
+#   1. Settings button is first in the panel
+#   2. ...
+#   ### Open forks (not yet decided)
+#   - ...
+#   accept / decline / edit
+#
+# If something you settled is missing, add it with `edit` — before the file
+# is written, not after you notice it gone a week later. On `accept`, each
+# decision is routed to a home in the file (an item's Outcomes / Acceptance
+# criteria, the spec sidecar, or Out of scope) and the roadmap is drafted.
+```
+
+Detection is automatic — no flag. A bare `/task:roadmap "add dark mode"` with no prior discussion still takes the normal cold-start brainstorm rounds.
+
 ## Autopilot via `/task:auto-roadmap`
 
 ```text
