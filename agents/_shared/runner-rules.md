@@ -26,7 +26,7 @@ When editing any rule below, **also update its source-of-truth file** — drift 
 
 When a runner fails it dumps a postmortem to the error log via the shared formatter (`skills/_lib/fail-log.sh`). Path resolution is gated on whether the workspace subfolder exists:
 
-1. **`.task-current` exists at the worktree root and `.task/workspace/<id>/` exists** (where `<id>` = `cat .task-current`) → write `.task/workspace/<id>/auto-error.log`. This is the post-open path.
+1. **The active-task pointer exists (git per-worktree dir) and `.task/workspace/<id>/` exists** (where `<id>` = `cat "$(git rev-parse --path-format=absolute --git-path task-current)"`) → write `.task/workspace/<id>/auto-error.log`. This is the post-open path.
 2. **Otherwise** (design-runner failed in Step a before `/task:design --from` landed `.task-current`) → **no on-disk postmortem**. Return the FAIL status line with the inline reason as the only record; the user reads it directly in the orchestrator's output. There is no worktree-local fallback file.
 
 `auto-roadmap-build-runner` always sees branch 1 (build-runner is only spawned after design-runner OK, so the subfolder is guaranteed). `auto-roadmap-design-runner` may hit either branch depending on where in Step a the failure occurred. `auto-roadmap-item-runner` inherits whichever branch its failing stage implies — pre-open only if its own Step 1 design-runner failed before `.task-current` landed; post-open for every later stage.

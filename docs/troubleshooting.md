@@ -25,15 +25,15 @@ Then reopen the `/` menu. If it was already installed, make sure it isn't disabl
 
 **Cause** — every skill except `/task:bootstrap` needs `.task/config/config.md`, and it hasn't been created in this project yet.
 
-**Fix** — run `/task:bootstrap` once; it writes the config. If you already ran it, you may be in a different git worktree — see "A linked worktree has no `.task/`" below.
+**Fix** — run `/task:bootstrap` once; it writes the config. If you already ran it elsewhere, see "A worktree can't find `.task/`" below.
 
 ### `.task/` shows up in `git status`
 
-**Symptom** — `.task/` or `.task-current` appears as untracked in `git status`.
+**Symptom** — `.task/` appears as untracked in `git status`.
 
 **Cause** — the local git exclusion wasn't written (e.g. `.task/` was created before bootstrap, or bootstrap ran outside a git repo).
 
-**Fix** — re-run `/task:bootstrap` (idempotent); it adds `.task` and `.task-current` to `.git/info/exclude`. The pipeline uses `.git/info/exclude`, not `.gitignore`, on purpose — the state stays invisible to teammates.
+**Fix** — re-run `/task:bootstrap` (idempotent); it adds `.task` to `.git/info/exclude`. The pipeline uses `.git/info/exclude`, not `.gitignore`, on purpose — the state stays invisible to teammates. (The active-task pointer never shows up — it lives inside git's per-worktree dir, outside the work tree.)
 
 ### `validate.sh` ends with `FAIL N error(s)`
 
@@ -43,13 +43,13 @@ Then reopen the `/` menu. If it was already installed, make sure it isn't disabl
 
 **Fix** — read the `ERROR <label>:` lines (each names the file and the problem) and fix the artifact by hand — they are plain Markdown. Re-check with `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`. A `WARN` on its own does not block.
 
-### A linked worktree has no `.task/`
+### A worktree can't find `.task/`
 
-**Symptom** — in a second git worktree, skills can't find the config or `.task-current`, or `.task` is missing.
+**Symptom** — in a second git worktree, skills stop with `config.md not found` even though the repo is bootstrapped.
 
-**Cause** — `.task/` lives in the main worktree and is git-excluded, so a fresh linked worktree doesn't inherit it.
+**Cause** — worktrees resolve the shared `.task/` through `git config task.root` (fallback `dirname(git-common-dir)`). This normally needs no setup, but the anchor can be missing (repo bootstrapped by an older version) or wrong (a bare repo whose `.task/` you put somewhere non-default).
 
-**Fix** — run `/task:bootstrap` in the linked worktree; in join-mode it symlinks `.task` → the main worktree's `.task/` and wires the exclusion. (Set up the main worktree first if it never was.)
+**Fix** — run `/task:bootstrap` from any worktree; it records `task.root` and every worktree then resolves the same `.task/`. To point the pipeline at an existing `.task/` yourself (e.g. an unusual bare-repo layout), set it directly: `git config --local task.root /abs/path/containing/dot-task` (the directory that *contains* `.task`, not `.task` itself).
 
 ### `--auto stopped: <reason>`
 

@@ -8,9 +8,9 @@
 #   validate.sh all                   — task + plan (when present) + every .task/roadmap/*.md
 #
 # For `task` and `plan`, the workspace subfolder is resolved via _lib/resolve-ws.sh:
-# $TASK_ID_OVERRIDE > positional <task-id> > .task-current. The `all` form
-# tolerates a missing .task-current and simply skips workspace validation
-# (used by the PreToolUse hook, which fires outside any active umbrella too).
+# $TASK_ID_OVERRIDE > positional <task-id> > active-task pointer (git per-worktree
+# dir). The `all` form tolerates a missing pointer and simply skips workspace
+# validation (used by the PreToolUse hook, which fires outside any active umbrella too).
 #
 # Exit codes:
 #   0 — all checks passed
@@ -331,7 +331,7 @@ shift || true
 case "$cmd" in
   task)
     require_config
-    # Resolve WS_DIR via $TASK_ID_OVERRIDE > positional > .task-current.
+    # Resolve WS_DIR via $TASK_ID_OVERRIDE > positional > active-task pointer.
     # Strict: fail if no active task is resolvable (the explicit `task` form
     # is only invoked when the caller already expects a workspace to exist).
     resolve_ws "$@" || exit 2
