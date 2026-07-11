@@ -37,7 +37,7 @@ You receive a prompt from the driver with these labelled fields:
 - `roadmap_path` — path to the roadmap file. Repo-relative or absolute.
 - `working_dir` — absolute working directory of the project (informational; the driver already `cd`'d there).
 - `is_first` — `true` when no item-runner has returned OK yet in this run (you own the first-item-only `auto.lock` write); `false` otherwise.
-- `is_last` — `true` when you are the last item to run (ship with `--full`, closing the umbrella); `false` otherwise (ship with `--next`, keeping the umbrella for the next item).
+- `is_last` — `true` when you are the last item to run (ship a bare `/task:ship` / default full close, closing the umbrella); `false` otherwise (ship with `--next`, keeping the umbrella for the next item).
 - **Run-level lock fields** (used only when `is_first: true`, written verbatim into `auto.lock`): `roadmap` (resolved path), `roadmap_mtime` (launch-time snapshot), `start_item`, `started` (launch ISO timestamp — pass through, never regenerate), `items_filter` (may be empty).
 
 ## Steps
@@ -162,7 +162,7 @@ Medium and low findings do not block. The auto-fix loop's applied edits land in 
 
 ### Step 6 — Ship (mode depends on `is_last`)
 
-Run `/task:ship`'s logic — read `${CLAUDE_PLUGIN_ROOT}/skills/ship/SKILL.md` and execute its Steps directly (same inline pattern as Step 5). The flag is the only difference between the two branches:
+Run `/task:ship`'s logic — read `${CLAUDE_PLUGIN_ROOT}/skills/ship/SKILL.md` and execute its Steps directly (same inline pattern as Step 5). The close mode is the only difference between the two branches — `--next` for a transition, a bare close (default full close) for the last item:
 
 **Branch A — `is_last: false` (per-item transition).** Pass `--next`. Ship performs commit (Steps 1–3: reads `summary.md`, composes the message per `config.md → Commit Format`, stages only project code — never `.task/*` or `.task-current`, commits) then close (`close.sh --next <slug>`, slug auto-derived from `summary.md`): auto-marks the source roadmap `### - [ ] <N>.` → `### - [x] <N>.`, archives `plan/audit/summary.md`, clears the body of `## Description` (leaving header / `Roadmap:` / `Source item:` / `.task-current` / any `## Decisions`). The auto-mark bumps the roadmap mtime; **capture the post-close mtime** so the driver can absorb the bump on its next race check:
 
@@ -173,11 +173,11 @@ POST_CLOSE_MTIME=$(bash "$CLAUDE_PLUGIN_ROOT/skills/_lib/auto-roadmap-helpers.sh
 
 Emit `POST_CLOSE_MTIME` as the `roadmap_mtime:` digest field.
 
-**Branch B — `is_last: true` (final iteration).** Pass `--full`. Pre-flight: confirm `.task/workspace/<id>/task.md` exists and the Description body is **non-empty** (implement + audit wrote it); empty → fail-stop with reason `task.md Description body empty at last-item --full ship — implement phase produced no Description content`. Do **not** pass an explicit slug (the last commit's slug describes the item, from `summary.md`, not the legacy `chore-finalize`). Ship commits as in Branch A, then `close.sh --full`: auto-marks the roadmap (Description-non-empty gates it regardless of `--full`), archives `plan/audit/summary.md` **and** `task.md`, removes the entire `.task/workspace/<id>/` subfolder (taking `auto.lock` with it) and `.task-current`. **No `roadmap_mtime:` field** in the digest — there is no next iteration.
+**Branch B — `is_last: true` (final iteration).** Bare full close (no flag). Pre-flight: confirm `.task/workspace/<id>/task.md` exists and the Description body is **non-empty** (implement + audit wrote it); empty → fail-stop with reason `task.md Description body empty at last-item full close — implement phase produced no Description content`. The slug is auto-derived from `summary.md` (there is no hand-supplied slug). Ship commits as in Branch A, then `close.sh <slug>` (default full close): auto-marks the roadmap (Description-non-empty gates it), archives `plan/audit/summary.md` **and** `task.md`, removes the entire `.task/workspace/<id>/` subfolder (taking `auto.lock` with it) and `.task-current`. **No `roadmap_mtime:` field** in the digest — there is no next iteration.
 
-Capture the umbrella `task_id` **before** the `--full` sweep removes `.task-current` — it is a required digest field either way (the driver's post-run summary needs it, and on the last item the workspace is gone).
+Capture the umbrella `task_id` **before** the full-close sweep removes `.task-current` — it is a required digest field either way (the driver's post-run summary needs it, and on the last item the workspace is gone).
 
-On any ship failure (commit refused, no diff, `summary.md` missing, close error) → fail-stop with reason `ship failed for item #<N>: <message>` (Branch A) / `ship --full failed for last item #<N>: <message>` (Branch B).
+On any ship failure (commit refused, no diff, `summary.md` missing, close error) → fail-stop with reason `ship failed for item #<N>: <message>` (Branch A) / `last-item full-close ship failed for item #<N>: <message>` (Branch B).
 
 ### Step 7 — Return the digest
 
@@ -202,15 +202,15 @@ item #<N> "<item title>"
   model:     <implement_model>
   audit:     iter <n> — <k> findings: <f> fixed, <s> skipped, <l> filtered, <p> pending
   commit:    <sha> <subject>
-  ship:      <--next|--full>
+  ship:      <--next|full>
   task_id:   <task-id>
-  roadmap_mtime: <epoch>          ← this line ONLY on --next (omit entirely on --full / last item)
-OK: item #<N> shipped (<--next|--full>) — <sha>
+  roadmap_mtime: <epoch>          ← this line ONLY on --next (omit entirely on full / last item)
+OK: item #<N> shipped (<--next|full>) — <sha>
 ```
 
-- The final `OK:` line must match `^OK: item #<N> shipped \((--next|--full)\) — [0-9a-f]{7,}$`.
-- `task_id:` is **required on every OK** — it is the driver's only source for the post-run summary once the last item's `--full` sweeps `.task-current`.
-- `roadmap_mtime:` is present **iff** ship mode was `--next`. On `--full` (last item) omit it — the driver skips the refresh.
+- The final `OK:` line must match `^OK: item #<N> shipped \((--next|full)\) — [0-9a-f]{7,}$`.
+- `task_id:` is **required on every OK** — it is the driver's only source for the post-run summary once the last item's full close sweeps `.task-current`.
+- `roadmap_mtime:` is present **iff** ship mode was `--next`. On `full` (last item) omit it — the driver skips the refresh.
 
 **Failure** (one of the two shared shapes):
 

@@ -110,7 +110,7 @@ Triggered when the **first** argument is `--from`.
 1. Resolve `<pathOrSlug>` to a repo-relative path (`.task/roadmap/<slug>.md`). Verify the file exists; otherwise — **stop and ask**.
 2. **Pick `N`:**
    - If `#<N>` was given, use it.
-   - If `#<N>` was omitted, scan the file for the **first** heading matching `^### - \[ \] [0-9]+\. (.+)$`. The captured number drives the rest of the parse. If no such heading exists — **stop** with: "All roadmap items in `<path>` are closed (or none have a `- [ ]` checkbox). Run `/task:ship --full` to drop the umbrella, or pick an item explicitly with `--from <path>#<N>`."
+   - If `#<N>` was omitted, scan the file for the **first** heading matching `^### - \[ \] [0-9]+\. (.+)$`. The captured number drives the rest of the parse. If no such heading exists — **stop** with: "All roadmap items in `<path>` are closed (or none have a `- [ ]` checkbox). Run `/task:ship` to drop the umbrella, or pick an item explicitly with `--from <path>#<N>`."
 3. Locate the heading for the chosen `N`: `### (- \[[ x~>-]\] )?<N>\. (.+)$`. Capture group 2 is the **item title**.
 4. From the heading down to the next `### ` heading or `---` boundary, locate **`**Ready description:**`** followed by a blockquote. The blockquote (lines starting with `> `) is the description body. Strip the leading `> ` from each line — that becomes `## Description`. The blockquote's sub-headings (`### Context`, `### Goal`, `### Outcomes`, `### Invariants`, optional `### Contracts`, `### Acceptance criteria`, optional `### Spec references`) are passed through unchanged. A `### Spec references` block may cite the roadmap's spec sidecar (`<slug>.spec.md §N`); copy it verbatim — design's blueprint phase reads those sections (Step 1.5 of `blueprint.md`) to ground the plan in pinned technical decisions.
 5. From the same task block, locate **`**Dependencies:**`** if present and note dependencies (informational; not auto-resolved).
@@ -144,7 +144,7 @@ If `.task-current` already exists at the worktree root when this phase runs with
 
 If any condition fails → **stop** with a specific message:
 - Description non-empty → "active subtask in progress. Run `/task:ship` first."
-- task-id mismatch / Roadmap mismatch / Roadmap line missing → "umbrella mismatch: current is `[<old-task-id>]` (Roadmap: `<old-path>`), you passed `--from <new>`. Run `/task:ship --full` first to drop the current umbrella, or pass `--from <old-path>` to continue the same umbrella."
+- task-id mismatch / Roadmap mismatch / Roadmap line missing → "umbrella mismatch: current is `[<old-task-id>]` (Roadmap: `<old-path>`), you passed `--from <new>`. Run `/task:ship` first to drop the current umbrella, or pass `--from <old-path>` to continue the same umbrella."
 
 If all conditions hold, **continuation mode** applies in Step 4: line 1, the `Roadmap:` line, and `.task-current` are not touched; only `Source item:` (and any `Modules:` / `Packages:` / `Key files:` from extra context) and the body of `## Description` are rewritten. Any `## Decisions` section stays untouched (umbrella-level, append-only).
 

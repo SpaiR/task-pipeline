@@ -1,6 +1,6 @@
 ---
 name: design
-description: 'Open a task and plan it — write the Description (quick-draft or `--idea` brainstorm), then build the implementation plan. Auto-resumes the right phase from artifact state; `--phase <open|idea|blueprint|refine>` / `--refine` override.'
+description: 'Open a task and plan it — write the Description (quick-draft or `--idea` brainstorm), then build the implementation plan. Auto-resumes the right phase from artifact state; `--phase <open|idea|blueprint|refine>` overrides.'
 disable-model-invocation: true
 user-invocable: true
 ---
@@ -12,8 +12,7 @@ Open a task, write its Description, build the implementation plan, and optionall
 - (empty) — if no task is in flight, treated as `--idea` with no context (the orchestrator asks for the idea, then opens the header and enters idea phase in architect mode). If a task is already in flight, continue with the next auto-detected phase.
 - `--idea [<free-form context>]` — explicit brainstorm over `## Description`. With no task yet: the header is written (Description left empty) and idea phase runs **architect mode** (the context, if any, seeds round 0). With an existing task whose Description is filled: idea phase runs **Socratic mode** (refinement). Mutually exclusive with `--from`, `--phase`, `--refine`.
 - `--from <roadmap>[#<N>]` — open from a roadmap file (auto-picks first un-checked item if `#<N>` omitted).
-- `--phase <open|idea|blueprint|refine>` — force a specific phase (override auto-detect).
-- `--refine` — shortcut for `--phase refine` (only valid when `plan.md` exists).
+- `--phase <open|idea|blueprint|refine>` — force a specific phase (override auto-detect). `refine` is a repair-level phase (critically review an existing `plan.md`), not part of the routine flow — see [docs/troubleshooting.md](../../docs/troubleshooting.md).
 
 **Phase companion files** live at `skills/design/phases/<phase>.md`. The orchestrator reads them and follows their instructions verbatim — they contain the full prompt for each phase. Treat each file as the authoritative contract for its phase.
 
@@ -37,7 +36,7 @@ Possible auto-detect outputs:
 - `idea` — `task.md` exists, `## Description` body empty (whitespace + HTML comments only).
 - `blueprint` — Description filled, no `plan.md`.
 - `refine-prompt` — `plan.md` exists. Orchestrator should NOT auto-enter refine. Instead, tell the user:
-  > Plan already exists at `.task/workspace/<task-id>/plan.md`. The design phase appears complete. You can start implementation, or discuss alternatives first with `/task:design --refine`. To start a different umbrella, close the current one first: `/task:ship`.
+  > Plan already exists at `.task/workspace/<task-id>/plan.md`. The design phase appears complete — next is `/task:build` to start implementation. To start a different umbrella, close the current one first: `/task:ship`. (If the plan itself needs a critical rework, `--phase refine` is a repair-level option — see docs/troubleshooting.md.)
   >
   > → Next: `/task:build`
 
@@ -68,7 +67,7 @@ After the dispatched phase completes successfully, suggest the next logical step
 - After `open` (from-roadmap mode, Description filled from roadmap) → `/task:design` again (auto-detects blueprint).
 - After `idea` (architect mode, Description just brainstormed) → `/task:design` again (auto-detects blueprint).
 - After `idea` (Socratic mode, Description refined) → `/task:design` again (auto-detects blueprint).
-- After `blueprint` → either `/task:design --refine` (optional) or `/task:build` (to start implementation).
+- After `blueprint` → `/task:build` (to start implementation).
 - After `refine` → `/task:build`.
 
 ## Forbidden

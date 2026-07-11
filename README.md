@@ -103,12 +103,12 @@ In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks
   ├─→ [/task:auto-roadmap] — optional; autopilot over an approved roadmap
   ↓                         in the current interactive session.
 /task:design  — open a task, write the Description, plan it out
-  ↓             (phase auto-detect: open(quick-draft) → blueprint; [--idea] brainstorm, [--refine] opt.)
+  ↓             (phase auto-detect: open(quick-draft) → blueprint; [--idea] brainstorm)
 /task:build [--auto] — implementation + audit with an auto-fix loop
   ↓             (phase auto-detect: implement → audit;
                  --auto — opt-in: both phases in one call)
 /task:ship [--next]  — commit + close
-                        default → full close of the umbrella task (--full is an alias)
+                        default → full close of the umbrella task
                         --next  → transition to the next subtask (task.md stays)
 ```
 
@@ -120,7 +120,7 @@ In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks
 
 ### Umbrella task vs subtask
 
-`task.md` is an **umbrella task**: a task with one `task-id` and a shared title, under which there may be several subtasks. Each `/task:design → /task:build → /task:ship` cycle is one subtask. By default `/task:ship` closes the umbrella task entirely (`--full` is a backward-compatible alias). `/task:ship --next` clears the Description and keeps the title — the next cycle starts from the same umbrella task.
+`task.md` is an **umbrella task**: a task with one `task-id` and a shared title, under which there may be several subtasks. Each `/task:design → /task:build → /task:ship` cycle is one subtask. By default `/task:ship` closes the umbrella task entirely. `/task:ship --next` clears the Description and keeps the title — the next cycle starts from the same umbrella task.
 
 ## Commands
 
@@ -129,9 +129,9 @@ In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks
 | `/task:bootstrap` | Initializes the pipeline in a project: creates `.task/config/config.md`, sets up the local git exclusion for `.task/`, and prints a short getting-started primer. Idempotent. |
 | `/task:roadmap <idea> \| --refine [<slug>]` *(opt.)* | Brainstorms an initiative roadmap → `.task/roadmap/<slug>.md` with ready-made task descriptions for `--from`. An optional sidecar `.task/roadmap/<slug>.spec.md` pins down key technical decisions (Blueprint reads them during planning). `--refine` — a parallel audit of an existing roadmap (Coverage / Decomposition / Clarity, ≤2 iterations; high → auto-applied, med/low → manual review). |
 | `/task:auto-roadmap [<roadmap>] [--next \| --from #<N> \| --items <spec>]` *(opt.)* | Autopilot over a roadmap in the current interactive Claude Code session: for each item — design → build → ship. `--next` — the first unclosed item; `--from #N` — start from item N; `--items 3-5` or `1,3-5,8` — a selection. |
-| `/task:design [<context>] [--from <path>[#<N>]] [--idea] [--phase <name>] [--refine]` | Open a task, write the Description, plan it out. Phase auto-detect (`open` → `blueprint`); `--phase` override. `--idea` — brainstorm the Description (architect from scratch / Socratic on a filled-in one). `--from <path>[#N]` — Description from a roadmap item. `--refine` — refine `plan.md`. |
+| `/task:design [<context>] [--from <path>[#<N>]] [--idea] [--phase <name>]` | Open a task, write the Description, plan it out. Phase auto-detect (`open` → `blueprint`); `--phase` override. `--idea` — brainstorm the Description (architect from scratch / Socratic on a filled-in one). `--from <path>[#N]` — Description from a roadmap item. (`--phase refine` critically reviews an existing `plan.md` — a repair-level option, see docs/troubleshooting.md.) |
 | `/task:build [--phase <name>] [--auto]` | Implementation (`implement`) + audit with bounded auto-fix (`audit`). `--auto` — both phases in one call (≤1 implement, ≤2 audit). `--phase` — override. Fixes outside `Touches` from `plan.md` are marked `Skipped: out-of-scope`. |
-| `/task:ship [--next] [<slug>]` | Commit + archiving under `.task/log/`. Default — full close: `workspace/<task-id>/` and `.task-current` are removed (`--full` is a backward-compatible alias). `--next` — `task.md` stays (Description cleared), transition to the next subtask. Auto-marks the roadmap item when `Roadmap:` + `Source item:` are present. |
+| `/task:ship [--next]` | Commit + archiving under `.task/log/`. Default — full close: `workspace/<task-id>/` and `.task-current` are removed. `--next` — `task.md` stays (Description cleared), transition to the next subtask. Auto-marks the roadmap item when `Roadmap:` + `Source item:` are present. The commit slug is always auto-derived. |
 | `validate` *(utility)* | Formal validator of artifact format. Invoked automatically. For a manual check: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" [task\|plan\|roadmap <path>\|all]`. |
 
 ## Example — a single task
@@ -151,7 +151,6 @@ In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks
 
 /task:design                                     # run again → phase=blueprint: builds plan.md with steps
 /task:design --idea                              # opt.: idea(Socratic) — refine the Description
-/task:design --refine                            # opt.: phase=refine: plan alternatives
 
 /task:build                                      # phase=implement: implement per the plan
 /task:build                                      # phase=audit: lens fanout + bounded auto-fix
@@ -160,8 +159,8 @@ In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks
 
 /task:ship                                       # slug auto-generated → e.g. feat-add-retries
                                                  # default: full close — workspace and .task-current removed
-# or an explicit slug:
-/task:ship feat-add-retries                       # the same full close with a given slug
+# or, instead of closing, keep the umbrella open for another subtask:
+/task:ship --next                                # transition to the next subtask (task.md stays)
 ```
 
 > [!NOTE]

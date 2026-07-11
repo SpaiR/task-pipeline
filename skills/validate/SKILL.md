@@ -8,7 +8,7 @@ model: inherit
 
 Validate the format of task-pipeline artifacts. This skill is a thin wrapper around `validate.sh` — it produces a structured pass/fail report so the pipeline can fail closed on malformed artifacts before a downstream skill (`/task:design`, `/task:build`, `/task:ship`) parses them and silently misbehaves. **Not user-invocable**: the bash script is dispatched directly from context scripts and the plugin's PreToolUse hook.
 
-**Input (when invoked manually via bash):** one of: `task [<task-id>]`, `plan [<task-id>]`, `roadmap <path|slug>`, `todo <path|slug>` (legacy alias), `all`. For `task` / `plan` the workspace subfolder is resolved through `_lib/resolve-ws.sh` (priority: `$TASK_ID_OVERRIDE` > positional > `.task-current`); `all` tolerates a missing `.task-current` and skips workspace validation in that case.
+**Input (when invoked manually via bash):** one of: `task [<task-id>]`, `plan [<task-id>]`, `roadmap <path|slug>`, `all`. For `task` / `plan` the workspace subfolder is resolved through `_lib/resolve-ws.sh` (priority: `$TASK_ID_OVERRIDE` > positional > `.task-current`); `all` tolerates a missing `.task-current` and skips workspace validation in that case.
 
 **Preconditions, tool tier, language:** see [docs/spec/invariants.md](../../docs/spec/invariants.md#tier-a--no-code-navigation) — bash gate in `validate.sh` itself is authoritative (the script enforces the `.task/config/config.md` precondition and exits 2 on miss). Internal utility — not user-invocable; the language pointer is informational only (validator output is fixed English by design, parser-stable).
 
@@ -19,8 +19,6 @@ Validate the format of task-pipeline artifacts. This skill is a thin wrapper aro
 | `.task/workspace/<task-id>/task.md` | line 1 matches `# [task-id] <title>`; `---` separator present; `## Description` heading present |
 | `.task/workspace/<task-id>/plan.md` | line 1 matches `# Plan: <title>`; `## Steps` present with ≥1 `### Step N:` block; each step has non-empty `Goal:` and `Touches:`; `Touches` contains no `...` placeholder; `## Verification` present; if `## Tests` is present, ≥1 `### Test N:` block must exist (`## Risks` is optional and not validated) |
 | `.task/roadmap/<slug>.md` | ≥1 `### N. <title>` heading (with optional `- [ ]`/`- [x]` checkbox); each task block has `**Ready description:**` and the English sub-headings `### Context`, `### Goal`, `### Outcomes`, `### Acceptance criteria` (mandatory contract with `/task:design --from`) |
-
-Legacy `.task/todo/<slug>.md` paths are accepted with a deprecation warning (rename `.task/todo/` → `.task/roadmap/`).
 
 ## How the script is invoked
 

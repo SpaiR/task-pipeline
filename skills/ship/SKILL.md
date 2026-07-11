@@ -10,14 +10,25 @@ Commit the completed task and close the umbrella entirely (or transition to the 
 
 **Two modes:**
 
-1. **Default — fully close the umbrella.** Commit task changes, then archive `plan.md` / `audit.md` / `summary.md` (plus `task.md`) to `.task/log/<task-id>/<N>-<slug>/`. The entire workspace subfolder `.task/workspace/<task-id>/` is removed and `.task-current` deleted. Any orchestrator state from a failed `/task:auto-roadmap` run (`auto.lock`, `auto-error.log`) is swept along with the subfolder. `--full` is accepted as a backward-compatible alias of this default.
+1. **Default — fully close the umbrella.** Commit task changes, then archive `plan.md` / `audit.md` / `summary.md` (plus `task.md`) to `.task/log/<task-id>/<N>-<slug>/`. The entire workspace subfolder `.task/workspace/<task-id>/` is removed and `.task-current` deleted. Any orchestrator state from a failed `/task:auto-roadmap` run (`auto.lock`, `auto-error.log`) is swept along with the subfolder.
 2. **`--next` — subtask transition.** Commit task changes, then archive `plan.md` / `audit.md` / `summary.md` to `.task/log/<task-id>/<N>-<slug>/`. Keep `.task/workspace/<task-id>/task.md` in place with **the body of `## Description`** cleared. `.task-current` stays. The next subtask of the same umbrella reuses both the header and any `## Decisions` below.
 
-**Input:** `$ARGUMENTS` — `[--next] [<slug>]` (`--full` accepted as an alias of the default full close). The slug is optional; if omitted, this skill generates one from `.task/workspace/<task-id>/summary.md` (primary) or `.task/workspace/<task-id>/task.md` Description (fallback). Pass an explicit slug only when you want to override the generated name.
+**Input:** `$ARGUMENTS` — `[--next]`. There is no slug argument: the commit slug is always auto-derived from `.task/workspace/<task-id>/summary.md` (primary) or `.task/workspace/<task-id>/task.md` Description (fallback).
 
 **Preconditions, tool tier, language:** see [docs/spec/invariants.md](../../docs/spec/invariants.md#tier-a--no-code-navigation) — bash gates in `commit-context.sh` (Step 1) and `close.sh` (Step 4) remain authoritative.
 
 **Precondition (hard-stop) — `.task-current` + workspace.** `.task-current` must exist at the worktree root and the subfolder it names must contain a `task.md`. If not — stop and tell the user. **`--next` mode** additionally requires non-empty `## Description` in `task.md` (something happened in the subtask). **Default mode (full close)** allows empty Description (used to drop the umbrella after the last subtask transition or after an aborted run).
+
+## Step 0: Removed-forms guard
+
+Two once-supported invocations are gone; both must fail loud, not silently misparse (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)):
+
+- If `$ARGUMENTS` contains `--full` — stop and tell the user:
+  > `--full` was removed. The default `/task:ship` already fully closes the umbrella — run `/task:ship` (no flag).
+- If `$ARGUMENTS` contains any **non-flag positional token** (anything that is not `--next`) — stop and tell the user:
+  > A hand-supplied commit slug was removed. The slug is now auto-derived from `summary.md` — run `/task:ship` (or `/task:ship --next`) with no slug.
+
+Only `--next` is a valid token. Proceed to Step 1 only when `$ARGUMENTS` is empty or exactly `--next`.
 
 ## Step 1: Gather commit context
 
@@ -65,12 +76,10 @@ EOF
 
 ## Step 4: Determine slug for close
 
-**Default path — auto-generate.** If `$ARGUMENTS` does not contain a slug, derive one yourself before calling `close.sh`. Resolve the active workspace subfolder via `<task-id>` = `cat .task-current`:
+The slug is **always** auto-derived — there is no override path. Resolve the active workspace subfolder via `<task-id>` = `cat .task-current`:
 
 1. Read `.task/workspace/<task-id>/summary.md` first (**primary source**). If it exists and conveys what the subtask did, generate the slug from it.
 2. **Only if `summary.md` is missing or insufficient** — fall back to the "Description" section in `.task/workspace/<task-id>/task.md`.
-
-**Override path.** If a slug is passed explicitly in `$ARGUMENTS` — use it as-is, do not regenerate.
 
 **Slug format:** `{type}-{1-4-words}`, kebab-case, English, where `{type}` is one of `feat`, `fix`, `chore`. Always English regardless of `config.md` → "Language" — the slug is a filesystem identifier, not user-facing text.
 
@@ -82,7 +91,7 @@ Examples:
 ## Step 5: Detect mode and run close
 
 - `--next` flag (anywhere in `$ARGUMENTS`) → subtask-transition mode.
-- Otherwise (including `--full`) → full-close mode (the default).
+- Otherwise → full-close mode (the default).
 
 Run:
 

@@ -4,7 +4,6 @@
 # Usage:
 #   validate.sh task [<task-id>]      — validate .task/workspace/<task-id>/task.md
 #   validate.sh plan [<task-id>]      — validate .task/workspace/<task-id>/plan.md
-#   validate.sh todo <path|slug>      — validate a roadmap file (legacy alias of `roadmap`)
 #   validate.sh roadmap <path|slug>   — validate a roadmap file
 #   validate.sh all                   — task + plan (when present) + every .task/roadmap/*.md
 #
@@ -53,10 +52,6 @@ while [ -L "$SRC" ]; do D=$(cd "$(dirname "$SRC")" && pwd); SRC=$(readlink "$SRC
 SCRIPT_DIR=$(cd "$(dirname "$SRC")" && pwd)
 # shellcheck source=../_lib/resolve-ws.sh
 source "$SCRIPT_DIR/../_lib/resolve-ws.sh"
-# Opt in to legacy `.task/todo/` WARN — validate.sh is the user-facing surface
-# for the deprecation message; auto-roadmap-context.sh stays silent (it calls
-# validate.sh first, so the WARN already prints exactly once).
-ROADMAP_WARN_ON_LEGACY=1
 # shellcheck source=../_lib/roadmap.sh
 source "$SCRIPT_DIR/../_lib/roadmap.sh"
 
@@ -246,17 +241,13 @@ validate_plan() {
 
 # ---------------- roadmap file ----------------
 # Resolution order is implemented in `_lib/roadmap.sh:resolve_roadmap_path`.
-# We opt in to its `ROADMAP_WARN_ON_LEGACY=1` mode at source time (above), so
-# legacy `.task/todo/<slug>(.md)` paths still resolve but emit a stderr WARN.
-# The legacy branch is kept for one release after the .task/todo/ →
-# .task/roadmap/ rename — remove in 0.2.x in lockstep with the resolver.
 
 validate_roadmap() {
   local raw="$1"
   local file
   file=$(resolve_roadmap_path "$raw")
   if [[ -z "$file" ]]; then
-    err "roadmap($raw)" "file not found (looked at $raw, $AI_DIR/roadmap/$raw(.md), $AI_DIR/todo/$raw(.md))"
+    err "roadmap($raw)" "file not found (looked at $raw, $AI_DIR/roadmap/$raw(.md))"
     return
   fi
   local label
@@ -351,7 +342,12 @@ case "$cmd" in
     resolve_ws "$@" || exit 2
     validate_plan
     ;;
-  todo|roadmap)
+  todo)
+    echo "ERROR: 'validate.sh todo' removed — use 'validate.sh roadmap <path|slug>'." >&2
+    rm -f "$MARKER_FILE"
+    exit 2
+    ;;
+  roadmap)
     require_config
     if [[ -z "${1:-}" ]]; then
       echo "ERROR usage: 'validate.sh $cmd <path|slug>' requires a path argument." >&2
@@ -371,21 +367,12 @@ case "$cmd" in
       [[ -f "$WS_DIR/task.md" ]] && validate_task
       [[ -f "$WS_DIR/plan.md" ]] && validate_plan
     fi
-    # Validate roadmap files. Prefer .task/roadmap/, fall back to legacy .task/todo/
-    # for one release so existing repos keep working before they rename.
+    # Validate roadmap files under .task/roadmap/.
     # Skip the sidecars: `<slug>.refine.md` (refine-log) and `<slug>.spec.md`
     # (spec sidecar) live in the same directory but are NOT roadmaps — they
     # carry no `### - [ ] N.` task headings and would fail validation spuriously.
     if [[ -d "$AI_DIR/roadmap" ]]; then
       for f in "$AI_DIR/roadmap"/*.md; do
-        [[ -f "$f" ]] || continue
-        case "$f" in *.refine.md|*.spec.md) continue ;; esac
-        validate_roadmap "$f"
-      done
-    fi
-    if [[ -d "$AI_DIR/todo" ]]; then
-      echo "WARN roadmap(.task/todo/): legacy directory still present. Rename .task/todo/ → .task/roadmap/." >&2
-      for f in "$AI_DIR/todo"/*.md; do
         [[ -f "$f" ]] || continue
         case "$f" in *.refine.md|*.spec.md) continue ;; esac
         validate_roadmap "$f"
@@ -398,7 +385,6 @@ Usage:
   validate.sh task [<task-id>]      — validate .task/workspace/<task-id>/task.md
   validate.sh plan [<task-id>]      — validate .task/workspace/<task-id>/plan.md
   validate.sh roadmap <path|slug>   — validate a roadmap file
-  validate.sh todo <path|slug>      — legacy alias of `roadmap`
   validate.sh all                   — task + plan (when present) + every .task/roadmap/*.md
 
 For `task` / `plan`, the workspace subfolder is resolved via:

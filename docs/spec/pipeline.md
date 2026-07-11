@@ -12,9 +12,9 @@
   ↓                                     │                    model split: design/audit/ship use
 /task:build [--auto]                    │                    session model, implement uses
   ↓                                     │                    plan.md → Implement-Model; session open)
-/task:ship [--full]                     │                Last item ships with /task:ship --full
-                                        │                directly (slug from summary.md); no
-                                        │                separate chore-finalize commit.
+/task:ship [--next]                     │                Last item ships a bare /task:ship
+                                        │                (default full close, slug from
+                                        │                summary.md); no separate finalize commit.
                                         │                /task:build --auto chains both phases.
 ```
 
@@ -27,7 +27,7 @@ The three operational skills (`design`, `build`, `ship`) auto-detect their curre
 - `open` — fresh task or roadmap continuation. Auto-detected when no `.task-current` or no `task.md`. In manual mode (no `--from`), Step 2a writes `## Description` via **quick-draft** (paraphrase of the provided context into `### Problem` / `### Outcome` / `### Scope` / `### Constraints`) for any non-empty **paraphrasable** context — a filled `task.md` in one call. Quick-draft is skipped (Description left empty) on two paths: `--idea` (explicit opt-out → orchestrator continues into the idea phase, architect, in the same call) and input with no prose to paraphrase (e.g. a bare ticket id → next `/task:design` enters the idea phase). An empty `/task:design` with no task in flight is treated as `--idea`.
 - `idea` — brainstorm / refine `## Description`. Reached via `--idea`, an empty `/task:design` call with no task in flight (orchestrator opens a header-only umbrella first), or auto-detect when `task.md` exists with empty Description (post-`/task:ship` continuation slot). Mode is a function of Description content: empty → architect-style brainstorm; non-empty → Socratic refinement.
 - `blueprint` — MCP discovery + plan composition. Auto-detected when Description is filled and `plan.md` doesn't exist.
-- `refine` — critically review the plan, propose alternatives. **Never auto-entered** — only on explicit `--phase refine` or `--refine` shorthand.
+- `refine` — critically review the plan, propose alternatives. A **repair-level** phase, off the everyday surface: **never auto-entered** and never advertised as a routine step, reachable only on explicit `--phase refine` (or the `--refine` shorthand). See [docs/troubleshooting.md](../troubleshooting.md).
 
 `/task:build` covers 2 phases — `implement`, `audit`:
 
@@ -38,7 +38,7 @@ Default semantics: one phase per invocation, then a chain hint. `--auto` (opt-in
 
 `/task:ship` has two modes:
 
-- **default** (umbrella close) — commit, then archive everything including `task.md`; remove `.task/workspace/<task-id>/` and `.task-current`. `--full` is accepted as a backward-compatible alias of this default.
+- **default** (umbrella close) — commit, then archive everything including `task.md`; remove `.task/workspace/<task-id>/` and `.task-current`.
 - **`--next`** (subtask transition) — commit, then archive per-subtask artifacts; keep `task.md` with Description body cleared, ready for the next subtask of the same umbrella.
 
 ## Off-cycle skills
@@ -54,16 +54,16 @@ Drives an approved roadmap through the full pipeline item-by-item. The common sh
 `/task:auto-roadmap` runs the per-item loop **inside the user's interactive Claude Code session**, but each item's cycle runs in an isolated `auto-roadmap-item-runner` subagent. The runtime cascades into three observable properties: per-stage model split (see below), foreground-only, and per-item observability via the item-runner's returned digest (plus `.task/log/<id>/` + `git`) rather than raw inline output.
 
 - **`skills/auto-roadmap/SKILL.md` (the driver) owns run-level orchestration**, Steps 0–4: hard-stop preconditions (three gates), wizard (roadmap / `--next` / `--from #N` / `--items <spec>`), the per-item mtime race check + status re-check, one `auto-roadmap-item-runner` spawn per item, digest routing, umbrella close accounting. Step 2 captures the run's parameters in main-thread memory only; the first on-disk record lands when the first item-runner writes `workspace/<task-id>/auto.lock`. The driver never spawns design/build runners or lens auditors and never runs `/task:build` / `/task:ship` itself.
-- **One `auto-roadmap-item-runner` per item, full cycle.** `agents/auto-roadmap-item-runner.md` runs design → implement → audit → ship in its own context and returns a compact report-card digest whose last line is `OK: item #<N> shipped (--next|--full) — <sha>` or `FAIL at <stage>: ...`. Inside it, as sub-subagents:
+- **One `auto-roadmap-item-runner` per item, full cycle.** `agents/auto-roadmap-item-runner.md` runs design → implement → audit → ship in its own context and returns a compact report-card digest whose last line is `OK: item #<N> shipped (--next|full) — <sha>` or `FAIL at <stage>: ...`. Inside it, as sub-subagents:
   - `auto-roadmap-design-runner` — design's open + blueprint phases; returns `OK: … — plan.md ready, awaiting implement`. Inherits the item-runner's (parent-session) model.
   - `auto-roadmap-build-runner` — build's implement phase; returns `OK: … — diff uncommitted, ready for audit`. Spawned with `Agent.model` override set to `plan.md → Implement-Model:` (`opus|sonnet|haiku`).
   - `audit-{reuse,simplicity,clarity}-auditor` — the three audit lenses, fanned out by the item-runner itself (nested subagent spawning is supported).
 - **The item-runner runs `/task:build` audit phase + `/task:ship` itself** after build-runner OK. "Inline" = the item-runner reads each skill's `SKILL.md` (and relevant `phases/<phase>.md` companion) and executes its Steps directly — see [`invariants.md` § `/task:auto-roadmap`](invariants.md). Build's audit Step 2b fans out to `audit-{reuse,simplicity,clarity}-auditor` (the item-runner can spawn them — it is one level up from the leaf lenses); ship's commit step reads the uncommitted diff the build-runner produced; ship's close step auto-marks the roadmap item and clears Description for the next iteration.
-- **Single sentinel — per-umbrella lifecycle.** Only one autopilot file exists on disk: `workspace/<task-id>/auto.lock` (with `orchestrator=auto-roadmap`), written by the **first item-runner** (its Step 2) after its design-runner lands `.task-current` and the workspace subfolder. It is both the launch-time snapshot of the run's parameters and the cross-worktree mutex — Step 0 gate 3 scans `workspace/*/auto.lock` and refuses on any match. Clean finish removes the sentinel with the workspace subfolder (via the **last** item-runner's `--full` ship — no separate `chore-finalize` commit).
+- **Single sentinel — per-umbrella lifecycle.** Only one autopilot file exists on disk: `workspace/<task-id>/auto.lock` (with `orchestrator=auto-roadmap`), written by the **first item-runner** (its Step 2) after its design-runner lands `.task-current` and the workspace subfolder. It is both the launch-time snapshot of the run's parameters and the cross-worktree mutex — Step 0 gate 3 scans `workspace/*/auto.lock` and refuses on any match. Clean finish removes the sentinel with the workspace subfolder (via the **last** item-runner's bare full-close ship — no separate finalize commit).
 - **Per-stage model split.** The item-runner runs under the parent-session model (user sets it via `/model` before invoking) — covering design (via the design-runner it spawns, which inherits its model), audit orchestration, and ship. Implement runs under each item's `plan.md → Implement-Model:` (`opus|sonnet|haiku`), passed by the item-runner as an `Agent.model` override when spawning `auto-roadmap-build-runner`. The three audit lens auditors pin `model: sonnet` in their own frontmatter — they do **not** inherit. To force a specific implement model, edit `Implement-Model:` in `plan.md` (or adjust the blueprint rubric); to change the lens-auditor model, edit the agents' frontmatter.
 - **Item count is unbounded; context budget is much less of a constraint than before.** Because each item's diff bundle + lens results live only in the disposable item-runner context — the driver accumulates just one compact digest per item — the old ~15 (Sonnet 200k) / ~25 (Opus 1M) auto-compact ceiling is greatly relaxed; a long run is now bounded by wall-clock, not the driver's context. No hard cap is enforced; slice with `--items <range>` if you still want to bound a run.
 - **Skips design's idea + refine phases always** — curated `Ready description:` (Context / Goal / Outcomes / Acceptance criteria) on each roadmap item is sufficient; Socratic refinement is unnecessary and refine requires a human in the loop.
-- **Recovery procedure.** On failure (triggers and postmortem path in [auto-roadmap.md § Failure protocol](auto-roadmap.md#failure-protocol--fail-stop-no-rollback)): manually inspect postmortem; run `/task:ship --full chore-finalize` to sweep the partial umbrella. Optionally `/task:auto-roadmap <roadmap> --from #<N>` to retry from the failed item.
+- **Recovery procedure.** On failure (triggers and postmortem path in [auto-roadmap.md § Failure protocol](auto-roadmap.md#failure-protocol--fail-stop-no-rollback)): manually inspect postmortem; run `/task:ship` (default full close) to sweep the partial umbrella. Optionally `/task:auto-roadmap <roadmap> --from #<N>` to retry from the failed item.
 
 ## Universal precondition
 

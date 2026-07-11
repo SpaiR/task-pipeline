@@ -41,15 +41,15 @@ set_workspace_root
 # --- Precondition: no active umbrella in this worktree ---
 # /task:auto-roadmap is forward-only — an existing .task-current means a
 # mid-flight umbrella (manual or from a prior failed run) that auto-roadmap must
-# not silently overwrite. Resume = user's manual job (/task:ship --full).
+# not silently overwrite. Resume = user's manual job (/task:ship).
 # `.task-current` sits at the project root beside `.task` (never symlinked);
 # resolve it off the discovered root, not cwd, so a drifted shell still sees it.
 TASK_CURRENT="$(dirname "$AI_DIR")/.task-current"
 if [[ -f "$TASK_CURRENT" ]]; then
   CURRENT=$(head -n 1 "$TASK_CURRENT" | tr -d '[:space:]')
   echo "ERROR: .task-current exists at the worktree root (points to '$CURRENT') — auto-roadmap is not for resume." >&2
-  echo "  Either run /task:ship (default) to transition the current subtask," >&2
-  echo "  or /task:ship --full to drop the umbrella entirely. Then rerun /task:auto-roadmap." >&2
+  echo "  Either run /task:ship --next to transition the current subtask," >&2
+  echo "  or /task:ship to drop the umbrella entirely. Then rerun /task:auto-roadmap." >&2
   exit 1
 fi
 
@@ -68,7 +68,7 @@ if (( ${#STALE_LOCKS[@]} > 0 )); then
   echo "ERROR: stale auto.lock present in the workspace:" >&2
   for l in "${STALE_LOCKS[@]}"; do echo "  $l" >&2; done
   echo "  A prior /task:auto-roadmap run was aborted (or another worktree owns it)." >&2
-  echo "  If you are sure no run is active, run /task:ship --full to clean up the corresponding umbrella, or remove the sentinel manually." >&2
+  echo "  If you are sure no run is active, run /task:ship to clean up the corresponding umbrella, or remove the sentinel manually." >&2
   exit 1
 fi
 
@@ -130,10 +130,9 @@ if [[ -x "$VALIDATOR" ]]; then
 fi
 
 # --- Resolve roadmap path (shared with validate.sh) ---
-# WARN-on-legacy stays silent; validate.sh (invoked above) already surfaces it.
 ROADMAP_PATH=$(resolve_roadmap_path "$ROADMAP_ARG")
 if [[ -z "$ROADMAP_PATH" ]]; then
-  echo "ERROR: roadmap '$ROADMAP_ARG' not found (looked at $ROADMAP_ARG, $AI_DIR/roadmap/$ROADMAP_ARG(.md), $AI_DIR/todo/$ROADMAP_ARG(.md))." >&2
+  echo "ERROR: roadmap '$ROADMAP_ARG' not found (looked at $ROADMAP_ARG, $AI_DIR/roadmap/$ROADMAP_ARG(.md))." >&2
   exit 1
 fi
 
