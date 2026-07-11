@@ -51,7 +51,61 @@ Build a coarse mental model of the initiative's surface in the project. Limit yo
 
 Do not open source files. Stop as soon as you can name: the stack, the top-level modules the initiative touches, the documented systems it builds on, the obvious extension points. If the scan starts to feel like investigation — stop; this is a roadmap, not a plan.
 
-### Step 3: First brainstorm round (architect mode)
+### Step 3: First brainstorm round — cold start or harvest
+
+**Branch first: is this a cold start or a harvest?** The rest of the pipeline downstream is written from the decisions this brainstorm settles — so the load-bearing question is *where those decisions come from*.
+
+- **Harvest** — the current conversation, **before** this `/task:roadmap` call, already holds a substantive design discussion of **this same initiative**: multiple exchanges that settled concrete decisions (including small ones), such that you can already point to several locked details from earlier turns. Tells: the request refers back to the conversation ("build a roadmap from what we discussed", "собери roadmap по итогам обсуждения"), or `$ARGUMENTS` reads as a summary/handle for that prior discussion rather than a fresh standalone idea. → Run the **harvest sub-step** below instead of the cold-start round.
+- **Cold start** — the call opens on a rough one-to-few-line description with no prior initiative-specific discussion in context. → Output Round 1 in the architect-mode format below (unchanged).
+
+**On the fence between "substantive" and "thin," prefer harvest.** A false-positive costs one extra confirmation round; a false-negative is the silent-detail-loss bug this branch exists to prevent. A single sentence with no prior back-and-forth is **never** harvest — it is cold start (or the too-small redirect).
+
+#### Step 3H: Harvest sub-step (prior-discussion path)
+
+The prior discussion happened *outside* the skill, so its decisions live only in conversation memory — and memory is exactly what drops small, explicitly-settled details when the file is drafted from a summary. Before drafting anything, surface every captured decision as an explicit inventory and have the user confirm it. This is an **input confirmation** (the decisions the file will be built *from*) — **not** a preview of the drafted file. It fires here, before Step 5 drafts; it does **not** replace Step 7's write-directly rule and never shows the drafted file body.
+
+Comb the prior conversation and output this block (heading skeleton English; prose in `config.md` language; chat-only — **never written to any file**):
+
+```
+## Roadmap Brainstorm — Decision Inventory
+
+{One line, config language: I'm building this roadmap from our earlier
+discussion. Before I write the file, here is every decision I captured —
+confirm nothing has dropped.}
+
+### Decisions locked so far
+1. {one locked decision, stated at full specificity — small UI / detail
+   decisions included verbatim, e.g. "the button is first in the panel"}
+2. {...}
+
+### Open forks (not yet decided)
+- {unresolved question left by the discussion}
+- {...}
+
+### Coverage caveat
+{Include ONLY when part of the discussion is out of context — see below.
+Omit the whole heading when the entire discussion is visible.}
+
+accept / decline / edit
+```
+
+Rules for this block:
+
+- **List decisions at full specificity, small ones included** — small UI / detail decisions are precisely what a summary drops, so they must appear verbatim. Do not collapse or generalize them.
+- Present the canonical `accept / decline / edit` prompt line and follow the grammar in [`docs/spec/invariants.md § Interaction conventions (b)`](../../docs/spec/invariants.md#b-choice-grammar--accept--decline--edit) — do not restate the grammar here. Per-instance consequences:
+  - **accept** → the inventory is complete; proceed to Step 5 (drafting) — or to Step 4 first if open forks remain (see routing below).
+  - **decline** → you have misread the discussion; ask the user to restate the initiative and rebuild the inventory. No file is written.
+  - **edit** → the user adds a missing decision, corrects one, or moves an item between *locked* and *open*; then proceed as for **accept**.
+- **Coverage caveat (compaction honesty).** Include the `### Coverage caveat` block **only** when you have reason to believe the discussion was truncated or summarized out of context (you recall the topic but not the specific turns, or the conversation is very long). Omit it when the whole discussion is visible — a false alarm erodes trust. Wording (config language): "part of our earlier discussion is no longer in my context (it was long / has been summarized). This inventory covers what I can still see — check especially for decisions made early on, and add anything I've lost via **edit**." This turns an invisible partial-memory failure into a visible, correctable one at the moment the user can still fix it.
+
+**After the inventory is confirmed, route on remaining open forks:**
+
+- **Load-bearing forks still open** → continue into Step 4 rounds, narrowed to those forks only. Do **not** re-stage decomposition options for a decomposition the user already chose in chat.
+- **Discussion already settled decomposition and tasks** → skip straight to Step 5 (draft).
+
+The Decision Inventory is a **confirmation** round, not a decomposition round — the "always propose 2–3 decomposition options" rule and the "single-direction monologue" forbidden apply to *decomposition* rounds only; the inventory is exempt (exactly like Step 4's final anchor sign-off). It does **not** replace or skip the slug-collision precondition (checked at draft/save) or the too-small precondition (a long discussion that decomposes to a single task still redirects to design's idea phase).
+
+#### Step 3C: Cold-start round (architect mode)
 
 Output the first round in this format:
 
@@ -105,13 +159,27 @@ Rules for this output:
 
 Wait for the user, then continue with `Round N` (same structure, narrowed to the fork in focus). Typical progression: phase boundaries → task decomposition → dependencies/scope boundaries → self-contained-description check. Stop when **any** holds: user says "fix it" / "write the roadmap" / "that's enough" / equivalent; you can write the full file (phases, tasks-per-phase, dependencies, ready descriptions covering Goal / Outcomes / Invariants / AC); or a new round would only restate prior conclusions. Typical depth **3–6 rounds**; past 6 means the initiative is too big — say so and suggest splitting.
 
-**Track technical anchors as you iterate.** The behavioral discipline (below) strips project-specific implementation detail from the roadmap proper — but a brainstorm legitimately surfaces *load-bearing technical decisions* (a chosen protocol/algorithm, a cross-cutting data shape, a "we picked X over Y because…" with reasoning that would not survive re-derivation). Keep a running mental list of these. They do **not** go into the behavioral item bodies; they go into the optional spec sidecar (Step 5). In the **final** round, before writing, name the anchors you intend to pin in `<slug>.spec.md` so the user can confirm or correct them — this is the skill's own decision to create a spec, surfaced for sign-off, not a separate prompt. If no genuine anchors accumulated, say so and create no sidecar.
+**Track decisions as you iterate — not in your head.** A cold-start brainstorm surfaces two kinds of settled decision, and both are load-bearing:
+
+- **Behavioral decisions** — observable properties the user locked in during the rounds (including small UI / detail decisions, e.g. "the button is first in the panel"). These belong in item bodies (`### Outcomes` / `### Acceptance criteria`).
+- **Technical anchors** — *load-bearing technical decisions* the behavioral discipline (below) strips from the roadmap proper (a chosen protocol/algorithm, a cross-cutting data shape, a "we picked X over Y because…" with reasoning that would not survive re-derivation). These go into the optional spec sidecar (Step 5), never into behavioral item bodies.
+
+Keep an explicit list of **both** as you iterate — do not rely on memory across rounds, which is what drops the small decisions. In the **final** round, before writing, reprint that list (locked behavioral decisions **and** the anchors you intend to pin in `<slug>.spec.md`) and have the user confirm it using the same `accept / decline / edit` grammar as the harvest inventory ([`docs/spec/invariants.md § Interaction conventions (b)`](../../docs/spec/invariants.md#b-choice-grammar--accept--decline--edit)). This is the cold-start twin of Step 3H's harvest inventory — both paths converge on exactly **one** confirmed decision list before drafting, harvest at entry and cold start at exit. It is the skill's own decision to create a spec, surfaced for sign-off, not a separate prompt. If no genuine anchors accumulated, say so and create no sidecar.
 
 **Exception:** topics the user explicitly told you to skip or ignore stay skipped — do not raise them again and do not bake them into the file.
 
 ### Step 5: Draft the roadmap
 
 Once iteration ends, draft the full file. The structure is fixed (the entire pipeline downstream depends on it). See "Output format" below.
+
+**Route every confirmed decision to a home.** Whether the decisions came from Step 3H's harvest inventory or Step 4's final-round sign-off, each one must land somewhere concrete in the drafted file — this is the traceability gate that stops small settled details from evaporating. For each confirmed decision:
+
+- **Observable behavior / user-facing effect** (e.g. "the button is first in the panel") → the relevant item's `### Outcomes`, or `### Acceptance criteria` when it is a testable assertion. This is where a UI / detail decision belongs — it is an observable property, not a symbol name, so it respects behavioral discipline.
+- **Cross-item technical decision** that passes the spec-sidecar boundary test (blueprint re-deriving freely could pick differently **and** that divergence would break cross-item consistency) → a `## N.` section in `<slug>.spec.md`, cited from each steered item via `### Spec references`.
+- **Scope exclusion** → a `## Out of scope` entry, with its reason.
+- **None of the above** → drop it **only** with a one-line reason surfaced to the user in chat — never a silent omission.
+
+A **local single-item UI / detail decision FAILS the sidecar boundary test** (it is local to one item, no cross-item consistency at stake) and must go to `### Outcomes` / `### Acceptance criteria`, not the sidecar. If routing a decision would require naming a project-specific file/symbol in `### Outcomes` / `### Goal` / `### Invariants` / `### Contracts`, restate it as the observable effect (what a user / reader would see) — the same behavioral-discipline rule as everywhere else.
 
 **Derive `Size` and `Class` mechanically — never ask the user for either.** Both are computed while drafting, not deliberated:
 
@@ -140,6 +208,7 @@ This is the **pre-save integrity gate** — the checklist you run and fix inline
 6. **Dependency consistency:** Each task's `**Dependencies:**` line cites task numbers that exist elsewhere in the file. No dangling references.
 7. **Slug uniqueness within file:** Each task heading produces a unique kebab-case slug (used by `/task:design --from <file>#<slug>`).
 8. **Spec sidecar integrity (only if a sidecar was drafted):** every `<slug>.spec.md §N` cited by an item resolves to an existing `## N.` section in the sidecar; every sidecar section is referenced by at least one item (no orphan decisions); each section is a load-bearing *anchor* (passes the boundary test), not a per-task implementation plan; no placeholders inside the sidecar.
+9. **Inventory routing (when a decision list was confirmed — harvest at Step 3H or the cold-start sign-off at Step 4):** every confirmed decision resolves to a concrete home — an item's `### Outcomes` / `### Acceptance criteria`, a `## Out of scope` entry, or a `<slug>.spec.md §N` section with a live `### Spec references` citation — **or** was explicitly rejected with a reason stated to the user. No confirmed decision is silently absent from the file. (A cold-start run that reached no confirmed list has nothing to check — skip.)
 
 If you find issues — fix them inline before saving. This inline fixing is drafting hygiene against a not-yet-written file — distinct from, and not in conflict with, the report-only light quality pass added in Step 8, which runs after Save and never edits the saved file.
 
@@ -360,7 +429,7 @@ Language: structural labels (`## N.`, `**Decision:**`, `**Rationale:**`, `**Cons
 - Plan implementation details (per-task file lists with line numbers, function signatures, code blocks > 5 lines) — that belongs to design's blueprint.
 - Modify any file other than `.task/roadmap/<slug>.md`, (brainstorm mode, optional) the spec sidecar `.task/roadmap/<slug>.spec.md`, and (refine mode only) the sidecar `.task/roadmap/<slug>.refine.md`.
 - Auto-check / auto-uncheck task checkboxes (brainstorm creates new files; refine rewrites item bodies but never flips `- [ ]` → `- [x]` — that is `/task:ship`'s exclusive responsibility).
-- Single-direction monologue (brainstorm) — every round must offer ≥ 2 decomposition options or explicitly justify why only one is viable.
+- Single-direction monologue (brainstorm) — every **decomposition** round must offer ≥ 2 decomposition options or explicitly justify why only one is viable. (The Step 3H harvest Decision Inventory and Step 4's final-round sign-off are *confirmation* rounds, not decomposition rounds — exempt.)
 - Generic risks ("watch out for bugs", "consider edge cases") — risks must be specific to the initiative and project.
 - Multi-initiative roadmap — one initiative per file; if the idea spans unrelated initiatives, split and pick one for this run.
 - Persist topics the user explicitly asked to skip; placeholders (`TBD`, `TODO`, `fill in`, `???`) anywhere.
