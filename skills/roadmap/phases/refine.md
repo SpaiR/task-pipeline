@@ -142,11 +142,11 @@ Print to the user (in `config.md` Language):
   Low:   <count> pending fix (see log)
 
 Open the refine log to review med/low findings; apply them by hand or
-re-run /task:roadmap --refine after editing.
-→ Next: /task:design --from <roadmap path>#<N>
+run the refine pass again after editing (see docs/troubleshooting.md).
+→ Next: /task:auto-roadmap   (or /task:design to pick up items one at a time)
 ```
 
-End with the canonical next-step footer — the final `→ Next:` line above (per [`docs/spec/invariants.md § Interaction conventions`](../../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)), naming the first task's `--from` command once the roadmap is ready. The `<terminal status>` placeholder still carries the parser-stable `--refine stopped: …` string unchanged. Then stop. Do **not** chain into brainstorm mode or any other skill.
+End with the canonical next-step footer — the final `→ Next:` line above (per [`docs/spec/invariants.md § Interaction conventions`](../../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)) — **flag-free** for the user (`/task:auto-roadmap` or `/task:design`). The `<terminal status>` placeholder still carries the parser-stable `--refine stopped: …` string unchanged. Then stop. Do **not** chain into brainstorm mode or any other skill.
 
 ## Forbidden (refine mode)
 

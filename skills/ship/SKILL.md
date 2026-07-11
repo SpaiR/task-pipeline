@@ -1,6 +1,6 @@
 ---
 name: ship
-description: 'Commit the change and close the task — interactive ship proposes an inferred close (transition vs full close) from remaining work, confirmed once; `--next` forces transition. Slug auto-derived from summary.'
+description: 'Commit the change and close the task — interactive ship proposes an inferred close (transition vs full close) from remaining work, confirmed once. Slug auto-derived from summary.'
 disable-model-invocation: true
 user-invocable: true
 model: haiku

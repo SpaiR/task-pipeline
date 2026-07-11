@@ -1,6 +1,6 @@
 ---
 name: roadmap
-description: 'Brainstorm a multi-item roadmap for a large initiative into `.task/roadmap/<slug>.md`, with task descriptions ready for `/task:design --from`. Authoring closes with a light three-lens self-check that can escalate to `--refine` inline. `--refine` runs a parallel three-lens audit over an existing roadmap.'
+description: 'Brainstorm a multi-item roadmap for a large initiative into `.task/roadmap/<slug>.md`, with task descriptions ready to pick up in `/task:design`. Authoring closes with a light three-lens self-check that can escalate to a deeper refine pass inline.'
 disable-model-invocation: true
 user-invocable: true
 ---
@@ -175,7 +175,7 @@ After Save, close the authoring flow with an automatic, **report-only** light qu
 - If a spec sidecar was written, print its path too and note that blueprint will read it for items carrying `### Spec references`.
 - One-line summary: "*N* tasks across *M* phases. Recommended order: 1 → 2 → 4 → 3 → 5 …".
 - Print the Step 8 light-quality-check findings summary (or "clean / minor only") and, if an inline `--refine` ran, note that it completed and where its findings live (`.task/roadmap/<slug>.refine.md`).
-- End with the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)), naming the first task's `--from` command, where `<N>` is the recommended starting point: `→ Next: \`/task:design --from .task/roadmap/<slug>.md#<N>\``.
+- End with the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)) — flag-free: `→ Next: \`/task:auto-roadmap\`` (run the whole roadmap on autopilot) or `\`/task:design\`` (pick up items one at a time — its entry fork offers "open from a roadmap"). Do not print a `--from` command to the user; `/task:auto-roadmap` remains the surface that documents flags.
 
 ## Output contract
 

@@ -7,18 +7,20 @@ A linear task workflow for Claude Code: from intake to commit, through explicit 
 ![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-8A2BE2)
 
 ```text
-/task:bootstrap                          # once per project (or auto-runs on 1st design/roadmap)
+/task:bootstrap              # once per project (or auto-runs on 1st design/roadmap)
   ↓
-[/task:roadmap [--refine]]               ← optional: roadmap for a large initiative
+[/task:roadmap]              ← optional: roadmap for a large initiative
   ↓
-  ├─ [/task:auto-roadmap] ──┐            ← optional: autopilot over an approved roadmap
-  ↓                          │
-/task:design  [--from …]     │           plan it out
-  ↓                          │
-/task:build   [--auto]       │           implement + audit
-  ↓                          │
-/task:ship    [--next]  ─────┘           commit + close
+  ├─ [/task:auto-roadmap] ─┐ ← optional: autopilot over an approved roadmap
+  ↓                         │
+/task:design                │  open + plan — walks you through with a question at each step
+  ↓                         │
+/task:build                 │  implement + audit
+  ↓                         │
+/task:ship  ────────────────┘  commit + close
 ```
+
+Just run the bare commands — the pipeline asks what to do next at each step (like plan mode), so there are no flags to remember. Power-user flags still exist as shortcuts and escape hatches; they're documented in [docs/troubleshooting.md](docs/troubleshooting.md) rather than here.
 
 ## Quickstart
 
@@ -27,13 +29,12 @@ A linear task workflow for Claude Code: from intake to commit, through explicit 
 /plugin install task@task-pipeline
 
 /task:bootstrap                              # once per project (optional — 1st design/roadmap auto-runs it)
-/task:design "fix the flaky retry logic"     # opens the task + writes the Description
-/task:design                                 # run again → builds the plan
-/task:build --auto                           # implement + audit
-/task:ship                                   # commit + close
+/task:design "fix the flaky retry logic"     # opens the task, then walks you through
+                                             # draft → plan → implement → audit → ship,
+                                             # asking before each step (answer "Stop" to pause)
 ```
 
-`design → build → ship` is the whole core; everything else (`roadmap`, `auto-roadmap`, and the flags) is optional.
+That single `/task:design` call carries the whole cycle by asking a question at each phase boundary — no flags, no re-typing. Stop at any question to pause; run the bare command again to resume from where you left off. `design → build → ship` is the whole core; `roadmap` and `auto-roadmap` are optional. Power-user flags are hidden by default — see [docs/troubleshooting.md](docs/troubleshooting.md).
 
 ## Why
 
@@ -97,22 +98,19 @@ In a new project you don't have to run setup by hand first: the first `/task:des
 ```text
 /task:bootstrap  — once per project (or auto-runs on 1st design/roadmap); creates .task/config/config.md
   ↓
-[/task:roadmap [--refine]]  — optional; roadmap for a large initiative → .task/roadmap/<slug>.md
-  ↓                          --refine: parallel audit of an existing roadmap
-                              (Coverage / Decomposition / Clarity, ≤2 iterations)
+[/task:roadmap]  — optional; roadmap for a large initiative → .task/roadmap/<slug>.md
+  ↓
   ├─→ [/task:auto-roadmap] — optional; autopilot over an approved roadmap
   ↓                         in the current interactive session.
 /task:design  — open a task, write the Description, plan it out
-  ↓             (phase auto-detect: open(quick-draft) → blueprint; [--idea] brainstorm)
-/task:build [--auto] — implementation + audit with an auto-fix loop
-  ↓             (phase auto-detect: implement → audit;
-                 --auto — opt-in: both phases in one call)
-/task:ship [--next]  — commit + close
-                        default → full close of the umbrella task
-                        --next  → transition to the next subtask (task.md stays)
+  ↓             (asks how to start, then walks open → plan with a question at each step)
+/task:build   — implementation + audit with an auto-fix loop
+  ↓             (asks before advancing implement → audit)
+/task:ship    — commit + close
+                (infers full-close vs transition-to-next-subtask and proposes it)
 ```
 
-**Re-entry semantics:** `/task:design` and `/task:build` look at the state of `.task/workspace/<task-id>/` and automatically resume from the right phase. Override with `--phase <open|idea|blueprint|refine|implement|audit>`. `/task:build` additionally accepts `--auto` (opt-in one-shot: runs `implement → audit` in a single call, mutually exclusive with `--phase`).
+**Re-entry semantics:** `/task:design` and `/task:build` look at the state of `.task/workspace/<task-id>/` and automatically resume from the right phase — you just run the bare command and answer the questions. If a phase was auto-detected wrong, or you need to force a specific one, that's what the advanced `--phase` escape hatch is for — see [docs/troubleshooting.md](docs/troubleshooting.md).
 
 **Next-step footer:** every core command ends its output with a single copy-pasteable `→ Next: <command>` line naming the exact next step (or `→ Done.` when the flow is complete), so you never have to remember which command comes next — just paste the line. The convention is defined once in [`docs/spec/invariants.md § Interaction conventions`](docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar).
 
@@ -120,18 +118,18 @@ In a new project you don't have to run setup by hand first: the first `/task:des
 
 ### Umbrella task vs subtask
 
-`task.md` is an **umbrella task**: a task with one `task-id` and a shared title, under which there may be several subtasks. Each `/task:design → /task:build → /task:ship` cycle is one subtask. Interactive `/task:ship` **proposes** close-or-transition based on whether pending work remains and acts on one confirmation — you can flip the proposal there. A full close ends the umbrella task entirely; a transition clears the Description and keeps the title, so the next cycle starts from the same umbrella task. `/task:ship --next` forces the transition without inferring. (Under `/task:auto-roadmap` the mode is chosen by the autopilot, not proposed interactively.)
+`task.md` is an **umbrella task**: a task with one `task-id` and a shared title, under which there may be several subtasks. Each `/task:design → /task:build → /task:ship` cycle is one subtask. Interactive `/task:ship` **proposes** close-or-transition based on whether pending work remains and acts on one confirmation — you can flip the proposal there, so you never have to name the mode yourself. A full close ends the umbrella task entirely; a transition clears the Description and keeps the title, so the next cycle starts from the same umbrella task. (Under `/task:auto-roadmap` the mode is chosen by the autopilot, not proposed interactively.)
 
 ## Commands
 
 | Command | In brief |
 |--------|--------|
 | `/task:bootstrap` | Initializes the pipeline in a project: creates `.task/config/config.md`, sets up the local git exclusion for `.task/`, and prints a short getting-started primer. Idempotent. |
-| `/task:roadmap <idea> \| --refine [<slug>]` *(opt.)* | Brainstorms an initiative roadmap → `.task/roadmap/<slug>.md` with ready-made task descriptions for `--from`; each task's Size and Class are inferred during authoring (Size from the outcome count, Class from task shape, user-overridable) rather than asked for. An optional sidecar `.task/roadmap/<slug>.spec.md` pins down key technical decisions (Blueprint reads them during planning). Authoring closes with a light, report-only self-check over the saved file (same three lenses as `--refine`), escalating to `--refine` inline when the findings warrant it. `--refine` — a parallel audit of an existing roadmap (Coverage / Decomposition / Clarity, ≤2 iterations; high → auto-applied, med/low → manual review). |
-| `/task:auto-roadmap [<roadmap>] [--next \| --from #<N> \| --items <spec>]` *(opt.)* | Autopilot over a roadmap in the current interactive Claude Code session: for each item — design → build → ship. Launched with no arguments it asks (via chips) which roadmap and, when several items are open, how much to run — so the flags below are optional shortcuts. `--next` — the first unclosed item; `--from #N` — start from item N; `--items 3-5` or `1,3-5,8` — a selection. |
-| `/task:design [<context>] [--from <path>[#<N>]] [--idea] [--phase <name>]` | Open a task, write the Description, plan it out. Phase auto-detect (`open` → `blueprint`); `--phase` override. A bare `/task:design` with no task in flight asks how to start (brainstorm / draft directly / open from a roadmap) via chips instead of requiring a flag; passing a flag or prose skips the question. `--idea` — brainstorm the Description (architect from scratch / Socratic on a filled-in one). `--from <path>[#N]` — Description from a roadmap item (without `#N`, and with several open items, it asks which). (`--phase refine` critically reviews an existing `plan.md` — a repair-level option, see docs/troubleshooting.md.) |
-| `/task:build [--phase <name>] [--auto]` | Implementation (`implement`) + audit with bounded auto-fix (`audit`). After a clean interactive `implement` it asks whether to run the audit now (chips) — so `--auto` is optional in day-to-day use. `--auto` — both phases in one call (≤1 implement, ≤2 audit). `--phase` — override. Fixes outside `Touches` from `plan.md` are marked `Skipped: out-of-scope`. A clean build proposes the ship and acts on one confirmation (interactive; accept ships, declining holds). |
-| `/task:ship [--next]` | Commit + archiving under `.task/log/`. Interactive ship infers close-vs-transition from remaining work and proposes it in the single commit confirmation (you can flip it); `--next` forces transition. Full close removes `workspace/<task-id>/` and `.task-current`; transition keeps `task.md` (Description cleared) for the next subtask. Auto-marks the roadmap item when `Roadmap:` + `Source item:` are present. The commit slug is always auto-derived. |
+| `/task:roadmap <idea>` *(opt.)* | Brainstorms an initiative roadmap → `.task/roadmap/<slug>.md` with ready-made task descriptions to pick up in design; each task's Size and Class are inferred during authoring (Size from the outcome count, Class from task shape, user-overridable) rather than asked for. An optional sidecar `.task/roadmap/<slug>.spec.md` pins down key technical decisions (Blueprint reads them during planning). Authoring closes with a light, report-only three-lens self-check over the saved file, offering a deeper refine pass inline when the findings warrant it. |
+| `/task:auto-roadmap [<roadmap>] [--next \| --from #<N> \| --items <spec>]` *(opt.)* | Autopilot over a roadmap in the current interactive Claude Code session: for each item — design → build → ship. Launched with no arguments it asks (via chips) which roadmap and, when several items are open, how much to run. This is the one surface that keeps its flags as a documented interface: `--next` — the first unclosed item; `--from #N` — start from item N; `--items 3-5` or `1,3-5,8` — a selection. |
+| `/task:design [<context>]` | Open a task, write the Description, and plan it out — then walk you through the whole cycle with a question at each step (draft/brainstorm → plan → build). A bare `/task:design` with no task in flight asks how to start (brainstorm / draft directly / open from a roadmap) via chips; giving a sentence of context drafts the Description directly. Phase is auto-detected from the workspace state, so re-running the bare command always resumes correctly. |
+| `/task:build` | Implementation (`implement`) + audit with bounded auto-fix (`audit`). Auto-detects the phase; after a clean `implement` it asks whether to run the audit now (chips). Fixes outside `Touches` from `plan.md` are marked `Skipped: out-of-scope`. A clean build proposes the ship and acts on one confirmation (accept ships, declining holds). |
+| `/task:ship` | Commit + archiving under `.task/log/`. Interactive ship infers close-vs-transition from remaining work and proposes it in the single commit confirmation (you can flip it there — no need to name the mode). Full close removes `workspace/<task-id>/` and `.task-current`; transition keeps `task.md` (Description cleared) for the next subtask. Auto-marks the roadmap item when `Roadmap:` + `Source item:` are present. The commit slug is always auto-derived. |
 | `validate` *(utility)* | Formal validator of artifact format. Invoked automatically. For a manual check: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" [task\|plan\|roadmap <path>\|all]`. |
 
 ## Example — a single task
@@ -139,39 +137,24 @@ In a new project you don't have to run setup by hand first: the first `/task:des
 ```text
 /task:bootstrap                                  # once per project (optional — 1st design/roadmap auto-runs it)
 
-# Manual mode — title + Description in one call (quick-draft):
-/task:design "I want an HTTP retry system with backoff and dead-letter" # phase=open + quick-draft:
-                                                 # task.md with a filled-in Description
-                                                 # (### Problem / ### Outcome / ...)
-
-# Need a multi-round Description brainstorm — the --idea flag:
-/task:design --idea "an idea for X"              # open(header-only) → idea(architect) in one call
-#   (alternative to the same entry: an empty /task:design when there's no task yet
-#    — the skill asks for the idea and drops into architect)
-
-/task:design                                     # run again → phase=blueprint: builds plan.md with steps
-/task:design --idea                              # opt.: idea(Socratic) — refine the Description
-
-/task:build                                      # phase=implement: implement per the plan
-/task:build                                      # phase=audit: lens fanout + bounded auto-fix
-                                                 # default output: one summary line (found/fixed/filtered);
-                                                 # full detail stays in audit.md
-                                                 # a clean build then proposes shipping and hands into the
-                                                 # ship confirmation — accept to ship, decline to hold
-# or in a single call (opt-in):
-/task:build --auto                                # both phases back-to-back; stop on per-phase budget
-
-/task:ship                                       # commit composed from artifacts, one accept/decline/edit confirm
-                                                 # slug auto-generated → e.g. feat-add-retries
-                                                 # proposes close-or-transition from remaining work; accept or flip it
-# or force the transition without inferring:
-/task:ship --next                                # transition to the next subtask (task.md stays)
+/task:design "I want an HTTP retry system with backoff and dead-letter"
+#   → drafts the Description from your sentence (### Problem / ### Outcome / ...)
+#   → "Build the plan now?"        → Plan it now      → writes plan.md with steps
+#   → "Start implementing now?"    → Implement it now → implements per the plan
+#   → "Run the audit now?"         → Run audit now    → lens fanout + bounded auto-fix
+#                                                        (one summary line; detail in audit.md)
+#   → clean build proposes the ship → accept          → commit + close
+#
+# Answer "Stop" at any question to pause. Resume later by running the bare
+# command again — the phase is auto-detected from the workspace state.
 ```
+
+Starting from scratch instead of a one-line description? Run a bare `/task:design` with no task in flight: it asks **how to start** (brainstorm the idea / draft directly / open from a roadmap) and, if you pick brainstorm, runs a short multi-round architect dialogue before drafting the Description — then continues into the same plan → build → ship walk.
 
 > [!NOTE]
 > If something goes wrong mid-way through the `/task:build` implement phase (a test/build fails), the skill makes **one** targeted quick-fix attempt, then stops. No automatic shotgun "try it and see" fixes.
 
-`--auto` is opt-in. By default `/task:build` runs one phase per call. After a clean interactive `implement` it asks — via chips — whether to run the audit now (**Run audit now** / **Stop here**), so the human checkpoint between `implement` and `audit` is a single question rather than a flag you must remember. `--auto` is the explicit shortcut (and the non-interactive path): both phases run automatically and the per-phase budget stops looping if `audit` doesn't converge within 2 iterations.
+Every phase boundary is a single question with a **Stop** option, so the whole cycle runs from one command without any flags to remember. Power users who want to jump straight to a phase, chain phases unattended, or force a close mode can still do so with the escape-hatch flags in [docs/troubleshooting.md](docs/troubleshooting.md).
 
 > [!TIP]
 > More scenarios — roadmap-driven initiatives, the `/task:auto-roadmap` autopilot, several subtasks under one umbrella, and returning to a closed task — live in **[docs/usage.md](docs/usage.md)**.
@@ -191,7 +174,7 @@ Three references: default Claude Code (plan mode + TodoWrite), [obra/superpowers
 | **Auto-fix audit findings** | None | Bounded loop ≤2 iterations, scope-gated by `Touches` |
 | **Interrupt / resume** | Lost on `/clear` | Plan + progress are files; auto-resumable via `TaskList` |
 | **Result review** | Only whatever the model decides | `/task:build` audit phase with a 3-lens fanout (Reuse / Simplicity / Clarity) + bounded auto-fix loop; reports one summary line by default, full detail in `audit.md` |
-| **Multi-task initiatives** | None | `/task:roadmap` → `/task:design --from`; autopilot `/task:auto-roadmap` |
+| **Multi-task initiatives** | None | `/task:roadmap` → `/task:design` (or autopilot `/task:auto-roadmap`) |
 | **Archive** | None | `.task/log/<task-id>/<N>-<slug>/` |
 
 **Use default Claude Code** if the task is one or two files and twenty minutes. **Use task-pipeline** if the task is longer than one session, refactors >5 files, needs review by eye, or the plan itself should be a working artifact.
