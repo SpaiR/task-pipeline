@@ -1,6 +1,6 @@
 ---
 name: build
-description: 'Implement the plan, then audit the diff through three read-only lenses with a bounded auto-fix loop. Auto-resumes the phase; `--phase <implement|audit>` overrides; `--auto` runs both in one call.'
+description: 'Implement the plan, then audit the diff through three read-only lenses with a bounded auto-fix loop. Auto-resumes the phase and asks before advancing from implement to audit.'
 disable-model-invocation: true
 user-invocable: true
 ---
@@ -42,7 +42,7 @@ Otherwise → run `PHASE=$(bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/phase-detect.
 Possible auto-detect outputs:
 - `implement` — no `summary.md` OR no diff vs HEAD (work hasn't started yet).
 - `audit` — `summary.md` exists, `audit.md` missing OR any `## Iteration N` block contains `pending fix` (parser greps the whole file per `_lib/phase-detect.sh:115`; the audit phase replaces every `pending fix` with `Fixed` per iteration, so practically only the last block ever holds one).
-- `done` — all artifacts complete. Print "Build complete." (The `done` phase-detect token itself is parser-facing — do not alter it; only the human-facing message changes.) Then branch on the run: an **interactive run** is clean here, so proceed into the **Clean-build ship proposal** (shared note before Step 5) instead of the passive footer; a **non-interactive run** (the item-runner executing inline) stops here and lets the item-runner drive ship. On a declined proposal (interactive), fall back to the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)): `→ Next: \`/task:ship\` (commit + close the umbrella) — or \`/task:ship --next\` to transition to the next subtask`.
+- `done` — all artifacts complete. Print "Build complete." (The `done` phase-detect token itself is parser-facing — do not alter it; only the human-facing message changes.) Then branch on the run: an **interactive run** is clean here, so proceed into the **Clean-build ship proposal** (shared note before Step 5) instead of the passive footer; a **non-interactive run** (the item-runner executing inline) stops here and lets the item-runner drive ship. On a declined proposal (interactive), fall back to the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)) — flag-free: `→ Next: \`/task:ship\``. (Ship then infers close-vs-transition and proposes it; the user never has to name the mode.)
 
 ## Step 1b: `--auto` per-phase budget gate (only when `AUTO_MODE=1`)
 
@@ -174,7 +174,7 @@ On a **non-interactive run** — the `auto-roadmap-item-runner` executing these 
 After the dispatched phase completes successfully (no verify failure, no iteration limit surfaced):
 
 - **Manual mode (`AUTO_MODE=0`)** — print the chain hint as the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)) and stop:
-  - After `implement` → `→ Next: \`/task:build\`` (auto-detects audit).
+  - After a clean `implement` (completed, no quick-fix-exhausted hand-off) → **advance question.** On an **interactive** run, instead of printing the passive footer, ask one `AskUserQuestion` (single-select) — "Implement done. Run the audit now?" — with **Run audit now** / **Stop here** (structured-choice convention (c) in [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar); the two-option advance folds `--auto`'s implement→audit chaining into one interactive opt-in). **Run audit now** → loop back to Step 1a exactly as `--auto` would (re-run phase-detect → `audit`, run the Step 4 bounded loop), then apply the normal clean-build outcome. **Stop here** → print `→ Next: \`/task:build\`` (auto-detects audit). This reuses the existing `--auto` machinery for a single opt-in advance — it does **not** flip the run into full `--auto` mode (no multi-phase budget loop beyond the one audit the user asked for). **Non-interactive carve-out:** the `auto-roadmap-item-runner` running build inline never asks — it drives phases with literal flags; print no question and let it proceed. On a non-interactive run print `→ Next: \`/task:build\``.
   - After `audit` (loop completed cleanly) → print the compact one-line summary first — `Audit: <total> found · <fixed> fixed · <filtered> filtered — full detail in \`audit.md\``, with the three numbers read from the just-written iteration's `### Result` line. Do not re-print the Findings/Details tables; they stay in `audit.md`. The build is now clean: on an **interactive run**, follow the compact summary with the **Clean-build ship proposal** (flow into ship's single confirmation) instead of the passive footer; on a **non-interactive run**, or when the proposal is declined, print `→ Next: \`/task:ship\`` (commit + close).
   - After `audit` (loop hit iteration limit) → user action required; print the Step 4 iteration-limit message (which ends with its own `→ Next:` line), no chain hint and **no ship proposal** — the build is not clean.
 
@@ -194,6 +194,7 @@ After the dispatched phase completes successfully (no verify failure, no iterati
 - Bypass the Step 1b per-phase budget gate in `--auto` mode — the budget is the only thing keeping the loop from re-entering audit indefinitely.
 - Combine `--auto` with `--phase` — they are mutually exclusive (Step 1 rejects).
 - Propose the ship on a non-clean build (any blocking path — verify failure, audit iteration limit, implement quick-fix exhausted) or under non-interactive (item-runner inline) execution — the Clean-build ship proposal is interactive-only and clean-only.
+- Ask the manual-mode implement→audit advance question (Step 5) under non-interactive (item-runner inline) execution, or after a non-clean implement (quick-fix-exhausted hand-off) — the advance question is interactive-only and clean-only; the item-runner drives phases with literal flags.
 - Add a second confirmation on top of ship's single Step 3 accept/decline/edit confirmation — the clean-build proposal reuses that one prompt, it does not stack another.
 
 ## Output
