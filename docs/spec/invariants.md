@@ -167,3 +167,30 @@ For: `/task:bootstrap`, `/task:roadmap`, design's idea phase, design's open phas
 **Rationale.** The goal at this tier is a coarse mental model — "this is a Go backend with these top-level modules", "this initiative breaks into these phases that touch these documented systems" — not "this function does X". Detailed exploration is build/implement's job per atomic task.
 
 **Language.** See `.task/config/config.md` → "Language". User-facing dialog (and the body of any Description written in this tier — idea architect mode, open quick-draft) follows the language of `task.md` Description or, when Description is empty / being bootstrapped, of `$ARGUMENTS`. **`/task:roadmap` is bilingual by structural contract** — section headers, table column names, per-task field labels, and the `### Context` / `### Goal` / `### Outcomes` / `### Acceptance criteria` / `### Spec references` sub-headings inside the `**Ready description:**` blockquote stay English regardless (parser contract with design's `--from` and `validate.sh`). Open's quick-draft sub-headers (`### Problem` / `### Outcome` / `### Scope` / `### Constraints`) follow the same English-skeleton convention as idea architect mode Step A.4 — they are content section markers, not parser contracts, but staying English keeps grep-style review consistent.
+
+## Interaction conventions (next-step footer + choice grammar)
+
+The single source of truth for two cross-cutting human-facing conventions. Every core command's user-facing dialog conforms to these rather than inventing its own phrasing; skill files **point here** instead of restating the format. Sits alongside the Shared prompt preamble because both are pipeline-wide prompt conventions.
+
+**Scope — human-facing dialog only.** These conventions govern the prose a command prints to the user at a checkpoint. They do **not** touch parser-stable strings or artifact file content, which stay byte-for-byte as specified elsewhere: runner return digests (`OK: … — diff uncommitted, ready for audit`, `FAIL at <stage>: …`), the build `done` phase-detect token and `--auto stopped: <reason>` lines, `## Iteration {N}` headers and their `pending fix` / `done` / `Skipped:` tokens, `JOIN-*` bootstrap status codes, `auto.lock` / `auto-error.log` contents, and all `close.sh` / `validate.sh` output. When a human-facing hint shares a line with such a token, only the prose changes.
+
+### (a) Next-step footer
+
+Every core command that leaves the user at a decision point ends its user-facing output with **one** copy-pasteable line naming the exact next step — never a vague suggestion ("you may want to…").
+
+- **Continue form:** `→ Next: <runnable command>` — the command backtick-wrapped and ready to paste, e.g. `→ Next: \`/task:build\``. When there is a common variant, name it in the same line (e.g. `→ Next: \`/task:ship --next\` (or \`/task:ship\` to close the umbrella)`).
+- **Terminal form:** `→ Done. <one clause on state>` — when the flow is genuinely complete and there is no next command in this pipeline (e.g. an umbrella just closed). A terminal line may be followed by a `→ Next:` line only when there is a natural fresh-start command (e.g. starting a new umbrella).
+
+The `→ Next:` value is per-command free (each command names its own next step); the **shape** above is fixed.
+
+### (b) Choice grammar — accept / decline / edit
+
+Every interactive decision prompt offers the same three responses, in the same wording and with the same semantics:
+
+- **accept** — proceed with the proposed action as-is.
+- **decline** — do not perform the action; the command states what happens instead.
+- **edit** — amend the proposed content, then proceed.
+
+Present the options on a canonical prompt line — `accept / decline / edit` — so later tasks reuse the wording verbatim. The specific proposed content (the file list, the plan, etc.) is per-command free; the three-option grammar and its wording are fixed.
+
+**Free by design.** Visual styling (surrounding blank lines, emphasis) and, per command, the actual next-step value and the specific proposed content are left to each command. Only the footer shape and the choice-grammar wording/semantics are pinned.

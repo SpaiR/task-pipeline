@@ -139,7 +139,7 @@ Write the file directly — no in-chat preview, no confirmation prompt. The user
 - Print the path to the created file. Tell the user to open it to review/edit.
 - If a spec sidecar was written, print its path too and note that blueprint will read it for items carrying `### Spec references`.
 - One-line summary: "*N* tasks across *M* phases. Recommended order: 1 → 2 → 4 → 3 → 5 …".
-- Suggest next step: `/task:design --from .task/roadmap/<slug>.md#<N>` for the first task, where `<N>` is the recommended starting point.
+- End with the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)), naming the first task's `--from` command, where `<N>` is the recommended starting point: `→ Next: \`/task:design --from .task/roadmap/<slug>.md#<N>\``.
 
 ## Output contract
 

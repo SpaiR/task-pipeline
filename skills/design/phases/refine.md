@@ -84,11 +84,13 @@ Present the review in this format:
 
 After outputting the review — **wait for the user's response**. Do not continue automatically.
 
-The user may:
-- Accept the plan as-is.
-- Choose an alternative for one or more decisions.
-- Ask for deeper analysis of a specific decision.
-- Propose their own alternative.
+Present the choices using the canonical **accept / decline / edit** grammar (per [`docs/spec/invariants.md § Interaction conventions`](../../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)):
+
+- **accept** — keep the plan as-is; make no changes.
+- **decline** — reject the proposed alternative(s) for a decision, keeping the plan's original choice (state which).
+- **edit** — adopt an alternative for one or more decisions (a listed option, or your own), then update the plan.
+
+The user may also ask for deeper analysis of a specific decision before choosing.
 
 ## Step 6: Evaluate responses for new questions
 
@@ -126,7 +128,7 @@ Write the file directly — no in-chat preview, no confirmation prompt. The user
 ```
 
 3. Record only decisions that **changed** the plan or **confirmed a non-obvious choice**. If the user accepted the original plan for a decision — do not record it.
-4. Print the path and a brief summary of what was changed. Tell the user to open the file to review/edit.
+4. Print the path and a brief summary of what was changed. Tell the user to open the file to review/edit. End with the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)): `→ Next: \`/task:build\``.
 
 ## Forbidden
 

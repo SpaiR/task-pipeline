@@ -37,13 +37,11 @@ Possible auto-detect outputs:
 - `idea` — `task.md` exists, `## Description` body empty (whitespace + HTML comments only).
 - `blueprint` — Description filled, no `plan.md`.
 - `refine-prompt` — `plan.md` exists. Orchestrator should NOT auto-enter refine. Instead, tell the user:
-  > Plan already exists at `.task/workspace/<task-id>/plan.md`. The design phase appears complete. Next steps:
-  > - `/task:build` — start implementation
-  > - `/task:design --refine` — discuss alternatives and refine the plan
+  > Plan already exists at `.task/workspace/<task-id>/plan.md`. The design phase appears complete. You can start implementation, or discuss alternatives first with `/task:design --refine`. To start a different umbrella, close the current one first: `/task:ship`.
   >
-  > To start a different umbrella, close the current one first: `/task:ship`.
+  > → Next: `/task:build`
 
-  Then stop without dispatching. Only continue to Step 2 if the user explicitly asked for `--refine`.
+  (Canonical footer per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar).) Then stop without dispatching. Only continue to Step 2 if the user explicitly asked for `--refine`.
 
 ## Step 2: Phase dispatch
 
@@ -84,3 +82,4 @@ After the dispatched phase completes successfully, suggest the next logical step
 After the dispatched phase completes:
 - Print whatever the companion phase's "Output" section specifies (paths, summary, next-step hint).
 - Add the orchestrator's chain hint (Step 3) on top of that.
+- End with the canonical next-step footer — a single `→ Next: <runnable command>` line matching the chain hint above (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)). If the phase's own Output already emits the footer, do not duplicate it.

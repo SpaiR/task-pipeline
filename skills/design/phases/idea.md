@@ -125,7 +125,7 @@ Write the file directly — no in-chat preview, no confirmation prompt. The user
 2. **Append** the brainstorm decisions (if any) to a top-level `## Decisions` section at the end of the file (same format and namespace Socratic mode uses; see Step S.5). If a `## Decisions` section already exists, append to it — do **not** rewrite earlier entries (append-only invariant).
 3. Write the file.
 
-Print the path and a 1–2 line summary of what was written. Tell the user to open the file to review/edit. Note that the next `/task:design` call will auto-detect blueprint phase.
+Print the path and a 1–2 line summary of what was written. Tell the user to open the file to review/edit. Note that the next `/task:design` call will auto-detect blueprint phase. End with the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)): `→ Next: \`/task:design\``.
 
 ## Socratic mode — refine an existing Description
 
@@ -205,7 +205,7 @@ Write the file directly — no in-chat preview, no confirmation prompt. The user
 
 3. Record only answers that **clarify or supplement** the Description. Do not record obvious confirmations. Omit topics the user asked to ignore.
 
-Print the path and a brief summary of what was written. Tell the user to open the file to review/edit. Note that the next `/task:design` call will auto-detect blueprint phase.
+Print the path and a brief summary of what was written. Tell the user to open the file to review/edit. Note that the next `/task:design` call will auto-detect blueprint phase. End with the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)): `→ Next: \`/task:design\``.
 
 ## Forbidden (both modes)
 

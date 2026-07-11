@@ -52,7 +52,7 @@ If the context block contains `===== referenced: <path> =====` sections, that do
 - **Do not stage** any files from `.task/` (task.md, plan.md, audit.md, summary.md, config/) — these are working artifacts.
 - **Do not stage** `.task-current` — it is the per-worktree pointer, excluded via `.git/info/exclude`; never enters a commit.
 - **Do not stage** `.env`, credentials, or other secrets.
-- If in doubt — show the file list and ask for confirmation.
+- If in doubt — show the staged file list and the composed commit, then ask for confirmation using the canonical **accept / decline / edit** grammar (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)): **accept** — commit as shown; **decline** — abort without committing; **edit** — adjust the file list or message, then commit.
 
 Create the commit using HEREDOC:
 
@@ -107,6 +107,9 @@ If `close.sh` returns ERROR — relay the message to the user and stop. (The com
 - List of committed files.
 - Path to the archive subfolder (from `close.sh` output).
 - Mode used (`umbrella close` or `subtask transition` / `--next`).
-- Reminder of the next step:
-  - default mode (full close) → `/task:design` (new umbrella).
-  - `--next` mode → fill Description (manually or `/task:design` → idea phase), then `/task:design` → blueprint, then `/task:build`.
+- End with the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)):
+  - default mode (full close) — the umbrella is complete, so use the terminal form plus a fresh-start line:
+    > → Done. Umbrella closed and archived under `.task/log/`.
+    > → Next: `/task:design "<your next task>"` to start a new umbrella.
+  - `--next` mode — Description was cleared; the next cycle fills it (manually or via `/task:design` → idea) then plans it:
+    > → Next: `/task:design`

@@ -89,10 +89,10 @@ Decide whether to fill the body of `## Description` in this call or leave it emp
 
 ### Manual-mode output
 
-Branch the output by which Step 2a path was taken — the next-step hint differs:
+Branch the output by which Step 2a path was taken — the next-step hint differs. Each branch ends with the canonical next-step footer (`→ Next: <runnable command>`, per [`docs/spec/invariants.md § Interaction conventions`](../../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)):
 
-- **Quick-draft (Step 2a wrote a Description).** Print the path to the created file (`.task/workspace/<task-id-lc>/task.md`), the contents of `.task-current`, a brief summary of the header, and a 1–2 line summary of the drafted Description (or the list of `### …` sub-headers it contains). Then print the explicit next step: **review or edit the Description in `task.md`, then run `/task:design` again to build the implementation plan (`plan.md`)** — the next call auto-enters the **blueprint** phase.
-- **Header-only (Description left empty).** Print the path, `.task-current` contents, and a brief header summary. State **why** Description is empty — either `--idea` was passed (brainstorm opt-out) or the input carried no paraphrasable prose (e.g. a bare ticket id). Next step by case: on the `--idea` path the orchestrator continues into the **idea** phase (**architect mode**) in the same call; on the bare-input path the **next** `/task:design` call auto-enters the **idea** phase (**architect mode**).
+- **Quick-draft (Step 2a wrote a Description).** Print the path to the created file (`.task/workspace/<task-id-lc>/task.md`), the contents of `.task-current`, a brief summary of the header, and a 1–2 line summary of the drafted Description (or the list of `### …` sub-headers it contains). Then print the explicit next step — review or edit the Description in `task.md`, then run `/task:design` again to build the implementation plan (`plan.md`); the next call auto-enters the **blueprint** phase — and close with the footer: `→ Next: \`/task:design\``.
+- **Header-only (Description left empty).** Print the path, `.task-current` contents, and a brief header summary. State **why** Description is empty — either `--idea` was passed (brainstorm opt-out) or the input carried no paraphrasable prose (e.g. a bare ticket id). On the `--idea` path the orchestrator continues into the **idea** phase (**architect mode**) in the same call — no footer here, idea.md's Output emits it. On the bare-input path the **next** `/task:design` call auto-enters the **idea** phase (**architect mode**); close with the footer: `→ Next: \`/task:design\``.
 
 ## Mode 2 — From roadmap (`--from`)
 
@@ -195,6 +195,7 @@ The `Roadmap:` line is the umbrella-level pointer (always written as a repo-rela
 - Print **Roadmap progress:** `<K> of <M> items remaining`.
 - If dependencies are listed in the roadmap entry — print them as a reminder.
 - Note that the next `/task:design` call will auto-enter blueprint phase (Description is already filled).
+- End with the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)): `→ Next: \`/task:design\``.
 
 ## Forbidden
 

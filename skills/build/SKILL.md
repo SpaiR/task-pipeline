@@ -42,7 +42,7 @@ Otherwise → run `PHASE=$(bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/phase-detect.
 Possible auto-detect outputs:
 - `implement` — no `summary.md` OR no diff vs HEAD (work hasn't started yet).
 - `audit` — `summary.md` exists, `audit.md` missing OR any `## Iteration N` block contains `pending fix` (parser greps the whole file per `_lib/phase-detect.sh:115`; the audit phase replaces every `pending fix` with `Fixed` per iteration, so practically only the last block ever holds one).
-- `done` — all artifacts complete. Stop with: "Build complete. Run `/task:ship` to commit and close the umbrella, or `/task:ship --next` to transition to the next subtask."
+- `done` — all artifacts complete. Print "Build complete." and end with the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)): `→ Next: \`/task:ship\` (commit + close the umbrella) — or \`/task:ship --next\` to transition to the next subtask`. Then stop. (The `done` phase-detect token itself is parser-facing — do not alter it; only the human-facing message takes the footer.)
 
 ## Step 1b: `--auto` per-phase budget gate (only when `AUTO_MODE=1`)
 
@@ -148,8 +148,9 @@ while passes_done < 2:
 if pending high-severity findings remain after 2 passes:
     surface to user with the list and stop.
     Output: "Audit hit iteration limit (2) with N high-severity findings remaining.
-             Review audit.md and either fix manually or run /task:design --refine
-             to revisit scope, then /task:build to retry."
+             Review audit.md and either fix manually or revisit scope with
+             /task:design --refine.
+             → Next: /task:build   (retry the audit after addressing findings)"
 ```
 
 The companion `audit.md` defines the prompt structure and lens definitions; the orchestrator owns the iteration count and the touches-gate enforcement.
@@ -158,13 +159,13 @@ The companion `audit.md` defines the prompt structure and lens definitions; the 
 
 After the dispatched phase completes successfully (no verify failure, no iteration limit surfaced):
 
-- **Manual mode (`AUTO_MODE=0`)** — print the chain hint and stop:
-  - After `implement` → `/task:build` again (auto-detects audit).
-  - After `audit` (loop completed cleanly) → `/task:ship` (commit + close).
-  - After `audit` (loop hit iteration limit) → user action required, no chain hint.
+- **Manual mode (`AUTO_MODE=0`)** — print the chain hint as the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)) and stop:
+  - After `implement` → `→ Next: \`/task:build\`` (auto-detects audit).
+  - After `audit` (loop completed cleanly) → `→ Next: \`/task:ship\`` (commit + close).
+  - After `audit` (loop hit iteration limit) → user action required; print the Step 4 iteration-limit message (which ends with its own `→ Next:` line), no chain hint.
 
 - **`--auto` mode (`AUTO_MODE=1`)** — instead of printing the chain hint, **loop back to Step 1a** (re-run phase-detect with the updated on-disk state). The loop terminates on:
-  - Step 1a returning `done` → print `Build complete. Run /task:ship...` and stop.
+  - Step 1a returning `done` → print `Build complete.` + the `→ Next:` footer (Step 1a) and stop.
   - Step 1b's per-phase budget gate firing → print `--auto stopped: ...` and stop.
   - Any dispatched phase surfacing a stop (verify failure, audit iteration limit, implement quick-fix exhausted) → propagate the phase's stop message, prefix with `--auto stopped:`, do not loop back.
 

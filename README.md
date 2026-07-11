@@ -114,6 +114,8 @@ In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks
 
 **Re-entry semantics:** `/task:design` and `/task:build` look at the state of `.task/workspace/<task-id>/` and automatically resume from the right phase. Override with `--phase <open|idea|blueprint|refine|implement|audit>`. `/task:build` additionally accepts `--auto` (opt-in one-shot: runs `implement → audit` in a single call, mutually exclusive with `--phase`).
 
+**Next-step footer:** every core command ends its output with a single copy-pasteable `→ Next: <command>` line naming the exact next step (or `→ Done.` when the flow is complete), so you never have to remember which command comes next — just paste the line. The convention is defined once in [`docs/spec/invariants.md § Interaction conventions`](docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar).
+
 `validate` is an internal utility: the pipeline invokes it as a precondition gate, not via a slash command. For a manual check: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`.
 
 ### Umbrella task vs subtask

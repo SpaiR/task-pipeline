@@ -272,10 +272,11 @@ Ensure:
 
 ## Output
 
-**Join-mode (Step 0 short-circuited Steps 1–4)** — report only:
-- `JOIN-LINK`: created `.task` → `<main>/.task` (absolute target), and the `.git/info/exclude` status.
-- `JOIN-NOOP`: `.task` already linked to the main worktree; exclusion re-affirmed.
-- `JOIN-REFUSE-*`: what was refused and the exact next action (resolve `.task` manually / run `/task:bootstrap` in the main worktree first). Nothing was changed.
+**Join-mode (Step 0 short-circuited Steps 1–4)** — report only. Each report ends with the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)) naming the exact next action; the `JOIN-*` status tokens themselves are parser-facing and unchanged:
+- `JOIN-LINK`: created `.task` → `<main>/.task` (absolute target), and the `.git/info/exclude` status. Footer: `→ Next: \`/task:design "<what you want to do>"\``.
+- `JOIN-NOOP`: `.task` already linked to the main worktree; exclusion re-affirmed. Footer: `→ Next: \`/task:design "<what you want to do>"\``.
+- `JOIN-REFUSE-LINK`: `.task` is a broken or foreign symlink; nothing was changed. Footer names the recovery action: `→ Next: resolve \`.task\` manually (remove or repoint it), then re-run \`/task:bootstrap\``.
+- `JOIN-REFUSE-NOMAIN`: the main worktree has no `.task/`; nothing was changed. Footer: `→ Next: \`/task:bootstrap\` in the main worktree first`.
 
 **Normal mode** — report:
 - Path to the written `config.md`, and whether an existing file was overwritten.
@@ -293,4 +294,4 @@ Then print this getting-started primer (translate to the `config.md` Language if
 >
 > Those four files are plain Markdown under `.task/` — read or edit them by hand any time. Re-running the same command resumes where you left off (phases are auto-detected from those files). One `task.md` is an *umbrella*; each design→build→ship cycle under it is a *subtask*, and `/task:ship --next` starts the next one.
 >
-> **Next step:** `/task:design "<what you want to do>"`
+> → Next: `/task:design "<what you want to do>"`

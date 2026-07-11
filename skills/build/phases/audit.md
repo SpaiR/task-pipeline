@@ -197,7 +197,7 @@ Template for each iteration:
 
 **`### Filtered (low confidence)` is optional.** Emit the section only when at least one finding was dropped at gate 3a/3b/3c. The section carries one bullet per dropped finding (`- <category> at <location>: <problem> (<reason>)`) and **no `Status:` lines** — the auto-fix loop treats it as inert. The `filtered: K` count in the `### Result` line tallies these. If every finding is filtered, `### Findings` keeps only the header row, `### Details` is omitted entirely, and `### Result` reads `0/0 fixed — filtered: K`; the absence of `pending fix` makes `phase-detect.sh` correctly classify the phase as `done`.
 
-Return control to the orchestrator (`build/SKILL.md` Step 4) which will apply fixes in main thread with `_lib/touches-gate.sh` enforcement and may invoke this phase again for iteration 2 if pending high-severity findings remain.
+Return control to the orchestrator (`build/SKILL.md` Step 4) which will apply fixes in main thread with `_lib/touches-gate.sh` enforcement and may invoke this phase again for iteration 2 if pending high-severity findings remain. The **human-facing** completion summary is owned by the orchestrator (SKILL.md Step 5) and ends with the canonical next-step footer `→ Next: \`/task:ship\`` (per [`docs/spec/invariants.md § Interaction conventions`](../../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)); the `audit.md` **artifact** content this phase writes — `## Iteration {N}` headers, `### Result` tallies, and `pending fix` / `Fixed` / `Skipped:` tokens — is parser-facing and stays exactly as specified above.
 
 ## Forbidden
 

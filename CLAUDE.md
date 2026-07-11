@@ -54,6 +54,7 @@ Compact one-liners; full reasoning + edge cases in [docs/spec/invariants.md](doc
 - `/task:ship` stages only task-related files; never anything under `.task/` and never `.task-current`.
 - Every skill carries `disable-model-invocation: true` + `user-invocable: true`. Exception: `validate` runs `user-invocable: false` (internal utility).
 - Artifacts and user-facing dialog follow `config.md` → "Language"; subagent prompt skeletons + `auto.lock` / `auto-error.log` / runner return strings stay English (parser-stable).
+- Every core command's user-facing output ends with the canonical next-step footer (`→ Next: <runnable command>`, or `→ Done.` when the flow is complete); every decision prompt uses the accept / decline / edit grammar. Both defined once in [docs/spec/invariants.md § Interaction conventions](docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar); human-facing dialog only — parser-stable strings and artifact content untouched.
 
 ### Code-navigation tiers
 
