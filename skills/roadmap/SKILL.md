@@ -24,7 +24,12 @@ Brainstorm a **multi-stage roadmap** for a large initiative — multi-phase, mul
 
 ### Step 0: Config gate
 
-Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`. If it exits with the `config.md not found` message, redirect the user to `/task:bootstrap` and stop — without `config.md` the roadmap cannot resolve the project's Language policy, which controls every prose field in the output file. The `all` subcommand tolerates a missing `.task-current` (which is the expected state when starting a new roadmap).
+Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`. Branch on the outcome:
+
+- **On a `config.md not found` message → auto-setup.** `/task:roadmap` is an intake-capable entry point: in a fresh, unconfigured project it runs setup inline rather than dead-ending the user (without `config.md` the roadmap cannot resolve the project's Language policy, which controls every prose field in the output file — so setup is a genuine precondition, not an optional convenience). Execute `/task:bootstrap` inline by reading `${CLAUDE_PLUGIN_ROOT}/skills/bootstrap/SKILL.md` and following its Steps **verbatim** — the full flow (Step 0 worktree join-mode through Step 4), no shortcuts, so auto-setup performs the same environment-guarding steps as the explicit command. Then re-run `validate.sh all`. If `config.md` is now present → proceed to Step 0a. If `config.md` is still absent (the user chose `decline`, or bootstrap's Step 0 hit a `JOIN-REFUSE-*` short-circuit that wrote nothing) → surface bootstrap's own message and **stop**. (`/task:roadmap` is already outside the PreToolUse validator-hook matcher, so — unlike `design` — no hook change is needed for this auto-setup to be reachable.)
+- **On any other non-zero exit** (config present but a malformed artifact) → **stop** and report the validator output.
+
+Auto-setup is a **prompt-layer response** to the bash gate's failure followed by re-validation — it does **not** relax or bypass the gate. `validate.sh` still fails authoritatively when config is absent; the skill only proceeds once config exists. The `all` subcommand tolerates a missing `.task-current` (which is the expected state when starting a new roadmap).
 
 ### Step 0a: Mode dispatch
 

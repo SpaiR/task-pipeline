@@ -20,7 +20,13 @@ Open a task, write its Description, build the implementation plan, and optionall
 
 ## Step 0: Config gate
 
-Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`. If it exits non-zero with a `config.md not found` message, redirect the user to `/task:bootstrap` and stop. The `all` subcommand tolerates a missing `.task-current` (needed for the open-phase fresh-start path).
+Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`. Branch on the outcome:
+
+- **(a) exits non-zero specifically with a `config.md not found` message → auto-setup.** `/task:design` is an intake-capable entry point: in a fresh, unconfigured project it runs setup inline rather than dead-ending the user. Execute `/task:bootstrap` inline by reading `${CLAUDE_PLUGIN_ROOT}/skills/bootstrap/SKILL.md` and following its Steps **verbatim** — the full flow (Step 0 worktree join-mode through Step 4), no shortcuts, so auto-setup performs the same environment-guarding steps as the explicit command. Then re-run `validate.sh all`. If `config.md` is now present → continue to Step 1 with the original `$ARGUMENTS` unchanged. If `config.md` is still absent (the user chose `decline`, or bootstrap's Step 0 hit a `JOIN-REFUSE-*` short-circuit that wrote nothing) → surface bootstrap's own message and **stop**; do not proceed to Step 1.
+- **(b) exits non-zero for any other reason** (config present but a malformed artifact) → **stop** and report the validator output, as before.
+- **(c) exits zero** → proceed to Step 1.
+
+Auto-setup is a **prompt-layer response** to the bash gate's failure followed by re-validation — it does **not** relax or bypass the gate. `validate.sh` still fails authoritatively when config is absent; the skill only proceeds once config exists. The `all` subcommand tolerates a missing `.task-current` (needed for the open-phase fresh-start path).
 
 ## Step 1: Phase detection
 

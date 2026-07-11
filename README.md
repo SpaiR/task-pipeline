@@ -7,7 +7,7 @@ A linear task workflow for Claude Code: from intake to commit, through explicit 
 ![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-8A2BE2)
 
 ```text
-/task:bootstrap                          # once per project
+/task:bootstrap                          # once per project (or auto-runs on 1st design/roadmap)
   ↓
 [/task:roadmap [--refine]]               ← optional: roadmap for a large initiative
   ↓
@@ -26,7 +26,7 @@ A linear task workflow for Claude Code: from intake to commit, through explicit 
 /plugin marketplace add https://github.com/SpaiR/task-pipeline.git
 /plugin install task@task-pipeline
 
-/task:bootstrap                              # once per project
+/task:bootstrap                              # once per project (optional — 1st design/roadmap auto-runs it)
 /task:design "fix the flaky retry logic"     # opens the task + writes the Description
 /task:design                                 # run again → builds the plan
 /task:build --auto                           # implement + audit
@@ -77,7 +77,7 @@ From then on, updates are a single command: `/plugin marketplace update task-pip
 
 After installation, Claude Code gains the commands `/task:bootstrap`, `/task:design`, `/task:build`, `/task:ship`, `/task:roadmap`, `/task:auto-roadmap`, plus nine named agents and a PreToolUse artifact-validator hook that activates automatically.
 
-In a new project: call `/task:bootstrap` once. The skill inspects the repo, detects language and test policy, presents both as defaults, and writes `.task/config/config.md` after a single confirmation (accept, edit either value, or decline).
+In a new project you don't have to run setup by hand first: the first `/task:design` or `/task:roadmap` in an unconfigured project auto-runs setup inline (inspect the repo → detect language and test policy → one confirmation), then continues the requested action. You can still call `/task:bootstrap` explicitly to do it deliberately — it inspects the repo, detects language and test policy, presents both as defaults, and writes `.task/config/config.md` after a single confirmation (accept, edit either value, or decline). The explicit command stays available and idempotent for re-running setup on demand. (`/task:build`, `/task:ship`, and `/task:auto-roadmap` do **not** auto-run setup — they presuppose prior pipeline state, so a fresh-project first-use of them still hard-stops with a "run `/task:bootstrap` first" redirect.)
 
 > [!NOTE]
 > Invoking the agents manually via `Agent(...)`, or hitting a `No such file or directory` from a skill's bash script? See [docs/troubleshooting.md](docs/troubleshooting.md).
@@ -95,7 +95,7 @@ In a new project: call `/task:bootstrap` once. The skill inspects the repo, dete
 ## Command reference
 
 ```text
-/task:bootstrap  — once per project; creates .task/config/config.md
+/task:bootstrap  — once per project (or auto-runs on 1st design/roadmap); creates .task/config/config.md
   ↓
 [/task:roadmap [--refine]]  — optional; roadmap for a large initiative → .task/roadmap/<slug>.md
   ↓                          --refine: parallel audit of an existing roadmap
@@ -137,7 +137,7 @@ In a new project: call `/task:bootstrap` once. The skill inspects the repo, dete
 ## Example — a single task
 
 ```text
-/task:bootstrap                                  # once per project
+/task:bootstrap                                  # once per project (optional — 1st design/roadmap auto-runs it)
 
 # Manual mode — title + Description in one call (quick-draft):
 /task:design "I want an HTTP retry system with backoff and dead-letter" # phase=open + quick-draft:
@@ -240,7 +240,7 @@ The pipeline is built on a few invariants; the full reasoning lives in [`docs/sp
 
 - **Artifacts.** Each `.task/` subfolder has one role — `config/`, `roadmap/`, `workspace/<task-id>/`, `log/<task-id>/<N>-<slug>/`. The pointer to the active umbrella is a one-line `.task-current` in the worktree root. If it is ever left empty or pointing at a closed or deleted workspace, the next command clears it automatically with a one-line notice — no manual cleanup — while a valid in-flight task is never touched. Full producer/consumer contract: [docs/spec/artifact-contract.md](docs/spec/artifact-contract.md).
 - **Code-navigation tiers.** Each skill reads only as much of your code as its job needs — from `.task/`-only (`/task:ship`, `validate`) through a structural scan to MCP-first navigation (`/task:design` blueprint, `/task:build`). Details: [docs/spec/invariants.md § Three code-navigation tiers](docs/spec/invariants.md#three-code-navigation-tiers).
-- **Validator hook.** A PreToolUse hook intercepts `Skill(task:design|build|ship|auto-roadmap)` and runs `validate.sh all` before the skill body. `bootstrap` / `roadmap` are deliberately excluded (the intake phase). Disable with `/plugin disable task` or by removing [`hooks/hooks.json`](hooks/hooks.json) locally.
+- **Validator hook.** A PreToolUse hook intercepts `Skill(task:build|ship|auto-roadmap)` and runs `validate.sh all` before the skill body. `bootstrap` / `roadmap` / `design` are deliberately excluded (the intake phase): each can be the first command in a fresh project and auto-runs setup inline, so a blocking pre-hook would make that inline setup unreachable. `design` still runs the identical `validate.sh all` in its own Step 0, so mid-pipeline validation coverage is preserved. Disable with `/plugin disable task` or by removing [`hooks/hooks.json`](hooks/hooks.json) locally.
 - **Parallel worktrees.** `.task/` is excluded from git, so a fresh worktree gets a `.task` symlink to the main tree's state — `/task:bootstrap` wires it up. Discipline and edge cases: [docs/spec/auto-roadmap.md § Cross-worktree safety](docs/spec/auto-roadmap.md#cross-worktree-safety).
 
 ## Contributing

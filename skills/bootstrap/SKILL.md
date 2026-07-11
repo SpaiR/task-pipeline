@@ -8,6 +8,8 @@ model: haiku
 
 Create `.task/config/config.md` — the per-project configuration for all task-* skills. Interactive: detects language policy and testing policy from the repo, then confirms both in a single accept/decline/edit prompt. Each run regenerates the file in full. Sections whose information is canonically maintained in `CLAUDE.md` are emitted as short references rather than duplicated copies.
 
+Besides explicit user invocation, this skill is **auto-invoked inline** by `/task:design` and `/task:roadmap` on their first run in an unconfigured project (their Step 0 config gate runs this skill's Steps verbatim, then re-validates and continues the original request). The explicit `/task:bootstrap` command remains available and idempotent for re-running setup on demand — a re-run simply regenerates `config.md`. An inline caller and a human caller share exactly this one flow; there is no trimmed "auto" variant.
+
 **Input:** Additional context (if provided): $ARGUMENTS
 
 **Preconditions, tool tier, language:** see [docs/spec/invariants.md](../../docs/spec/invariants.md#tier-c--shallow-scan) — no `config.md` precondition (this skill creates it); the Tier-C reads (manifests, top-level dirs, `CLAUDE.md`, `git log`) apply. Language inside the emitted `config.md` is detected, then confirmed (or edited) in Step 2's single confirmation. **Worktree join-mode (Step 0) is the exception:** when invoked from a *linked* git worktree that has no local `.task`, the skill only links the shared `.task/` from the main worktree and exits — Tier A (`git` + a `.task` symlink + `.git/info/exclude`; no project analysis, no prompts, Steps 1–4 skipped).
