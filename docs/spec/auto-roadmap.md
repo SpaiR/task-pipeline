@@ -27,7 +27,7 @@ Ship's interactive **close-vs-next inference** (proposing transition vs full clo
 `auto-roadmap-context.sh` enforces all three gates in bash, with prompt-layer reminders in `SKILL.md`. Failing any gate refuses to start the run with a specific message — no silent recovery, no rollback.
 
 1. **`.task/config/config.md` exists** — universal pipeline precondition.
-2. **`.task-current` absent at the worktree root** — no umbrella in flight in this worktree.
+2. **no active-task pointer for this worktree** (git per-worktree dir) — no umbrella in flight in this worktree.
 3. **No `.task/workspace/*/auto.lock` anywhere** — no previous orchestrator run left a per-umbrella sentinel behind, and no sibling worktree sharing this `.task/` currently owns one (the scan is glob-wide).
 
 Beyond the three gates, the skill recommends running the session in auto mode (auto-accept edits) so implement-stage `Edit` calls don't prompt mid-run. A recommendation only — not a precondition, not enforced.
@@ -80,7 +80,7 @@ Failure triggers: design-runner or build-runner FAIL return, malformed child sta
 
 ## Cross-worktree safety
 
-Two parallel git worktrees that share `.task/` (via a `.task` symlink — materialized by `/task:bootstrap` Step 0 join-mode, or placed manually) can each own a different umbrella at the same time because `.task-current` is **per-worktree**, not in `.task/`. The autopilot inherits that property:
+Two parallel git worktrees of one repo automatically share the same `.task/` (resolved via the `task.root` anchor — no symlink, no join step) yet can each own a different umbrella at the same time, because the active-task pointer lives **per-worktree** inside git's per-worktree dir (`git rev-parse --git-path task-current`), not in the shared `.task/`. The autopilot inherits that property:
 
 - Two `/task:auto-roadmap` runs in different worktrees that derive **distinct** task-ids are allowed — each owns its own `workspace/<task-id>/` subfolder and `workspace/<task-id>/auto.lock` sentinel. A same-task-id collision (two worktrees targeting the same roadmap) is caught at one of two points: (a) Step 0 gate 3 refuses if the sibling worktree's first item-runner has already written `workspace/<task-id>/auto.lock`; (b) if both worktrees somehow pass Step 0 against the same target roadmap before either writes the sentinel, the loser's design-runner's `/task:design --from` refuses on `workspace/<task-id>/` mkdir collision, and the item-runner's own `auto.lock` write (`set -o noclobber`) is the final backstop.
 - There is **no worktree-local sentinel** before the first item-runner writes `auto.lock` — the driver keeps run state in memory. The Step 2 → first-item-runner-lock-write window in the same worktree is single-threaded by definition (interactive Claude Code processes one slash command at a time per session), so no additional file-based mutex is needed there.

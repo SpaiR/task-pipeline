@@ -191,8 +191,9 @@ trap 'rm -f "$WHITELIST" "$VIOLATING"' EXIT
 while IFS= read -r file; do
   [[ -z "$file" ]] && continue
   # Skip .task/ artifacts — they are pipeline-internal, not subject to Touches.
+  # (The active-task pointer lives inside the git dir now, so it never appears
+  # in `git diff` and needs no carve-out here.)
   [[ "$file" == .task/* ]] && continue
-  [[ "$file" == .task-current ]] && continue
 
   if ! grep -qxF -- "$(to_repo_relative "$file")" "$WHITELIST"; then
     echo "$file" >> "$VIOLATING"

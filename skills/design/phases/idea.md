@@ -2,7 +2,7 @@
 
 > **Inputs:** `$ARGUMENTS` forwarded from `/task:design` — rough idea (architect mode) or extra context (Socratic mode).
 > **Tier:** C (shallow scan — top-level dirs, manifests, CLAUDE.md only; no source files).
-> **Workspace:** Resolved via `.task-current` → `.task/workspace/<task-id>/`.
+> **Workspace:** Resolved via the active-task pointer (git per-worktree dir) → `.task/workspace/<task-id>/`.
 > **Note on entry.** In manual mode the open phase writes Description directly by default (quick-draft on the Tier C path). This phase runs when the user opts into a brainstorm: (a) `/task:design --idea [<context>]`, (b) an empty `/task:design` call with no task in flight (the orchestrator routes it here, opening a header-only umbrella first and forwarding the elicited idea), or (c) `--phase idea`. Empty Description on entry → Architect mode; non-empty Description on entry → Socratic refinement of the existing text.
 
 Produce or refine the `## Description` section of `.task/workspace/<task-id>/task.md`. This phase auto-detects which mode to run from the current state of Description:

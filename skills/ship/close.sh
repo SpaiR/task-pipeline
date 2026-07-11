@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # close.sh — Close current subtask. Two modes:
 #   default:   archive everything including task.md, remove the entire
-#              .task/workspace/<task-id>/ subfolder, and remove .task-current
-#              — fully closes the umbrella task; workspace returns to empty
+#              .task/workspace/<task-id>/ subfolder, and remove the active-task
+#              pointer — fully closes the umbrella task; workspace returns to empty
 #   --next:    archive plan/audit/summary, keep task.md (clear Description)
 #              — moves to the next subtask of the same umbrella task
 #
@@ -16,8 +16,8 @@
 #   close.sh [--next] <slug>      (default = full close)
 #   close.sh <slug> [--next]
 #
-# Workspace resolution uses _lib/resolve-ws.sh — reads .task-current to find
-# the active umbrella's subfolder. The slug positional is NOT a task-id;
+# Workspace resolution uses _lib/resolve-ws.sh — reads the active-task pointer
+# to find the active umbrella's subfolder. The slug positional is NOT a task-id;
 # resolve_ws() reads no positionals here.
 
 set -euo pipefail
@@ -55,13 +55,13 @@ SCRIPT_DIR=$(cd "$(dirname "$__BOOT")" && pwd)
 source "$SCRIPT_DIR/../_lib/preamble.sh"
 
 require_config_md
-# Resolve workspace from .task-current. Note: SLUG was already captured above
+# Resolve workspace from the active-task pointer. Note: SLUG was already captured above
 # so resolve_ws sees no positional args (it would otherwise treat SLUG as a
 # task-id override — that's the exact bug close.sh's old code avoided by
 # calling resolve_ws with no args).
 source_resolve_ws
 TASK_FILE="$WS_DIR/task.md"
-# TASK_ID from .task-current IS the lowercase form (the path-side identifier).
+# TASK_ID from the active-task pointer IS the lowercase form (the path-side identifier).
 # task.md's header may preserve the original case (e.g. `# [DT-1234]`); we
 # read that for sanity checks below, but archive paths use the resolver's id.
 TASK_ID_LOWER="$TASK_ID"
@@ -74,7 +74,7 @@ run_validator task "$TASK_FILE"
 
 # --- Step 1: Read task.md ---
 if [[ ! -f "$TASK_FILE" ]]; then
-  echo "ERROR: $TASK_FILE not found (resolved from .task-current=$TASK_ID)."
+  echo "ERROR: $TASK_FILE not found (resolved from active-task pointer=$TASK_ID)."
   exit 1
 fi
 
@@ -89,7 +89,7 @@ if [[ -z "$HEADER_TASK_ID" ]]; then
 fi
 HEADER_TASK_ID_LOWER=$(echo "$HEADER_TASK_ID" | tr '[:upper:]' '[:lower:]')
 if [[ "$HEADER_TASK_ID_LOWER" != "$TASK_ID_LOWER" ]]; then
-  echo "ERROR: .task-current points to '$TASK_ID_LOWER' but $TASK_FILE line 1 carries task-id '$HEADER_TASK_ID' (lowercased '$HEADER_TASK_ID_LOWER'). Refusing to archive against mismatched ids." >&2
+  echo "ERROR: active-task pointer points to '$TASK_ID_LOWER' but $TASK_FILE line 1 carries task-id '$HEADER_TASK_ID' (lowercased '$HEADER_TASK_ID_LOWER'). Refusing to archive against mismatched ids." >&2
   exit 1
 fi
 TASK_ID="$HEADER_TASK_ID"  # used for the header display below; LOG path keeps TASK_ID_LOWER
@@ -206,9 +206,9 @@ if [[ "$FULL" -eq 1 ]]; then
   # survived a failed /task:auto-roadmap run — the manual `/task:ship` (default
   # full close) is the documented way to clean up after such a failure.
   rm -rf "$WS_DIR"
-  # `.task-current` sits at the project root beside `.task` (never symlinked);
-  # key off the discovered root so a drifted cwd doesn't leave it behind.
-  rm -f "$(dirname "$AI_DIR")/.task-current"
+  # The active-task pointer lives in git's per-worktree dir (task_current_path);
+  # resolve it there so a drifted cwd doesn't leave it behind.
+  rm -f "$(task_current_path)"
 else
   rm -f "$WS_DIR/plan.md" "$WS_DIR/audit.md" "$WS_DIR/summary.md"
   # Clear the BODY of `## Description` only — header lines stay so the next
@@ -239,7 +239,7 @@ done
 echo "Files archived: $ARCHIVED"
 
 if [[ "$FULL" -eq 1 ]]; then
-  echo "Mode: umbrella close (default). Workspace subfolder '$WS_DIR' and .task-current removed. Next: /task:design (to revive this umbrella, restore it manually from .task/log/)."
+  echo "Mode: umbrella close (default). Workspace subfolder '$WS_DIR' and the active-task pointer removed. Next: /task:design (to revive this umbrella, restore it manually from .task/log/)."
 elif [[ "$ROADMAP_MODE" -eq 1 ]]; then
   ROADMAP_SLUG=$(basename "$ROADMAP_PATH" .md)
   echo "Mode: subtask transition (--next, roadmap). task.md kept (Description cleared). Next: /task:design --from $ROADMAP_SLUG to roll the umbrella to the next un-checked item, or /task:ship to drop it."

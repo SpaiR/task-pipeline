@@ -2,23 +2,23 @@
 
 > **Inputs:** `$ARGUMENTS` forwarded from `/task:design`.
 > **Tier:** **mixed** — A (no code navigation) on the header-only path; C (shallow scan) on the quick-draft path. In Mode 1 quick-draft (Tier C) runs for any non-empty **paraphrasable** context; the header-only Tier A path is taken only via `--idea` or when the input carries no paraphrasable prose (e.g. a bare ticket id).
-> **Workspace:** Not yet resolved — this phase creates the workspace and `.task-current`.
+> **Workspace:** Not yet resolved — this phase creates the workspace and the active-task pointer.
 
-Prepare a task file `.task/workspace/<task-id>/task.md` from the provided context, and write the per-worktree `.task-current` pointer (one-line file at the worktree root) that downstream skills use to find the active workspace subfolder.
+Prepare a task file `.task/workspace/<task-id>/task.md` from the provided context, and write the per-worktree active-task pointer (a one-line file in git's per-worktree dir, resolved via `git rev-parse --git-path task-current`) that downstream skills use to find the active workspace subfolder. The pointer lives inside the git dir, so each worktree has its own while they all share one `.task/`.
 
 **Two modes** are supported, distinguished by argument shape:
 
 1. **Manual mode (default).** Arguments are free-form context (a ticket number, a brief title, or a sentence/paragraph about the task). Always writes the header. The `## Description` body is **filled in this call via quick-draft** (paraphrase of the provided context — Tier C shallow scan + structured `### Problem` / `### Outcome` / `### Scope` / `### Constraints`) for any non-empty context. It is left empty only when the `--idea` flag was passed — the brainstorm opt-out: the orchestrator then runs the idea phase in architect mode against the empty Description.
 2. **From-roadmap mode (`--from`).** Arguments start with `--from <path>` (auto-picks the first un-checked item) or `--from <path>#<N>` (explicit item). One roadmap = one umbrella; items become consecutive subtasks. After each `/task:ship --next`, rerun `/task:design --from <path>` to roll the umbrella to the next item (a bare `/task:ship` would close the umbrella instead).
 
-**Precondition (hard-stop) — `.task-current`.** Refuse if `.task-current` already exists at the worktree root unless this is a from-roadmap continuation (see Mode 2 → Step 3 → "Continuation mode"). `.task-current` names the active umbrella's task-id (one line); its presence means an umbrella is in flight and the workspace subfolder `.task/workspace/<task-id>/` is reserved. Cases (let `<id>` = `cat .task-current`):
+**Precondition (hard-stop) — active-task pointer.** Refuse if the per-worktree active-task pointer already exists unless this is a from-roadmap continuation (see Mode 2 → Step 3 → "Continuation mode"). The pointer names the active umbrella's task-id (one line); its presence means an umbrella is in flight in this worktree and the workspace subfolder `.task/workspace/<task-id>/` is reserved. The pointer lives in git's per-worktree dir — resolve it with `git rev-parse --path-format=absolute --git-path task-current`; let `<id>` = `cat` of that path:
 
-- **Self-heal a provably-stale pointer first (evaluated before every refuse case below).** If `.task-current` exists but is **provably stale** — its content is empty after whitespace-strip, OR its `.task/workspace/<id>/` subfolder is absent — remove `.task-current`, print a one-line notice that a stale pointer was cleaned (see the mode outputs), and proceed as an **initial open** (Mode 1 fresh, or Mode 2 initial-open for `--from`) exactly as if no pointer had existed. This is the "next command self-heals and continues" behavior. The staleness definition must match the shared one in `skills/_lib/resolve-ws.sh`'s `heal_stale_pointer` (empty OR missing workspace subfolder); the executor may run that helper or an inline `test`/`rm`. A stale pointer can never be a valid continuation (continuation Mode 2 → Step 3 requires an existing `task.md`), so heal-then-fresh is always correct. The refuse/continuation cases below apply only to a **valid** pointer (workspace subfolder present).
+- **Self-heal a provably-stale pointer first (evaluated before every refuse case below).** If the pointer exists but is **provably stale** — its content is empty after whitespace-strip, OR its `.task/workspace/<id>/` subfolder is absent — remove it, print a one-line notice that a stale pointer was cleaned (see the mode outputs), and proceed as an **initial open** (Mode 1 fresh, or Mode 2 initial-open for `--from`) exactly as if no pointer had existed. This is the "next command self-heals and continues" behavior. The staleness definition must match the shared one in `skills/_lib/resolve-ws.sh`'s `heal_stale_pointer` (empty OR missing workspace subfolder); the executor may run that helper (via `source_resolve_ws`) or an inline `test`/`rm` against the resolved pointer path. A stale pointer can never be a valid continuation (continuation Mode 2 → Step 3 requires an existing `task.md`), so heal-then-fresh is always correct. The refuse/continuation cases below apply only to a **valid** pointer (workspace subfolder present).
 - The body of `## Description` in `.task/workspace/<id>/task.md` is **non-empty** → an active subtask is in progress. Run `/task:ship` (full close) or `/task:ship --next` (transition) first.
 - Description is **empty**, no `--from` argument (manual mode) → the umbrella is mid-flight between subtasks (after a `/task:ship --next` transition). Do **not** run this phase — fill Description (manually or call `/task:design --idea` to enter idea phase) and proceed with blueprint. To start a brand-new umbrella, run `/task:ship` first to drop the current one.
 - Description is **empty**, `--from <path>[#<N>]` given → fall through to Mode 2 → Step 3 (Continuation mode); the existing umbrella may roll forward to the next item if all gate conditions hold.
 
-Rationale: this phase writes the umbrella header. Overwriting an existing `task.md` (even one with empty Description) silently destroys the in-flight umbrella's task-id and title. Continuation mode preserves both — line 1, the `Roadmap:` line, and `.task-current` are not touched.
+Rationale: this phase writes the umbrella header. Overwriting an existing `task.md` (even one with empty Description) silently destroys the in-flight umbrella's task-id and title. Continuation mode preserves both — line 1, the `Roadmap:` line, and the active-task pointer are not touched.
 
 ## Mode 1 — Manual (default)
 
@@ -35,7 +35,7 @@ Extract **task-id** from the cleaned arguments — a short identifier in square 
 
 task-id is written into the file header and used by `/task:ship` to determine the folder in `.task/log/`.
 
-### Step 2: Create task file and `.task-current` pointer
+### Step 2: Create task file and active-task pointer
 
 Compute `<task-id-lc>` — the lowercase form of task-id from Step 1 (used for workspace and log paths; the header preserves the original case if it carries a ticket like `DT-5177`). Then:
 
@@ -56,11 +56,11 @@ Compute `<task-id-lc>` — the lowercase form of task-id from Step 1 (used for w
    <!-- Detailed task description. Filled in manually. -->
    ```
 
-3. Write the per-worktree pointer:
+3. Write the per-worktree active-task pointer:
    ```bash
-   printf '%s\n' "<task-id-lc>" > .task-current
+   printf '%s\n' "<task-id-lc>" > "$(git rev-parse --path-format=absolute --git-path task-current)"
    ```
-   This file lives at the worktree root (NOT inside `.task/`) so each git worktree can have its own active umbrella while sharing `.task/`. It is excluded from git via `.git/info/exclude` (configured by `/task:bootstrap`).
+   The pointer lives inside git's per-worktree dir (`.git/worktrees/<name>/task-current`, or `.git/task-current` in the main worktree), so each git worktree has its own active umbrella while they all share one `.task/`. Being inside the git dir, it is never part of the work tree and needs no git-exclude entry.
 
 ### Step 2a: Quick-draft Description (Tier C path)
 
@@ -93,10 +93,10 @@ Decide whether to fill the body of `## Description` in this call or leave it emp
 
 Branch the output by which Step 2a path was taken — the next-step hint differs. Each branch ends with the canonical next-step footer (`→ Next: <runnable command>`, per [`docs/spec/invariants.md § Interaction conventions`](../../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)):
 
-- **If a stale `.task-current` was self-healed on entry** (Precondition self-heal clause), open the output with the one-line notice that the stale pointer was cleaned (e.g. `note: cleared stale active-task pointer '.task-current' (…) — no active task now.`) before the branch-specific lines below, so outcome "told in one line" holds on the design path.
+- **If a stale pointer was self-healed on entry** (Precondition self-heal clause), open the output with the one-line notice that the stale pointer was cleaned (e.g. `note: cleared stale active-task pointer (was empty) — no active task now.`) before the branch-specific lines below, so outcome "told in one line" holds on the design path.
 
-- **Quick-draft (Step 2a wrote a Description).** Print the path to the created file (`.task/workspace/<task-id-lc>/task.md`), the contents of `.task-current`, a brief summary of the header, and a 1–2 line summary of the drafted Description (or the list of `### …` sub-headers it contains). Then print the explicit next step — review or edit the Description in `task.md`, then run `/task:design` again to build the implementation plan (`plan.md`); the next call auto-enters the **blueprint** phase — and close with the footer: `→ Next: \`/task:design\``.
-- **Header-only (Description left empty).** Print the path, `.task-current` contents, and a brief header summary. State **why** Description is empty — either `--idea` was passed (brainstorm opt-out) or the input carried no paraphrasable prose (e.g. a bare ticket id). On the `--idea` path the orchestrator continues into the **idea** phase (**architect mode**) in the same call — no footer here, idea.md's Output emits it. On the bare-input path the **next** `/task:design` call auto-enters the **idea** phase (**architect mode**); close with the footer: `→ Next: \`/task:design\``.
+- **Quick-draft (Step 2a wrote a Description).** Print the path to the created file (`.task/workspace/<task-id-lc>/task.md`), the active-task pointer contents, a brief summary of the header, and a 1–2 line summary of the drafted Description (or the list of `### …` sub-headers it contains). Then print the explicit next step — review or edit the Description in `task.md`, then run `/task:design` again to build the implementation plan (`plan.md`); the next call auto-enters the **blueprint** phase — and close with the footer: `→ Next: \`/task:design\``.
+- **Header-only (Description left empty).** Print the path, the active-task pointer contents, and a brief header summary. State **why** Description is empty — either `--idea` was passed (brainstorm opt-out) or the input carried no paraphrasable prose (e.g. a bare ticket id). On the `--idea` path the orchestrator continues into the **idea** phase (**architect mode**) in the same call — no footer here, idea.md's Output emits it. On the bare-input path the **next** `/task:design` call auto-enters the **idea** phase (**architect mode**); close with the footer: `→ Next: \`/task:design\``.
 
 ## Mode 2 — From roadmap (`--from`)
 
@@ -137,11 +137,11 @@ The helper applies these priorities (highest first) and prints the resulting tas
 2. **Ticket number inside the item title** for the chosen `<N>`. Case preserved.
 3. **Roadmap filename slug** — basename without `.md`, lowercased, ≤30 chars (truncated at the last hyphen before position 30). This is the **default for `--from` mode**: all subtasks of the same roadmap share one task-id, so the close phase archives them as numbered subfolders under a single `.task/log/<roadmap-slug>/{N}-<slug>/` umbrella.
 
-Same priority applies to both the no-`#N` and the explicit-`#N` forms. The task-id is used **verbatim** for the `# [task-id] …` header in task.md; for paths (`.task/workspace/<task-id-lc>/`, `.task/log/<task-id-lc>/`, `.task-current`) the lowercase form is used.
+Same priority applies to both the no-`#N` and the explicit-`#N` forms. The task-id is used **verbatim** for the `# [task-id] …` header in task.md; for the pointer contents and paths (`.task/workspace/<task-id-lc>/`, `.task/log/<task-id-lc>/`) the lowercase form is used.
 
 ### Step 3: Continuation mode (existing umbrella)
 
-If `.task-current` already exists at the worktree root when this phase runs with `--from`, the "refuse on existing `.task-current`" precondition is locally relaxed **only** when all of the following hold (otherwise — **stop**). Let `<id>` = `cat .task-current` and check against `.task/workspace/<id>/task.md`:
+If the active-task pointer already exists when this phase runs with `--from`, the "refuse on existing pointer" precondition is locally relaxed **only** when all of the following hold (otherwise — **stop**). Let `<id>` = `cat "$(git rev-parse --path-format=absolute --git-path task-current)"` and check against `.task/workspace/<id>/task.md`:
 
 1. The body of `## Description` in `.task/workspace/<id>/task.md` (between the heading and the next `## ` heading or EOF) is empty (whitespace and HTML comments only).
 2. The existing `task.md` has a line `^Roadmap: (.+)$` somewhere in the header (above the first `---`).
@@ -152,11 +152,11 @@ If any condition fails → **stop** with a specific message:
 - Description non-empty → "active subtask in progress. Run `/task:ship` first."
 - task-id mismatch / Roadmap mismatch / Roadmap line missing → "umbrella mismatch: current is `[<old-task-id>]` (Roadmap: `<old-path>`), you passed `--from <new>`. Run `/task:ship` first to drop the current umbrella, or pass `--from <old-path>` to continue the same umbrella."
 
-If all conditions hold, **continuation mode** applies in Step 4: line 1, the `Roadmap:` line, and `.task-current` are not touched; only `Source item:` (and any `Modules:` / `Packages:` / `Key files:` from extra context) and the body of `## Description` are rewritten. Any `## Decisions` section stays untouched (umbrella-level, append-only).
+If all conditions hold, **continuation mode** applies in Step 4: line 1, the `Roadmap:` line, and the active-task pointer are not touched; only `Source item:` (and any `Modules:` / `Packages:` / `Key files:` from extra context) and the body of `## Description` are rewritten. Any `## Decisions` section stays untouched (umbrella-level, append-only).
 
 ### Step 4: Create or rewrite the task file
 
-**Initial open** (no existing `.task-current`) — compute `<task-id-lc>`, then:
+**Initial open** (no existing active-task pointer) — compute `<task-id-lc>`, then:
 
 1. `mkdir -p .task/workspace/<task-id-lc>` — the umbrella's workspace subfolder.
 2. Write `.task/workspace/<task-id-lc>/task.md` from scratch:
@@ -175,14 +175,18 @@ If all conditions hold, **continuation mode** applies in Step 4: line 1, the `Ro
    {Body of the `**Ready description:**` blockquote, with `> ` prefix stripped from each line.}
    ```
 
-3. `printf '%s\n' "<task-id-lc>" > .task-current` — write the per-worktree pointer.
+3. Write the per-worktree active-task pointer into git's per-worktree dir (so it is naturally scoped to this worktree and needs no git-exclude entry):
+
+   ```bash
+   printf '%s\n' "<task-id-lc>" > "$(git rev-parse --path-format=absolute --git-path task-current)"
+   ```
 
 The `Roadmap:` line is the umbrella-level pointer (always written as a repo-relative path so `/task:ship`'s close step can resolve it). The `Source item:` line is the per-subtask pointer — `/task:ship`'s auto-mark reads it. Both live in the header (above `---`) so the idea phase, which rewrites the body of `## Description`, cannot accidentally remove them.
 
 **Continuation** (Step 3 conditions held) — apply targeted rewrites only against `.task/workspace/<id>/task.md`:
 
 - Leave line 1 (`# [<task-id>] <Initiative title>`) and the `Roadmap:` line as they are.
-- Leave `.task-current` untouched.
+- Leave the active-task pointer untouched.
 - Replace the existing `Source item:` line with the new one (`Source item: #<N> — <item title>`). If the file lacks a `Source item:` line, insert it directly under the `Roadmap:` line.
 - Replace any existing `Modules:` / `Packages:` / `Key files:` lines with values from the new extra context (or remove them if extra context provided none).
 - Replace the body of `## Description` with the new item's blockquote body.
@@ -194,8 +198,8 @@ The `Roadmap:` line is the umbrella-level pointer (always written as a repo-rela
 
 ### From-roadmap-mode output
 
-- **If a stale `.task-current` was self-healed on entry** (Precondition self-heal clause), open the output with the one-line notice that the stale pointer was cleaned (e.g. `note: cleared stale active-task pointer '.task-current' (…) — no active task now.`) before the lines below — the run then proceeds as an initial open.
-- Print the path to the created or updated task file, whether this was a fresh open or a continuation, and (on initial open) that `.task-current` was written.
+- **If a stale pointer was self-healed on entry** (Precondition self-heal clause), open the output with the one-line notice that the stale pointer was cleaned (e.g. `note: cleared stale active-task pointer (was empty) — no active task now.`) before the lines below — the run then proceeds as an initial open.
+- Print the path to the created or updated task file, whether this was a fresh open or a continuation, and (on initial open) that the active-task pointer was written.
 - Print the resolved roadmap source (`<path>#<N>`).
 - Print the chosen task-id and which rule produced it.
 - One-line summary of what the item description covers.
@@ -210,5 +214,5 @@ The `Roadmap:` line is the umbrella-level pointer (always written as a repo-rela
 - Add fluff to the header — facts only.
 - In Mode 1 Step 2a quick-draft path: engage in multi-round dialogue, ask the user clarifying questions, or append a `## Decisions` section. Those belong to idea phase's architect mode and require explicit `--idea`. Quick-draft is a single-pass paraphrase, not a brainstorm.
 - Invent content the user did not provide. If a sub-section (`### Problem` / `### Outcome` / `### Scope` / `### Constraints`) has no signal in the input, omit it.
-- Modify any file other than `.task/workspace/<task-id-lc>/task.md`, `.task-current` (initial open only — continuation leaves it untouched), and `.task/log/<task-id-lc>/` (created if missing).
+- Modify any file other than `.task/workspace/<task-id-lc>/task.md`, the active-task pointer (git per-worktree dir; initial open only — continuation leaves it untouched), and `.task/log/<task-id-lc>/` (created if missing).
 - In `--from` mode: modify the source roadmap file. `/task:ship` is the only step that flips `- [ ]` → `- [x]`.

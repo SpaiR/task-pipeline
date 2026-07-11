@@ -76,7 +76,7 @@ Take the **last non-empty line** of the reply as the status line. Match it again
 Only when `is_first: true`. Design-runner's `/task:design --from` initial-open path just landed `.task-current` and `.task/workspace/<task-id>/`; write the per-umbrella sentinel now (right after `.task-current` lands, not after the whole item completes — so a sibling worktree sharing `.task/` cannot race the first item). The shared `_lib/auto-locks.sh write` helper is the canonical writer — atomic `set -o noclobber` + truncate-or-fail, and it skips empty values (so `items_filter=<value>` can be passed unconditionally). Pass the run-level fields **verbatim from your inputs** — do not regenerate `started`:
 
 ```bash
-TASK_ID=$(head -n 1 .task-current | tr -d '[:space:]')
+TASK_ID=$(head -n 1 "$(git rev-parse --path-format=absolute --git-path task-current)" | tr -d '[:space:]')
 LOCK_PATH=".task/workspace/$TASK_ID/auto.lock"
 bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/auto-locks.sh" write "$LOCK_PATH" \
   "roadmap=<roadmap>" \
@@ -92,10 +92,10 @@ If the helper exits non-zero (`LOCK_COLLISION`), a concurrent orchestrator owns 
 
 ### Step 3 — Read `Implement-Model:` from `plan.md`
 
-`.task-current` is guaranteed present now (design-runner landed it this item, or it persisted from a prior item):
+The active-task pointer is guaranteed present now (design-runner landed it this item, or it persisted from a prior item):
 
 ```bash
-TASK_ID=$(head -n 1 .task-current | tr -d '[:space:]')
+TASK_ID=$(head -n 1 "$(git rev-parse --path-format=absolute --git-path task-current)" | tr -d '[:space:]')
 IMPLEMENT_MODEL=$(bash "$CLAUDE_PLUGIN_ROOT/skills/_lib/auto-roadmap-helpers.sh" \
                     extract_implement_model ".task/workspace/$TASK_ID/plan.md")
 ```
@@ -150,7 +150,7 @@ Branch on result:
 - **Iteration limit hit with a pending high-severity finding** → fail-stop:
 
   ```bash
-  TASK_ID=$(head -n 1 .task-current | tr -d '[:space:]')
+  TASK_ID=$(head -n 1 "$(git rev-parse --path-format=absolute --git-path task-current)" | tr -d '[:space:]')
   bash "$CLAUDE_PLUGIN_ROOT/skills/_lib/auto-roadmap-helpers.sh" record_orchestrator_fail \
     ".task/workspace/$TASK_ID/auto-error.log" "#$N" \
     "AUDIT_LIMIT: build audit hit iteration limit with high-severity unfixed finding — see audit.md"
