@@ -15,6 +15,9 @@
 # self-audit ratchet baseline (runtime metrics, per-clone)
 .claude/.audit-baseline.json
 
+# self-improve ratchet baseline (runtime metrics, per-clone)
+.claude/.improve-baseline.json
+
 # Editor
 .idea/
 .vscode/
