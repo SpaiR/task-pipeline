@@ -96,6 +96,8 @@ Examples:
 
 ## Step 5: Detect mode and run close
 
+The archive location is standard and chosen mechanically — **ship never asks the user where to file the closed subtask.** `close.sh` computes the next free numeric prefix `<N>` under `.task/log/<task-id>/` and combines it with the Step 4 slug to form the fixed path `.task/log/<task-id>/<N>-<slug>/`. There is no location prompt and no override argument.
+
 - `--next` flag (anywhere in `$ARGUMENTS`) → subtask-transition mode.
 - Otherwise → full-close mode (the default).
 

@@ -108,6 +108,19 @@ Wait for the user, then continue with `Round N` (same structure, narrowed to the
 
 Once iteration ends, draft the full file. The structure is fixed (the entire pipeline downstream depends on it). See "Output format" below.
 
+**Derive `Size` and `Class` mechanically — never ask the user for either.** Both are computed while drafting, not deliberated:
+
+- **`Size` is a function of `### Outcomes` bullet count.** After drafting each task's `### Outcomes`, count the bullets and set `**Size:**` to the matching token: `small` = 1–2, `medium` = 3–6, `large` = 7+. Never treat it as a free choice; the outcome count decides it. (If a count lands at ≥ 7 — or the outcomes span ≥ 2 unrelated domains — the item is compound; split it rather than labeling it `large`.)
+- **`Class` is inferred from the task's shape** via this rubric, mapping to the existing closed list; the user is free to override it in-file:
+  - refactor with no behavior change → `rote-refactor`
+  - introduces a new subsystem / contract → `new-substrate`
+  - moves or changes behavior across several modules → `cross-module-migration`
+  - user-facing capability → `product-feature`
+  - vocabulary / wording / content edits → `content-vocabulary`
+  - pipeline / build / infra changes → `tooling`
+
+  Pick the closest single token; when two fit, prefer the one describing the task's dominant effect. `Class` stays a best-effort hint (not validated) — the inference fills a sensible default, it does not lock the field.
+
 **Then, if technical anchors accumulated (Step 4), draft the spec sidecar.** Compose `<slug>.spec.md` (format + boundary test in "Spec sidecar" under "Output contract" below) holding one numbered section per load-bearing decision, and add a `### Spec references` sub-heading citing `<slug>.spec.md §N` to each roadmap item that the decision steers. The sidecar captures the **why** that the behavioral item bodies cannot carry — not a full plan (that is per-task `plan.md`). **No anchors → no sidecar**; never write an empty or placeholder spec.
 
 ### Step 6: Self-review pass
@@ -117,7 +130,7 @@ Before saving, run a quick self-check (do not dispatch a subagent — this is a 
 1. **Phase coverage:** Does every fork raised during the brainstorm have a home in some phase, or an explicit "what's not in this plan" mention?
 2. **Description completeness:** Skim each task's `**Ready description:**` blockquote. Does it stand alone (a reader who has not seen the roadmap could write a design's blueprint phase from it)? Are `### Context`, `### Goal`, `### Outcomes`, `### Invariants`, `### Contracts` (when present), `### Acceptance criteria`, and `### Spec references` (when present) each concrete and self-contained? Context must answer "why this task, what it unblocks" — not restate Goal.
 3. **Behavioral discipline:** `### Outcomes` / `### Goal` / `### Invariants` / `### Contracts` describe **observable properties of the system / world**, not implementation choices. They MUST NOT name project-specific files, modules, functions, types, or constants. Normative names from the project's spec or `CLAUDE.md` ARE allowed (they address shared concepts, not implementation choices). When in doubt, ask: "would design's blueprint be free to pick a different file or symbol name?" — if yes, the name doesn't belong in the roadmap.
-4. **Sizing by outcomes count:** `Size:` is calibrated against `### Outcomes` bullet count, not modules or files. `small` = 1–2 outcomes, `medium` = 3–6, `large` = 7+. If an item lists ≥ 7 outcomes or outcomes spanning ≥ 2 unrelated domains — split it.
+4. **Sizing by outcomes count:** verify each computed `Size:` still matches its `### Outcomes` bullet count (Step 5 sets it; this catches a miscount, not a mislabel). `small` = 1–2 outcomes, `medium` = 3–6, `large` = 7+ — by count, not modules or files. If an item lists ≥ 7 outcomes or outcomes spanning ≥ 2 unrelated domains — split it.
 5. **No placeholders:** Search the draft for `TBD`, `TODO`, `???`, `fill in`, `add appropriate ...`, `handle edge cases` — these are plan failures. Either fill them in or remove them.
 6. **Dependency consistency:** Each task's `**Dependencies:**` line cites task numbers that exist elsewhere in the file. No dangling references.
 7. **Slug uniqueness within file:** Each task heading produces a unique kebab-case slug (used by `/task:design --from <file>#<slug>`).
@@ -283,10 +296,10 @@ prose is in config language.>
 - **Task numbering** is global within the file (`1`, `2`, `3`, …), continuous across phases; table order mirrors file order. The `Recommended execution order` line gives the dependency-driven sequence (may differ from file order).
 - **`**Ready description:**` is a blockquote** with H3 sub-headings (`### Context`, `### Goal`, `### Outcomes`, `### Invariants`, optional `### Contracts`, `### Acceptance criteria`, optional `### Spec references`) — `/task:design --from` strips `> ` and copies the body into `task.md` verbatim. Sub-headings stay English; their bodies follow config language. Renaming/translating breaks the parser and the validator.
 - **`### Context` precedes `### Goal`** — propagates into `task.md` via `--from` so blueprint/audit can read the "why" without re-opening the roadmap. Context is motivation; Goal is target state.
-- **Sizing is by `### Outcomes` bullet count**, not by file count or estimated hours: `small` = 1–2, `medium` = 3–6, `large` = 7+. An item with ≥ 7 outcomes — or outcomes spanning ≥ 2 unrelated domains — is compound; split it.
+- **Sizing is computed from `### Outcomes` bullet count** at author time (Step 5), not deliberated and not by file count or estimated hours: `small` = 1–2, `medium` = 3–6, `large` = 7+. An item with ≥ 7 outcomes — or outcomes spanning ≥ 2 unrelated domains — is compound; split it. A `Size:` label disagreeing with the count is drift from a hand-edit — the refine-phase decomposition auditor flags it.
 - **`### Contracts` is optional** structurally. Recommended for `Class: new-substrate` or `Class: cross-module-migration` — substrate boundaries deserve to be pinned before blueprint picks a shape. Refine-phase clarity auditor surfaces a `missing contracts` finding (severity `med`) when those classes omit it.
 - **`### Spec references`** — omit the entire heading if no relevant spec; never leave an empty heading. Reference specs by section number, not quoted text (quotes rot with spec edits). A reference may point at an external project spec (`docs/spec/<file>.md §X.Y`) or at this roadmap's own spec sidecar (`<slug>.spec.md §N`). The sidecar form is what design's blueprint phase reads to ground its plan in pre-agreed technical decisions.
-- **`**Class:**` is a best-effort hint**, not a validated field. Empty / off-list values are tolerated by `validate.sh`, but downstream (`/task:design`'s `Implement-Model:` rubric, clarity auditor's missing-contracts check) reads it — leave it populated when you can.
+- **`**Class:**` is a best-effort hint**, not a validated field. The skill infers a default from task shape at author time (Step 5 rubric), but the user may override it in-file. Empty / off-list values are tolerated by `validate.sh`, but downstream (`/task:design`'s `Implement-Model:` rubric, clarity auditor's missing-contracts check) reads it — leave it populated.
 
 ### Spec sidecar (`<slug>.spec.md`)
 
