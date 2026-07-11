@@ -55,7 +55,7 @@ Scenarios can be combined: some tasks via `/task:roadmap` + `--from`, small fixe
 #   1) spawns auto-roadmap-design-runner (parent-session model)
 #      → goes through design/phases/open.md → design/phases/blueprint.md
 #      → returns: "OK: item #N \"...\" — plan.md ready, awaiting implement"
-#      (first item only: writes workspace/<id>/auto.lock right after .task-current lands)
+#      (first item only: writes workspace/<id>/auto.lock right after the active-task pointer lands)
 #   2) reads plan.md → Implement-Model: (opus|sonnet|haiku)
 #   3) spawns auto-roadmap-build-runner with Agent.model = that value
 #      → goes through build/phases/implement.md
@@ -75,7 +75,7 @@ Scenarios can be combined: some tasks via `/task:roadmap` + `--from`, small fixe
 /task:auto-roadmap api-v2-migration --items 1,3-5,8 # a selection
 
 # If it failed on item #5:
-/task:ship                                          # default full close; sweeps the subfolder and .task-current
+/task:ship                                          # default full close; sweeps the subfolder and the active-task pointer
 /task:auto-roadmap api-v2-migration --from #5       # retry from #5
 ```
 
@@ -89,7 +89,7 @@ Scenarios can be combined: some tasks via `/task:roadmap` + `--from`, small fixe
 > - One session model for the whole run's orchestration (implement still uses each item's `plan.md → Implement-Model:`). For opus, run `/model opus` BEFORE starting.
 > - The session window must stay open for the whole run.
 
-`/task:auto-roadmap` is **not for resume**: it refuses when `.task-current` exists or any `workspace/*/auto.lock` is present. It skips design's idea + refine phases — roadmap items already have a curated `Ready description`.
+`/task:auto-roadmap` is **not for resume**: it refuses when an active-task pointer exists for this worktree or any `workspace/*/auto.lock` is present. It skips design's idea + refine phases — roadmap items already have a curated `Ready description`.
 
 ## Several subtasks in one umbrella task
 
@@ -118,13 +118,13 @@ Scenarios can be combined: some tasks via `/task:roadmap` + `--from`, small fixe
 
 ## Returning to a closed umbrella task
 
-To pick a closed umbrella back up, restore `task.md` by hand from the latest full-close archive and re-point `.task-current` at it:
+To pick a closed umbrella back up, restore `task.md` by hand from the latest full-close archive and re-point the active-task pointer at it:
 
 ```text
 # restore task.md from the latest full-close archive:
 mkdir -p .task/workspace/dt-5177
 cp .task/log/dt-5177/2-feat-schema-guard/task.md .task/workspace/dt-5177/task.md
-echo "dt-5177" > .task-current
+echo "dt-5177" > "$(git rev-parse --path-format=absolute --git-path task-current)"
 
 # (opt.) clear everything from ## Description down if you want a clean start
 # then the standard cycle:

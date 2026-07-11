@@ -2,7 +2,7 @@
 
 > **Inputs:** `$ARGUMENTS` forwarded from `/task:design` — additional context if provided.
 > **Tier:** B (MCP-first tooling).
-> **Workspace:** Resolved via `.task-current` → `.task/workspace/<task-id>/`.
+> **Workspace:** Resolved via the active-task pointer (git per-worktree dir) → `.task/workspace/<task-id>/`.
 
 Critically review the implementation plan — propose alternatives, discuss trade-offs, and refine the plan with the user.
 

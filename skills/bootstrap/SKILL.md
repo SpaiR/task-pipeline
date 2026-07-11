@@ -1,6 +1,6 @@
 ---
 name: bootstrap
-description: 'Set up task-pipeline in this repo once — detects the stack, writes `.task/config/config.md`, and adds the local git exclusion. Run this first.'
+description: 'Set up task-pipeline in this repo once — detects the stack, writes `.task/config/config.md`, records the pipeline root (`git config task.root`), and adds the local git exclusion. Run this first.'
 disable-model-invocation: true
 user-invocable: true
 model: haiku
@@ -12,55 +12,36 @@ Besides explicit user invocation, this skill is **auto-invoked inline** by `/tas
 
 **Input:** Additional context (if provided): $ARGUMENTS
 
-**Preconditions, tool tier, language:** see [docs/spec/invariants.md](../../docs/spec/invariants.md#tier-c--shallow-scan) — no `config.md` precondition (this skill creates it); the Tier-C reads (manifests, top-level dirs, `CLAUDE.md`, `git log`) apply. Language inside the emitted `config.md` is detected, then confirmed (or edited) in Step 2's single confirmation. **Worktree join-mode (Step 0) is the exception:** when invoked from a *linked* git worktree that has no local `.task`, the skill only links the shared `.task/` from the main worktree and exits — Tier A (`git` + a `.task` symlink + `.git/info/exclude`; no project analysis, no prompts, Steps 1–4 skipped).
+**Preconditions, tool tier, language:** see [docs/spec/invariants.md](../../docs/spec/invariants.md#tier-c--shallow-scan) — no `config.md` precondition (this skill creates it); the Tier-C reads (manifests, top-level dirs, `CLAUDE.md`, `git log`) apply. Language inside the emitted `config.md` is detected, then confirmed (or edited) in Step 2's single confirmation.
+
+**Worktree sharing is automatic — there is no join step.** `.task/` lives once at the pipeline root and is resolved by every worktree of the repo (nested, sibling, or a bare repo's worktrees) through the `task.root` git-config anchor this skill records (with a `dirname(git-common-dir)` fallback). No symlink, no per-worktree setup: create a worktree and `/task:design` just works. Re-running `/task:bootstrap` from any worktree targets the same shared `.task/` and simply regenerates `config.md`.
 
 ## Instructions
 
-### Step 0: Worktree join-mode detection
+### Step 0: Determine the pipeline root
 
-Before any project analysis, detect whether this invocation is **joining an existing pipeline from a linked git worktree** rather than bootstrapping a fresh project. The shared `.task/` lives only in the main worktree (it is git-excluded, so a freshly created worktree has no copy); a linked worktree gets access by symlinking `.task` to the main worktree's `.task/`. This step materializes that symlink — the single sanctioned, safe way to create it. Run:
+Before any project analysis, compute the directory that will hold `.task/` — the **pipeline root**, shared by every worktree of this repo. Run:
 
 ```bash
-MODE="NORMAL"; MAIN_TASK=""
 if git rev-parse --git-dir >/dev/null 2>&1; then
-  GIT_DIR_ABS=$(cd "$(git rev-parse --git-dir)" && pwd)
-  COMMON_ABS=$(cd "$(git rev-parse --git-common-dir)" && pwd)
-  if [[ "$GIT_DIR_ABS" != "$COMMON_ABS" ]]; then          # linked worktree, not main
-    MAIN_ROOT=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
-    MAIN_TASK="$MAIN_ROOT/.task"
-    if [[ -L .task ]]; then                                # already a symlink
-      if [[ -d .task && -d "$MAIN_TASK" && "$(cd .task && pwd -P)" == "$(cd "$MAIN_TASK" && pwd -P)" ]]; then
-        MODE="JOIN-NOOP"                                   # valid link to main's .task
-      else
-        MODE="JOIN-REFUSE-LINK"                            # broken or foreign symlink
-      fi
-    elif [[ ! -e .task ]]; then                            # no local .task
-      if [[ -d "$MAIN_TASK" ]]; then MODE="JOIN-LINK"; else MODE="JOIN-REFUSE-NOMAIN"; fi
-    fi
-    # else: .task is a real dir/file → standalone pipeline in this worktree → MODE stays NORMAL
+  IS_BARE=$(git rev-parse --is-bare-repository)
+  EXISTING=$(git config --local --get task.root 2>/dev/null || true)
+  if [[ -n "$EXISTING" ]]; then
+    ROOT="$EXISTING"                                      # already bootstrapped — keep the same root
+  else
+    ROOT=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
   fi
+else
+  IS_BARE=false
+  ROOT=$(pwd)                                             # non-git: bootstrap in place
 fi
-echo "MODE=$MODE"; echo "MAIN_TASK=$MAIN_TASK"
+echo "IS_BARE=$IS_BARE"; echo "ROOT=$ROOT"
 ```
 
-Dispatch on `MODE` (never overwrite an existing `.task` silently):
+- **Normal git repo / non-git dir** (`IS_BARE=false`): `ROOT` is the main worktree root (or `pwd` for a non-git dir). This is deterministic — do not ask; just report it in the output. `.task/` is created at `$ROOT/.task`.
+- **Bare repo** (`IS_BARE=true`): there is no main worktree, so the default `ROOT` (the bare repo's container) is a best-effort guess. **Surface it for confirmation in Step 2** (see the location line + edit option there) so the user can redirect `.task/` to wherever their worktrees actually live.
 
-- **`NORMAL`** — not a linked worktree, or the worktree already has its own real `.task`. Skip the rest of Step 0; proceed to Step 1 (regular bootstrap).
-- **`JOIN-LINK`** — linked worktree, no local `.task`, main worktree has `.task/`. Create the symlink with an **absolute** target, update the local git exclusion, report, and **STOP** (do not run Steps 1–4):
-
-  ```bash
-  ln -s "$(cd "$MAIN_TASK" && pwd -P)" .task          # absolute, physical target
-  EXCLUDE=$(git rev-parse --git-path info/exclude)
-  mkdir -p "$(dirname "$EXCLUDE")"; touch "$EXCLUDE"
-  grep -qxF '.task'         "$EXCLUDE" || echo '.task'         >> "$EXCLUDE"
-  grep -qxF '.task-current' "$EXCLUDE" || echo '.task-current' >> "$EXCLUDE"
-  ```
-
-- **`JOIN-NOOP`** — already linked to main's `.task/`. Re-affirm the exclusion idempotently (the `EXCLUDE` block above), report "already linked", and **STOP**. Do **not** fall through to Steps 1–4 — that would regenerate the main worktree's `config.md` through the symlink.
-- **`JOIN-REFUSE-LINK`** — `.task` is a broken symlink or points somewhere other than the main worktree's `.task/`. Do nothing; tell the user to resolve `.task` manually, then **STOP**.
-- **`JOIN-REFUSE-NOMAIN`** — the main worktree has no `.task/`. Do nothing; tell the user to run `/task:bootstrap` in the **main** worktree first, then **STOP**.
-
-`.task-current` is **never** symlinked — it stays a real per-worktree file (each worktree points at its own active umbrella).
+`ROOT` is carried into Step 3 (where `.task/` is created and `git config --local task.root "$ROOT"` is recorded) and Step 3a. There is no worktree "join" — sharing is automatic once `task.root` is set. Do **not** create or touch any `.task` symlink; the mechanism no longer exists.
 
 ### Step 1: Analyze project
 
@@ -85,16 +66,23 @@ Dispatch on `MODE` (never overwrite an existing `.task` silently):
 
 ### Step 2: Confirm detected setup
 
-Regardless of whether `config.md` already exists, present the two detected defaults from Step 1 as one proposal, then a single decision using the canonical **accept / decline / edit** choice grammar — see [docs/spec/invariants.md § Interaction conventions (b)](../../docs/spec/invariants.md#b-choice-grammar--accept--decline--edit) for the grammar itself; do not restate it here. Present in the user's language (fall back to English).
+Regardless of whether `config.md` already exists, present the detected defaults from Step 1 as one proposal, then a single decision using the canonical **accept / decline / edit** choice grammar — see [docs/spec/invariants.md § Interaction conventions (b)](../../docs/spec/invariants.md#b-choice-grammar--accept--decline--edit) for the grammar itself; do not restate it here. Present in the user's language (fall back to English).
 
 ```
 Detected — Language: <detected policy, in plain words>; Testing policy: <detected mode>.
 accept / decline / edit
 ```
 
-- **accept** — adopt both detected values as-is; continue to Step 3.
-- **edit** — ask which field(s) to amend (language policy, testing-policy mode, or both); for each amended field show the matching option list below, apply the user's choice, then continue to Step 3.
-- **decline** — do **not** write `config.md`; report "config.md not written — re-run `/task:bootstrap` when ready" and **STOP** (skip Steps 3–4).
+**Bare repo only** (`IS_BARE=true` from Step 0): the default `.task/` location is a guess, so add a third line to the proposal and offer it as an editable field:
+
+```
+Detected — Language: <…>; Testing policy: <…>; .task location: <ROOT>/.task.
+accept / decline / edit
+```
+
+- **accept** — adopt the detected values (and, for a bare repo, the proposed `.task` location) as-is; continue to Step 3.
+- **edit** — ask which field(s) to amend (language policy, testing-policy mode, and — bare repo only — the `.task` location); for each amended field show the matching option list below (for the location, ask for an absolute directory and set `ROOT` to it), apply the user's choice, then continue to Step 3.
+- **decline** — do **not** write `config.md` or `task.root`; report "config.md not written — re-run `/task:bootstrap` when ready" and **STOP** (skip Steps 3–4).
 
 **Edit menu — Language** (shown only if the user edits the language policy; for section `Language`):
 
@@ -127,9 +115,19 @@ Store the chosen mode. For modes `1` or `2`, also try to pre-fill from project a
 
 ### Step 3: Write `.task/config/config.md`
 
-Always write the file from the full template, replacing any prior version. If `.task/config/config.md` already exists, overwrite it — note this in the output ("recreated existing config.md"). Manual edits to `config.md` will be lost; durable preferences should live in `CLAUDE.md` (which `/task:bootstrap` references) or be reproducible from the prompts.
+All `.task/` paths below are under the **pipeline root `$ROOT`** computed in Step 0 (and possibly edited in Step 2). When `$ROOT` is not the current directory (a nested/sibling/bare worktree), write to the absolute `$ROOT/.task/...` — do **not** create a second `.task/` at `pwd`.
 
-Also pre-create the `.task/workspace/` directory (`mkdir -p .task/workspace`) so subsequent skills (`/task:design`, `/task:auto-roadmap`) have the container ready. The directory stays empty after init; each umbrella creates its own subfolder `.task/workspace/<task-id>/` when `/task:design` (or `/task:auto-roadmap`) runs, and the per-worktree pointer file `.task-current` (at the worktree root) names the active subfolder.
+First, **record the pipeline root** so every worktree resolves the same `.task/` (skip in a non-git dir):
+
+```bash
+git config --local task.root "$ROOT"
+```
+
+`--local` writes the repo-common config, shared by all worktrees (unaffected by `extensions.worktreeConfig`). This is what `_lib/resolve-ws.sh`'s `find_ai_dir` reads first.
+
+Always write `config.md` from the full template, replacing any prior version. If `$ROOT/.task/config/config.md` already exists, overwrite it — note this in the output ("recreated existing config.md"). Manual edits to `config.md` will be lost; durable preferences should live in `CLAUDE.md` (which `/task:bootstrap` references) or be reproducible from the prompts.
+
+Also pre-create the workspace container (`mkdir -p "$ROOT/.task/workspace"`) so subsequent skills (`/task:design`, `/task:auto-roadmap`) have it ready. The directory stays empty after init; each umbrella creates its own subfolder `.task/workspace/<task-id>/` when `/task:design` (or `/task:auto-roadmap`) runs, and a per-worktree active-task pointer (inside git's per-worktree dir — `git rev-parse --git-path task-current`) names the active subfolder for that worktree.
 
 **Dedup rule.** Each section emits in one of two modes based on `CLAUDE.md` coverage from Step 1:
 
@@ -250,11 +248,11 @@ When `tests_required` is `true`, `/task:design` (blueprint phase) emits a `## Te
 - Commit format — determine from actual `git log`, do not impose a style.
 - **No decorative XML tags.** Use Markdown headers and formatting only. XML tags are allowed only when they carry semantic metadata that Markdown cannot express.
 - **Every run regenerates the file in full.** Manual edits to `config.md` are not preserved — durable preferences belong in `CLAUDE.md` (referenced via `**Source:**`) or in the prompt answers (Language, Testing Policy).
-- **Pipeline is invisible to the project.** Do not modify `CLAUDE.md`, `README.md`, `.gitignore`, or any other tracked file outside `.task/`. The pipeline must leave no trace in shared project files — anyone not using it should be unable to tell from the repo that it exists. All pipeline configuration lives under `.task/config/`; two sanctioned artifacts may sit outside `.task/`: (1) `.task-current` (one-line per-worktree pointer at the worktree root, written by `/task:design` (initial mode), by manual umbrella recovery (restoring a closed umbrella from `.task/log/`), and — transitively, via the first subagent's `/task:design --from` — by `/task:auto-roadmap`); (2) a `.task` **symlink** to the main worktree's `.task/`, materialized only by Step 0 join-mode in a linked worktree (a passive artifact — no executable code). Both `.task` and `.task-current` are git-excluded through `.git/info/exclude` (Step 3a / Step 0), which is per-clone and never committed.
+- **Pipeline is invisible to the project.** Do not modify `CLAUDE.md`, `README.md`, `.gitignore`, or any other tracked file outside `.task/`. The pipeline must leave no trace in shared project files — anyone not using it should be unable to tell from the repo that it exists. All pipeline configuration lives under `.task/`; the only sanctioned artifact that may sit at the pipeline root is `.task/` itself (git-excluded through `.git/info/exclude`, Step 3a). The per-worktree active-task pointer lives **inside git's per-worktree dir** (`git rev-parse --git-path task-current`), so it is already outside the work tree and needs no exclusion. The `task.root` anchor lives in the repo-local git config, not in any tracked file. There is no `.task` symlink — worktree sharing is via `task.root` (Step 3).
 
 ### Step 3a: Set up local git exclusion
 
-Ensure both `.task` (pipeline working tree) and `.task-current` (the per-worktree pointer file written by `/task:design` / manual umbrella recovery / `/task:auto-roadmap`'s first subagent) are excluded locally via `.git/info/exclude` so pipeline artifacts never get staged or pushed and the project's shared `.gitignore` stays untouched. The pattern is `.task` **without a trailing slash** on purpose: a slash (`.task/`) matches only a directory, so it would miss the `.task` **symlink** a linked worktree carries (see Step 0) and the symlink would surface in `git status`; the slash-less form matches both the real directory (main worktree) and the symlink. `.git/info/exclude` is repo-wide and shared across all worktrees, so this step needs to run only once per clone. Idempotent — skip lines that are already present.
+Exclude `.task` (the pipeline working tree at `$ROOT`) locally via `.git/info/exclude` so pipeline artifacts never get staged or pushed and the project's shared `.gitignore` stays untouched. `.git/info/exclude` is repo-wide and shared across all worktrees, so this needs to run only once per clone. The active-task pointer needs no entry — it lives inside the git dir. Idempotent — skip the line if already present.
 
 1. If the current directory is not inside a git repository (no `.git/` directory or `git rev-parse --git-dir` fails) — skip this step and warn the user that exclusion was not configured.
 2. Otherwise run:
@@ -262,42 +260,37 @@ Ensure both `.task` (pipeline working tree) and `.task-current` (the per-worktre
    ```bash
    EXCLUDE=$(git rev-parse --git-path info/exclude)
    mkdir -p "$(dirname "$EXCLUDE")"; touch "$EXCLUDE"
-   grep -qxF '.task'         "$EXCLUDE" || echo '.task'         >> "$EXCLUDE"
-   grep -qxF '.task-current' "$EXCLUDE" || echo '.task-current' >> "$EXCLUDE"
+   grep -qxF '.task' "$EXCLUDE" || echo '.task' >> "$EXCLUDE"
    ```
 
-3. Report whether each line was added or already present.
+3. Report whether the line was added or already present.
 
 ### Step 4: Verify
 
 Ensure:
-1. `.task/config/config.md` exists and contains all sections listed in the template:
+1. `$ROOT/.task/config/config.md` exists and contains all sections listed in the template:
    `Code Navigation`, `Code Editing`, `Library Documentation`, `Project Conventions`,
    `Build and Tests`, `Commit Format`, `Language`, `Testing Policy`,
    `Directories — Do Not Search`.
-1a. `.task/workspace/` directory exists (empty after init — per-umbrella `<task-id>/` subfolders appear later, on first `/task:design` or `/task:auto-roadmap`).
+1a. `$ROOT/.task/workspace/` directory exists (empty after init — per-umbrella `<task-id>/` subfolders appear later, on first `/task:design` or `/task:auto-roadmap`).
 2. All file references in the project (patterns.md, guardrails.md, etc.) exist.
 3. Build/test commands match the project (whether emitted in full or as a reference summary).
 4. Only actually available MCP tools are listed.
 5. `Testing Policy` → `Mode` is one of `always | on-demand | never`.
-6. `.git/info/exclude` contains both `.task` and `.task-current` (or the project is not a git repo and a warning was reported).
-7. No project files outside `.task/` were modified by this skill (`.task-current` is created lazily by `/task:design` / manual umbrella recovery / `/task:auto-roadmap`'s first subagent, not by bootstrap).
+6. `git config --local --get task.root` returns `$ROOT` (or the project is not a git repo and a warning was reported).
+7. `.git/info/exclude` contains `.task` (or the project is not a git repo and a warning was reported).
+8. No project files outside `.task/` were modified by this skill. The active-task pointer lives inside git's per-worktree dir and is created lazily by `/task:design` / `/task:auto-roadmap`, not by bootstrap.
 
 ## Output
 
-**Join-mode (Step 0 short-circuited Steps 1–4)** — report only. Each report ends with the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)) naming the exact next action; the `JOIN-*` status tokens themselves are parser-facing and unchanged:
-- `JOIN-LINK`: created `.task` → `<main>/.task` (absolute target), and the `.git/info/exclude` status. Footer: `→ Next: \`/task:design "<what you want to do>"\``.
-- `JOIN-NOOP`: `.task` already linked to the main worktree; exclusion re-affirmed. Footer: `→ Next: \`/task:design "<what you want to do>"\``.
-- `JOIN-REFUSE-LINK`: `.task` is a broken or foreign symlink; nothing was changed. Footer names the recovery action: `→ Next: resolve \`.task\` manually (remove or repoint it), then re-run \`/task:bootstrap\``.
-- `JOIN-REFUSE-NOMAIN`: the main worktree has no `.task/`; nothing was changed. Footer: `→ Next: \`/task:bootstrap\` in the main worktree first`.
+**On decline** — report only: "config.md not written — re-run `/task:bootstrap` when ready". No file was written, `task.root` was not set, Steps 3–4 did not run, and no further bullets below apply.
 
-**Normal mode, on decline** — report only: "config.md not written — re-run `/task:bootstrap` when ready". No file was written, Step 3–4 did not run, and no further bullets below apply.
-
-**Normal mode, on accept or edit** — report:
-- Path to the written `config.md`, and whether an existing file was overwritten.
-- Detected Language policy and Testing Policy mode, and whether the user accepted them as-is or edited one or both.
+**On accept or edit** — report:
+- Path to the written `config.md` (the absolute `$ROOT/.task/...` when `$ROOT` is not the current directory), and whether an existing file was overwritten.
+- Recorded pipeline root: `task.root = $ROOT` (or skipped — not a git repo).
+- Detected Language policy and Testing Policy mode, and whether the user accepted them as-is or edited any (bare repo: include the `.task` location if edited).
 - List of sections emitted in **reference mode** (pointing into `CLAUDE.md`) vs. **full mode**.
-- Local git exclusion status: both `.task` and `.task-current` added to `.git/info/exclude`, already present, or skipped (not a git repo).
+- Local git exclusion status: `.task` added to `.git/info/exclude`, already present, or skipped (not a git repo).
 - Remind the pipeline: `/task:design` → [design's idea phase] → `/task:design` (blueprint phase) → [design's refine phase] → `/task:build implement phase` → [`/task:build audit phase`] → `/task:ship` → `/task:ship`. Steps in brackets are optional.
 
 Then print this getting-started primer (translate to the `config.md` Language if it is not English; otherwise reproduce verbatim):

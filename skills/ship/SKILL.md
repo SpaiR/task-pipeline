@@ -17,7 +17,7 @@ Commit the completed task, then either fully close the umbrella or transition to
 
 **Preconditions, tool tier, language:** see [docs/spec/invariants.md](../../docs/spec/invariants.md#tier-a--no-code-navigation) — bash gates in `commit-context.sh` (Step 1) and `close.sh` (Step 4) remain authoritative.
 
-**Precondition (hard-stop) — `.task-current` + workspace.** `.task-current` must exist at the worktree root and the subfolder it names must contain a `task.md`. If not — stop and tell the user. **`--next` mode** additionally requires non-empty `## Description` in `task.md` (something happened in the subtask). **Default mode (full close)** allows empty Description (used to drop the umbrella after the last subtask transition or after an aborted run).
+**Precondition (hard-stop) — active-task pointer + workspace.** The per-worktree active-task pointer (git per-worktree dir) must exist and the subfolder it names must contain a `task.md`. If not — stop and tell the user. **`--next` mode** additionally requires non-empty `## Description` in `task.md` (something happened in the subtask). **Default mode (full close)** allows empty Description (used to drop the umbrella after the last subtask transition or after an aborted run).
 
 ## Step 0: Removed-forms guard
 
@@ -76,7 +76,7 @@ The resolved mode feeds the Step 3 prompt (interactive) and Step 5's `close.sh` 
 
 - Stage **only** files related to the task (per `Touches` in `plan.md` and the diff).
 - **Do not stage** any files from `.task/` (task.md, plan.md, audit.md, summary.md, config/) — these are working artifacts.
-- **Do not stage** `.task-current` — it is the per-worktree pointer, excluded via `.git/info/exclude`; never enters a commit.
+- **Do not stage** the active-task pointer — it is the per-worktree pointer, living inside git's per-worktree dir (outside the work tree); it can never enter a commit.
 - **Do not stage** `.env`, credentials, or other secrets.
 - **Single confirmation (interactive).** On every interactive ship, present the staged file list, the composed commit message, **and the proposed close mode from Step 2.5** (`transition` or `full close`, plus its one-line reason) **once**, then ask **exactly once** using the canonical **accept / decline / edit** grammar (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar), section (b)): **accept** — commit as shown and run the proposed close; **decline** — abort without committing; **edit** — adjust the file list or message **and/or flip the close mode** to the other option, then commit and run the resolved close. This is still **one** prompt — the close-mode proposal folds into the existing commit confirmation, it does not add a second checkpoint. The prompt always fires — there is no "if in doubt" conditional. (When `--next` was passed, the mode is fixed to transition per Step 2.5 and only the commit is up for accept/decline/edit.)
 - **Non-interactive carve-out.** When ship runs non-interactively — the `auto-roadmap-item-runner` executing these Steps inline, where there is no user to answer — skip the prompt and commit the composed message directly, mirroring that runner's "No interactive blocking" rule (`agents/auto-roadmap-item-runner.md`). No close-mode proposal is surfaced either — the mode was already resolved literally in Step 2.5 from the flag. The interactive checkpoint stays intact for users; the autopilot ship stays unattended.
@@ -92,7 +92,7 @@ EOF
 
 ## Step 4: Determine slug for close
 
-The slug is **always** auto-derived — there is no override path. Resolve the active workspace subfolder via `<task-id>` = `cat .task-current`:
+The slug is **always** auto-derived — there is no override path. Resolve the active workspace subfolder via `<task-id>` = `cat "$(git rev-parse --path-format=absolute --git-path task-current)"`:
 
 1. Read `.task/workspace/<task-id>/summary.md` first (**primary source**). If it exists and conveys what the subtask did, generate the slug from it.
 2. **Only if `summary.md` is missing or insufficient** — fall back to the "Description" section in `.task/workspace/<task-id>/task.md`.

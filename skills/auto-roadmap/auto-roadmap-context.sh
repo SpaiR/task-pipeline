@@ -11,8 +11,8 @@
 #
 # Hard-stop preconditions (exit 1 with ERROR ... message on stderr):
 #   - .task/config/config.md missing
-#   - .task-current exists at the worktree root (auto-roadmap refuses mid-flight
-#     umbrellas — resume is the user's manual job)
+#   - an active-task pointer exists for this worktree (auto-roadmap refuses
+#     mid-flight umbrellas — resume is the user's manual job)
 #   - .task/workspace/*/auto.lock exists (stale per-umbrella sentinel
 #     from a previously failed /task:auto-roadmap run, or an active run owned
 #     by another worktree sharing this .task/)
@@ -39,15 +39,17 @@ require_config_md
 set_workspace_root
 
 # --- Precondition: no active umbrella in this worktree ---
-# /task:auto-roadmap is forward-only — an existing .task-current means a
+# /task:auto-roadmap is forward-only — an existing active-task pointer means a
 # mid-flight umbrella (manual or from a prior failed run) that auto-roadmap must
 # not silently overwrite. Resume = user's manual job (/task:ship).
-# `.task-current` sits at the project root beside `.task` (never symlinked);
-# resolve it off the discovered root, not cwd, so a drifted shell still sees it.
-TASK_CURRENT="$(dirname "$AI_DIR")/.task-current"
+# The pointer lives in git's per-worktree dir (task_current_path), so it is
+# naturally scoped to THIS worktree regardless of cwd; a legacy worktree-root
+# pointer left by a pre-upgrade run is read as a fallback.
+TASK_CURRENT="$(task_current_path)"
+[[ -f "$TASK_CURRENT" ]] || TASK_CURRENT="$(dirname "$AI_DIR")/.task-current"
 if [[ -f "$TASK_CURRENT" ]]; then
   CURRENT=$(head -n 1 "$TASK_CURRENT" | tr -d '[:space:]')
-  echo "ERROR: .task-current exists at the worktree root (points to '$CURRENT') — auto-roadmap is not for resume." >&2
+  echo "ERROR: an active-task pointer exists for this worktree (points to '$CURRENT') — auto-roadmap is not for resume." >&2
   echo "  Either run /task:ship --next to transition the current subtask," >&2
   echo "  or /task:ship to drop the umbrella entirely. Then rerun /task:auto-roadmap." >&2
   exit 1

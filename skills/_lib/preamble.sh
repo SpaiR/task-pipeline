@@ -47,50 +47,39 @@ find_ai_dir
 
 # --- require_config_md ---
 # Hard-stop precondition. Exit code 1 with ERROR on stderr if config.md is
-# missing. Aligned to stderr across all callers (previously a few printed to
-# stdout — see refactor notes).
+# missing. Aligned to stderr across all callers.
 #
-# This is the first gate a freshly created git worktree hits (config.md is
-# missing before resolve-ws even runs). When `.task` is absent AND cwd is a
-# *linked* worktree, point the user at `/task:bootstrap` join-mode instead of
-# the generic message. Guard order keeps git off the happy path: config.md
-# present → whole block skipped → no git subprocess. `realpath`/`readlink -f`
-# avoided (not built-in on macOS) — compare `cd … && pwd`. The check is
-# duplicated (not shared with resolve-ws.sh's `_linked_worktree_without_task`)
-# on purpose — bash gates fail closed independently per the repo invariant.
+# `find_ai_dir` (sourced above) resolves the shared `.task/` root for every
+# worktree of a bootstrapped repo — via the `task.root` git-config anchor or the
+# git-common-dir fallback — so a freshly created worktree finds config.md with
+# no setup. If config.md is genuinely absent (unbootstrapped repo), the generic
+# redirect is correct: /task:bootstrap creates it at the shared root.
 require_config_md() {
   if [[ ! -f "$AI_DIR/config/config.md" ]]; then
-    local _gd _common
-    if [[ ! -e "$AI_DIR" ]] && command -v git >/dev/null 2>&1 \
-       && _gd=$(git rev-parse --git-dir 2>/dev/null) \
-       && _gd=$(cd "$_gd" 2>/dev/null && pwd) \
-       && _common=$(git rev-parse --git-common-dir 2>/dev/null) \
-       && _common=$(cd "$_common" 2>/dev/null && pwd) \
-       && [[ "$_gd" != "$_common" ]]; then
-      echo "ERROR: you're in a linked git worktree without '.task'. Run /task:bootstrap here to link the shared .task/ from the main worktree." >&2
-    else
-      echo "ERROR: $AI_DIR/config/config.md not found. Run /task:bootstrap first." >&2
-    fi
+    echo "ERROR: $AI_DIR/config/config.md not found. Run /task:bootstrap first." >&2
     exit 1
   fi
 }
 
 # --- source_resolve_ws ---
 # Source the workspace resolver and run it. Caller must have set SCRIPT_DIR.
-# Self-heals a *provably-stale* `.task-current` first (empty, or pointing at a
-# missing `workspace/<id>/` subfolder): `heal_stale_pointer` removes it with a
-# one-line stderr notice, so the following `resolve_ws` reports the clean "no
-# active task" terminal state instead of the old "Restore … manually" error. A
-# valid pointer (workspace present) is a no-op for the heal, so `close.sh`
-# (which resolves via this wrapper against a live umbrella) is unaffected. The
-# heal is best-effort — its return code is intentionally ignored. Only this
-# wrapper and design's open phase heal; the direct sourcers (`validate.sh`,
-# `phase-detect.sh`) call `resolve_ws` read-only and never mutate.
-# On resolver failure (no .task-current, missing subfolder after heal), the
-# resolver prints to stderr and we exit 1.
+# Migrates a pre-upgrade pointer first (`migrate_legacy_pointer` moves a
+# worktree-root `.task-current` into git's per-worktree dir), then self-heals a
+# *provably-stale* pointer (empty, or pointing at a missing `workspace/<id>/`
+# subfolder): `heal_stale_pointer` removes it with a one-line stderr notice, so
+# the following `resolve_ws` reports the clean "no active task" terminal state
+# instead of the old "Restore … manually" error. A valid pointer (workspace
+# present) is a no-op for the heal, so `close.sh` (which resolves via this
+# wrapper against a live umbrella) is unaffected. Both are best-effort — return
+# codes intentionally ignored. Only this wrapper and design's open phase
+# migrate/heal; the direct sourcers (`validate.sh`, `phase-detect.sh`) call
+# `resolve_ws` read-only and never mutate (they read the legacy location as a
+# read-only fallback instead). On resolver failure the resolver prints to
+# stderr and we exit 1.
 source_resolve_ws() {
   # shellcheck source=resolve-ws.sh
   source "$SCRIPT_DIR/../_lib/resolve-ws.sh"
+  migrate_legacy_pointer || true
   heal_stale_pointer || true
   resolve_ws "$@" || exit 1
 }
