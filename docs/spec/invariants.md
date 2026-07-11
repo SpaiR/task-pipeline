@@ -196,4 +196,6 @@ Present the options on a canonical prompt line — `accept / decline / edit` —
 
 `/task:ship`'s commit confirmation is the canonical single instance of this grammar: the message is composed mechanically from `summary.md` artifacts (fallback `task.md`) — never authored as free text — obeys the configured commit format, and is presented **once** before commit. The non-interactive `/task:auto-roadmap` path (the item-runner running ship inline) auto-accepts, so an unattended run does not deadlock.
 
+`/task:bootstrap`'s setup confirmation is another instance: the detected language policy and testing-policy mode are proposed once, in a single block, with edit as the override path for either or both.
+
 **Free by design.** Visual styling (surrounding blank lines, emphasis) and, per command, the actual next-step value and the specific proposed content are left to each command. Only the footer shape and the choice-grammar wording/semantics are pinned.

@@ -77,7 +77,7 @@ From then on, updates are a single command: `/plugin marketplace update task-pip
 
 After installation, Claude Code gains the commands `/task:bootstrap`, `/task:design`, `/task:build`, `/task:ship`, `/task:roadmap`, `/task:auto-roadmap`, plus nine named agents and a PreToolUse artifact-validator hook that activates automatically.
 
-In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks two interactive questions (language, test policy), and writes `.task/config/config.md`.
+In a new project: call `/task:bootstrap` once. The skill inspects the repo, detects language and test policy, presents both as defaults, and writes `.task/config/config.md` after a single confirmation (accept, edit either value, or decline).
 
 > [!NOTE]
 > Invoking the agents manually via `Agent(...)`, or hitting a `No such file or directory` from a skill's bash script? See [docs/troubleshooting.md](docs/troubleshooting.md).

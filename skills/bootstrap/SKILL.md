@@ -6,11 +6,11 @@ user-invocable: true
 model: haiku
 ---
 
-Create `.task/config/config.md` — the per-project configuration for all task-* skills. Interactive: asks the user about language and testing policy. Each run regenerates the file in full. Sections whose information is canonically maintained in `CLAUDE.md` are emitted as short references rather than duplicated copies.
+Create `.task/config/config.md` — the per-project configuration for all task-* skills. Interactive: detects language policy and testing policy from the repo, then confirms both in a single accept/decline/edit prompt. Each run regenerates the file in full. Sections whose information is canonically maintained in `CLAUDE.md` are emitted as short references rather than duplicated copies.
 
 **Input:** Additional context (if provided): $ARGUMENTS
 
-**Preconditions, tool tier, language:** see [docs/spec/invariants.md](../../docs/spec/invariants.md#tier-c--shallow-scan) — no `config.md` precondition (this skill creates it); the Tier-C reads (manifests, top-level dirs, `CLAUDE.md`, `git log`) apply. Language inside the emitted `config.md` is chosen interactively via Prompt A. **Worktree join-mode (Step 0) is the exception:** when invoked from a *linked* git worktree that has no local `.task`, the skill only links the shared `.task/` from the main worktree and exits — Tier A (`git` + a `.task` symlink + `.git/info/exclude`; no project analysis, no prompts, Steps 1–4 skipped).
+**Preconditions, tool tier, language:** see [docs/spec/invariants.md](../../docs/spec/invariants.md#tier-c--shallow-scan) — no `config.md` precondition (this skill creates it); the Tier-C reads (manifests, top-level dirs, `CLAUDE.md`, `git log`) apply. Language inside the emitted `config.md` is detected, then confirmed (or edited) in Step 2's single confirmation. **Worktree join-mode (Step 0) is the exception:** when invoked from a *linked* git worktree that has no local `.task`, the skill only links the shared `.task/` from the main worktree and exits — Tier A (`git` + a `.task` symlink + `.git/info/exclude`; no project analysis, no prompts, Steps 1–4 skipped).
 
 ## Instructions
 
@@ -76,14 +76,25 @@ Dispatch on `MODE` (never overwrite an existing `.task` silently):
    - **Convention documents**: paths to patterns.md, guardrails.md, etc. (if present).
    - **MCP servers** available — discover whichever code-navigation, code-editing, or library-documentation servers are actually connected in this session (from `CLAUDE.md` or system context). Record them by their role, not by any assumed product; name none by default.
    - **Ticket format**: if the project has one (`DT-XXXX`, `PROJ-NNN`, etc.).
+   - **Detected language policy**: infer the repo's dominant natural language from the `git log` commit prose (item 3 below) plus prose in `CLAUDE.md` / `README.md`. For an English or mixed-language repo, the safe detected default is "follow the language of `task.md` Description" ("Edit menu — Language", option 2, below); for a repo whose commits and docs are clearly in one non-English language, detect that language instead. This only **seeds** the proposal shown in Step 2 — it never locks a value.
+   - **Detected testing-policy mode**: reuse the test-infrastructure signals already gathered here (test framework, test directories, test command referenced in `CLAUDE.md` or lockfiles). Tests present → `on-demand`. A documented TDD / red-first convention in `CLAUDE.md` → `always`. No test infrastructure at all → still `on-demand` (never silently detect `never`). Also seeds only — never locks a value.
 3. Run `git log -10 --oneline` to determine commit style and language.
 4. Look for a project commit-format doc — check, in order: `CONTRIBUTING.md`, `docs/CONTRIBUTING.md`, `.github/CONTRIBUTING.md`. If one exists, record its path; the Commit Format section will emit a `**Source:**` pointer to it instead of paraphrasing rules that may drift.
 
-### Step 2: Interactive prompts
+### Step 2: Confirm detected setup
 
-Always ask both prompts, regardless of whether `config.md` already exists. Present prompts in the user's language (fall back to English).
+Regardless of whether `config.md` already exists, present the two detected defaults from Step 1 as one proposal, then a single decision using the canonical **accept / decline / edit** choice grammar — see [docs/spec/invariants.md § Interaction conventions (b)](../../docs/spec/invariants.md#b-choice-grammar--accept--decline--edit) for the grammar itself; do not restate it here. Present in the user's language (fall back to English).
 
-**Prompt A — Language** (for section `Language`):
+```
+Detected — Language: <detected policy, in plain words>; Testing policy: <detected mode>.
+accept / decline / edit
+```
+
+- **accept** — adopt both detected values as-is; continue to Step 3.
+- **edit** — ask which field(s) to amend (language policy, testing-policy mode, or both); for each amended field show the matching option list below, apply the user's choice, then continue to Step 3.
+- **decline** — do **not** write `config.md`; report "config.md not written — re-run `/task:bootstrap` when ready" and **STOP** (skip Steps 3–4).
+
+**Edit menu — Language** (shown only if the user edits the language policy; for section `Language`):
 
 ```
 Which language policy for task artifacts?
@@ -97,7 +108,7 @@ Which language policy for task artifacts?
 - Option **2** → use the defaults baked into the template below.
 - Option **3** → ask for each of: `task.md` Description, `plan.md`, `summary.md`, `## Decisions`, commits, design idea phase dialog language, design refine phase dialog language. Record the per-artifact answers into the `Language` section.
 
-**Prompt B — Testing Policy** (for section `Testing Policy`):
+**Edit menu — Testing Policy** (shown only if the user edits the testing-policy mode; for section `Testing Policy`):
 
 ```
 How strict should the testing policy be for tasks driven by this pipeline?
@@ -133,8 +144,8 @@ Apply per section:
 | Project Conventions | Reference mode | Full mode |
 | Build and Tests | Reference mode + the exact build/test commands as a 1–2 line summary | Full mode |
 | Commit Format | Reference mode if a project commit-format doc was found in Step 1.4 — emit only `**Source:** \`<path>\`` and stop, no inline rules. Otherwise Full mode (derived from `git log`). | Full mode (derived from `git log`) |
-| Language | Full mode (pipeline-specific, comes from Prompt A) | Full mode |
-| Testing Policy | Full mode (pipeline-specific, comes from Prompt B) | Full mode |
+| Language | Full mode (pipeline-specific, comes from the confirmed language policy) | Full mode |
+| Testing Policy | Full mode (pipeline-specific, comes from the confirmed testing-policy mode) | Full mode |
 | Directories — Do Not Search | Reference mode | Full mode |
 
 Template:
@@ -186,7 +197,7 @@ Full mode (no commit-format doc found): determine from `git log` — format, lan
 
 Rules about which language to use for each artifact produced by task-* skills. Skills reference this section instead of duplicating the rule locally.
 
-{Emit the block that matches Prompt A:
+{Emit the block that matches the confirmed language policy (detected default, or the edit-menu option chosen in Step 2):
  - Option 1: every line becomes "English".
  - Option 2 (default): emit the block below verbatim.
  - Option 3: reflect the user's per-artifact answers.}
@@ -204,7 +215,7 @@ Rules about which language to use for each artifact produced by task-* skills. S
 
 Controls whether `/task:design` blueprint phase and `/task:build` implement phase write tests.
 
-- **Mode:** `{always | on-demand | never}`   <!-- from Prompt B -->
+- **Mode:** `{always | on-demand | never}`   <!-- the confirmed testing-policy mode -->
 - **Test framework:** `{e.g. JUnit 5 / Vitest / pytest — or "project-default" if unknown}`
 - **Test command:** `{exact command, usually the Tests line from "Build and Tests"}`
 - **Required scope:** `{paths where tests are mandatory — or "project-default"}`
@@ -278,9 +289,11 @@ Ensure:
 - `JOIN-REFUSE-LINK`: `.task` is a broken or foreign symlink; nothing was changed. Footer names the recovery action: `→ Next: resolve \`.task\` manually (remove or repoint it), then re-run \`/task:bootstrap\``.
 - `JOIN-REFUSE-NOMAIN`: the main worktree has no `.task/`; nothing was changed. Footer: `→ Next: \`/task:bootstrap\` in the main worktree first`.
 
-**Normal mode** — report:
+**Normal mode, on decline** — report only: "config.md not written — re-run `/task:bootstrap` when ready". No file was written, Step 3–4 did not run, and no further bullets below apply.
+
+**Normal mode, on accept or edit** — report:
 - Path to the written `config.md`, and whether an existing file was overwritten.
-- Chosen Language policy and Testing Policy mode.
+- Detected Language policy and Testing Policy mode, and whether the user accepted them as-is or edited one or both.
 - List of sections emitted in **reference mode** (pointing into `CLAUDE.md`) vs. **full mode**.
 - Local git exclusion status: both `.task` and `.task-current` added to `.git/info/exclude`, already present, or skipped (not a git repo).
 - Remind the pipeline: `/task:design` → [design's idea phase] → `/task:design` (blueprint phase) → [design's refine phase] → `/task:build implement phase` → [`/task:build audit phase`] → `/task:ship` → `/task:ship`. Steps in brackets are optional.
