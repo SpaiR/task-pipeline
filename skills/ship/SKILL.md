@@ -51,7 +51,12 @@ The script enforces the hard-stop precondition (exits if `.task/config/config.md
 
 ## Step 2: Compose commit message
 
-Use the commit format from `config.md` → "Commit Format". Base content primarily on `summary.md`.
+Compose the commit message **mechanically from the task's own artifacts — there is no free-text authoring step**. Both parts are artifact-sourced:
+
+- **Header** (`type` / optional `scope` / subject) — derived from `summary.md`'s `**Solution:**` line, shaped by the configured commit format.
+- **Body** (the "why" bullets) — derived from `summary.md`'s `**Problem:** / **Decision:** / **Result:**` fields.
+
+`task.md`'s `## Description` is the fallback source **only** when `summary.md` is missing. The user is never asked to write commit text from scratch; the sole place free text may enter is the optional **edit** branch of the Step 3 confirmation.
 
 If the context block contains `===== referenced: <path> =====` sections, that doc is the source of truth — types, scope enums, description form, length limits, body structure, AI-trailer convention. Apply it directly. Inline content in `config.md` is a hint; the referenced doc wins on conflicts. Follow any project-specific `Co-authored-by` trailer format verbatim — it overrides any default trailer the harness would otherwise emit.
 
@@ -63,7 +68,8 @@ If the context block contains `===== referenced: <path> =====` sections, that do
 - **Do not stage** any files from `.task/` (task.md, plan.md, audit.md, summary.md, config/) — these are working artifacts.
 - **Do not stage** `.task-current` — it is the per-worktree pointer, excluded via `.git/info/exclude`; never enters a commit.
 - **Do not stage** `.env`, credentials, or other secrets.
-- If in doubt — show the staged file list and the composed commit, then ask for confirmation using the canonical **accept / decline / edit** grammar (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)): **accept** — commit as shown; **decline** — abort without committing; **edit** — adjust the file list or message, then commit.
+- **Single confirmation (interactive).** On every interactive ship, present the staged file list plus the composed commit message **once**, then ask **exactly once** using the canonical **accept / decline / edit** grammar (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar), section (b)): **accept** — commit as shown; **decline** — abort without committing; **edit** — adjust the file list or message, then commit. The prompt always fires — there is no "if in doubt" conditional.
+- **Non-interactive carve-out.** When ship runs non-interactively — the `auto-roadmap-item-runner` executing these Steps inline, where there is no user to answer — skip the prompt and commit the composed message directly, mirroring that runner's "No interactive blocking" rule (`agents/auto-roadmap-item-runner.md`). The interactive checkpoint stays intact for users; the autopilot ship stays unattended.
 
 Create the commit using HEREDOC:
 

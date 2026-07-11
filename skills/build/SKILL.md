@@ -161,7 +161,7 @@ After the dispatched phase completes successfully (no verify failure, no iterati
 
 - **Manual mode (`AUTO_MODE=0`)** — print the chain hint as the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)) and stop:
   - After `implement` → `→ Next: \`/task:build\`` (auto-detects audit).
-  - After `audit` (loop completed cleanly) → `→ Next: \`/task:ship\`` (commit + close).
+  - After `audit` (loop completed cleanly) → print the compact one-line summary first — `Audit: <total> found · <fixed> fixed · <filtered> filtered — full detail in \`audit.md\``, with the three numbers read from the just-written iteration's `### Result` line — then `→ Next: \`/task:ship\`` (commit + close). Do not re-print the Findings/Details tables; they stay in `audit.md`.
   - After `audit` (loop hit iteration limit) → user action required; print the Step 4 iteration-limit message (which ends with its own `→ Next:` line), no chain hint.
 
 - **`--auto` mode (`AUTO_MODE=1`)** — instead of printing the chain hint, **loop back to Step 1a** (re-run phase-detect with the updated on-disk state). The loop terminates on:
@@ -184,6 +184,6 @@ After the dispatched phase completes successfully (no verify failure, no iterati
 
 After the dispatched phase completes:
 - Print whatever the companion phase's "Output" section specifies (iteration counts, findings, build/test results).
-- For audit: report iteration count, fixes applied, fixes skipped (touches-gate violations), and final verification status.
+- For audit (clean/converged case): the **default** human-facing output is a single compact line — `Audit: <total> found · <fixed> fixed · <filtered> filtered — full detail in \`audit.md\`` — where the three numbers come from the just-written iteration's `### Result` line. Do NOT re-print the Findings/Details tables by default; they remain retrievable from `audit.md` on request. The Step 4 iteration-limit and verify-failure paths keep their existing full blocking-finding surfacing — the compact summary never replaces those.
 - In manual mode — add the chain hint (Step 5).
 - In `--auto` mode — print one summary line per completed phase as the loop progresses (`[--auto] implement done`, `[--auto] audit iteration 1 done`, etc.); after the final phase or on stop, print the terminating message described in Step 5.

@@ -154,10 +154,13 @@ In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks
 
 /task:build                                      # phase=implement: implement per the plan
 /task:build                                      # phase=audit: lens fanout + bounded auto-fix
+                                                 # default output: one summary line (found/fixed/filtered);
+                                                 # full detail stays in audit.md
 # or in a single call (opt-in):
 /task:build --auto                                # both phases back-to-back; stop on per-phase budget
 
-/task:ship                                       # slug auto-generated → e.g. feat-add-retries
+/task:ship                                       # commit composed from artifacts, one accept/decline/edit confirm
+                                                 # slug auto-generated → e.g. feat-add-retries
                                                  # default: full close — workspace and .task-current removed
 # or, instead of closing, keep the umbrella open for another subtask:
 /task:ship --next                                # transition to the next subtask (task.md stays)
@@ -185,7 +188,7 @@ Three references: default Claude Code (plan mode + TodoWrite), [obra/superpowers
 | **Step verification** | None | A step closes only if the `Touches` symbols are in `git diff` (+ RED→GREEN when `## Tests`) |
 | **Auto-fix audit findings** | None | Bounded loop ≤2 iterations, scope-gated by `Touches` |
 | **Interrupt / resume** | Lost on `/clear` | Plan + progress are files; auto-resumable via `TaskList` |
-| **Result review** | Only whatever the model decides | `/task:build` audit phase with a 3-lens fanout (Reuse / Simplicity / Clarity) + bounded auto-fix loop |
+| **Result review** | Only whatever the model decides | `/task:build` audit phase with a 3-lens fanout (Reuse / Simplicity / Clarity) + bounded auto-fix loop; reports one summary line by default, full detail in `audit.md` |
 | **Multi-task initiatives** | None | `/task:roadmap` → `/task:design --from`; autopilot `/task:auto-roadmap` |
 | **Archive** | None | `.task/log/<task-id>/<N>-<slug>/` |
 
