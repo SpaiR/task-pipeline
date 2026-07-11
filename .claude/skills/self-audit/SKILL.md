@@ -130,7 +130,7 @@ After rendering the report, auto-apply only findings that pass the gate: **sever
 If no fix was applied, skip this step.
 
 Otherwise, in one parallel batch:
-- Run `bash skills/validate.sh --help 2>&1 | head -5` to confirm the validator still parses (any syntax break is high-severity).
+- Run `bash skills/validate/validate.sh --help 2>&1 | head -5` to confirm the validator still parses (any syntax break is high-severity).
 - For each fix that touched a producer template, re-read the file once (Read, no `cat`) and confirm the change landed cleanly.
 - Re-emit a one-line summary: `Verified: K/K fixes intact.`
 
