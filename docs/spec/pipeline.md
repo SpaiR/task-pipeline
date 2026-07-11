@@ -20,6 +20,8 @@
 
 The three operational skills (`design`, `build`, `ship`) auto-detect their current phase from `.task/workspace/<task-id>/` state. Pass `--phase <name>` to force a specific phase (override auto-detect).
 
+**Interactive question layer.** On top of auto-detect, the operational skills present a discrete **path fork** as an `AskUserQuestion` (chips) whenever the intent is genuinely undetermined and no flag disambiguates it — the structured-choice convention (c) in [invariants.md § Interaction conventions](invariants.md#interaction-conventions-next-step-footer--choice-grammar): `/task:design`'s entry fork (brainstorm / draft directly / open from a roadmap), its `--from` item picker, `/task:build`'s implement→audit advance question, and `/task:auto-roadmap`'s roadmap picker (already present) + item-scope question. This is **additive and interactive-only** — the flags (`--idea` / `--from` / `--items` / `--next` / `--auto`) all remain as the explicit, non-interactive equivalents that skip the question, and the `/task:auto-roadmap` runners always pass those flags so autopilot never blocks on a prompt. The design goal is fewer mandatory flags in day-to-day interactive use, not their removal.
+
 ## Phase dispatch
 
 `/task:design` covers 4 phases — `open`, `idea`, `blueprint`, `refine`:

@@ -13,6 +13,7 @@ When editing any rule below, **also update its source-of-truth file** — drift 
 | Mandatory verification before `TaskUpdate(completed)` | `auto-roadmap-build-runner` | `skills/build/phases/implement.md` |
 | MCP-first tooling in nested phases | all runners (blueprint / implement / audit) | `docs/spec/invariants.md` § Code-navigation tiers + `.task/config/config.md` |
 | Implement-Model rubric stamp in `plan.md` | `auto-roadmap-design-runner` | `skills/design/phases/blueprint.md` § Step 3 |
+| Never call `AskUserQuestion` — pass explicit flags | all runners | `docs/spec/invariants.md` § Interaction conventions (c) |
 
 ## Rules
 
@@ -20,6 +21,7 @@ When editing any rule below, **also update its source-of-truth file** — drift 
 - **Append-only artifacts.** `## Decisions` in `task.md` / `plan.md` is append-only. (Both runners.)
 - **Mandatory verification before `TaskUpdate(completed)`** for each step in implement: Identify → Run → Read → State. `Touches` symbols must be visible in `git diff`; if `## Tests` is present, RED→GREEN must be observed. (Build-runner only.)
 - **MCP-first tooling.** For code navigation and editing inside any nested phase (`blueprint`, `implement`, `audit`), use MCP tools from `.task/config/config.md` → "Code Navigation" / "Code Editing" in the priority order listed there. Built-in `Read`/`Edit`/`Grep`/`Glob`/`ls` are allowed only when `config.md` explicitly lists them as fallback; otherwise justify the choice in one line before calling. **Read `config.md` once at the start of your run** — all three runners are interactive-session subagents, so `config.md` is available throughout their context.
+- **Never call `AskUserQuestion`.** The interactive structured-choice forks (`docs/spec/invariants.md` § Interaction conventions (c) — design's entry fork, `--from` item picker, build's implement→audit advance, auto-roadmap's item-scope question) are **interactive-only**. A runner has no user to answer and must never reach one: always drive the nested skill with the explicit flag the driver captured (`--from <path>#<N>`, `--items`/`--next`, `--auto` or literal phase dispatch). A blocked question would deadlock the unattended run. (All runners.)
 - **Implement-Model rubric.** Design-runner MUST apply `blueprint.md` § Step 3's rubric honestly (`opus` for cross-cutting / >5 steps / >3 modules / subtle invariants; `sonnet` for typical isolated changes; `haiku` for ≤2-step single-module mechanical edits; `sonnet` when uncertain). The stamp is load-bearing — the item-runner reads `plan.md → Implement-Model:` after design-runner OK and passes the value as the `Agent.model` override when spawning build-runner. Too cheap → implement may flap on verification; too dear → the run pays opus rates for trivial work. (Design-runner only — build-runner just echoes the chosen value in its `implement_model` input field.)
 
 ## Postmortem path resolution
