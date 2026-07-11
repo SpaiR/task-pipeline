@@ -42,7 +42,7 @@ Otherwise → run `PHASE=$(bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/phase-detect.
 Possible auto-detect outputs:
 - `implement` — no `summary.md` OR no diff vs HEAD (work hasn't started yet).
 - `audit` — `summary.md` exists, `audit.md` missing OR any `## Iteration N` block contains `pending fix` (parser greps the whole file per `_lib/phase-detect.sh:115`; the audit phase replaces every `pending fix` with `Fixed` per iteration, so practically only the last block ever holds one).
-- `done` — all artifacts complete. Stop with: "Build complete. Run `/task:ship` to commit and close the umbrella, or `/task:ship --next` to transition to the next subtask."
+- `done` — all artifacts complete. Print "Build complete." (The `done` phase-detect token itself is parser-facing — do not alter it; only the human-facing message changes.) Then branch on the run: an **interactive run** is clean here, so proceed into the **Clean-build ship proposal** (shared note before Step 5) instead of the passive footer; a **non-interactive run** (the item-runner executing inline) stops here and lets the item-runner drive ship. On a declined proposal (interactive), fall back to the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)): `→ Next: \`/task:ship\` (commit + close the umbrella) — or \`/task:ship --next\` to transition to the next subtask`.
 
 ## Step 1b: `--auto` per-phase budget gate (only when `AUTO_MODE=1`)
 
@@ -148,24 +148,39 @@ while passes_done < 2:
 if pending high-severity findings remain after 2 passes:
     surface to user with the list and stop.
     Output: "Audit hit iteration limit (2) with N high-severity findings remaining.
-             Review audit.md and either fix manually or run /task:design --refine
-             to revisit scope, then /task:build to retry."
+             Review audit.md and either fix manually or revisit scope with
+             /task:design --refine.
+             → Next: /task:build   (retry the audit after addressing findings)"
 ```
 
 The companion `audit.md` defines the prompt structure and lens definitions; the orchestrator owns the iteration count and the touches-gate enforcement.
+
+## Clean-build ship proposal (interactive only)
+
+A build is **clean** when phase-detect returns `done`, OR the audit auto-fix loop converged with no `pending fix` remaining and no unresolved high-severity finding. This is the *same* signal the existing clean endpoints already reach — it adds no new detector.
+
+On a clean build **in an interactive run**, the orchestrator does not stop at a passive `→ Next: \`/task:ship\`` footer — it **proposes the ship** by flowing directly into the ship flow: compose the commit from artifacts → resolve the close mode → present ship's single **accept / decline / edit** confirmation (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)). That single ship confirmation **is** the confirm-gate for the auto-ship — do NOT stack a separate "ship now?" prompt in front of it (§2's single explicit confirmation; one prompt, no second checkpoint):
+
+- **accept** → commit + close (ship runs its normal close/transition).
+- **decline** → nothing is committed (safe default); the build then prints the manual `→ Next: \`/task:ship\`` footer so the user can ship later.
+- **edit** → ship's normal edit branch, then commit + close.
+
+On a **non-interactive run** — the `auto-roadmap-item-runner` executing these Steps inline (the *same* non-interactive detector ship's SKILL.md Steps 2.5/3 use) — the orchestrator does **not** propose: it completes silently and the item-runner drives ship itself with literal flags. This interactive-only gate is what keeps the item-runner and the driver byte-stable. This is a confirm-gated default (always-on for interactive builds), not an opt-in flag or config toggle — per `simplify-pipeline-surface.spec.md §2`.
+
+**Blocking completions never propose.** The Step 4 verify-failure path, the Step 4 / Step 5 audit iteration-limit path, and the implement quick-fix-exhausted hand-off are not clean — they keep their full blocking-finding surfacing and their own `→ Next:` lines, with no ship proposal added.
 
 ## Step 5: Chain hint / `--auto` loop-back
 
 After the dispatched phase completes successfully (no verify failure, no iteration limit surfaced):
 
-- **Manual mode (`AUTO_MODE=0`)** — print the chain hint and stop:
-  - After `implement` → `/task:build` again (auto-detects audit).
-  - After `audit` (loop completed cleanly) → `/task:ship` (commit + close).
-  - After `audit` (loop hit iteration limit) → user action required, no chain hint.
+- **Manual mode (`AUTO_MODE=0`)** — print the chain hint as the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)) and stop:
+  - After `implement` → `→ Next: \`/task:build\`` (auto-detects audit).
+  - After `audit` (loop completed cleanly) → print the compact one-line summary first — `Audit: <total> found · <fixed> fixed · <filtered> filtered — full detail in \`audit.md\``, with the three numbers read from the just-written iteration's `### Result` line. Do not re-print the Findings/Details tables; they stay in `audit.md`. The build is now clean: on an **interactive run**, follow the compact summary with the **Clean-build ship proposal** (flow into ship's single confirmation) instead of the passive footer; on a **non-interactive run**, or when the proposal is declined, print `→ Next: \`/task:ship\`` (commit + close).
+  - After `audit` (loop hit iteration limit) → user action required; print the Step 4 iteration-limit message (which ends with its own `→ Next:` line), no chain hint and **no ship proposal** — the build is not clean.
 
 - **`--auto` mode (`AUTO_MODE=1`)** — instead of printing the chain hint, **loop back to Step 1a** (re-run phase-detect with the updated on-disk state). The loop terminates on:
-  - Step 1a returning `done` → print `Build complete. Run /task:ship...` and stop.
-  - Step 1b's per-phase budget gate firing → print `--auto stopped: ...` and stop.
+  - Step 1a returning `done` → the build is clean; apply the **Clean-build ship proposal** via the Step 1a `done` branch (interactive: flow into ship's single confirmation; non-interactive / declined: print `Build complete.` + the `→ Next:` footer) and stop.
+  - Step 1b's per-phase budget gate firing → print `--auto stopped: ...` and stop. This path is not clean — no ship proposal.
   - Any dispatched phase surfacing a stop (verify failure, audit iteration limit, implement quick-fix exhausted) → propagate the phase's stop message, prefix with `--auto stopped:`, do not loop back.
 
   The `--auto` loop has no global iteration bound beyond the per-phase budgets in Step 1b; the worst-case execution is `implement(×1) → audit(×2)` = 3 phase dispatches before forced termination.
@@ -178,11 +193,14 @@ After the dispatched phase completes successfully (no verify failure, no iterati
 - Run more than 2 audit iterations — the bound is the safety mechanism; surface to user instead.
 - Bypass the Step 1b per-phase budget gate in `--auto` mode — the budget is the only thing keeping the loop from re-entering audit indefinitely.
 - Combine `--auto` with `--phase` — they are mutually exclusive (Step 1 rejects).
+- Propose the ship on a non-clean build (any blocking path — verify failure, audit iteration limit, implement quick-fix exhausted) or under non-interactive (item-runner inline) execution — the Clean-build ship proposal is interactive-only and clean-only.
+- Add a second confirmation on top of ship's single Step 3 accept/decline/edit confirmation — the clean-build proposal reuses that one prompt, it does not stack another.
 
 ## Output
 
 After the dispatched phase completes:
 - Print whatever the companion phase's "Output" section specifies (iteration counts, findings, build/test results).
-- For audit: report iteration count, fixes applied, fixes skipped (touches-gate violations), and final verification status.
+- For audit (clean/converged case): the **default** human-facing output is a single compact line — `Audit: <total> found · <fixed> fixed · <filtered> filtered — full detail in \`audit.md\`` — where the three numbers come from the just-written iteration's `### Result` line. Do NOT re-print the Findings/Details tables by default; they remain retrievable from `audit.md` on request. The Step 4 iteration-limit and verify-failure paths keep their existing full blocking-finding surfacing — the compact summary never replaces those.
+- On a **clean interactive build** (both clean endpoints — Step 1a `done` and Step 5 audit-clean — plus the `--auto` `done` termination): after the applicable completion / compact-summary line, surface the **Clean-build ship proposal** (see the shared note before Step 5) — flow into ship's single accept/decline/edit confirmation (accept → commit + close; decline → no commit, print the manual `→ Next: \`/task:ship\`` footer; edit → ship's edit branch). Non-interactive runs and every blocking path never propose.
 - In manual mode — add the chain hint (Step 5).
 - In `--auto` mode — print one summary line per completed phase as the loop progresses (`[--auto] implement done`, `[--auto] audit iteration 1 done`, etc.); after the final phase or on stop, print the terminating message described in Step 5.

@@ -7,7 +7,7 @@ A linear task workflow for Claude Code: from intake to commit, through explicit 
 ![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-8A2BE2)
 
 ```text
-/task:bootstrap                          # once per project
+/task:bootstrap                          # once per project (or auto-runs on 1st design/roadmap)
   ↓
 [/task:roadmap [--refine]]               ← optional: roadmap for a large initiative
   ↓
@@ -26,7 +26,7 @@ A linear task workflow for Claude Code: from intake to commit, through explicit 
 /plugin marketplace add https://github.com/SpaiR/task-pipeline.git
 /plugin install task@task-pipeline
 
-/task:bootstrap                              # once per project
+/task:bootstrap                              # once per project (optional — 1st design/roadmap auto-runs it)
 /task:design "fix the flaky retry logic"     # opens the task + writes the Description
 /task:design                                 # run again → builds the plan
 /task:build --auto                           # implement + audit
@@ -77,7 +77,7 @@ From then on, updates are a single command: `/plugin marketplace update task-pip
 
 After installation, Claude Code gains the commands `/task:bootstrap`, `/task:design`, `/task:build`, `/task:ship`, `/task:roadmap`, `/task:auto-roadmap`, plus nine named agents and a PreToolUse artifact-validator hook that activates automatically.
 
-In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks two interactive questions (language, test policy), and writes `.task/config/config.md`.
+In a new project you don't have to run setup by hand first: the first `/task:design` or `/task:roadmap` in an unconfigured project auto-runs setup inline (inspect the repo → detect language and test policy → one confirmation), then continues the requested action. You can still call `/task:bootstrap` explicitly to do it deliberately — it inspects the repo, detects language and test policy, presents both as defaults, and writes `.task/config/config.md` after a single confirmation (accept, edit either value, or decline). The explicit command stays available and idempotent for re-running setup on demand. (`/task:build`, `/task:ship`, and `/task:auto-roadmap` do **not** auto-run setup — they presuppose prior pipeline state, so a fresh-project first-use of them still hard-stops with a "run `/task:bootstrap` first" redirect.)
 
 > [!NOTE]
 > Invoking the agents manually via `Agent(...)`, or hitting a `No such file or directory` from a skill's bash script? See [docs/troubleshooting.md](docs/troubleshooting.md).
@@ -95,7 +95,7 @@ In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks
 ## Command reference
 
 ```text
-/task:bootstrap  — once per project; creates .task/config/config.md
+/task:bootstrap  — once per project (or auto-runs on 1st design/roadmap); creates .task/config/config.md
   ↓
 [/task:roadmap [--refine]]  — optional; roadmap for a large initiative → .task/roadmap/<slug>.md
   ↓                          --refine: parallel audit of an existing roadmap
@@ -103,39 +103,41 @@ In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks
   ├─→ [/task:auto-roadmap] — optional; autopilot over an approved roadmap
   ↓                         in the current interactive session.
 /task:design  — open a task, write the Description, plan it out
-  ↓             (phase auto-detect: open(quick-draft) → blueprint; [--idea] brainstorm, [--refine] opt.)
+  ↓             (phase auto-detect: open(quick-draft) → blueprint; [--idea] brainstorm)
 /task:build [--auto] — implementation + audit with an auto-fix loop
   ↓             (phase auto-detect: implement → audit;
                  --auto — opt-in: both phases in one call)
 /task:ship [--next]  — commit + close
-                        default → full close of the umbrella task (--full is an alias)
+                        default → full close of the umbrella task
                         --next  → transition to the next subtask (task.md stays)
 ```
 
 **Re-entry semantics:** `/task:design` and `/task:build` look at the state of `.task/workspace/<task-id>/` and automatically resume from the right phase. Override with `--phase <open|idea|blueprint|refine|implement|audit>`. `/task:build` additionally accepts `--auto` (opt-in one-shot: runs `implement → audit` in a single call, mutually exclusive with `--phase`).
 
+**Next-step footer:** every core command ends its output with a single copy-pasteable `→ Next: <command>` line naming the exact next step (or `→ Done.` when the flow is complete), so you never have to remember which command comes next — just paste the line. The convention is defined once in [`docs/spec/invariants.md § Interaction conventions`](docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar).
+
 `validate` is an internal utility: the pipeline invokes it as a precondition gate, not via a slash command. For a manual check: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`.
 
 ### Umbrella task vs subtask
 
-`task.md` is an **umbrella task**: a task with one `task-id` and a shared title, under which there may be several subtasks. Each `/task:design → /task:build → /task:ship` cycle is one subtask. By default `/task:ship` closes the umbrella task entirely (`--full` is a backward-compatible alias). `/task:ship --next` clears the Description and keeps the title — the next cycle starts from the same umbrella task.
+`task.md` is an **umbrella task**: a task with one `task-id` and a shared title, under which there may be several subtasks. Each `/task:design → /task:build → /task:ship` cycle is one subtask. Interactive `/task:ship` **proposes** close-or-transition based on whether pending work remains and acts on one confirmation — you can flip the proposal there. A full close ends the umbrella task entirely; a transition clears the Description and keeps the title, so the next cycle starts from the same umbrella task. `/task:ship --next` forces the transition without inferring. (Under `/task:auto-roadmap` the mode is chosen by the autopilot, not proposed interactively.)
 
 ## Commands
 
 | Command | In brief |
 |--------|--------|
 | `/task:bootstrap` | Initializes the pipeline in a project: creates `.task/config/config.md`, sets up the local git exclusion for `.task/`, and prints a short getting-started primer. Idempotent. |
-| `/task:roadmap <idea> \| --refine [<slug>]` *(opt.)* | Brainstorms an initiative roadmap → `.task/roadmap/<slug>.md` with ready-made task descriptions for `--from`. An optional sidecar `.task/roadmap/<slug>.spec.md` pins down key technical decisions (Blueprint reads them during planning). `--refine` — a parallel audit of an existing roadmap (Coverage / Decomposition / Clarity, ≤2 iterations; high → auto-applied, med/low → manual review). |
+| `/task:roadmap <idea> \| --refine [<slug>]` *(opt.)* | Brainstorms an initiative roadmap → `.task/roadmap/<slug>.md` with ready-made task descriptions for `--from`; each task's Size and Class are inferred during authoring (Size from the outcome count, Class from task shape, user-overridable) rather than asked for. An optional sidecar `.task/roadmap/<slug>.spec.md` pins down key technical decisions (Blueprint reads them during planning). Authoring closes with a light, report-only self-check over the saved file (same three lenses as `--refine`), escalating to `--refine` inline when the findings warrant it. `--refine` — a parallel audit of an existing roadmap (Coverage / Decomposition / Clarity, ≤2 iterations; high → auto-applied, med/low → manual review). |
 | `/task:auto-roadmap [<roadmap>] [--next \| --from #<N> \| --items <spec>]` *(opt.)* | Autopilot over a roadmap in the current interactive Claude Code session: for each item — design → build → ship. `--next` — the first unclosed item; `--from #N` — start from item N; `--items 3-5` or `1,3-5,8` — a selection. |
-| `/task:design [<context>] [--from <path>[#<N>]] [--idea] [--phase <name>] [--refine]` | Open a task, write the Description, plan it out. Phase auto-detect (`open` → `blueprint`); `--phase` override. `--idea` — brainstorm the Description (architect from scratch / Socratic on a filled-in one). `--from <path>[#N]` — Description from a roadmap item. `--refine` — refine `plan.md`. |
-| `/task:build [--phase <name>] [--auto]` | Implementation (`implement`) + audit with bounded auto-fix (`audit`). `--auto` — both phases in one call (≤1 implement, ≤2 audit). `--phase` — override. Fixes outside `Touches` from `plan.md` are marked `Skipped: out-of-scope`. |
-| `/task:ship [--next] [<slug>]` | Commit + archiving under `.task/log/`. Default — full close: `workspace/<task-id>/` and `.task-current` are removed (`--full` is a backward-compatible alias). `--next` — `task.md` stays (Description cleared), transition to the next subtask. Auto-marks the roadmap item when `Roadmap:` + `Source item:` are present. |
+| `/task:design [<context>] [--from <path>[#<N>]] [--idea] [--phase <name>]` | Open a task, write the Description, plan it out. Phase auto-detect (`open` → `blueprint`); `--phase` override. `--idea` — brainstorm the Description (architect from scratch / Socratic on a filled-in one). `--from <path>[#N]` — Description from a roadmap item. (`--phase refine` critically reviews an existing `plan.md` — a repair-level option, see docs/troubleshooting.md.) |
+| `/task:build [--phase <name>] [--auto]` | Implementation (`implement`) + audit with bounded auto-fix (`audit`). `--auto` — both phases in one call (≤1 implement, ≤2 audit). `--phase` — override. Fixes outside `Touches` from `plan.md` are marked `Skipped: out-of-scope`. A clean build proposes the ship and acts on one confirmation (interactive; accept ships, declining holds). |
+| `/task:ship [--next]` | Commit + archiving under `.task/log/`. Interactive ship infers close-vs-transition from remaining work and proposes it in the single commit confirmation (you can flip it); `--next` forces transition. Full close removes `workspace/<task-id>/` and `.task-current`; transition keeps `task.md` (Description cleared) for the next subtask. Auto-marks the roadmap item when `Roadmap:` + `Source item:` are present. The commit slug is always auto-derived. |
 | `validate` *(utility)* | Formal validator of artifact format. Invoked automatically. For a manual check: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" [task\|plan\|roadmap <path>\|all]`. |
 
 ## Example — a single task
 
 ```text
-/task:bootstrap                                  # once per project
+/task:bootstrap                                  # once per project (optional — 1st design/roadmap auto-runs it)
 
 # Manual mode — title + Description in one call (quick-draft):
 /task:design "I want an HTTP retry system with backoff and dead-letter" # phase=open + quick-draft:
@@ -149,17 +151,21 @@ In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks
 
 /task:design                                     # run again → phase=blueprint: builds plan.md with steps
 /task:design --idea                              # opt.: idea(Socratic) — refine the Description
-/task:design --refine                            # opt.: phase=refine: plan alternatives
 
 /task:build                                      # phase=implement: implement per the plan
 /task:build                                      # phase=audit: lens fanout + bounded auto-fix
+                                                 # default output: one summary line (found/fixed/filtered);
+                                                 # full detail stays in audit.md
+                                                 # a clean build then proposes shipping and hands into the
+                                                 # ship confirmation — accept to ship, decline to hold
 # or in a single call (opt-in):
 /task:build --auto                                # both phases back-to-back; stop on per-phase budget
 
-/task:ship                                       # slug auto-generated → e.g. feat-add-retries
-                                                 # default: full close — workspace and .task-current removed
-# or an explicit slug:
-/task:ship feat-add-retries                       # the same full close with a given slug
+/task:ship                                       # commit composed from artifacts, one accept/decline/edit confirm
+                                                 # slug auto-generated → e.g. feat-add-retries
+                                                 # proposes close-or-transition from remaining work; accept or flip it
+# or force the transition without inferring:
+/task:ship --next                                # transition to the next subtask (task.md stays)
 ```
 
 > [!NOTE]
@@ -184,7 +190,7 @@ Three references: default Claude Code (plan mode + TodoWrite), [obra/superpowers
 | **Step verification** | None | A step closes only if the `Touches` symbols are in `git diff` (+ RED→GREEN when `## Tests`) |
 | **Auto-fix audit findings** | None | Bounded loop ≤2 iterations, scope-gated by `Touches` |
 | **Interrupt / resume** | Lost on `/clear` | Plan + progress are files; auto-resumable via `TaskList` |
-| **Result review** | Only whatever the model decides | `/task:build` audit phase with a 3-lens fanout (Reuse / Simplicity / Clarity) + bounded auto-fix loop |
+| **Result review** | Only whatever the model decides | `/task:build` audit phase with a 3-lens fanout (Reuse / Simplicity / Clarity) + bounded auto-fix loop; reports one summary line by default, full detail in `audit.md` |
 | **Multi-task initiatives** | None | `/task:roadmap` → `/task:design --from`; autopilot `/task:auto-roadmap` |
 | **Archive** | None | `.task/log/<task-id>/<N>-<slug>/` |
 
@@ -234,9 +240,9 @@ All of this lives in `.task/config/config.md`, written by `/task:bootstrap`:
 
 The pipeline is built on a few invariants; the full reasoning lives in [`docs/spec/`](docs/spec/README.md).
 
-- **Artifacts.** Each `.task/` subfolder has one role — `config/`, `roadmap/`, `workspace/<task-id>/`, `log/<task-id>/<N>-<slug>/`. The pointer to the active umbrella is a one-line `.task-current` in the worktree root. Full producer/consumer contract: [docs/spec/artifact-contract.md](docs/spec/artifact-contract.md).
+- **Artifacts.** Each `.task/` subfolder has one role — `config/`, `roadmap/`, `workspace/<task-id>/`, `log/<task-id>/<N>-<slug>/`. The pointer to the active umbrella is a one-line `.task-current` in the worktree root. If it is ever left empty or pointing at a closed or deleted workspace, the next command clears it automatically with a one-line notice — no manual cleanup — while a valid in-flight task is never touched. Full producer/consumer contract: [docs/spec/artifact-contract.md](docs/spec/artifact-contract.md).
 - **Code-navigation tiers.** Each skill reads only as much of your code as its job needs — from `.task/`-only (`/task:ship`, `validate`) through a structural scan to MCP-first navigation (`/task:design` blueprint, `/task:build`). Details: [docs/spec/invariants.md § Three code-navigation tiers](docs/spec/invariants.md#three-code-navigation-tiers).
-- **Validator hook.** A PreToolUse hook intercepts `Skill(task:design|build|ship|auto-roadmap)` and runs `validate.sh all` before the skill body. `bootstrap` / `roadmap` are deliberately excluded (the intake phase). Disable with `/plugin disable task` or by removing [`hooks/hooks.json`](hooks/hooks.json) locally.
+- **Validator hook.** A PreToolUse hook intercepts `Skill(task:build|ship|auto-roadmap)` and runs `validate.sh all` before the skill body. `bootstrap` / `roadmap` / `design` are deliberately excluded (the intake phase): each can be the first command in a fresh project and auto-runs setup inline, so a blocking pre-hook would make that inline setup unreachable. `design` still runs the identical `validate.sh all` in its own Step 0, so mid-pipeline validation coverage is preserved. Disable with `/plugin disable task` or by removing [`hooks/hooks.json`](hooks/hooks.json) locally.
 - **Parallel worktrees.** `.task/` is excluded from git, so a fresh worktree gets a `.task` symlink to the main tree's state — `/task:bootstrap` wires it up. Discipline and edge cases: [docs/spec/auto-roadmap.md § Cross-worktree safety](docs/spec/auto-roadmap.md#cross-worktree-safety).
 
 ## Contributing

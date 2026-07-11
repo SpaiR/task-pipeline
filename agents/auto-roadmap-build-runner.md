@@ -51,7 +51,7 @@ After implement, `.task/workspace/<task-id>/summary.md` exists and `git diff HEA
 You are done. Do NOT run audit, commit, or close — the `auto-roadmap-item-runner` that spawned you takes over from here:
 
 - It will spawn the three audit lens agents itself (nested subagent spawning is supported) — running `/task:build`'s audit phase with the bounded auto-fix loop.
-- It will run `/task:ship` on the uncommitted diff: commit, then close (`--next` on intermediate items — auto-marks the roadmap item and clears `task.md` Description for the next item; `--full` on the last item — closes the umbrella).
+- It will run `/task:ship` on the uncommitted diff: commit, then close (`--next` on intermediate items — auto-marks the roadmap item and clears `task.md` Description for the next item; a bare `/task:ship` (default full close) on the last item — closes the umbrella).
 
 Emit your one-line status (see "Return format" below) and stop.
 

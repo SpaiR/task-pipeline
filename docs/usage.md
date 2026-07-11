@@ -31,10 +31,9 @@ Scenarios can be combined: some tasks via `/task:roadmap` + `--from`, small fixe
 # → .task/log/api-v2-migration/1-update-client-sdk/, item 2 → `- [x]`
 
 # At the end (the last roadmap item):
-/task:ship --full                                  # slug auto-generated from summary.md
-# → .task/log/api-v2-migration/{N}-feat-...-finalize/ with the archived task.md
-# The chore-finalize slug isn't used in a clean finish of a manual run —
-# it's reserved for manual recovery of an aborted /task:auto-roadmap
+/task:ship                                         # default full close; slug auto-generated from summary.md
+# → .task/log/api-v2-migration/{N}-feat-.../ with the archived task.md
+# The same bare /task:ship also cleans up after an aborted /task:auto-roadmap run
 # (see the "If it failed on an item" block in the autopilot scenario below).
 
 # If you need to skip or redo an item:
@@ -66,7 +65,7 @@ Scenarios can be combined: some tasks via `/task:roadmap` + `--from`, small fixe
 #        Step 2b: the item-runner spawns 3 lens agents in parallel (nested spawn)
 #      — bounded auto-fix loop (≤2 iterations, touches-gate)
 #      — on high-severity unfixed after 2 iterations → fail-stop
-#   5) runs /task:ship inline (commit + close: --next on intermediate items, --full on the last)
+#   5) runs /task:ship inline (commit + close: --next on intermediate items, a bare /task:ship (default full close) on the last)
 #   6) returns a compact report-card digest; the driver prints it and moves on
 
 # With flags:
@@ -76,7 +75,7 @@ Scenarios can be combined: some tasks via `/task:roadmap` + `--from`, small fixe
 /task:auto-roadmap api-v2-migration --items 1,3-5,8 # a selection
 
 # If it failed on item #5:
-/task:ship --full chore-finalize                    # sweeps the subfolder and .task-current
+/task:ship                                          # default full close; sweeps the subfolder and .task-current
 /task:auto-roadmap api-v2-migration --from #5       # retry from #5
 ```
 
@@ -113,8 +112,8 @@ Scenarios can be combined: some tasks via `/task:roadmap` + `--from`, small fixe
 # → .task/log/dt-5177/1-feat-body-emitter/
 
 # finally (the last subtask — closing the umbrella entirely):
-/task:ship chore-cleanup                          # default = full close (--full is an alias)
-# → .task/log/dt-5177/2-chore-cleanup/  (with task.md)
+/task:ship                                        # default = full close; slug auto-derived from summary.md
+# → .task/log/dt-5177/2-feat-schema-guard/  (slug auto-derived; with task.md)
 ```
 
 ## Returning to a closed umbrella task
@@ -124,7 +123,7 @@ To pick a closed umbrella back up, restore `task.md` by hand from the latest ful
 ```text
 # restore task.md from the latest full-close archive:
 mkdir -p .task/workspace/dt-5177
-cp .task/log/dt-5177/2-chore-cleanup/task.md .task/workspace/dt-5177/task.md
+cp .task/log/dt-5177/2-feat-schema-guard/task.md .task/workspace/dt-5177/task.md
 echo "dt-5177" > .task-current
 
 # (opt.) clear everything from ## Description down if you want a clean start

@@ -133,4 +133,4 @@ Red-first specs. Each test is written before its implementation; each implementa
 ## Output
 
 - Path to the created `.task/workspace/<task-id>/plan.md` and a brief summary of the planned steps.
-- Note that the next `/task:design --refine` call (optional) will discuss alternatives; otherwise proceed to `/task:build` to execute.
+- The routine next step is `/task:build` to execute the plan. (If the plan itself needs a critical rework, `--phase refine` is a repair-level option — see docs/troubleshooting.md.)

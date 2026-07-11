@@ -44,7 +44,7 @@ Rules common to all runners (per-runner OK/FAIL grammars live in each agent's ow
 
 - **Stands alone.** No trailing prose, no Markdown decoration around the status line, no blank lines after it that contain anything but whitespace.
 - **English regardless of `config.md` → "Language".** The status lines are parser-stable identifiers, not user-facing prose.
-- **The trailing clause is part of the status string** (`"— plan.md ready, awaiting implement"` for design-runner; `"— diff uncommitted, ready for audit"` for build-runner; `"shipped (--next|--full) — <sha>"` for item-runner). Load-bearing — the consumer pattern-matches on it to know which producer/stage it is reading. Do not omit it.
+- **The trailing clause is part of the status string** (`"— plan.md ready, awaiting implement"` for design-runner; `"— diff uncommitted, ready for audit"` for build-runner; `"shipped (--next|full) — <sha>"` for item-runner). Load-bearing — the consumer pattern-matches on it to know which producer/stage it is reading. Do not omit it.
 - **Closed enum for `<stage>`** — each runner's `## Return format` lists the exact accepted values. Never emit any other.
 - **Never improvise a third shape.** If you cannot construct a valid `OK:`, emit `FAIL at <stage>: …` instead. Anything else is malformed and the consumer follows the fail-stop protocol with reason `runner returned malformed status`.
 - **Error-log path naming.** On failure with an on-disk postmortem, name the actual path you wrote to (so the user can `cat` it directly).

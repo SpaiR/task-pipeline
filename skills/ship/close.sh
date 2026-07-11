@@ -5,8 +5,6 @@
 #              — fully closes the umbrella task; workspace returns to empty
 #   --next:    archive plan/audit/summary, keep task.md (clear Description)
 #              — moves to the next subtask of the same umbrella task
-#   --full:    accepted as an alias of the default (full close) for backward
-#              compatibility; equivalent to passing no mode flag.
 #
 # Roadmap auto-mark: if task.md carries `Roadmap: <path>` and `Source item:
 # #<N> — <title>` lines in the header AND Description is non-empty, flips the
@@ -15,7 +13,7 @@
 # /task:design re-pick the same item).
 #
 # Usage:
-#   close.sh [--next] <slug>      (default = full close; --full alias accepted)
+#   close.sh [--next] <slug>      (default = full close)
 #   close.sh <slug> [--next]
 #
 # Workspace resolution uses _lib/resolve-ws.sh — reads .task-current to find
@@ -30,18 +28,20 @@ set -euo pipefail
 # (primary) or task.md Description (fallback) and passes it explicitly.
 # close.sh is not meant to be user-callable directly — users invoke it via
 # /task:ship. /task:auto-roadmap's last-item ship lets the slug be
-# auto-derived from summary.md (no explicit slug); the literal slug
-# `chore-finalize` survives only as a documented convention for manual
-# recovery of an aborted /task:auto-roadmap run.
+# auto-derived from summary.md (no explicit slug).
 # FULL=1 is the default: bare `close.sh <slug>` fully closes the umbrella.
-# `--next` opts into the lighter subtask-transition mode (FULL=0). `--full` is
-# retained as a no-op alias of the default so existing invocations keep working.
+# `--next` opts into the lighter subtask-transition mode (FULL=0). The removed
+# `--full` alias is guarded below so a stray occurrence fails loud rather than
+# being silently captured as the mandatory <slug> positional.
 FULL=1
 ARGS=()
 for arg in "$@"; do
   case "$arg" in
     --next) FULL=0 ;;
-    --full) FULL=1 ;;
+    --full)
+      echo "ERROR: --full removed — the default /task:ship already closes the umbrella (no flag needed)." >&2
+      exit 1
+      ;;
     *)      ARGS+=("$arg") ;;
   esac
 done
@@ -131,21 +131,6 @@ if [[ -n "$DESC_CONTENT" ]]; then
       exit 1
     fi
 
-    if [[ ! -f "$ROADMAP_PATH" ]]; then
-      # Legacy fallback for the .task/todo/ → .task/roadmap/ rename.
-      # Delegate to _lib/roadmap.sh:resolve_roadmap_path so the policy lives in
-      # one place (mirrors validate.sh, auto-roadmap-context.sh). The Roadmap:
-      # line in task.md is always written as `.task/roadmap/<slug>.md` by
-      # open.md's template; strip prefix to a slug + let the helper try the
-      # legacy path with its standard WARN. Remove in 0.2.x in lockstep with
-      # the helper.
-      # shellcheck source=../_lib/roadmap.sh
-      source "$SCRIPT_DIR/../_lib/roadmap.sh"
-      LEGACY_RESOLVED=$(ROADMAP_WARN_ON_LEGACY=1 resolve_roadmap_path "$(basename "$ROADMAP_PATH" .md)")
-      if [[ -n "$LEGACY_RESOLVED" && -f "$LEGACY_RESOLVED" ]]; then
-        ROADMAP_PATH="$LEGACY_RESOLVED"
-      fi
-    fi
     if [[ ! -f "$ROADMAP_PATH" ]]; then
       echo "ERROR: Roadmap file '$ROADMAP_PATH' not found; cannot auto-mark item #$SOURCE_N. Restore the file, edit task.md to point at the correct path, or remove the Roadmap:/Source item: lines to disable auto-mark." >&2
       exit 1

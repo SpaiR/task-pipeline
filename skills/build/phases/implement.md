@@ -67,7 +67,7 @@ For each step in `## Steps` order (skipping `completed` ones from Step 2):
    - **Identify** what to check: the `Touches` symbols (must be present in the diff), and any step-local invariant from `Goal` (e.g. "registered in DI container", "exported from index").
    - **Run** the verification: `git diff -- <files>` to confirm `Touches` symbols actually changed; if `tests_required` and a test references this step, confirm it transitioned RED → GREEN.
    - **Read** the full output, not just exit code. Skim the diff hunk to confirm the change matches `Goal`, not just the symbol name.
-   - **State** the result internally before transitioning. If verification fails — keep the task `in_progress`, **stop**, report what was checked and what failed, and ask the user to inspect the diff and rerun the skill after manual investigation, or run `/task:design --refine` if scope needs revisiting.
+   - **State** the result internally before transitioning. If verification fails — keep the task `in_progress`, **stop**, report what was checked and what failed, ask the user to inspect the diff (or run `/task:design --refine` if scope needs revisiting), and end with the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)): `→ Next: \`/task:build\``.
    - Only on a passed verification: `TaskUpdate` the tracked task to `completed`.
 
 4. **Move to the next step.** Loop until all steps are `completed` or a verification stops the run.
@@ -87,8 +87,10 @@ If build or tests fail mid-execution, do **one** quick attempt grounded in a cle
 1. Read the **full** error output (not just exit code or last line).
 2. If the cause is obvious from the output (typo, missing import, wrong symbol name in `Touches`) — apply **one** targeted fix and re-run.
 3. If the fix succeeds — continue execution.
-4. If the fix fails, or the cause is not obvious from the output — **stop** and tell the user:
-   > Step {N} failed. One quick-fix attempt did not resolve it (or the root cause is not obvious from one pass). Inspect the diff and rerun `/task:build` after manual investigation, or run `/task:design --refine` if the scope needs revisiting.
+4. If the fix fails, or the cause is not obvious from the output — **stop** and tell the user, ending with the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)):
+   > Step {N} failed. One quick-fix attempt did not resolve it (or the root cause is not obvious from one pass). Inspect the diff, then rerun after manual investigation — or run `/task:design --refine` if the scope needs revisiting.
+   >
+   > → Next: `/task:build`
 
 Do **not** try shotgun fixes ("try this and see"). When the root cause is not obvious — stop and hand off to the user.
 

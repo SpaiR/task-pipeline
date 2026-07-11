@@ -1,15 +1,15 @@
 ---
 name: roadmap
-description: 'Brainstorm a multi-item roadmap for a large initiative into `.task/roadmap/<slug>.md`, with task descriptions ready for `/task:design --from`. `--refine` runs a parallel three-lens audit over an existing roadmap.'
+description: 'Brainstorm a multi-item roadmap for a large initiative into `.task/roadmap/<slug>.md`, with task descriptions ready for `/task:design --from`. Authoring closes with a light three-lens self-check that can escalate to `--refine` inline. `--refine` runs a parallel three-lens audit over an existing roadmap.'
 disable-model-invocation: true
 user-invocable: true
 ---
 
-Brainstorm a **multi-stage roadmap** for a large initiative — multi-phase, multi-task — and write it to `.task/roadmap/<slug>.md` with a phase-grouped table, dependencies, and **ready-to-paste task descriptions** that subsequent `/task:design --from` invocations consume. Multi-task counterpart to design's idea phase (which produces one task description).
+Brainstorm a **multi-stage roadmap** for a large initiative — multi-phase, multi-task — and write it to `.task/roadmap/<slug>.md` with a phase-grouped table, dependencies, and **ready-to-paste task descriptions** that subsequent `/task:design --from` invocations consume. Multi-task counterpart to design's idea phase (which produces one task description). Authoring closes with a light, report-only three-lens self-check (Coverage / Decomposition / Clarity) over the saved file that can escalate to an inline `--refine` when warranted — see Step 8.
 
 **Input:** `$ARGUMENTS` — one of:
 
-- Rough description of a multi-stage initiative → brainstorm mode (Steps 1–8 below).
+- Rough description of a multi-stage initiative → brainstorm mode (Steps 1–9 below).
 - `--refine [<slug>]` → refine mode: parallel three-lens audit of an existing roadmap (Coverage / Decomposition / Clarity), bounded ≤2 iterations, sidecar findings in `.task/roadmap/<slug>.refine.md`. See [`phases/refine.md`](phases/refine.md).
 
 **Preconditions, tool tier, language:** see [docs/spec/invariants.md](../../docs/spec/invariants.md#tier-c--shallow-scan) — no bash context script here; preconditions enforced inline. `/task:roadmap` is the primary Tier-C consumer of `docs/` (entry points like `docs/README.md`, `docs/spec/README.md`). Refine mode tier and read policy live in [`phases/refine.md`](phases/refine.md).
@@ -24,7 +24,12 @@ Brainstorm a **multi-stage roadmap** for a large initiative — multi-phase, mul
 
 ### Step 0: Config gate
 
-Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`. If it exits with the `config.md not found` message, redirect the user to `/task:bootstrap` and stop — without `config.md` the roadmap cannot resolve the project's Language policy, which controls every prose field in the output file. The `all` subcommand tolerates a missing `.task-current` (which is the expected state when starting a new roadmap).
+Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`. Branch on the outcome:
+
+- **On a `config.md not found` message → auto-setup.** `/task:roadmap` is an intake-capable entry point: in a fresh, unconfigured project it runs setup inline rather than dead-ending the user (without `config.md` the roadmap cannot resolve the project's Language policy, which controls every prose field in the output file — so setup is a genuine precondition, not an optional convenience). Execute `/task:bootstrap` inline by reading `${CLAUDE_PLUGIN_ROOT}/skills/bootstrap/SKILL.md` and following its Steps **verbatim** — the full flow (Step 0 worktree join-mode through Step 4), no shortcuts, so auto-setup performs the same environment-guarding steps as the explicit command. Then re-run `validate.sh all`. If `config.md` is now present → proceed to Step 0a. If `config.md` is still absent (the user chose `decline`, or bootstrap's Step 0 hit a `JOIN-REFUSE-*` short-circuit that wrote nothing) → surface bootstrap's own message and **stop**. (`/task:roadmap` is already outside the PreToolUse validator-hook matcher, so — unlike `design` — no hook change is needed for this auto-setup to be reachable.)
+- **On any other non-zero exit** (config present but a malformed artifact) → **stop** and report the validator output.
+
+Auto-setup is a **prompt-layer response** to the bash gate's failure followed by re-validation — it does **not** relax or bypass the gate. `validate.sh` still fails authoritatively when config is absent; the skill only proceeds once config exists. The `all` subcommand tolerates a missing `.task-current` (which is the expected state when starting a new roadmap).
 
 ### Step 0a: Mode dispatch
 
@@ -108,22 +113,35 @@ Wait for the user, then continue with `Round N` (same structure, narrowed to the
 
 Once iteration ends, draft the full file. The structure is fixed (the entire pipeline downstream depends on it). See "Output format" below.
 
+**Derive `Size` and `Class` mechanically — never ask the user for either.** Both are computed while drafting, not deliberated:
+
+- **`Size` is a function of `### Outcomes` bullet count.** After drafting each task's `### Outcomes`, count the bullets and set `**Size:**` to the matching token: `small` = 1–2, `medium` = 3–6, `large` = 7+. Never treat it as a free choice; the outcome count decides it. (If a count lands at ≥ 7 — or the outcomes span ≥ 2 unrelated domains — the item is compound; split it rather than labeling it `large`.)
+- **`Class` is inferred from the task's shape** via this rubric, mapping to the existing closed list; the user is free to override it in-file:
+  - refactor with no behavior change → `rote-refactor`
+  - introduces a new subsystem / contract → `new-substrate`
+  - moves or changes behavior across several modules → `cross-module-migration`
+  - user-facing capability → `product-feature`
+  - vocabulary / wording / content edits → `content-vocabulary`
+  - pipeline / build / infra changes → `tooling`
+
+  Pick the closest single token; when two fit, prefer the one describing the task's dominant effect. `Class` stays a best-effort hint (not validated) — the inference fills a sensible default, it does not lock the field.
+
 **Then, if technical anchors accumulated (Step 4), draft the spec sidecar.** Compose `<slug>.spec.md` (format + boundary test in "Spec sidecar" under "Output contract" below) holding one numbered section per load-bearing decision, and add a `### Spec references` sub-heading citing `<slug>.spec.md §N` to each roadmap item that the decision steers. The sidecar captures the **why** that the behavioral item bodies cannot carry — not a full plan (that is per-task `plan.md`). **No anchors → no sidecar**; never write an empty or placeholder spec.
 
 ### Step 6: Self-review pass
 
-Before saving, run a quick self-check (do not dispatch a subagent — this is a checklist you run yourself):
+This is the **pre-save integrity gate** — the checklist you run and fix inline **before the file is written**; the reported three-lens quality pass over the saved file happens after Save (Step 8). Before saving, run a quick self-check (do not dispatch a subagent — this is a checklist you run yourself):
 
 1. **Phase coverage:** Does every fork raised during the brainstorm have a home in some phase, or an explicit "what's not in this plan" mention?
 2. **Description completeness:** Skim each task's `**Ready description:**` blockquote. Does it stand alone (a reader who has not seen the roadmap could write a design's blueprint phase from it)? Are `### Context`, `### Goal`, `### Outcomes`, `### Invariants`, `### Contracts` (when present), `### Acceptance criteria`, and `### Spec references` (when present) each concrete and self-contained? Context must answer "why this task, what it unblocks" — not restate Goal.
 3. **Behavioral discipline:** `### Outcomes` / `### Goal` / `### Invariants` / `### Contracts` describe **observable properties of the system / world**, not implementation choices. They MUST NOT name project-specific files, modules, functions, types, or constants. Normative names from the project's spec or `CLAUDE.md` ARE allowed (they address shared concepts, not implementation choices). When in doubt, ask: "would design's blueprint be free to pick a different file or symbol name?" — if yes, the name doesn't belong in the roadmap.
-4. **Sizing by outcomes count:** `Size:` is calibrated against `### Outcomes` bullet count, not modules or files. `small` = 1–2 outcomes, `medium` = 3–6, `large` = 7+. If an item lists ≥ 7 outcomes or outcomes spanning ≥ 2 unrelated domains — split it.
+4. **Sizing by outcomes count:** verify each computed `Size:` still matches its `### Outcomes` bullet count (Step 5 sets it; this catches a miscount, not a mislabel). `small` = 1–2 outcomes, `medium` = 3–6, `large` = 7+ — by count, not modules or files. If an item lists ≥ 7 outcomes or outcomes spanning ≥ 2 unrelated domains — split it.
 5. **No placeholders:** Search the draft for `TBD`, `TODO`, `???`, `fill in`, `add appropriate ...`, `handle edge cases` — these are plan failures. Either fill them in or remove them.
 6. **Dependency consistency:** Each task's `**Dependencies:**` line cites task numbers that exist elsewhere in the file. No dangling references.
 7. **Slug uniqueness within file:** Each task heading produces a unique kebab-case slug (used by `/task:design --from <file>#<slug>`).
 8. **Spec sidecar integrity (only if a sidecar was drafted):** every `<slug>.spec.md §N` cited by an item resolves to an existing `## N.` section in the sidecar; every sidecar section is referenced by at least one item (no orphan decisions); each section is a load-bearing *anchor* (passes the boundary test), not a per-task implementation plan; no placeholders inside the sidecar.
 
-If you find issues — fix them inline before saving.
+If you find issues — fix them inline before saving. This inline fixing is drafting hygiene against a not-yet-written file — distinct from, and not in conflict with, the report-only light quality pass added in Step 8, which runs after Save and never edits the saved file.
 
 ### Step 7: Save
 
@@ -134,12 +152,30 @@ Write the file directly — no in-chat preview, no confirmation prompt. The user
 3. **If a spec sidecar was drafted (Step 5)**, write `.task/roadmap/<slug>.spec.md` (same slug). Skip entirely when no anchors accumulated.
 4. **Do not** modify any other file.
 
-### Step 8: Output
+### Step 8: Light quality self-check
+
+After Save, close the authoring flow with an automatic, **report-only** light quality pass over the just-saved `.task/roadmap/<slug>.md` — this never edits the file; any change goes through the normal review (by hand, or via an explicitly accepted `--refine` below).
+
+1. **Skim the saved file** (not the in-chat draft) against the same three lens dimensions `--refine`'s auditors use, as a self-run checklist — **not** a subagent fanout:
+   - **Coverage** — phase/fork coverage, dependency integrity (dangling or cyclic `**Dependencies:**`).
+   - **Decomposition** — compound tasks, `Size:`-vs-outcomes drift.
+   - **Clarity** — behavioral discipline, self-contained descriptions, missing `### Contracts` on substrate-class tasks, broken `### Spec references`.
+2. **Report** a compact findings summary: a count per lens plus the obvious issues, in a few lines. Never silently rewrite the saved file.
+3. **Escalate only when findings warrant it.** Warrants threshold: at least one finding you judge high-severity (a coverage gap / broken dependency / compound task / technical leak) **or** ≥ 3 findings total across the three lenses. When it warrants escalation, offer `/task:roadmap --refine <slug>` inline using the canonical accept/decline/edit grammar (see [`docs/spec/invariants.md § Interaction conventions (b)`](../../docs/spec/invariants.md#b-choice-grammar--accept--decline--edit) — do not restate the grammar here):
+   - **accept** → read [`phases/refine.md`](phases/refine.md) and run its Steps R1–R7 for this slug, inline, now.
+   - **decline** → leave the roadmap as authored; proceed to Step 9.
+   - **edit** → the user fixes the flagged items by hand in the file; proceed to Step 9.
+   When findings don't warrant escalation, report "clean / minor only" and skip the prompt.
+
+`--refine`'s own machinery (`phases/refine.md`, the three `audit-roadmap-*-auditor` agents, the bounded ≤2-iteration auto-apply) is unchanged by this pass — an accepted offer here is still an explicit, deliberate invocation, not an automatic entry.
+
+### Step 9: Output
 
 - Print the path to the created file. Tell the user to open it to review/edit.
 - If a spec sidecar was written, print its path too and note that blueprint will read it for items carrying `### Spec references`.
 - One-line summary: "*N* tasks across *M* phases. Recommended order: 1 → 2 → 4 → 3 → 5 …".
-- Suggest next step: `/task:design --from .task/roadmap/<slug>.md#<N>` for the first task, where `<N>` is the recommended starting point.
+- Print the Step 8 light-quality-check findings summary (or "clean / minor only") and, if an inline `--refine` ran, note that it completed and where its findings live (`.task/roadmap/<slug>.refine.md`).
+- End with the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)), naming the first task's `--from` command, where `<N>` is the recommended starting point: `→ Next: \`/task:design --from .task/roadmap/<slug>.md#<N>\``.
 
 ## Output contract
 
@@ -283,10 +319,10 @@ prose is in config language.>
 - **Task numbering** is global within the file (`1`, `2`, `3`, …), continuous across phases; table order mirrors file order. The `Recommended execution order` line gives the dependency-driven sequence (may differ from file order).
 - **`**Ready description:**` is a blockquote** with H3 sub-headings (`### Context`, `### Goal`, `### Outcomes`, `### Invariants`, optional `### Contracts`, `### Acceptance criteria`, optional `### Spec references`) — `/task:design --from` strips `> ` and copies the body into `task.md` verbatim. Sub-headings stay English; their bodies follow config language. Renaming/translating breaks the parser and the validator.
 - **`### Context` precedes `### Goal`** — propagates into `task.md` via `--from` so blueprint/audit can read the "why" without re-opening the roadmap. Context is motivation; Goal is target state.
-- **Sizing is by `### Outcomes` bullet count**, not by file count or estimated hours: `small` = 1–2, `medium` = 3–6, `large` = 7+. An item with ≥ 7 outcomes — or outcomes spanning ≥ 2 unrelated domains — is compound; split it.
+- **Sizing is computed from `### Outcomes` bullet count** at author time (Step 5), not deliberated and not by file count or estimated hours: `small` = 1–2, `medium` = 3–6, `large` = 7+. An item with ≥ 7 outcomes — or outcomes spanning ≥ 2 unrelated domains — is compound; split it. A `Size:` label disagreeing with the count is drift from a hand-edit — the refine-phase decomposition auditor flags it.
 - **`### Contracts` is optional** structurally. Recommended for `Class: new-substrate` or `Class: cross-module-migration` — substrate boundaries deserve to be pinned before blueprint picks a shape. Refine-phase clarity auditor surfaces a `missing contracts` finding (severity `med`) when those classes omit it.
 - **`### Spec references`** — omit the entire heading if no relevant spec; never leave an empty heading. Reference specs by section number, not quoted text (quotes rot with spec edits). A reference may point at an external project spec (`docs/spec/<file>.md §X.Y`) or at this roadmap's own spec sidecar (`<slug>.spec.md §N`). The sidecar form is what design's blueprint phase reads to ground its plan in pre-agreed technical decisions.
-- **`**Class:**` is a best-effort hint**, not a validated field. Empty / off-list values are tolerated by `validate.sh`, but downstream (`/task:design`'s `Implement-Model:` rubric, clarity auditor's missing-contracts check) reads it — leave it populated when you can.
+- **`**Class:**` is a best-effort hint**, not a validated field. The skill infers a default from task shape at author time (Step 5 rubric), but the user may override it in-file. Empty / off-list values are tolerated by `validate.sh`, but downstream (`/task:design`'s `Implement-Model:` rubric, clarity auditor's missing-contracts check) reads it — leave it populated.
 
 ### Spec sidecar (`<slug>.spec.md`)
 

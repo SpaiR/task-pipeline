@@ -1,6 +1,6 @@
 ---
 name: design
-description: 'Open a task and plan it — write the Description (quick-draft or `--idea` brainstorm), then build the implementation plan. Auto-resumes the right phase from artifact state; `--phase <open|idea|blueprint|refine>` / `--refine` override.'
+description: 'Open a task and plan it — write the Description (quick-draft or `--idea` brainstorm), then build the implementation plan. Auto-resumes the right phase from artifact state; `--phase <open|idea|blueprint|refine>` overrides.'
 disable-model-invocation: true
 user-invocable: true
 ---
@@ -12,8 +12,7 @@ Open a task, write its Description, build the implementation plan, and optionall
 - (empty) — if no task is in flight, treated as `--idea` with no context (the orchestrator asks for the idea, then opens the header and enters idea phase in architect mode). If a task is already in flight, continue with the next auto-detected phase.
 - `--idea [<free-form context>]` — explicit brainstorm over `## Description`. With no task yet: the header is written (Description left empty) and idea phase runs **architect mode** (the context, if any, seeds round 0). With an existing task whose Description is filled: idea phase runs **Socratic mode** (refinement). Mutually exclusive with `--from`, `--phase`, `--refine`.
 - `--from <roadmap>[#<N>]` — open from a roadmap file (auto-picks first un-checked item if `#<N>` omitted).
-- `--phase <open|idea|blueprint|refine>` — force a specific phase (override auto-detect).
-- `--refine` — shortcut for `--phase refine` (only valid when `plan.md` exists).
+- `--phase <open|idea|blueprint|refine>` — force a specific phase (override auto-detect). `refine` is a repair-level phase (critically review an existing `plan.md`), not part of the routine flow — see [docs/troubleshooting.md](../../docs/troubleshooting.md).
 
 **Phase companion files** live at `skills/design/phases/<phase>.md`. The orchestrator reads them and follows their instructions verbatim — they contain the full prompt for each phase. Treat each file as the authoritative contract for its phase.
 
@@ -21,7 +20,13 @@ Open a task, write its Description, build the implementation plan, and optionall
 
 ## Step 0: Config gate
 
-Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`. If it exits non-zero with a `config.md not found` message, redirect the user to `/task:bootstrap` and stop. The `all` subcommand tolerates a missing `.task-current` (needed for the open-phase fresh-start path).
+Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`. Branch on the outcome:
+
+- **(a) exits non-zero specifically with a `config.md not found` message → auto-setup.** `/task:design` is an intake-capable entry point: in a fresh, unconfigured project it runs setup inline rather than dead-ending the user. Execute `/task:bootstrap` inline by reading `${CLAUDE_PLUGIN_ROOT}/skills/bootstrap/SKILL.md` and following its Steps **verbatim** — the full flow (Step 0 worktree join-mode through Step 4), no shortcuts, so auto-setup performs the same environment-guarding steps as the explicit command. Then re-run `validate.sh all`. If `config.md` is now present → continue to Step 1 with the original `$ARGUMENTS` unchanged. If `config.md` is still absent (the user chose `decline`, or bootstrap's Step 0 hit a `JOIN-REFUSE-*` short-circuit that wrote nothing) → surface bootstrap's own message and **stop**; do not proceed to Step 1.
+- **(b) exits non-zero for any other reason** (config present but a malformed artifact) → **stop** and report the validator output, as before.
+- **(c) exits zero** → proceed to Step 1.
+
+Auto-setup is a **prompt-layer response** to the bash gate's failure followed by re-validation — it does **not** relax or bypass the gate. `validate.sh` still fails authoritatively when config is absent; the skill only proceeds once config exists. The `all` subcommand tolerates a missing `.task-current` (needed for the open-phase fresh-start path).
 
 ## Step 1: Phase detection
 
@@ -37,13 +42,11 @@ Possible auto-detect outputs:
 - `idea` — `task.md` exists, `## Description` body empty (whitespace + HTML comments only).
 - `blueprint` — Description filled, no `plan.md`.
 - `refine-prompt` — `plan.md` exists. Orchestrator should NOT auto-enter refine. Instead, tell the user:
-  > Plan already exists at `.task/workspace/<task-id>/plan.md`. The design phase appears complete. Next steps:
-  > - `/task:build` — start implementation
-  > - `/task:design --refine` — discuss alternatives and refine the plan
+  > Plan already exists at `.task/workspace/<task-id>/plan.md`. The design phase appears complete — next is `/task:build` to start implementation. To start a different umbrella, close the current one first: `/task:ship`. (If the plan itself needs a critical rework, `--phase refine` is a repair-level option — see docs/troubleshooting.md.)
   >
-  > To start a different umbrella, close the current one first: `/task:ship`.
+  > → Next: `/task:build`
 
-  Then stop without dispatching. Only continue to Step 2 if the user explicitly asked for `--refine`.
+  (Canonical footer per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar).) Then stop without dispatching. Only continue to Step 2 if the user explicitly asked for `--refine`.
 
 ## Step 2: Phase dispatch
 
@@ -70,7 +73,7 @@ After the dispatched phase completes successfully, suggest the next logical step
 - After `open` (from-roadmap mode, Description filled from roadmap) → `/task:design` again (auto-detects blueprint).
 - After `idea` (architect mode, Description just brainstormed) → `/task:design` again (auto-detects blueprint).
 - After `idea` (Socratic mode, Description refined) → `/task:design` again (auto-detects blueprint).
-- After `blueprint` → either `/task:design --refine` (optional) or `/task:build` (to start implementation).
+- After `blueprint` → `/task:build` (to start implementation).
 - After `refine` → `/task:build`.
 
 ## Forbidden
@@ -84,3 +87,4 @@ After the dispatched phase completes successfully, suggest the next logical step
 After the dispatched phase completes:
 - Print whatever the companion phase's "Output" section specifies (paths, summary, next-step hint).
 - Add the orchestrator's chain hint (Step 3) on top of that.
+- End with the canonical next-step footer — a single `→ Next: <runnable command>` line matching the chain hint above (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)). If the phase's own Output already emits the footer, do not duplicate it.

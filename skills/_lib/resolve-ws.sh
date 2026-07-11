@@ -94,6 +94,46 @@ _linked_worktree_without_task() {
   [[ "$gd" != "$common" ]]
 }
 
+# heal_stale_pointer — clear a *provably-stale* `.task-current`, with a notice.
+#
+# "Provably stale" (the safety invariant "never discards a valid in-flight task"
+# hinges on this): `.task-current` exists AND (its first line is empty after
+# whitespace-strip, OR the resolved `"$AI_DIR/workspace/<id>/"` directory is
+# gone). A pointer whose workspace subfolder exists is a valid in-flight task
+# (even mid-transition with an empty task.md Description) and is left untouched.
+#
+# On a stale pointer: `rm -f` it, print exactly ONE informational line to stderr
+# (a benign notice — deliberately NOT prefixed `ERROR:`, so tooling that greps
+# for error lines does not read it as a failure), and return 0 (healed). On a
+# valid pointer (workspace present) or a missing pointer: return non-zero and
+# touch nothing.
+#
+# Keys off `.task-current` alone — safe even when a caller also passes a
+# positional/override id: if the workspace is present the helper no-ops; if
+# absent the pointer is stale by definition regardless of the override.
+#
+# `resolve_ws` itself stays pure and never calls this — only the explicit
+# healers (preamble's `source_resolve_ws` wrapper, design's open phase) mutate,
+# so the direct sourcers `phase-detect.sh` / `validate.sh` never delete the
+# pointer during read-only detection. Not invoked at source time.
+heal_stale_pointer() {
+  local pointer id
+  pointer="$(dirname "$AI_DIR")/.task-current"
+  [[ -f "$pointer" ]] || return 1                       # nothing to heal
+  id="$(head -n 1 "$pointer" | tr -d '[:space:]')"
+  if [[ -z "$id" ]]; then
+    rm -f "$pointer"
+    echo "note: cleared stale active-task pointer '.task-current' (was empty) — no active task now." >&2
+    return 0
+  fi
+  if [[ ! -d "$AI_DIR/workspace/$id" ]]; then
+    rm -f "$pointer"
+    echo "note: cleared stale active-task pointer '.task-current' (workspace '$id' is gone) — no active task now." >&2
+    return 0
+  fi
+  return 1                                               # valid in-flight task — untouched
+}
+
 resolve_ws() {
   local source_label="" id=""
   # `.task-current` lives at the project root beside `.task` (never symlinked),

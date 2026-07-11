@@ -59,6 +59,14 @@ Then reopen the `/` menu. If it was already installed, make sure it isn't disabl
 
 **Fix** — open the named artifact (`audit.md` / `summary.md`), finish what's left by hand or with a plain `/task:build`, then continue. `--auto` is intentionally one-shot.
 
+## Repair-level: refine an existing plan
+
+**When** — a `plan.md` is complete but you suspect it is wrong: the decomposition is off, a step's approach won't work, or a better alternative surfaced after blueprint. This is a repair capability, not part of the routine design → build → ship flow, so it is not advertised on the everyday surface.
+
+**Fix** — run `/task:design --phase refine` (equivalently `/task:design --refine`) on the active umbrella. The refine phase critically reviews the current `plan.md`, proposes alternatives, and records the chosen changes in `## Decisions` so `/task:build` implement honors them. Use it only when the plan itself needs rework; for normal progress after blueprint, go straight to `/task:build`.
+
+> Note: this is design's plan-refine, distinct from `/task:roadmap --refine` (a roadmap audit — see below).
+
 ## Manual `Agent(...)` calls need the `task:` prefix
 
 The named agents are installed as part of the plugin — nine files under `agents/`: six auditor-class (three for the `/task:build` audit phase — Reuse / Simplicity / Clarity — and three for `/task:roadmap --refine` — Coverage / Decomposition / Clarity) and three executor-class (`auto-roadmap-item-runner.md` and the two runners it spawns, `auto-roadmap-design-runner.md` and `auto-roadmap-build-runner.md`).

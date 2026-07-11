@@ -195,9 +195,11 @@ Template for each iteration:
 
 `Status` lives only on each Details bullet — there is no `Status` column in the Findings table. The orchestrator's auto-fix loop (`build/SKILL.md` Step 4) flips that single bullet from `pending fix` to `Fixed` / `Skipped: …`; `phase-detect.sh` greps the whole file for `pending fix` to decide re-entry, so a single anchor per finding is enough.
 
+**Human-facing consumer.** The orchestrator (`build/SKILL.md`) surfaces this `### Result` line as the compact one-line default the user sees after a clean audit (found / fixed / filtered counts), while the `### Findings` / `### Details` tables remain the full detail retrievable from `audit.md` on request. A future editor of the `### Result` line must keep its three counts (total, fixed, filtered) present — a human-facing summary now depends on them. This note is documentation only; the `### Result` template string and its parser-stable counts do not change.
+
 **`### Filtered (low confidence)` is optional.** Emit the section only when at least one finding was dropped at gate 3a/3b/3c. The section carries one bullet per dropped finding (`- <category> at <location>: <problem> (<reason>)`) and **no `Status:` lines** — the auto-fix loop treats it as inert. The `filtered: K` count in the `### Result` line tallies these. If every finding is filtered, `### Findings` keeps only the header row, `### Details` is omitted entirely, and `### Result` reads `0/0 fixed — filtered: K`; the absence of `pending fix` makes `phase-detect.sh` correctly classify the phase as `done`.
 
-Return control to the orchestrator (`build/SKILL.md` Step 4) which will apply fixes in main thread with `_lib/touches-gate.sh` enforcement and may invoke this phase again for iteration 2 if pending high-severity findings remain.
+Return control to the orchestrator (`build/SKILL.md` Step 4) which will apply fixes in main thread with `_lib/touches-gate.sh` enforcement and may invoke this phase again for iteration 2 if pending high-severity findings remain. The **human-facing** completion summary is owned by the orchestrator (SKILL.md Step 5) and ends with the canonical next-step footer `→ Next: \`/task:ship\`` (per [`docs/spec/invariants.md § Interaction conventions`](../../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)); the `audit.md` **artifact** content this phase writes — `## Iteration {N}` headers, `### Result` tallies, and `pending fix` / `Fixed` / `Skipped:` tokens — is parser-facing and stays exactly as specified above.
 
 ## Forbidden
 

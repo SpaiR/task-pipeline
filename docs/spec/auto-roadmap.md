@@ -20,6 +20,8 @@ The split exists because implement is the largest-input stage of the cycle (read
 
 `auto.lock` does **not** store the per-item implement model — it captures **run** parameters at launch, not per-item plan content. The implement model is read fresh from each item's `plan.md` by the item-runner (its Step 3), between design-runner's OK and the build-runner spawn (see `agents/auto-roadmap-item-runner.md` Step 3 for the canonical regex).
 
+Ship's interactive **close-vs-next inference** (proposing transition vs full close from remaining pending work) does **not** apply under autopilot: the item-runner runs ship non-interactively and passes the literal mode the driver's `is_last` look-ahead already decided (`--next` for a non-last item, bare full close for the last), so both the item-runner and the driver are unaffected — the inference fires only when a real user can answer the commit confirmation.
+
 ## Step 0 preconditions — three hard-stop gates
 
 `auto-roadmap-context.sh` enforces all three gates in bash, with prompt-layer reminders in `SKILL.md`. Failing any gate refuses to start the run with a specific message — no silent recovery, no rollback.
@@ -47,7 +49,7 @@ N, M    := positive integer (1-based item numbers)
 
 Items not in the resolved set are skipped during iteration regardless of their `[ ]` / `[x]` state. Expansion happens inline in main thread.
 
-`--next` is sugar: it resolves to a **single-item include-set** — the first unchecked item (lowest `N`) — and sets `ITEMS_SPEC=<N>`, so it travels the exact `--items <N>` path downstream (single-item run set, `auto.lock` `items_filter=<N>`, last-item `--full` ship). Mutually exclusive with `--from` / `--items` at the SKILL.md layer.
+`--next` is sugar: it resolves to a **single-item include-set** — the first unchecked item (lowest `N`) — and sets `ITEMS_SPEC=<N>`, so it travels the exact `--items <N>` path downstream (single-item run set, `auto.lock` `items_filter=<N>`, last-item bare full-close ship). Mutually exclusive with `--from` / `--items` at the SKILL.md layer.
 
 When both `items_filter` and `start_item` land in the sentinel, `items_filter` wins and `start_item` is informational only.
 
@@ -63,18 +65,18 @@ Invariants:
 - Written **atomically via `set -o noclobber`** — concurrent writes fail loud.
 - Carries `roadmap_mtime` as a launch-time snapshot. Race detection per loop iteration compares the live roadmap mtime to the **in-memory** `ROADMAP_MTIME` variable (refreshed by the driver's Substep 3.4 from the value the item-runner returns after every successful `--next` close); the on-disk value is never updated after the first item-runner writes it.
 - Carries `orchestrator=auto-roadmap` so a sibling `/task:auto-roadmap` invocation in another worktree refuses to step on the same umbrella — the file's existence under `workspace/*/` is itself the cross-worktree mutex.
-- **Retained on failure** as the deliberate abort signal (alongside the rest of the `workspace/<task-id>/` subfolder); removed implicitly by the **last item-runner's `--full` ship** on clean finish — it rides with the subfolder. On a failure path the user runs `/task:ship --full chore-finalize` manually to sweep the partial umbrella; the orchestrator no longer emits `chore-finalize` on its own.
-- After every successful `/task:ship` the **roadmap mtime bumps** (`close.sh:Step 1.5` flips `[ ]` → `[x]`). The item-runner captures the post-close mtime and returns it in its digest; the driver assigns it to the in-memory `ROADMAP_MTIME` (Substep 3.4) before the next iteration's race check, otherwise the legitimate close-induced bump would trip the check. The last item (`--full`) returns no mtime — there is no next iteration.
+- **Retained on failure** as the deliberate abort signal (alongside the rest of the `workspace/<task-id>/` subfolder); removed implicitly by the **last item-runner's bare full-close ship** on clean finish — it rides with the subfolder. On a failure path the user runs a bare `/task:ship` (default full close) manually to sweep the partial umbrella; there is no dedicated recovery slug.
+- After every successful `/task:ship` the **roadmap mtime bumps** (`close.sh:Step 1.5` flips `[ ]` → `[x]`). The item-runner captures the post-close mtime and returns it in its digest; the driver assigns it to the in-memory `ROADMAP_MTIME` (Substep 3.4) before the next iteration's race check, otherwise the legitimate close-induced bump would trip the check. The last item (full close) returns no mtime — there is no next iteration.
 
 ## Failure protocol — fail-stop, no rollback
 
-The orchestrator is fail-stop with no automatic rollback. On any failure where the workspace subfolder exists, it is retained as the abort signal; the user inspects the postmortem, then explicitly cleans up with `/task:ship --full chore-finalize` (which sweeps the per-umbrella `auto.lock`, `auto-error.log`, and the whole subfolder). On failure **before** the item-runner's Step 1 design-runner lands `.task-current` (e.g. roadmap-validate failure inside open, or task-id collision), no workspace subfolder was created; there is nothing to clean up, and the user reruns `/task:auto-roadmap` directly. Every later stage — build-runner spawn, audit, ship — always has a workspace subfolder available, so its only FAIL shape is the post-open one.
+The orchestrator is fail-stop with no automatic rollback. On any failure where the workspace subfolder exists, it is retained as the abort signal; the user inspects the postmortem, then explicitly cleans up with a bare `/task:ship` (default full close, which sweeps the per-umbrella `auto.lock`, `auto-error.log`, and the whole subfolder). On failure **before** the item-runner's Step 1 design-runner lands `.task-current` (e.g. roadmap-validate failure inside open, or task-id collision), no workspace subfolder was created; there is nothing to clean up, and the user reruns `/task:auto-roadmap` directly. Every later stage — build-runner spawn, audit, ship — always has a workspace subfolder available, so its only FAIL shape is the post-open one.
 
 Postmortem block format is standardized in `skills/_lib/fail-log.sh` — `--- FAIL <ISO> ---` for a runner's per-stage failure, `--- ORCHESTRATOR FAIL <ISO> ---` for a block appended by an orchestration layer after a child's FAIL. There are now **two** orchestration layers that can append the latter: the **item-runner** (after a design/build-runner FAIL, or for its own internal failures — `Implement-Model:` extraction miss at item-runner Step 3, audit iteration-limit exhaustion at Step 5), and the **driver** (only when the item-runner returns malformed/absent status, or on a driver-detected mtime race). All reuse the `subagent status line` slot for the failure reason to keep the on-disk shape uniform.
 
 Postmortem path: `.task/workspace/<task-id>/auto-error.log` if `.task-current` exists (design-runner succeeded in landing it); otherwise **no on-disk postmortem** — the inline FAIL message (in the item-runner's return, relayed by the driver) is the only record.
 
-Failure triggers: design-runner or build-runner FAIL return, malformed child status line, `Implement-Model:` extraction miss (item-runner Step 3), audit high-severity finding unfixed after 2 iterations (item-runner Step 5), commit refusal/failure, close failure, `auto.lock` collision (item-runner Step 2), `task.md` Description body empty at the last-item `--full` ship (item-runner Step 6), item-runner returned malformed/absent status (driver Substep 3.4), roadmap-mtime race detected at Substep 3.1.
+Failure triggers: design-runner or build-runner FAIL return, malformed child status line, `Implement-Model:` extraction miss (item-runner Step 3), audit high-severity finding unfixed after 2 iterations (item-runner Step 5), commit refusal/failure, close failure, `auto.lock` collision (item-runner Step 2), `task.md` Description body empty at the last-item full close (item-runner Step 6), item-runner returned malformed/absent status (driver Substep 3.4), roadmap-mtime race detected at Substep 3.1.
 
 ## Cross-worktree safety
 
