@@ -1,15 +1,15 @@
 ---
 name: roadmap
-description: 'Brainstorm a multi-item roadmap for a large initiative into `.task/roadmap/<slug>.md`, with task descriptions ready for `/task:design --from`. `--refine` runs a parallel three-lens audit over an existing roadmap.'
+description: 'Brainstorm a multi-item roadmap for a large initiative into `.task/roadmap/<slug>.md`, with task descriptions ready for `/task:design --from`. Authoring closes with a light three-lens self-check that can escalate to `--refine` inline. `--refine` runs a parallel three-lens audit over an existing roadmap.'
 disable-model-invocation: true
 user-invocable: true
 ---
 
-Brainstorm a **multi-stage roadmap** for a large initiative — multi-phase, multi-task — and write it to `.task/roadmap/<slug>.md` with a phase-grouped table, dependencies, and **ready-to-paste task descriptions** that subsequent `/task:design --from` invocations consume. Multi-task counterpart to design's idea phase (which produces one task description).
+Brainstorm a **multi-stage roadmap** for a large initiative — multi-phase, multi-task — and write it to `.task/roadmap/<slug>.md` with a phase-grouped table, dependencies, and **ready-to-paste task descriptions** that subsequent `/task:design --from` invocations consume. Multi-task counterpart to design's idea phase (which produces one task description). Authoring closes with a light, report-only three-lens self-check (Coverage / Decomposition / Clarity) over the saved file that can escalate to an inline `--refine` when warranted — see Step 8.
 
 **Input:** `$ARGUMENTS` — one of:
 
-- Rough description of a multi-stage initiative → brainstorm mode (Steps 1–8 below).
+- Rough description of a multi-stage initiative → brainstorm mode (Steps 1–9 below).
 - `--refine [<slug>]` → refine mode: parallel three-lens audit of an existing roadmap (Coverage / Decomposition / Clarity), bounded ≤2 iterations, sidecar findings in `.task/roadmap/<slug>.refine.md`. See [`phases/refine.md`](phases/refine.md).
 
 **Preconditions, tool tier, language:** see [docs/spec/invariants.md](../../docs/spec/invariants.md#tier-c--shallow-scan) — no bash context script here; preconditions enforced inline. `/task:roadmap` is the primary Tier-C consumer of `docs/` (entry points like `docs/README.md`, `docs/spec/README.md`). Refine mode tier and read policy live in [`phases/refine.md`](phases/refine.md).
@@ -130,7 +130,7 @@ Once iteration ends, draft the full file. The structure is fixed (the entire pip
 
 ### Step 6: Self-review pass
 
-Before saving, run a quick self-check (do not dispatch a subagent — this is a checklist you run yourself):
+This is the **pre-save integrity gate** — the checklist you run and fix inline **before the file is written**; the reported three-lens quality pass over the saved file happens after Save (Step 8). Before saving, run a quick self-check (do not dispatch a subagent — this is a checklist you run yourself):
 
 1. **Phase coverage:** Does every fork raised during the brainstorm have a home in some phase, or an explicit "what's not in this plan" mention?
 2. **Description completeness:** Skim each task's `**Ready description:**` blockquote. Does it stand alone (a reader who has not seen the roadmap could write a design's blueprint phase from it)? Are `### Context`, `### Goal`, `### Outcomes`, `### Invariants`, `### Contracts` (when present), `### Acceptance criteria`, and `### Spec references` (when present) each concrete and self-contained? Context must answer "why this task, what it unblocks" — not restate Goal.
@@ -141,7 +141,7 @@ Before saving, run a quick self-check (do not dispatch a subagent — this is a 
 7. **Slug uniqueness within file:** Each task heading produces a unique kebab-case slug (used by `/task:design --from <file>#<slug>`).
 8. **Spec sidecar integrity (only if a sidecar was drafted):** every `<slug>.spec.md §N` cited by an item resolves to an existing `## N.` section in the sidecar; every sidecar section is referenced by at least one item (no orphan decisions); each section is a load-bearing *anchor* (passes the boundary test), not a per-task implementation plan; no placeholders inside the sidecar.
 
-If you find issues — fix them inline before saving.
+If you find issues — fix them inline before saving. This inline fixing is drafting hygiene against a not-yet-written file — distinct from, and not in conflict with, the report-only light quality pass added in Step 8, which runs after Save and never edits the saved file.
 
 ### Step 7: Save
 
@@ -152,11 +152,29 @@ Write the file directly — no in-chat preview, no confirmation prompt. The user
 3. **If a spec sidecar was drafted (Step 5)**, write `.task/roadmap/<slug>.spec.md` (same slug). Skip entirely when no anchors accumulated.
 4. **Do not** modify any other file.
 
-### Step 8: Output
+### Step 8: Light quality self-check
+
+After Save, close the authoring flow with an automatic, **report-only** light quality pass over the just-saved `.task/roadmap/<slug>.md` — this never edits the file; any change goes through the normal review (by hand, or via an explicitly accepted `--refine` below).
+
+1. **Skim the saved file** (not the in-chat draft) against the same three lens dimensions `--refine`'s auditors use, as a self-run checklist — **not** a subagent fanout:
+   - **Coverage** — phase/fork coverage, dependency integrity (dangling or cyclic `**Dependencies:**`).
+   - **Decomposition** — compound tasks, `Size:`-vs-outcomes drift.
+   - **Clarity** — behavioral discipline, self-contained descriptions, missing `### Contracts` on substrate-class tasks, broken `### Spec references`.
+2. **Report** a compact findings summary: a count per lens plus the obvious issues, in a few lines. Never silently rewrite the saved file.
+3. **Escalate only when findings warrant it.** Warrants threshold: at least one finding you judge high-severity (a coverage gap / broken dependency / compound task / technical leak) **or** ≥ 3 findings total across the three lenses. When it warrants escalation, offer `/task:roadmap --refine <slug>` inline using the canonical accept/decline/edit grammar (see [`docs/spec/invariants.md § Interaction conventions (b)`](../../docs/spec/invariants.md#b-choice-grammar--accept--decline--edit) — do not restate the grammar here):
+   - **accept** → read [`phases/refine.md`](phases/refine.md) and run its Steps R1–R7 for this slug, inline, now.
+   - **decline** → leave the roadmap as authored; proceed to Step 9.
+   - **edit** → the user fixes the flagged items by hand in the file; proceed to Step 9.
+   When findings don't warrant escalation, report "clean / minor only" and skip the prompt.
+
+`--refine`'s own machinery (`phases/refine.md`, the three `audit-roadmap-*-auditor` agents, the bounded ≤2-iteration auto-apply) is unchanged by this pass — an accepted offer here is still an explicit, deliberate invocation, not an automatic entry.
+
+### Step 9: Output
 
 - Print the path to the created file. Tell the user to open it to review/edit.
 - If a spec sidecar was written, print its path too and note that blueprint will read it for items carrying `### Spec references`.
 - One-line summary: "*N* tasks across *M* phases. Recommended order: 1 → 2 → 4 → 3 → 5 …".
+- Print the Step 8 light-quality-check findings summary (or "clean / minor only") and, if an inline `--refine` ran, note that it completed and where its findings live (`.task/roadmap/<slug>.refine.md`).
 - End with the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)), naming the first task's `--from` command, where `<N>` is the recommended starting point: `→ Next: \`/task:design --from .task/roadmap/<slug>.md#<N>\``.
 
 ## Output contract

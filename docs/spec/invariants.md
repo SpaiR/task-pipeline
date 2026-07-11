@@ -198,4 +198,6 @@ Present the options on a canonical prompt line — `accept / decline / edit` —
 
 `/task:bootstrap`'s setup confirmation is another instance: the detected language policy and testing-policy mode are proposed once, in a single block, with edit as the override path for either or both.
 
+`/task:roadmap` brainstorm authoring's light-pass escalation offer is a third instance: it fires only when the post-Save quality pass surfaces enough to warrant it (≥1 high-severity finding or ≥3 total); accept runs `--refine` inline now, decline leaves the roadmap as authored, edit means the user fixes the flagged items by hand.
+
 **Free by design.** Visual styling (surrounding blank lines, emphasis) and, per command, the actual next-step value and the specific proposed content are left to each command. Only the footer shape and the choice-grammar wording/semantics are pinned.
