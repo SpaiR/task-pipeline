@@ -58,11 +58,11 @@ After this step `.task/workspace/<task-id>/task.md` is in place with `Roadmap:` 
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/design/phases/blueprint.md`. Execute it. Resolve `tests_required` per the phase's Step 1 rules (Testing Policy mode + Description language). Write `.task/workspace/<task-id>/plan.md` per the template.
 
-**The `Implement-Model:` stamp is load-bearing in your context** — the orchestrator reads it after you return and uses it to choose the model for `auto-roadmap-build-runner`. Apply the rubric in `blueprint.md` Step 3 honestly:
+**The `Implement-Model:` stamp is load-bearing in your context** — the orchestrator reads it after you return and uses it to choose the model for `auto-roadmap-build-runner`. Apply the rubric in `blueprint.md` Step 3 honestly — judge by reasoning difficulty, not size:
 
-- `opus` for genuinely complex / cross-cutting work,
-- `sonnet` for typical isolated changes that still need code-level judgment (the safe default),
-- `haiku` for ≤2-step single-module mechanical edits (text/config/template substitution / one-to-one renames).
+- `opus` for genuine reasoning difficulty (subtle invariants, non-local cross-cutting coordination) — not for step/module count alone,
+- `sonnet` as the safe default, covering large-but-straightforward multi-module changes too,
+- `haiku` for mechanical edits with no behavioural branching and no judgment involved (text/config/template substitution / one-to-one renames).
 
 Wrong choice has a cost: too cheap → implement may flap on verification; too dear → the run pays opus rates for trivial work. When uncertain, prefer `sonnet`.
 

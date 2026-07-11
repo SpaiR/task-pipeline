@@ -47,11 +47,11 @@ Analysis algorithm:
 
 ## Step 3: Write the plan
 
-**Decide the implementation model first.** Assess task complexity and stamp `Implement-Model: <opus|sonnet|haiku>` directly below the `# Plan:` heading. Rubric:
+**Decide the implementation model first.** Assess task complexity and stamp `Implement-Model: <opus|sonnet|haiku>` directly below the `# Plan:` heading. Rubric — judge by **reasoning difficulty**, not by diff volume. Step/module counts alone are not a signal: a large context window lets the executor hold a wide, straightforward plan in full; they do not help it navigate a genuinely subtle one. Do not escalate `opus` on step or module count by itself.
 
-- **`opus`** — any of: more than 5 `### Step N:` blocks; touches more than 3 distinct modules (count from `## Scope` → "Affected modules/directories"); cross-cutting refactor; non-trivial coordination between systems; subtle invariants the executor could miss.
-- **`sonnet`** — isolated, straightforward changes that still require code-level judgment (default for typical features and bug fixes).
-- **`haiku`** — mechanical edits against an already-fixed contract: ≤2 `### Step N:` blocks, a single module, changes that are mostly textual / config / template substitution / one-to-one renames with no behavioural branching.
+- **`opus`** — genuine reasoning difficulty, regardless of size: subtle invariants the plan cannot fully spell out; cross-cutting coordination where a local mistake breaks something non-local; the plan intentionally leaves design-level judgment to the implementer. Since blueprint already did the hard design reasoning, this bucket is narrow for the implement stage — reach for it only when the *execution itself* still requires that judgment.
+- **`sonnet`** — the strong default. Straightforward execution against a clear, fixed plan that still needs code-level judgment — including large multi-module changes with no subtle invariants, since a large context window holds the whole working set.
+- **`haiku`** — mechanical edits with no behavioural branching and no judgment involved: textual / config / template substitution, one-to-one renames, changes against an already-fixed contract. Stay conservative on very large or broad mechanical sweeps — Haiku's lower ceiling can still be tripped by sheer breadth even when each individual edit is trivial.
 
 When uncertain, default to `sonnet`. The stamp is parser-validated by `validate.sh` and load-bearing for `/task:auto-roadmap` — it selects the model used to spawn `auto-roadmap-build-runner` for the implement stage. Harmless in manual flows.
 
