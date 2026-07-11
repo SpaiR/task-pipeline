@@ -36,10 +36,10 @@ The three operational skills (`design`, `build`, `ship`) auto-detect their curre
 
 Default semantics: one phase per invocation, then a chain hint. `--auto` (opt-in, mutually exclusive with `--phase`) chains both phases in a single invocation, guarded by per-phase budgets (≤1 `implement`, ≤2 `audit`) — symmetric with audit's own bounded loop. Not auto-detected; the flag must be passed explicitly. See [invariants.md § `/task:build`](invariants.md) for the full stop-condition matrix.
 
-`/task:ship` has two modes. Both compose the commit from `summary.md` (fallback `task.md`) per the configured commit format and present it once for an **accept / decline / edit** confirmation before committing (auto-accepted when run non-interactively under `/task:auto-roadmap` — the item-runner commits without prompting):
+`/task:ship` has two modes — **full close** and **subtask transition**. Both compose the commit from `summary.md` (fallback `task.md`) per the configured commit format. Interactive ship **infers** which mode fits from whether pending work remains (`commit-context.sh` emits an authoritative `verdict: transition|full-close`) and **proposes** it inside the single **accept / decline / edit** commit confirmation — one prompt, no second checkpoint; the user accepts the proposal or **flips** it via *edit*. `--next` is an explicit transition override that skips inference. Non-interactive `/task:auto-roadmap` keeps literal-flag mode selection (the item-runner passes the mode the driver's `is_last` look-ahead decided) and auto-accepts — the interactive inference does not apply under autopilot:
 
-- **default** (umbrella close) — commit, then archive everything including `task.md`; remove `.task/workspace/<task-id>/` and `.task-current`.
-- **`--next`** (subtask transition) — commit, then archive per-subtask artifacts; keep `task.md` with Description body cleared, ready for the next subtask of the same umbrella.
+- **full close** — commit, then archive everything including `task.md`; remove `.task/workspace/<task-id>/` and `.task-current`.
+- **subtask transition** (`--next`, or the inferred proposal) — commit, then archive per-subtask artifacts; keep `task.md` with Description body cleared, ready for the next subtask of the same umbrella.
 
 ## Off-cycle skills
 

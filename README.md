@@ -120,7 +120,7 @@ In a new project you don't have to run setup by hand first: the first `/task:des
 
 ### Umbrella task vs subtask
 
-`task.md` is an **umbrella task**: a task with one `task-id` and a shared title, under which there may be several subtasks. Each `/task:design → /task:build → /task:ship` cycle is one subtask. By default `/task:ship` closes the umbrella task entirely. `/task:ship --next` clears the Description and keeps the title — the next cycle starts from the same umbrella task.
+`task.md` is an **umbrella task**: a task with one `task-id` and a shared title, under which there may be several subtasks. Each `/task:design → /task:build → /task:ship` cycle is one subtask. Interactive `/task:ship` **proposes** close-or-transition based on whether pending work remains and acts on one confirmation — you can flip the proposal there. A full close ends the umbrella task entirely; a transition clears the Description and keeps the title, so the next cycle starts from the same umbrella task. `/task:ship --next` forces the transition without inferring. (Under `/task:auto-roadmap` the mode is chosen by the autopilot, not proposed interactively.)
 
 ## Commands
 
@@ -131,7 +131,7 @@ In a new project you don't have to run setup by hand first: the first `/task:des
 | `/task:auto-roadmap [<roadmap>] [--next \| --from #<N> \| --items <spec>]` *(opt.)* | Autopilot over a roadmap in the current interactive Claude Code session: for each item — design → build → ship. `--next` — the first unclosed item; `--from #N` — start from item N; `--items 3-5` or `1,3-5,8` — a selection. |
 | `/task:design [<context>] [--from <path>[#<N>]] [--idea] [--phase <name>]` | Open a task, write the Description, plan it out. Phase auto-detect (`open` → `blueprint`); `--phase` override. `--idea` — brainstorm the Description (architect from scratch / Socratic on a filled-in one). `--from <path>[#N]` — Description from a roadmap item. (`--phase refine` critically reviews an existing `plan.md` — a repair-level option, see docs/troubleshooting.md.) |
 | `/task:build [--phase <name>] [--auto]` | Implementation (`implement`) + audit with bounded auto-fix (`audit`). `--auto` — both phases in one call (≤1 implement, ≤2 audit). `--phase` — override. Fixes outside `Touches` from `plan.md` are marked `Skipped: out-of-scope`. |
-| `/task:ship [--next]` | Commit + archiving under `.task/log/`. Default — full close: `workspace/<task-id>/` and `.task-current` are removed. `--next` — `task.md` stays (Description cleared), transition to the next subtask. Auto-marks the roadmap item when `Roadmap:` + `Source item:` are present. The commit slug is always auto-derived. |
+| `/task:ship [--next]` | Commit + archiving under `.task/log/`. Interactive ship infers close-vs-transition from remaining work and proposes it in the single commit confirmation (you can flip it); `--next` forces transition. Full close removes `workspace/<task-id>/` and `.task-current`; transition keeps `task.md` (Description cleared) for the next subtask. Auto-marks the roadmap item when `Roadmap:` + `Source item:` are present. The commit slug is always auto-derived. |
 | `validate` *(utility)* | Formal validator of artifact format. Invoked automatically. For a manual check: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" [task\|plan\|roadmap <path>\|all]`. |
 
 ## Example — a single task
@@ -161,8 +161,8 @@ In a new project you don't have to run setup by hand first: the first `/task:des
 
 /task:ship                                       # commit composed from artifacts, one accept/decline/edit confirm
                                                  # slug auto-generated → e.g. feat-add-retries
-                                                 # default: full close — workspace and .task-current removed
-# or, instead of closing, keep the umbrella open for another subtask:
+                                                 # proposes close-or-transition from remaining work; accept or flip it
+# or force the transition without inferring:
 /task:ship --next                                # transition to the next subtask (task.md stays)
 ```
 

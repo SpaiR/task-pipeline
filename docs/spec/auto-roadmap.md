@@ -20,6 +20,8 @@ The split exists because implement is the largest-input stage of the cycle (read
 
 `auto.lock` does **not** store the per-item implement model — it captures **run** parameters at launch, not per-item plan content. The implement model is read fresh from each item's `plan.md` by the item-runner (its Step 3), between design-runner's OK and the build-runner spawn (see `agents/auto-roadmap-item-runner.md` Step 3 for the canonical regex).
 
+Ship's interactive **close-vs-next inference** (proposing transition vs full close from remaining pending work) does **not** apply under autopilot: the item-runner runs ship non-interactively and passes the literal mode the driver's `is_last` look-ahead already decided (`--next` for a non-last item, bare full close for the last), so both the item-runner and the driver are unaffected — the inference fires only when a real user can answer the commit confirmation.
+
 ## Step 0 preconditions — three hard-stop gates
 
 `auto-roadmap-context.sh` enforces all three gates in bash, with prompt-layer reminders in `SKILL.md`. Failing any gate refuses to start the run with a specific message — no silent recovery, no rollback.
