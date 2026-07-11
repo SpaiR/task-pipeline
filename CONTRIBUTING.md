@@ -84,6 +84,71 @@ README.md                        user-facing documentation
 
 This project is a collection of Markdown skills plus a handful of bash helpers. There is no compile step, no unit-test suite, and no linter. The bar for "it works" is: skills run end-to-end, invariants in [`CLAUDE.md`](CLAUDE.md) still hold, and the `validate.sh` script accepts the new artifact shapes.
 
+### Pull Request Title
+
+Write a short, **descriptive** title for the whole change — do **not** paste the first commit's header. The title is what a reviewer scans in the PR list, so it should read as plain prose describing the outcome, not as a `<type>(<scope>): …` commit line.
+
+- Sentence case, no trailing period, aim for under ~72 characters.
+- Describe the whole PR, not just its first or largest commit.
+- No `type(scope):` prefix — the **type is carried by the label** (see [Labels](#labels) below), not the title.
+
+Examples — `feat(auto): collapse per-item cycle into one item-runner subagent` (commit) becomes **"Run each roadmap item in a single isolated subagent"** (PR title); `docs: restructure README for public release` becomes **"Restructure the README for the public release"**.
+
+### Pull Request Body
+
+`.github/pull_request_template.md` pre-fills the body when you open a PR on GitHub. Fill the sections that apply and delete the rest — only **What** is mandatory.
+
+```markdown
+## What
+
+<One or two sentences: the user-visible change and why it exists.>
+
+## Why
+
+<The motivation, constraint, prior incident, or complaint that prompted this.
+ Skip if fully covered by What.>
+
+## Changes
+
+<Bullet list of the notable edits, grouped by file or subsystem. For a
+ multi-item roadmap PR, group by roadmap item.>
+
+## Verification
+
+<How you dogfooded it — which skill(s) you ran end-to-end in a real project,
+ and the `bash skills/validate/validate.sh all` result. The repo has no
+ automated tests, so this section is how a reviewer trusts the change.>
+
+## Notes for reviewer
+
+<Anything that helps review: a design decision and the alternative rejected,
+ a deliberate scope boundary, a follow-up left for later. Omit if none.>
+```
+
+Rules:
+
+- **What** is required on every PR. The other sections are optional but strongly preferred on anything non-trivial.
+- Close issues/PRs with a `Closes #<n>` / `Fixes #<n>` line at the bottom of the body (GitHub auto-links and auto-closes on merge).
+- AI-assisted PRs keep the `🤖 Generated with [Claude Code]` attribution line at the very end of the body, mirroring the commit `Co-Authored-By` trailer (see [Contributing with AI Agents](#contributing-with-ai-agents)).
+
+### Labels
+
+Apply exactly one **type** label, derived from the PR's commit `type`:
+
+| Commit `type`     | Label           |
+|-------------------|-----------------|
+| `feat`            | `enhancement`   |
+| `fix`             | `fix`           |
+| `docs`            | `documentation` |
+| `refactor`        | `refactor`      |
+| `perf`            | `performance`   |
+| `test` / `chore`  | `chore`         |
+| `revert`          | *(label of the change being reverted)* |
+
+Then add **`breaking-change`** on top of the type label whenever the PR carries a `BREAKING CHANGE:` footer or a `!` in the header — it drives the major-version bump at release time, so it must be visible in the PR list.
+
+The remaining labels (`bug`, `question`, `help wanted`, `good first issue`, `duplicate`, `invalid`, `wontfix`) are for **issue triage**, not PRs. Do not invent new labels — add a label to the repo first if a genuinely new category appears.
+
 ## Commit Message Format
 
 *This specification adapts [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) to the task-pipeline repo. The project's runtime fallback (`skills/_lib/templates/conventional-commits.md`) is the **default** that ships to consumer projects without their own commit doc — this file is the source of truth for commits **inside this repo**.*
@@ -125,19 +190,26 @@ Must be one of the following:
 * **feat** — A new skill, agent, hook, slash-command form, or any user-visible capability.
 * **fix** — A bug fix in a skill, agent, bash helper, or hook.
 * **refactor** — Internal change that does not add a feature or fix a bug (rename, restructure, extract).
-* **docs** — Documentation only: `README.md`, `CLAUDE.md`, `CHANGELOG.md`, this file, or comments inside skills.
-* **chore** — Tooling, repo housekeeping, plugin manifest fields that do not affect users (keywords, description tweaks).
+* **perf** — A change whose primary goal is to shrink a skill/agent's token or context footprint (or its latency) **without** changing behavior. Distinct from `refactor`: the win is measured in tokens/context, not readability.
+* **docs** — Documentation only: `README.md`, `CLAUDE.md`, `CHANGELOG.md`, `docs/`, this file, or prose inside skills.
+* **test** — Changes to the project's only executable QA surface: the artifact validator (`skills/validate/validate.sh`) and the bash unit tests (`skills/_lib/*.test.sh`).
+* **chore** — Tooling, repo housekeeping, plugin manifest fields that do not affect users (keywords, description tweaks), and repo automation under `.github/`.
+* **revert** — Reverts a previous commit. The body must name the reverted commit (`Reverts <sha>`) and say why.
 
 #### Scope
 
 **Do NOT invent new scopes.** Pick from the list below; if none fits, omit the scope entirely.
 
 * **A skill name** (no `task:` prefix): `bootstrap`, `roadmap`, `auto`, `open`, `idea`, `blueprint`, `refine`, `implement`, `audit`, `commit`, `close`, `validate`.
-* **An agent name**: `audit-reuse`, `audit-simplicity`, `audit-clarity`.
+* **An agent name**: the build-audit lenses `audit-reuse`, `audit-simplicity`, `audit-clarity`; the roadmap-refine lenses `audit-roadmap-coverage`, `audit-roadmap-decomposition`, `audit-roadmap-clarity`.
 * **`skills`** — cross-cutting change that touches several skills at once.
+* **`agents`** — cross-cutting change that touches several agents at once (e.g. a shared rule in `agents/_shared/`).
+* **`runners`** — the executor-class agents for `/task:auto-roadmap` (`auto-roadmap-item-runner`, `auto-roadmap-design-runner`, `auto-roadmap-build-runner`).
+* **`lib`** — the shared bash helpers under `skills/_lib/` (`resolve-ws.sh`, `preamble.sh`, `phase-detect.sh`, `touches-gate.sh`, etc.) and their templates.
 * **`hooks`** — `hooks/hooks.json` and the PreToolUse validator wiring.
 * **`plugin`** — `.claude-plugin/plugin.json` and install-path concerns.
-* **`readme` / `claudemd` / `changelog`** — single-doc edits (use `docs:` as the type for these).
+* **`github`** — files under `.github/` (PR/issue templates, any repo automation).
+* **`readme` / `claudemd` / `changelog` / `contributing` / `spec`** — single-doc edits (use `docs:` as the type for these; `spec` = anything under `docs/spec/`).
 
 #### Summary
 

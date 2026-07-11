@@ -125,11 +125,19 @@ Full detail in [docs/spec/internals.md § Editing protocol](docs/spec/internals.
 Source of truth: [`CONTRIBUTING.md`](CONTRIBUTING.md). Summary:
 
 - Header: `<type>(<scope>): <short summary>` — under 72 chars, imperative, lowercase first letter, no trailing period.
-- Types: `feat | fix | refactor | docs | chore`. **Do not invent types.**
-- Scopes (optional but strongly preferred): skill names without `task:` prefix (`bootstrap`, `roadmap`, `auto`, `open`, `idea`, `blueprint`, `refine`, `implement`, `audit`, `commit`, `close`, `validate`), agent names (`audit-reuse`, `audit-simplicity`, `audit-clarity`), or cross-cutting keys (`skills`, `hooks`, `plugin`, `readme`, `claudemd`, `changelog`). **Do not invent scopes.**
+- Types: `feat | fix | refactor | perf | docs | test | chore | revert`. **Do not invent types.**
+- Scopes (optional but strongly preferred): skill names without `task:` prefix (`bootstrap`, `roadmap`, `auto`, `open`, `idea`, `blueprint`, `refine`, `implement`, `audit`, `commit`, `close`, `validate`), agent names (`audit-reuse`, `audit-simplicity`, `audit-clarity`, `audit-roadmap-coverage`, `audit-roadmap-decomposition`, `audit-roadmap-clarity`), or cross-cutting keys (`skills`, `agents`, `runners`, `lib`, `hooks`, `plugin`, `github`, `readme`, `claudemd`, `changelog`, `contributing`, `spec`). **Do not invent scopes.**
 - Body: mandatory for all non-trivial commits; explain **why**, not what; 2–5 bullet list, imperative tense.
 - Footer: `BREAKING CHANGE:` when header carries `!`; `Fixes #N` / `Closes #N` for issues/PRs.
 - AI attribution: every Claude-assisted commit must carry `Co-Authored-By: Claude <noreply@anthropic.com>` as the last footer line.
+
+## Pull requests
+
+Source of truth: [`CONTRIBUTING.md`](CONTRIBUTING.md#pull-request-title) (the Pull Request Title / Body / Labels subsections). When opening a PR (`gh pr create`), follow it — do NOT default to `gh`'s commit-derived title/body:
+
+- **Title**: short descriptive prose for the whole change. **Not** the first commit's header, and **no** `type(scope):` prefix — the type is carried by the label. Sentence case, no trailing period, under ~72 chars.
+- **Body**: use `.github/pull_request_template.md`. Only `## What` is mandatory; fill `Why` / `Changes` / `Verification` / `Notes for reviewer` when they apply, delete the rest. End with `Closes #N` / `Fixes #N` when relevant, then the `🤖 Generated with [Claude Code]` attribution line.
+- **Label**: apply exactly one type label mapped from the commit type — `feat`→`enhancement`, `fix`→`fix`, `docs`→`documentation`, `refactor`→`refactor`, `perf`→`performance`, `test`/`chore`→`chore`. Add `breaking-change` on top when the header carries `!` / a `BREAKING CHANGE:` footer. Set it with `gh pr create --label <name>`. **Do not invent labels.**
 
 ## Release procedure
 
