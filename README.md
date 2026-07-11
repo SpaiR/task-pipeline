@@ -75,7 +75,7 @@ The pipeline ships as a Claude Code plugin (`task`) inside the `task-pipeline` m
 
 From then on, updates are a single command: `/plugin marketplace update task-pipeline`.
 
-After installation, Claude Code gains the commands `/task:bootstrap`, `/task:design`, `/task:build`, `/task:ship`, `/task:roadmap`, `/task:auto-roadmap`, plus eight named agents and a PreToolUse artifact-validator hook that activates automatically.
+After installation, Claude Code gains the commands `/task:bootstrap`, `/task:design`, `/task:build`, `/task:ship`, `/task:roadmap`, `/task:auto-roadmap`, plus nine named agents and a PreToolUse artifact-validator hook that activates automatically.
 
 In a new project: call `/task:bootstrap` once. The skill inspects the repo, asks two interactive questions (language, test policy), and writes `.task/config/config.md`.
 

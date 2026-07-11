@@ -204,4 +204,4 @@ Return control to the orchestrator (`build/SKILL.md` Step 4) which will apply fi
 - Apply fixes in this phase — fixes are the orchestrator's responsibility (main thread, scope-gated).
 - Modify `summary.md` — it is owned by the implement phase.
 - Rewrite previous iterations of `audit.md` — append-only.
-- Spawn subagents recursively (this phase already runs lens-agents; agents can't spawn agents).
+- Add a subagent layer beyond Step 2b's single lens fanout — the three lens auditors are read-only leaves and must not spawn anything themselves. (Step 2b's fanout is the one prescribed agent layer; whoever runs this phase — `/task:build`'s main thread or the `auto-roadmap-item-runner` — spawns the lenses and nothing deeper.)

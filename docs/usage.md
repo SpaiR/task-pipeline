@@ -51,20 +51,23 @@ Scenarios can be combined: some tasks via `/task:roadmap` + `--from`, small fixe
 /task:auto-roadmap
 # A wizard picks the roadmap and confirms the run.
 #
-# For each item:
-#   1) main thread spawns auto-roadmap-design-runner (parent-session model)
+# For each item, the driver spawns ONE auto-roadmap-item-runner and routes on
+# its returned digest. Inside that item-runner:
+#   1) spawns auto-roadmap-design-runner (parent-session model)
 #      → goes through design/phases/open.md → design/phases/blueprint.md
 #      → returns: "OK: item #N \"...\" — plan.md ready, awaiting implement"
-#   2) main thread reads plan.md → Implement-Model: (opus|sonnet|haiku)
-#   3) main thread spawns auto-roadmap-build-runner with Agent.model = that value
+#      (first item only: writes workspace/<id>/auto.lock right after .task-current lands)
+#   2) reads plan.md → Implement-Model: (opus|sonnet|haiku)
+#   3) spawns auto-roadmap-build-runner with Agent.model = that value
 #      → goes through build/phases/implement.md
 #      → returns: "OK: item #N \"...\" — diff uncommitted, ready for audit"
-#   4) main thread → /task:build --phase audit inline
+#   4) runs /task:build --phase audit inline
 #      — audit-context.sh sees a non-trivial diff →
-#        Step 2b spawns 3 lens agents in parallel (the main thread can Agent(...))
+#        Step 2b: the item-runner spawns 3 lens agents in parallel (nested spawn)
 #      — bounded auto-fix loop (≤2 iterations, touches-gate)
 #      — on high-severity unfixed after 2 iterations → fail-stop
-#   5) main thread → /task:ship inline (commit + close: --next on intermediate items, --full on the last)
+#   5) runs /task:ship inline (commit + close: --next on intermediate items, --full on the last)
+#   6) returns a compact report-card digest; the driver prints it and moves on
 
 # With flags:
 /task:auto-roadmap api-v2-migration --next          # only the first unclosed item
@@ -82,8 +85,9 @@ Scenarios can be combined: some tasks via `/task:roadmap` + `--from`, small fixe
 
 > [!WARNING]
 > **Limitations.**
-> - The main thread's context accumulates. Rough auto-compact thresholds: ~15 items on Sonnet 200k, ~25 on Opus 1M. Slice with `--items <range>` as needed.
-> - One session model for the whole run. For opus, run `/model opus` BEFORE starting.
+> - Each item's cycle runs in a disposable `auto-roadmap-item-runner`, so the driver accumulates only a one-screen digest per item — the old ~15 (Sonnet 200k) / ~25 (Opus 1M) auto-compact ceiling is greatly relaxed and a long run is bounded by wall-clock, not context. Slice with `--items <range>` if you still want to bound one.
+> - Live per-lens audit output shows in each item-runner's own subagent view, not the main transcript; the main thread prints the item-runner's report-card digest and the full detail stays in `.task/log/<id>/` + `git log`.
+> - One session model for the whole run's orchestration (implement still uses each item's `plan.md → Implement-Model:`). For opus, run `/model opus` BEFORE starting.
 > - The session window must stay open for the whole run.
 
 `/task:auto-roadmap` is **not for resume**: it refuses when `.task-current` exists or any `workspace/*/auto.lock` is present. It skips design's idea + refine phases — roadmap items already have a curated `Ready description`.
