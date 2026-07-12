@@ -49,7 +49,7 @@ Possible auto-detect outputs:
   >
   > → Next: `/task:build`
 
-  (Canonical footer per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar).) Then stop without dispatching. Only continue to Step 2 if the user explicitly asked for `--refine`.
+  (Canonical footer per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar).) Then stop without dispatching. Only continue to Step 2 if the user explicitly forced `--phase refine`.
 
 ## Step 2: Phase dispatch
 

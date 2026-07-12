@@ -135,7 +135,7 @@ On a clean build **in an interactive run**, the orchestrator does not stop at a 
 - **decline** → nothing is committed (safe default); the build then prints the manual `→ Next: \`/task:ship\`` footer so the user can ship later.
 - **edit** → ship's normal edit branch, then commit + close.
 
-On a **non-interactive run** — the `auto-roadmap-item-runner` executing these Steps inline (the *same* non-interactive detector ship's SKILL.md Steps 2.5/3 use) — the orchestrator does **not** propose: it completes silently and the item-runner drives ship itself with literal flags. This interactive-only gate is what keeps the item-runner and the driver byte-stable. This is a confirm-gated default (always-on for interactive builds), not an opt-in flag or config toggle — per `simplify-pipeline-surface.spec.md §2`.
+On a **non-interactive run** — the `auto-roadmap-item-runner` executing these Steps inline (the *same* non-interactive detector ship's SKILL.md Steps 2.5/3 use) — the orchestrator does **not** propose: it completes silently and the item-runner drives ship itself with literal flags. This interactive-only gate is what keeps the item-runner and the driver byte-stable. This is a confirm-gated default (always-on for interactive builds), not an opt-in flag or config toggle.
 
 **Blocking completions never propose.** The Step 4 verify-failure path, the Step 4 / Step 5 audit iteration-limit path, and the implement quick-fix-exhausted hand-off are not clean — they keep their full blocking-finding surfacing and their own `→ Next:` lines, with no ship proposal added.
 
