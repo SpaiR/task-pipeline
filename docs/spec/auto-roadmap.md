@@ -13,8 +13,10 @@ A per-item cycle still uses a per-stage model split, now expressed as spawns **w
 | (per-item orchestration) | `auto-roadmap-item-runner` subagent | inherits parent-session model (user's `/model` choice, typically opus) |
 | Open + Blueprint | `auto-roadmap-design-runner` sub-subagent | inherits the item-runner's model (= parent-session model) |
 | Implement | `auto-roadmap-build-runner` sub-subagent | `plan.md → Implement-Model:` (`opus`, `sonnet`, or `haiku`) — passed by the item-runner as `Agent.model` override at spawn time |
-| Audit lens fanout (×3) | `audit-{clarity,reuse,simplicity}-auditor` sub-subagents | pin `model: sonnet` in their own frontmatter (do not inherit) |
+| Audit lens fanout (×3, non-trivial diffs only) | `audit-{clarity,reuse,simplicity}-auditor` sub-subagents | pin `model: sonnet` in their own frontmatter (do not inherit) |
 | Audit orchestration + ship | the `auto-roadmap-item-runner` itself | its own (parent-session) model |
+
+Audit is **adaptive** (honoring `build/SKILL.md` Step 4): a trivial diff (1 file AND <30 changed lines) is audited inline in the item-runner's own context with no lens sub-subagents; only a non-trivial diff triggers the ×3 fanout above. The gate is size-based (`audit-context.sh` `trivial` flag), never `Class`-based.
 
 The split exists because implement is the largest-input stage of the cycle (reads many sources, writes a diff) but the most mechanical once `plan.md` has fixed `Touches` + `Goal` per Step. Letting it run under a cheaper model than design saves significant cost on long roadmaps while keeping architectural decisions (blueprint) and code review (audit) on the parent-session model. The `Implement-Model:` rubric is in `skills/design/phases/blueprint.md` Step 3. Depth budget: `driver(0) → item-runner(1) → {design-runner | build-runner | lens auditor}(2)`, all leaves — well under the runtime's nesting cap.
 
