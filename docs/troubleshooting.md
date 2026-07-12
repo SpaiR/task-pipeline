@@ -1,12 +1,12 @@
 # Troubleshooting
 
-First-run problems you may hit as a new user, then edge cases when integrating with the pipeline or invoking its agents by hand.
+First-run problems you may hit as a new user, then edge cases in a v3 world — a solo, hook-free, pointer-free pipeline where enforcement is convention, not a gate.
 
 ## First run
 
 ### `/task:` commands don't appear after installing
 
-**Symptom** — typing `/task:` shows nothing; no `/task:bootstrap`, `/task:design`, etc.
+**Symptom** — typing `/task:` shows nothing; no `/task:to-task`, `/task:to-plan`, etc.
 
 **Cause** — the `task` plugin isn't installed/enabled in this session, or the marketplace was never added.
 
@@ -19,88 +19,76 @@ First-run problems you may hit as a new user, then edge cases when integrating w
 
 Then reopen the `/` menu. If it was already installed, make sure it isn't disabled (`/plugin`).
 
-### `ERROR precondition: …/config.md not found. Run /task:bootstrap first.`
+### `ERROR: …/config.md not found.`
 
-**Symptom** — a skill stops immediately with `ERROR precondition: …/.task/config/config.md not found. Run /task:bootstrap first.`
+**Symptom** — a skill stops with `.task/config/config.md not found`.
 
-**Cause** — every skill except `/task:bootstrap` needs `.task/config/config.md`, and it hasn't been created in this project yet.
+**Cause** — every skill except `to-task` / `to-plan` / `to-roadmap` requires `.task/config/config.md`, and it hasn't been written in this project yet. There is no separate `bootstrap` command in v3 to run first — setup is folded inline into the three capture skills.
 
-**Fix** — run `/task:bootstrap` once; it writes the config. If you already ran it elsewhere, see "A worktree can't find `.task/`" below.
+**Fix** — run any of `/task:to-task`, `/task:to-plan`, or `/task:to-roadmap`. On a fresh project each detects language and test policy, presents both for one accept/decline/edit confirmation, writes `.task/config/config.md`, records `git config task.root`, and continues straight into the requested capture. If you specifically hit this from `/task:roadmap-to-workflow`, that skill is *not* intake-capable by design (a roadmap can't exist without config, so a missing config there means something upstream is broken) — run a capture skill first, then retry.
 
 ### `.task/` shows up in `git status`
 
 **Symptom** — `.task/` appears as untracked in `git status`.
 
-**Cause** — the local git exclusion wasn't written (e.g. `.task/` was created before bootstrap, or bootstrap ran outside a git repo).
+**Cause** — the local git exclusion wasn't written, e.g. `.task/` was created before the inline setup ran, or setup ran outside a git repo.
 
-**Fix** — re-run `/task:bootstrap` (idempotent); it adds `.task` to `.git/info/exclude`. The pipeline uses `.git/info/exclude`, not `.gitignore`, on purpose — the state stays invisible to teammates. (The active-task pointer never shows up — it lives inside git's per-worktree dir, outside the work tree.)
+**Fix** — run any capture skill again; the inline setup step is idempotent and re-adds `.task` to `.git/info/exclude`. This uses `.git/info/exclude`, not `.gitignore`, on purpose — the pipeline stays invisible to teammates and never touches a tracked file. There's no active-task pointer to worry about either way — v3 has none.
 
 ### `validate.sh` ends with `FAIL N error(s)`
 
-**Symptom** — an artifact check ends with `FAIL <N> error(s), <M> warning(s)`, preceded by one or more `ERROR <label>: <message>` lines.
+**Symptom** — `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all` (or `task <slug>` / `roadmap <slug>`) ends with `FAIL <N> error(s), <M> warning(s)`, preceded by `ERROR <label>: <message>` lines.
 
-**Cause** — a `task.md` / `plan.md` / roadmap file drifted from the expected format (bad header, missing required section, wrong separator).
+**Cause** — a `task.md` or roadmap file drifted from the expected format: a missing `# <Title>` first line, no `---` separator, no `## Description`, a `## Plan` present with zero `### Step N:` blocks, or a roadmap item missing its checkbox prefix or a required `### Context`/`### Goal`/`### Outcomes`/`### Acceptance criteria` sub-heading.
 
-**Fix** — read the `ERROR <label>:` lines (each names the file and the problem) and fix the artifact by hand — they are plain Markdown. Re-check with `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`. A `WARN` on its own does not block.
+**Fix** — read each `ERROR <label>:` line (it names the file and the exact problem) and fix the artifact by hand — these are plain Markdown files. Re-check with `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`. `validate.sh` is an optional self-check, not a gate — nothing stops you from continuing with a `WARN`, only genuine structural `ERROR`s are worth fixing before you hand the file to an implementing session.
+
+## Working with roadmaps
+
+### A roadmap item's checkbox never gets ticked
+
+**Symptom** — you ran `implement .task/task/<item-slug>.md` and it completed, but `.task/roadmap/<slug>.md` still shows `- [ ]` for that item.
+
+**Cause** — the auto-mark step in `## Execution` is conditional on the task file carrying both `Roadmap:` and `Source item: #N` header lines, above the `---` separator. If the file was hand-created, or `Roadmap:`/`Source item:` were edited out, or the item number doesn't match, the executing session has nothing to key the checkbox flip off of.
+
+**Fix** — check the top of `.task/task/<item-slug>.md` for both header lines and a correct `#N`. If they're missing, add them (ASCII, above `---`) and re-run the implementing session, or just tick the box yourself — it's a plain `- [ ]` → `- [x]` edit in a Markdown file, no script involved.
+
+### A `roadmap-to-workflow` run stops on a failed item
+
+**Symptom** — the run prints a `FAIL #N <item-slug> <what failed>` digest line and stops instead of continuing to the next wave.
+
+**Cause** — this is by design: the driver is stop-on-FAIL. A later wave is never started if an earlier item didn't land cleanly, since a later item may depend on it.
+
+**Fix** — read the failure digest, fix the item (edit `.task/task/<item-slug>.md`, or just re-implement it by hand with `implement .task/task/<item-slug>.md`), tick its checkbox once it's done, then rerun `/task:roadmap-to-workflow <slug>` — completed items stay checked, so the rerun only picks up the unchecked remainder. If the Workflow tool itself isn't available in your environment, `roadmap-to-workflow` falls back to running items one at a time by hand instead of failing outright.
 
 ### A worktree can't find `.task/`
 
-**Symptom** — in a second git worktree, skills stop with `config.md not found` even though the repo is bootstrapped.
+**Symptom** — in a second git worktree, a skill stops with `config.md not found` even though the repo is set up elsewhere.
 
-**Cause** — worktrees resolve the shared `.task/` through `git config task.root` (fallback `dirname(git-common-dir)`). This normally needs no setup, but the anchor can be missing (repo bootstrapped by an older version) or wrong (a bare repo whose `.task/` you put somewhere non-default).
+**Cause** — worktrees resolve the shared `.task/` through `git config --local task.root` (fallback: the upward walk, then `dirname(git-common-dir)`). This normally needs no setup, but the anchor can be missing (the repo was set up by an older version) or wrong (a bare repo whose `.task/` lives somewhere non-default).
 
-**Fix** — run `/task:bootstrap` from any worktree; it records `task.root` and every worktree then resolves the same `.task/`. To point the pipeline at an existing `.task/` yourself (e.g. an unusual bare-repo layout), set it directly: `git config --local task.root /abs/path/containing/dot-task` (the directory that *contains* `.task`, not `.task` itself).
+**Fix** — run any capture skill (`to-task` / `to-plan` / `to-roadmap`) from the worktree that's stuck; its inline setup records `task.root` and every worktree then resolves the same `.task/`. To point the pipeline at an existing `.task/` yourself, set it directly: `git config --local task.root /abs/path/containing/dot-task` (the directory that *contains* `.task`, not `.task` itself).
 
-## Escape hatches (advanced flags)
+## No pointer — finding your own state
 
-Day-to-day you never need a flag: `/task:design`, `/task:build`, and `/task:ship` walk you through the whole cycle with a question at each phase boundary, and `/task:ship` infers its close mode. The flags below still exist — as shortcuts that **skip** the corresponding question, as a way to **force** a phase when auto-detect guessed wrong, and as the interface the non-interactive `/task:auto-roadmap` runners drive internally. They are deliberately off the everyday surface; this is where they live.
+### "How do I find my in-flight task?"
 
-(`/task:auto-roadmap`'s own flags — `--next` / `--from #<N>` / `--items <spec>` — are **not** hidden: that command is the sanctioned batch/power surface and documents them in the [README](../README.md).)
+There is no active-task pointer in v3 to lose or heal — the artifact's path is the only handle. To see what's captured and not yet implemented:
 
-| Flag | Skill | What it forces / skips | Interactive equivalent (the default) |
-|------|-------|------------------------|--------------------------------------|
-| `--phase <open\|blueprint\|refine>` | `/task:design` | Force one design phase, bypassing auto-detect. The **main recovery hatch** when the workspace state makes auto-detect pick the wrong phase. | Auto-detect from workspace state + the advance questions. |
-| `--phase <implement\|audit>` | `/task:build` | Force one build phase. | Auto-detect + the implement→audit advance question. |
-| `--from <path>[#<N>]` | `/task:design` | Open a specific roadmap item as the umbrella (with `#<N>`, that exact item). | Entry-fork chip **"Open from a roadmap"** → roadmap picker → item picker. |
-| `--refine [<slug>]` | `/task:roadmap` | Parallel three-lens audit (Coverage / Decomposition / Clarity, ≤2 iterations) of an existing roadmap. | The inline refine offer that authoring makes when its light self-check finds enough to warrant it. |
+```text
+ls .task/task/
+# every task file you've captured; a task stays here until you delete it —
+# git history is the record, there is no archive to dig through
 
-### Repair-level: refine an existing plan
-
-**When** — a `plan.md` is complete but you suspect it is wrong: the decomposition is off, a step's approach won't work, or a better alternative surfaced after blueprint. This is a repair capability, not part of the routine design → build → ship flow, and it is the **only** design phase with no auto/question path — you must ask for it.
-
-**Fix** — run `/task:design --phase refine` on the active umbrella. The refine phase critically reviews the current `plan.md`, proposes alternatives, and records the chosen changes in `## Decisions` so `/task:build` implement honors them. Use it only when the plan itself needs rework; for normal progress after blueprint, just answer **"Start implementing now?"** with yes (or run `/task:build`).
-
-> Note: this is design's plan-refine, distinct from `/task:roadmap --refine` (a roadmap audit, in the table above).
-
-## Manual `Agent(...)` calls need the `task:` prefix
-
-The named agents are installed as part of the plugin — nine files under `agents/`: six auditor-class (three for the `/task:build` audit phase — Reuse / Simplicity / Clarity — and three for `/task:roadmap --refine` — Coverage / Decomposition / Clarity) and three executor-class (`auto-roadmap-item-runner.md` and the two runners it spawns, `auto-roadmap-design-runner.md` and `auto-roadmap-build-runner.md`).
-
-> [!WARNING]
-> If you invoke these agents manually via `Agent(...)` from your own integrations, you **must** use the plugin prefix:
-> `subagent_type: task:audit-reuse-auditor` / `task:audit-simplicity-auditor` / `task:audit-clarity-auditor` / `task:audit-roadmap-coverage-auditor` / `task:audit-roadmap-decomposition-auditor` / `task:audit-roadmap-clarity-auditor` / `task:auto-roadmap-item-runner` / `task:auto-roadmap-design-runner` / `task:auto-roadmap-build-runner`.
->
-> Without the prefix the runtime silently routes to the catch-all `claude` agent — it looks like "0 tool uses Done", with no error.
-
-## A skill's bash script fails with `No such file or directory`
-
-Symptom — the model writes something like this in the Bash tool:
-
-```
-CLAUDE_SKILL_DIR="/.../skills/build" bash "${CLAUDE_SKILL_DIR}/audit-context.sh"
-→ bash: /audit-context.sh: No such file or directory  (exit 127)
+grep -L '^## Plan' .task/task/*.md
+# task files with a Description but no Plan yet (to-task-only captures)
 ```
 
-Cause — Claude Code substitutes `${CLAUDE_SKILL_DIR}` into the skill text **at prompt load time** (it is not a shell env var), and the model is supposed to run the command verbatim. When the model "defensively" adds an inline assignment `CLAUDE_SKILL_DIR=… bash "${CLAUDE_SKILL_DIR}/…"` on the same line, bash expands the variable in the parent shell *before* the assignment takes effect, so the path resolves to nothing → `bash "/audit-context.sh"`.
+To see where a roadmap stands:
 
-A second variant shows up in `/task:auto-roadmap`: its audit phase runs inline inside the `auto-roadmap-item-runner` — that subagent reads `skills/build/phases/audit.md` directly, no `${CLAUDE_SKILL_DIR}` substitution happens, and it guesses the path from the directory of the file it read → it wrongly puts the script in `phases/` (`.../skills/build/phases/audit-context.sh` → exit 127), even though `audit-context.sh` lives in the **root** of the build skill. On a second try it usually climbs back up to the root on its own.
-
-Each skill that uses `${CLAUDE_SKILL_DIR}` explicitly tells the model to "run verbatim" right next to the bash block; the inline call from auto-roadmap additionally provides the ready-made absolute path `${CLAUDE_PLUGIN_ROOT}/skills/build/audit-context.sh`. Update the plugin: `/plugin marketplace update task-pipeline`.
-
-Manual workaround (if you can't update):
-
-```bash
-CLAUDE_SKILL_DIR="<abs-path-to-skill-root>" bash -c 'bash "${CLAUDE_SKILL_DIR}/<script>.sh"'
+```text
+grep '^### - \[ \]' .task/roadmap/<slug>.md
+# every item still unchecked in that roadmap
 ```
 
-The assignment and expansion happen in a single child shell in the right order.
+Once you've found the file you want, any session picks it up with `implement .task/task/<slug>.md` — no pointer to re-point, nothing to restore from an archive.

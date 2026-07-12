@@ -17,63 +17,36 @@ We use [GitHub](https://github.com/SpaiR/task-pipeline) to host code, track issu
 ```
 .claude-plugin/plugin.json       plugin manifest (name `task`, version, metadata)
 .claude-plugin/marketplace.json  catalog for the `task-pipeline` marketplace
-hooks/hooks.json                 PreToolUse hook → validate.sh
-skills/                          SKILL.md + companion phase files + bash helpers
+hooks/hooks.json                 empty — {"hooks": {}}; no PreToolUse gate in v3
+skills/                          SKILL.md per skill + shared bash helpers
   _lib/                          shared bash helpers:
-                                   preamble.sh, resolve-ws.sh, derive-task-id.sh,
-                                   roadmap.sh, auto-locks.sh, fail-log.sh,
-                                   auto-roadmap-helpers.sh (extract Implement-Model,
-                                   refresh mtime, record orchestrator fail),
-                                   phase-detect.sh (workspace state → phase name),
-                                   touches-gate.sh (files-level scope gate);
-                                   templates/ (shared markdown: summary.md,
-                                   conventional-commits.md)
-  bootstrap/                     bootstrap/SKILL.md
-  roadmap/                       SKILL.md (roadmap brainstorm) +
-                                   phases/refine.md (only for --refine)
-  design/                        SKILL.md (thin orchestrator) + phases/
-                                   {open,blueprint,refine}.md
-  build/                         SKILL.md (orchestrator + bounded audit
-                                   auto-fix loop) + phases/{implement,audit}.md +
-                                   audit-context.sh
-  ship/                          SKILL.md + close.sh + commit-context.sh
-  auto-roadmap/                  SKILL.md (driver loop; spawns one item-runner per item) +
-                                   auto-roadmap-context.sh
-  validate/                      SKILL.md + validate.sh (validator; not user-invocable)
-agents/                          named subagents
-  audit-reuse-auditor.md         build-audit lens: DRY / duplication / premature abstractions (read-only)
-  audit-simplicity-auditor.md    build-audit lens: dead code / over-engineering / scope creep (read-only)
-  audit-clarity-auditor.md       build-audit lens: misleading names / magic values / redundant comments (read-only)
-  audit-roadmap-coverage-auditor.md       roadmap-refine lens: end-to-end coverage / dependency graph (read-only)
-  audit-roadmap-decomposition-auditor.md  roadmap-refine lens: atomicity / sizing / duplicate work (read-only)
-  audit-roadmap-clarity-auditor.md        roadmap-refine lens: titles / Context-vs-Goal / testable AC (read-only)
-  auto-roadmap-item-runner.md    executor-class: whole per-item cycle (design→implement→
-                                   audit→ship); spawned once per item by the driver loop;
-                                   spawns the two runners below + the three build-audit lenses
-  auto-roadmap-design-runner.md  executor-class (narrow, leaf): design open+blueprint phases
-                                   for one roadmap item (parent-session model)
-  auto-roadmap-build-runner.md   executor-class (narrow, leaf): build implement phase only,
-                                   spawned with Agent.model from plan.md → Implement-Model
-  _shared/audit-rules.md         shared prompt-layer rules for all six audit-*-auditor agents
-                                   (build-audit family + roadmap-refine family)
-  _shared/runner-rules.md        shared registry of rules the three roadmap runners inherit
-                                   from nested phase files (sources in build/phases/implement.md,
-                                   design/phases/blueprint.md § Step 3, docs/spec/invariants.md;
-                                   edits must stay in sync)
-CLAUDE.md                        checklist of invariants + links to docs/spec/
-docs/spec/                       full specification for the editing assistant
-  README.md                      spec index
-  pipeline.md                    pipeline diagram, phase dispatch, /task:auto-roadmap
-  artifact-contract.md           producer/consumer table, identifiers
-  auto-roadmap.md                /task:auto-roadmap mechanics
-  invariants.md                  all invariants + Shared prompt preamble (Tiers A/B/C)
-  internals.md                   layout, bash helpers, agent classes, frontmatter, editing protocol
-docs/usage.md                    extended usage scenarios (roadmap, autopilot, multi-subtask)
-docs/troubleshooting.md          integration edge cases (agent prefix, CLAUDE_SKILL_DIR)
+                                   preamble.sh (require_config + source_resolve_ws),
+                                   resolve-ws.sh (pure .task/-root finder, exports AI_DIR),
+                                   roadmap.sh (roadmap parsing / checkbox auto-mark helpers);
+                                   templates/conventional-commits.md (commit-format fallback)
+  to-task/                       SKILL.md — Description only, no Plan; folds in the
+                                   inline config setup (former `bootstrap`) on a fresh project
+  to-plan/                       SKILL.md — Description + `## Plan` (Goal/Touches/Logic);
+                                   promotes/revises a to-task-only file in place
+  to-roadmap/                    SKILL.md — multi-task initiative → .task/roadmap/<slug>.md
+                                   (+ optional <slug>.spec.md sidecar)
+  roadmap-to-workflow/           SKILL.md — the one launcher; authors + invokes a dynamic
+                                   Workflow over a roadmap's unchecked items
+  validate/                      SKILL.md + validate.sh (optional self-check; not user-invocable)
+CLAUDE.md                        invariants + maintainer guidance
+docs/
+  contract.md                    the authoritative artifact contract — flat .task/ layout,
+                                   AI_DIR resolution, task.md + roadmap formats, producer/
+                                   consumer table, bash-layer inventory, interaction conventions
+  usage.md                       extended usage scenarios (roadmap, roadmap-to-workflow,
+                                   mixing hand-picked items with autopilot, resuming a task)
+  troubleshooting.md              first-run problems and roadmap/worktree edge cases
 CONTRIBUTING.md                  commit format, release procedure, this layout
 CHANGELOG.md                     public release log (English)
 README.md                        user-facing documentation
 ```
+
+There is no `agents/` directory in v3 — `to-task` / `to-plan` / `to-roadmap` / `roadmap-to-workflow` / `validate` are the only five skills, and `roadmap-to-workflow` reaches for the platform's own `agent()` / `parallel()` Workflow primitives rather than named subagents shipped by this plugin.
 
 ## All Code Changes Happen Through Pull Requests
 
@@ -176,7 +149,7 @@ The `footer` is optional. The [Commit Message Footer](#commit-message-footer) fo
   │       │             │
   │       │             └─⫸ Summary in imperative, present tense. Not capitalized. No period at the end.
   │       │
-  │       └─⫸ Commit Scope: skill name | agent name | skills | hooks | plugin | readme | claudemd | changelog
+  │       └─⫸ Commit Scope: skill name | skills | lib | hooks | plugin | readme | claudemd | contract | changelog
   │
   └─⫸ Commit Type: feat | fix | refactor | docs | chore
 ```
@@ -200,16 +173,13 @@ Must be one of the following:
 
 **Do NOT invent new scopes.** Pick from the list below; if none fits, omit the scope entirely.
 
-* **A skill name** (no `task:` prefix): `bootstrap`, `roadmap`, `auto`, `open`, `blueprint`, `refine`, `implement`, `audit`, `commit`, `close`, `validate`.
-* **An agent name**: the build-audit lenses `audit-reuse`, `audit-simplicity`, `audit-clarity`; the roadmap-refine lenses `audit-roadmap-coverage`, `audit-roadmap-decomposition`, `audit-roadmap-clarity`.
+* **A skill name** (no `task:` prefix): `to-task`, `to-plan`, `to-roadmap`, `roadmap-to-workflow`, `validate`.
 * **`skills`** — cross-cutting change that touches several skills at once.
-* **`agents`** — cross-cutting change that touches several agents at once (e.g. a shared rule in `agents/_shared/`).
-* **`runners`** — the executor-class agents for `/task:auto-roadmap` (`auto-roadmap-item-runner`, `auto-roadmap-design-runner`, `auto-roadmap-build-runner`).
-* **`lib`** — the shared bash helpers under `skills/_lib/` (`resolve-ws.sh`, `preamble.sh`, `phase-detect.sh`, `touches-gate.sh`, etc.) and their templates.
-* **`hooks`** — `hooks/hooks.json` and the PreToolUse validator wiring.
+* **`lib`** — the shared bash helpers under `skills/_lib/` (`resolve-ws.sh`, `preamble.sh`, `roadmap.sh`) and `skills/validate/validate.sh`, plus their templates.
+* **`hooks`** — `hooks/hooks.json`.
 * **`plugin`** — `.claude-plugin/plugin.json` and install-path concerns.
 * **`github`** — files under `.github/` (PR/issue templates, any repo automation).
-* **`readme` / `claudemd` / `changelog` / `contributing` / `spec`** — single-doc edits (use `docs:` as the type for these; `spec` = anything under `docs/spec/`).
+* **`readme` / `claudemd` / `changelog` / `contributing` / `contract`** — single-doc edits (use `docs:` as the type for these; `contract` = `docs/contract.md`).
 
 #### Summary
 
@@ -294,7 +264,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/): `Added` / `Chang
 
 ## Contributing with AI Agents
 
-This repository **is** a tool for working with AI coding agents, so dogfooding is encouraged: it is fine — preferred, even — to use the pipeline itself (`/task:design` → `/task:build` → `/task:ship`) when contributing here. AI coding agents (Claude Code, Copilot, Cursor, Codex, Gemini, etc.) are welcome to assist with contributions of any kind.
+This repository **is** a tool for working with AI coding agents, so dogfooding is encouraged: it is fine — preferred, even — to use the pipeline itself when contributing here — discuss the change in chat, fix it with `/task:to-task` or `/task:to-plan` into `.task/task/<slug>.md`, then tell any session `implement .task/task/<slug>.md` (which runs `/verify` + `/code-review` and commits per this file's Commit Format). AI coding agents (Claude Code, Copilot, Cursor, Codex, Gemini, etc.) are welcome to assist with contributions of any kind.
 
 Two extra rules apply on top of the regular contribution flow:
 
@@ -350,8 +320,8 @@ We track bugs in the GitHub project's issue tracker. Report a bug by opening a n
 **Great Bug Reports** tend to have:
 
 - A quick summary and/or background
-- The slash-command sequence you ran (e.g. `/task:design --from foo#2` → `/task:build` → `/task:ship`)
-- The relevant slice of `.task/workspace/*.md` (or `.task/log/<...>/*.md` for archive-related bugs) that triggers the bug, when the bug is about artifact handling
+- The slash-command sequence you ran (e.g. `/task:to-plan api-v2-migration#2` → `implement .task/task/<slug>.md`, or `/task:roadmap-to-workflow api-v2-migration`)
+- The relevant slice of `.task/task/<slug>.md` or `.task/roadmap/<slug>.md` that triggers the bug, when the bug is about artifact handling
 - The output of `bash skills/validate/validate.sh all` when the bug is about validation
 - What you expected would happen
 - What actually happened
