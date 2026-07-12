@@ -48,7 +48,7 @@ bash "${CLAUDE_SKILL_DIR}/audit-context.sh"
 It outputs all context needed for the audit in one block:
 
 - `.task/config/config.md` — tool configuration. Extract MCP priority list and the project's `CLAUDE.md` references.
-- `.task/workspace/<task-id>/task.md` — extract `## Description` and `## Decisions` (if present). Decisions may explicitly justify a pattern that would otherwise look like a quality issue.
+- `.task/workspace/<task-id>/task.md` — extract `## Description`.
 - `.task/workspace/<task-id>/plan.md` — extract `## Scope` and the `Goal`/`Touches` of each step in `## Steps`. `Touches` defines what should have changed; anything outside it is a candidate for a "scope creep" finding.
 - `CLAUDE.md` (project root, if exists) — used by the Clarity agent for naming/style conventions.
 - `iteration` — next iteration number (1 if `audit.md` missing, else `max(## Iteration N) + 1`).
@@ -70,7 +70,7 @@ When `trivial: true`, do the audit yourself in the main thread.
 1. Read the diff bundle. For each entry in the `neighborhood map` (Reuse lens), check whether the new symbol genuinely duplicates the listed file:line.
 2. Mentally apply all three lenses to the diff in one pass.
 3. Build a findings list using the canonical 5-field `severity / category / location / problem / fix` schema agents return (per [`agents/_shared/audit-rules.md`](../../../agents/_shared/audit-rules.md)). Then stamp a `source` label on each finding post-hoc — one of `Reuse | Simplicity | Clarity` — by inspecting the category (e.g. `duplicates utility` → Reuse, `dead branch` → Simplicity, `misleading name` → Clarity). In the Step 2b path, `source` is supplied by which named agent returned the finding; here in the inline path you assign it yourself.
-4. Skip findings that contradict an explicit decision in `task.md` / `plan.md`. **Language:** values of `category`, `problem`, `fix` are written in the language from `config.md` → "Language"; field keys and the `high`/`med`/`low` enum stay English.
+4. Skip findings that contradict an explicit decision in `plan.md`. **Language:** values of `category`, `problem`, `fix` are written in the language from `config.md` → "Language"; field keys and the `high`/`med`/`low` enum stay English.
 5. Continue at Step 3.
 
 ### Step 2b: Non-trivial diff — single round (parallel: Reuse ‖ Simplicity ‖ Clarity)
@@ -79,9 +79,9 @@ When `trivial: false`, send **three** `Agent` calls in a **single tool-call mess
 
 | Agent | `subagent_type` | Per-call data |
 |-------|-----------------|---------------|
-| Reuse Auditor | `task:audit-reuse-auditor` | Decisions(task) · Decisions(plan) · **Neighborhood map** · Diff bundle |
-| Simplicity Auditor | `task:audit-simplicity-auditor` | Decisions(task) · Decisions(plan) · **Plan touches (scope)** · **Recent history** · Diff bundle |
-| Clarity Auditor | `task:audit-clarity-auditor` | Decisions(task) · Decisions(plan) · **CLAUDE.md** · Diff bundle |
+| Reuse Auditor | `task:audit-reuse-auditor` | Decisions(plan) · **Neighborhood map** · Diff bundle |
+| Simplicity Auditor | `task:audit-simplicity-auditor` | Decisions(plan) · **Plan touches (scope)** · **Recent history** · Diff bundle |
+| Clarity Auditor | `task:audit-clarity-auditor` | Decisions(plan) · **CLAUDE.md** · Diff bundle |
 
 #### Per-call prompt template
 
@@ -93,9 +93,6 @@ in your agent prompt.
 
 --- Language ---
 {paste config.md → "Language" value verbatim}
-
---- Decisions (task) ---
-{paste task.md ## Decisions, or "none"}
 
 --- Decisions (plan) ---
 {paste plan.md ## Decisions, or "none"}

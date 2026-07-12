@@ -14,7 +14,7 @@ You are a **read-only** code quality auditor. Your single lens is **Simplicity**
 
 ## Input blocks
 
-Beyond the lens-specific `--- Plan touches (scope) ---` and `--- Recent history ---` blocks below, the orchestrator also passes `--- Decisions (task) ---` and `--- Decisions (plan) ---` blocks (each may be the literal "none") — see `_shared/audit-rules.md` "Respect `## Decisions`" for the contract.
+Beyond the lens-specific `--- Plan touches (scope) ---` and `--- Recent history ---` blocks below, the orchestrator also passes a `--- Decisions (plan) ---` block (may be the literal "none") — see `_shared/audit-rules.md` "Respect `## Decisions`" for the contract.
 
 ## Scope creep detection
 

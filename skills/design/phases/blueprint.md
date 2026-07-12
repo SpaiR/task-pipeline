@@ -22,7 +22,7 @@ If it exits non-zero, **stop** and report the validator output; the task header 
    - `always` → `tests_required = true`.
    - `never` → `tests_required = false`.
    - `on-demand` → `tests_required = true` **only** if `task.md` Description explicitly asks for tests (phrases like "with tests", "add tests", "write tests"). If the Description is silent or ambiguous → `tests_required = false`. Responsibility is on the user.
-   - If ambiguous and you are uncertain, ask the user a single yes/no question before writing the plan. In non-interactive runs (`--auto` / `/task:auto-roadmap`, where there is no user to ask) do not block — default to `false` per the rule above.
+   - If ambiguous and you are uncertain, ask the user a single yes/no question before writing the plan. In non-interactive runs (`/task:auto-roadmap`, where there is no user to ask) do not block — default to `false` per the rule above.
 
 ## Step 1.5: Read pinned spec decisions (if the item references them)
 
@@ -30,7 +30,7 @@ If `task.md` carries a `Roadmap: <path>` header **and** `## Description` contain
 
 1. Resolve the sidecar path the **same way the Clarity auditor does** (single resolution rule across both readers): the directory is the `Roadmap:` header's directory (`.task/roadmap/`); the filename is the `<name>.spec.md` token taken **verbatim from the citation** (`<name>.spec.md §N`), not reconstructed from the roadmap basename. In the normal auto-generated case these coincide (the roadmap skill writes both with the same slug); taking the filename from the citation keeps blueprint and the auditor reading the same file even if a citation was hand-edited.
 2. Read the cited `## N.` sections. They are **pre-agreed technical anchors** from the roadmap brainstorm — the load-bearing decisions (chosen protocol, cross-cutting data shape, "X over Y because…") whose loss would distort the initiative. Treat each as a fixed point: `## Steps` must honor it, not re-derive a different choice.
-3. **On a missing sidecar or a referenced section that doesn't exist:** in an interactive run — **stop and ask** the user to create the sidecar or correct the reference. In a non-interactive run (`--auto` / `/task:auto-roadmap`) — emit a loud `WARN:` line naming the unresolved reference and **proceed** on the behavioral `## Description` alone (the Description is still a complete input; reference integrity is enforced upstream by the Clarity auditor, not here).
+3. **On a missing sidecar or a referenced section that doesn't exist:** in an interactive run — **stop and ask** the user to create the sidecar or correct the reference. In a non-interactive run (`/task:auto-roadmap`) — emit a loud `WARN:` line naming the unresolved reference and **proceed** on the behavioral `## Description` alone (the Description is still a complete input; reference integrity is enforced upstream by the Clarity auditor, not here).
 
 Skip this step entirely when there is no `Roadmap:` header or no `### Spec references` pointing at the sidecar (manual tasks, or roadmap items with no pinned decisions).
 

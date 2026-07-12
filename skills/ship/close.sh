@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
-# close.sh — Close current subtask. Two modes:
-#   default:   archive everything including task.md, remove the entire
-#              .task/workspace/<task-id>/ subfolder, and remove the active-task
-#              pointer — fully closes the umbrella task; workspace returns to empty
-#   --next:    archive plan/audit/summary, keep task.md (clear Description)
-#              — moves to the next subtask of the same umbrella task
+# close.sh — Close the current task. One mode (full close):
+#   archive everything including task.md to .task/log/<task-id>/<N>-<slug>/,
+#   remove the entire .task/workspace/<task-id>/ subfolder, and remove the
+#   active-task pointer — the workspace returns to empty.
 #
 # Roadmap auto-mark: if task.md carries `Roadmap: <path>` and `Source item:
 # #<N> — <title>` lines in the header AND Description is non-empty, flips the
@@ -13,8 +11,7 @@
 # /task:design re-pick the same item).
 #
 # Usage:
-#   close.sh [--next] <slug>      (default = full close)
-#   close.sh <slug> [--next]
+#   close.sh <slug>
 #
 # Workspace resolution uses _lib/resolve-ws.sh — reads the active-task pointer
 # to find the active umbrella's subfolder. The slug positional is NOT a task-id;
@@ -27,25 +24,27 @@ set -euo pipefail
 # thread) auto-derives a slug from .task/workspace/<task-id>/summary.md
 # (primary) or task.md Description (fallback) and passes it explicitly.
 # close.sh is not meant to be user-callable directly — users invoke it via
-# /task:ship. /task:auto-roadmap's last-item ship lets the slug be
+# /task:ship. /task:auto-roadmap's per-item ship lets the slug be
 # auto-derived from summary.md (no explicit slug).
-# FULL=1 is the default: bare `close.sh <slug>` fully closes the umbrella.
-# `--next` opts into the lighter subtask-transition mode (FULL=0). The removed
-# `--full` alias is guarded below so a stray occurrence fails loud rather than
-# being silently captured as the mandatory <slug> positional.
-FULL=1
+# Full close is the only mode: `close.sh <slug>` closes the task entirely. The
+# removed `--full` / `--next` flags are guarded below so a stray occurrence
+# fails loud rather than being silently captured as the mandatory <slug>
+# positional.
 ARGS=()
 for arg in "$@"; do
   case "$arg" in
-    --next) FULL=0 ;;
     --full)
-      echo "ERROR: --full removed — the default /task:ship already closes the umbrella (no flag needed)." >&2
+      echo "ERROR: --full removed — /task:ship already closes the task (no flag needed)." >&2
+      exit 1
+      ;;
+    --next)
+      echo "ERROR: --next removed — /task:ship now always closes the task (subtask-transition mode was dropped)." >&2
       exit 1
       ;;
     *)      ARGS+=("$arg") ;;
   esac
 done
-SLUG="${ARGS[0]:?Usage: close.sh [--next] <slug>}"
+SLUG="${ARGS[0]:?Usage: close.sh <slug>}"
 
 # --- Bootstrap: resolve SCRIPT_DIR through symlinks, then load shared preamble ---
 __BOOT="${BASH_SOURCE[0]}"
@@ -94,10 +93,9 @@ if [[ "$HEADER_TASK_ID_LOWER" != "$TASK_ID_LOWER" ]]; then
 fi
 TASK_ID="$HEADER_TASK_ID"  # used for the header display below; LOG path keeps TASK_ID_LOWER
 
-# Description must be non-empty in --next (subtask-transition) mode — something
-# must have happened in the subtask to archive. The default (full close) allows
-# an empty Description — useful right after a --next transition, when the user
-# wants to drop the umbrella with no further subtask body.
+# Full close allows an empty Description (e.g. dropping an umbrella after an
+# aborted run). DESC_CONTENT is still computed below — the roadmap auto-mark
+# only fires when a subtask actually produced Description content.
 DESC_CONTENT=$(awk '
   /^## Description[[:space:]]*$/ { in_desc = 1; next }
   in_desc && /^## / { exit }
@@ -106,10 +104,6 @@ DESC_CONTENT=$(awk '
   | tr '\n' ' ' \
   | sed -E 's/<!--[^-]*(-[^-]+)*-->//g' \
   | tr -d '[:space:]')
-if [[ "$FULL" -eq 0 && -z "$DESC_CONTENT" ]]; then
-  echo "ERROR: Section 'Description' is empty — nothing to archive. Run /task:ship <slug> (default full close) if you want to drop the umbrella, or fill the Description first."
-  exit 1
-fi
 
 # --- Step 1.5: Auto-mark roadmap item (roadmap-mode only) ---
 # When Description is non-empty (a subtask actually finished) AND the header
@@ -182,50 +176,24 @@ N=$(( MAX_N + 1 ))
 SUBFOLDER="$LOG_DIR/${N}-${SLUG}"
 mkdir -p "$SUBFOLDER"
 
-# Per-subtask artifacts always archived.
-# NOTE: orchestrator artifacts (auto.lock, auto-error.log) are
-# intentionally NOT archived here. In the per-task-subfolder layout they live
-# alongside the pipeline artifacts inside `<task-id>/`, but they belong to the
-# /task:auto-roadmap run, not the subtask. On a full close (the default) they
-# are removed together with the whole subfolder below; on a `--next` transition
-# they stay in the workspace so /task:auto-roadmap can keep using the sentinel
-# between items.
+# All pipeline artifacts archived, including task.md.
+# NOTE: orchestrator artifacts (auto-error.log) are intentionally NOT archived
+# here. They belong to the /task:auto-roadmap run, not the task. The full close
+# removes them together with the whole subfolder below — the manual
+# `/task:ship` is the documented way to clean up after a failed run.
 [[ -f "$WS_DIR/plan.md" ]] && cp "$WS_DIR/plan.md" "$SUBFOLDER/plan.md"
 [[ -f "$WS_DIR/audit.md" ]] && cp "$WS_DIR/audit.md" "$SUBFOLDER/audit.md"
 [[ -f "$WS_DIR/summary.md" ]] && cp "$WS_DIR/summary.md" "$SUBFOLDER/summary.md"
-
-# task.md handling diverges by mode
-if [[ "$FULL" -eq 1 ]]; then
-  cp "$TASK_FILE" "$SUBFOLDER/task.md"
-fi
+cp "$TASK_FILE" "$SUBFOLDER/task.md"
 
 # --- Step 4: Clean up active slot ---
-if [[ "$FULL" -eq 1 ]]; then
-  # Drop the entire umbrella subfolder and the per-worktree pointer. This also
-  # sweeps any orchestrator state (auto.lock / auto-error.log) that
-  # survived a failed /task:auto-roadmap run — the manual `/task:ship` (default
-  # full close) is the documented way to clean up after such a failure.
-  rm -rf "$WS_DIR"
-  # The active-task pointer lives in git's per-worktree dir (task_current_path);
-  # resolve it there so a drifted cwd doesn't leave it behind.
-  rm -f "$(task_current_path)"
-else
-  rm -f "$WS_DIR/plan.md" "$WS_DIR/audit.md" "$WS_DIR/summary.md"
-  # Clear the BODY of `## Description` only — header lines stay so the next
-  # subtask reuses the same umbrella context, and any `## Decisions` (or other
-  # `## ` sections) appended by Socratic-mode `/task:design idea phase` survive across
-  # subtask transitions because they are umbrella-level decisions.
-  awk '
-    /^## Description[[:space:]]*$/ {
-      print; print ""
-      in_desc = 1
-      next
-    }
-    in_desc && /^## / { in_desc = 0 }
-    in_desc { next }
-    { print }
-  ' "$TASK_FILE" > "$TASK_FILE.tmp" && mv "$TASK_FILE.tmp" "$TASK_FILE"
-fi
+# Drop the entire umbrella subfolder and the per-worktree pointer. This also
+# sweeps any orchestrator state (auto-error.log) that survived a failed
+# /task:auto-roadmap run.
+rm -rf "$WS_DIR"
+# The active-task pointer lives in git's per-worktree dir (task_current_path);
+# resolve it there so a drifted cwd doesn't leave it behind.
+rm -f "$(task_current_path)"
 
 # --- Report ---
 echo "OK"
@@ -238,11 +206,10 @@ for f in task.md plan.md audit.md summary.md; do
 done
 echo "Files archived: $ARCHIVED"
 
-if [[ "$FULL" -eq 1 ]]; then
-  echo "Mode: umbrella close (default). Workspace subfolder '$WS_DIR' and the active-task pointer removed. Next: /task:design (to revive this umbrella, restore it manually from .task/log/)."
-elif [[ "$ROADMAP_MODE" -eq 1 ]]; then
+echo "Workspace subfolder '$WS_DIR' and the active-task pointer removed."
+if [[ "$ROADMAP_MODE" -eq 1 ]]; then
   ROADMAP_SLUG=$(basename "$ROADMAP_PATH" .md)
-  echo "Mode: subtask transition (--next, roadmap). task.md kept (Description cleared). Next: /task:design --from $ROADMAP_SLUG to roll the umbrella to the next un-checked item, or /task:ship to drop it."
+  echo "Next: /task:design --from $ROADMAP_SLUG for the next roadmap item, or /task:design to start something new."
 else
-  echo "Mode: subtask transition (--next). task.md kept (Description cleared). Next: fill Description (manually or /task:design idea phase), then /task:design blueprint phase."
+  echo "Next: /task:design to start a new task (to revive this one, restore it manually from .task/log/)."
 fi

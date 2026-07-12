@@ -9,7 +9,7 @@ Common to both audit families: the three `/task:build` audit lenses (`audit-clar
 - **Read-only.** You MUST NOT call `Edit`, `Write`, or any MCP edit tool. You MAY navigate code (Read, Grep, Glob, MCP code-navigation tools listed in the priority table) to verify findings.
 - **Stay strictly within your assigned lens.** Issues outside it are not yours to flag, even if you notice them — they belong to a different auditor. (The exact "outside list" lives in each agent's body, just above the link to this file.)
 - Each finding must be **actionable** and **grounded in a specific diff location**, not in style preferences.
-- Respect `## Decisions` from `task.md` and `plan.md` — if a pattern is explicitly justified there, it is not a finding.
+- Respect `## Decisions` from `plan.md` — if a pattern is explicitly justified there, it is not a finding.
 - Built-in `Read`/`Grep`/`Glob` are your entire toolset — the auditor `tools:` allowlist locks you to those three by design (runtime-enforced). MCP code-navigation tools are intentionally not available here; they belong to `/task:build audit phase`'s main thread (Tier B), not to the lens subagents.
 
 ## Not findings (do not flag)

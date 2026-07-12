@@ -1,11 +1,11 @@
 ---
 name: auto-roadmap
-description: 'Autopilot an approved `.task/roadmap/<slug>.md` — runs design → build → ship for each item inside the current session; the last item closes the umbrella.'
+description: 'Autopilot an approved `.task/roadmap/<slug>.md` — runs design → build → ship (full close) for each item inside the current session.'
 disable-model-invocation: true
 user-invocable: true
 ---
 
-Drive an entire approved roadmap through the full pipeline from inside the **user's currently open Claude Code session**. The main thread (the "driver") owns run-level orchestration only — Step 0 gates, the wizard, run-state, the per-item mtime race check and status re-check — and spawns **one `auto-roadmap-item-runner` subagent per item**. That item-runner runs the entire per-item cycle in its own isolated context: it spawns `auto-roadmap-design-runner` (open + blueprint, parent-session model), then `auto-roadmap-build-runner` (implement, under this item's `plan.md → Implement-Model:`), then the three build-audit lens auditors, then runs commit + close inline — and returns a compact report-card digest. Keeping the per-item diff bundle + lens results inside the disposable item-runner context (not the driver's) is what lets a run scale past the old ~15/~25-item auto-compact ceiling. The **last** item of the resolved run set ships a bare `/task:ship` (default full close, slug auto-derived from `summary.md`), dropping the umbrella in that same close pass — no separate finalize commit.
+Drive an entire approved roadmap through the full pipeline from inside the **user's currently open Claude Code session**. The main thread (the "driver") owns run-level orchestration only — Step 0 gates, the wizard, the run lock, run-state, the per-item mtime race check and status re-check — and spawns **one `auto-roadmap-item-runner` subagent per item**. That item-runner runs the entire per-item cycle in its own isolated context: it spawns `auto-roadmap-design-runner` (open + blueprint, parent-session model), then `auto-roadmap-build-runner` (implement, under this item's `plan.md → Implement-Model:`), then the three build-audit lens auditors, then runs commit + close inline — and returns a compact report-card digest. Keeping the per-item diff bundle + lens results inside the disposable item-runner context (not the driver's) is what lets a run scale past the old ~15/~25-item auto-compact ceiling. **Every item ships a full `/task:ship` close** (slug auto-derived from `summary.md`), archiving its own `task.md` and re-opening fresh for the next item — there is no transition mode and no separate finalize commit.
 
 **Input:** $ARGUMENTS — `[<roadmap-pathOrSlug>] [--next | --from #<N> | --items <spec>]`
 
@@ -17,7 +17,7 @@ Drive an entire approved roadmap through the full pipeline from inside the **use
 
 ## Step 0: Hard-stop preconditions
 
-Three gates enforced by `auto-roadmap-context.sh` (surface its stderr verbatim on non-zero exit): `config.md` exists, `.task-current` absent, no stale `workspace/*/auto.lock`. Full rationale: [docs/spec/auto-roadmap.md § Step 0](../../docs/spec/auto-roadmap.md).
+Three gates enforced by `auto-roadmap-context.sh` (surface its stderr verbatim on non-zero exit): `config.md` exists, `.task-current` absent, no stale `.task/roadmap/*.lock`. Full rationale: [docs/spec/auto-roadmap.md § Step 0](../../docs/spec/auto-roadmap.md).
 
 ## Step 1: Wizard / argument parsing
 
@@ -74,48 +74,59 @@ Mode:     interactive (session must stay open for the run's duration)
 
 `AskUserQuestion` shape: single-select, question `"Launch /task:auto-roadmap for these <count> items?"`, options `Launch` / `Cancel`. On `Cancel` — exit without changes.
 
-On `Launch`, **no file is written yet** — the run's parameters live only in main-thread memory until the **first item-runner** writes `.task/workspace/<task-id-lc>/auto.lock` (Step 2 of the item-runner, after its design-runner lands `.task-current`). The driver passes these captured values into every item-runner spawn; the run-level ones (below) also become the `auto.lock` field set on the first item:
+On `Launch`, capture the run parameters into main-thread memory and **write the run lock** (the run's only sentinel):
 
 - `ROADMAP` — resolved roadmap path (from `auto-roadmap-context.sh` `roadmap-resolution`).
-- `ROADMAP_MTIME` — initial mtime (from the same section). Refreshed after every successful `--next` ship from the value the item-runner returns in its digest (Substep 3.4), to absorb the close-induced bump.
+- `ROADMAP_MTIME` — initial mtime (from the same section). Refreshed after every successful ship from the value the item-runner returns in its digest (Substep 3.4), to absorb the close-induced bump.
 - `START_ITEM` — lowest item number to run.
 - `ITEMS_SPEC` — raw spec when `--items` was passed, or the single resolved item number when `--next` was passed; empty string otherwise. When non-empty, it wins over `START_ITEM` as the authoritative include-set; the main-thread loop re-expands it and uses it as a strict filter.
 - `STARTED` — ISO 8601 UTC timestamp.
 
 `--next`, `--from`, and `--items` are mutually exclusive (rejected upstream in Step 1) so only one of `START_ITEM` / `ITEMS_SPEC` can be active (`--next` sets `ITEMS_SPEC`).
 
-**Important — what is NOT created here.** This step does **not** pre-derive the umbrella task-id, does **not** write `.task-current`, does **not** create `.task/workspace/<task-id>/`, and does **not** write any sentinel file. The umbrella's task-id, workspace subfolder, and `.task-current` all land via the first item-runner's design-runner (`/task:design --from` initial-open path of `design/phases/open.md` Mode 2 → Step 4); the per-umbrella sentinel `.task/workspace/<task-id>/auto.lock` is written by that same first item-runner (its Step 2) once `.task-current` lands. The driver reads neither `.task-current` nor `auto.lock` for run state — it keeps everything in memory.
+**Write the run lock.** The lock is keyed on the roadmap slug (the unit of a run), lives at `.task/roadmap/<slug>.lock`, and is the cross-worktree mutex + crash sentinel for the whole run. Write it now, before spawning any item-runner, via the shared `_lib/auto-locks.sh write` helper (atomic `set -o noclobber` + truncate-or-fail; it skips empty values so `items_filter` can be passed unconditionally):
+
+```bash
+ROADMAP_SLUG=$(basename "$ROADMAP" .md)
+LOCK_PATH=".task/roadmap/$ROADMAP_SLUG.lock"
+bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/auto-locks.sh" write "$LOCK_PATH" \
+  "roadmap=$ROADMAP" \
+  "roadmap_mtime=$ROADMAP_MTIME" \
+  "start_item=$START_ITEM" \
+  "started=$STARTED" \
+  "orchestrator=auto-roadmap" \
+  "items_filter=$ITEMS_SPEC"
+```
+
+If the helper exits non-zero, a concurrent `/task:auto-roadmap` already owns this roadmap (Step 0 gate 3 should have caught it, but this is the atomic backstop) — **stop** with "a run lock already exists for `<slug>` — another orchestrator is active, or a prior run crashed. Remove `.task/roadmap/<slug>.lock` if you are sure no run is active." Keep `LOCK_PATH` in memory; the driver removes it on clean finish (Step 4) and on any handled failure (Substep 3.1 / 3.4).
+
+**Important — what is NOT created here.** This step does **not** pre-derive the task-id, does **not** write `.task-current`, and does **not** create `.task/workspace/<task-id>/`. The task-id, workspace subfolder, and `.task-current` all land via each item-runner's design-runner (`/task:design --from` initial-open path of `design/phases/open.md` Mode 2 → Step 3). The driver reads neither `.task-current` nor the run lock for run state — it keeps everything in memory.
 
 ## Step 3: Per-item loop (main thread / driver)
 
-Read the resolved run set from Step 1 into an in-memory list of `(N, title)` tuples. For each item `N` in roadmap order, do all substeps below. **Do not parallelize items** — the next item's `/task:design --from` (inside its item-runner) enters continuation mode only after the previous item's ship cleared Description; running two item-runners concurrently corrupts `task.md`.
+Read the resolved run set from Step 1 into an in-memory list of `(N, title)` tuples. For each item `N` in roadmap order, do all substeps below. **Do not parallelize items** — each item's `/task:design --from` (inside its item-runner) does a fresh initial open that requires no active-task pointer; the previous item's ship must have fully closed and removed `.task-current` first, so running two item-runners concurrently corrupts state.
 
-Track two latched flags across the loop:
+Track one latched value across the loop:
 
-- `FIRST_OK_SEEN` — starts `false`; the next item-runner spawn passes `is_first = NOT FIRST_OK_SEEN`. Set it `true` the moment an item-runner returns OK. Because any FAIL fail-stops the run, `is_first` is `true` on exactly the first item-runner that succeeds — the one that must write `auto.lock`. (An item skipped at Substep 3.2 never spawns an item-runner, so it cannot consume the first-OK slot.)
 - `TASK_ID` — empty until the first OK digest; assigned from each OK digest's `task_id:` field (see Substep 3.4). Step 4 reads the last value.
 
 ### Substep 3.1 — Roadmap-mtime race check
 
-`stat` the roadmap (BSD/macOS `stat -f '%m'` or GNU `stat -c '%Y'`); compare to the in-memory `ROADMAP_MTIME` (captured at Step 2 and refreshed by Substep 3.4 from the item-runner's returned mtime after each successful `--next` ship). On mismatch:
+`stat` the roadmap (BSD/macOS `stat -f '%m'` or GNU `stat -c '%Y'`); compare to the in-memory `ROADMAP_MTIME` (captured at Step 2 and refreshed by Substep 3.4 from the item-runner's returned mtime after each successful ship). On mismatch:
 
-1. Write a fail-stop record to the error log if a workspace subfolder exists (driver-level postmortem per Substep 3.4 below); otherwise rely on the inline message to the user.
-2. Print to the user: "roadmap was edited mid-run (mtime <old> → <new>). Run stopped at item #<N>. Inspect .task-current (if present) and run `/task:ship` to clean up."
-3. Exit. The inline message above is the user-facing report on failure; the post-run summary in Step 4 only fires after a clean finish (last item shipped a bare full close in Substep 3.4).
+1. **Remove the run lock** (`rm -f "$LOCK_PATH"`).
+2. Write a fail-stop record to the error log if a workspace subfolder exists (driver-level postmortem per Substep 3.4 below); otherwise rely on the inline message to the user.
+3. Print to the user: "roadmap was edited mid-run (mtime <old> → <new>). Run stopped at item #<N>. Inspect .task-current (if present) and run `/task:ship` to clean up."
+4. Exit. The inline message above is the user-facing report on failure; the post-run summary in Step 4 only fires after a clean finish.
 
 ### Substep 3.2 — Item status re-check
 
 Re-read the item's checkbox state from the roadmap (a manual edit between iterations may have flipped it). If it is no longer `- [ ]` (i.e. it became `[x]` / `[~]` / `[>]` / `[-]`):
 
 - Print to the user: "Item #<N> is now [<state>] — skipping (was already done or cancelled between iterations)."
-- Do not spawn the item-runner; continue to the next item. (A skipped item never consumes the `is_first` slot and is never counted as the `is_last` item — see Substep 3.3.)
+- Do not spawn the item-runner; continue to the next item.
 
-### Substep 3.3 — Compute flags + spawn `auto-roadmap-item-runner`
-
-Determine the two per-spawn flags:
-
-- `is_first` = `NOT FIRST_OK_SEEN` (see the loop preamble — `true` only on the item-runner that will produce the run's first OK; that one writes `auto.lock`).
-- `is_last` = **look-ahead over checkbox state**: `true` when **no** run-set item after `N` is still `- [ ]`. Re-read the roadmap checkbox state (same source as Substep 3.2) for the remaining run-set items; if every one of them is already `[x]`/`[~]`/`[>]`/`[-]` (or there are none), this item is the last one that will actually run → `is_last = true`. **Do not** use "last entry in the run set" — a trailing item that is already `[x]` (legal under `--items`) is skipped at Substep 3.2, so the true last *worked* item must ship a bare full close, else the umbrella is never closed and `.task-current` + `workspace/<id>/` + `auto.lock` dangle into the next run's Step 0 gate.
+### Substep 3.3 — Spawn `auto-roadmap-item-runner`
 
 Use the `Agent` tool with `subagent_type: "task:auto-roadmap-item-runner"` (plugin prefix is mandatory — unprefixed names do not resolve and the runtime silently falls back to the catch-all `claude` agent). Do **not** pass a `model:` override — the item-runner inherits the parent-session model (it re-derives the implement model per item and overrides only its own build-runner spawn). Prompt body (verbatim — keep field labels and English; parser-stable):
 
@@ -124,48 +135,37 @@ item_number: <N>
 item_title: <title>
 roadmap_path: <resolved roadmap path>
 working_dir: <abs cwd>
-is_first: <true|false>
-is_last: <true|false>
-roadmap: <ROADMAP>
-roadmap_mtime: <ROADMAP_MTIME>
-start_item: <START_ITEM>
-started: <STARTED>
-items_filter: <ITEMS_SPEC>
 
 Run the FULL per-item cycle for this item: design (open + blueprint) → implement
-→ audit (fan out the three lens auditors yourself) → ship. When is_first is true,
-write .task/workspace/<id>/auto.lock from the run-level fields above. Ship --next
-unless is_last is true, in which case ship a bare /task:ship (default full close)
-to close the umbrella.
+→ audit (fan out the three lens auditors yourself) → ship (full close).
 
 Return your report-card digest per your agent prompt's "Return format" — the last
 non-empty line is a parser-stable status (OK or FAIL).
 ```
 
-The run-level fields (`roadmap` … `items_filter`) are consumed only when `is_first: true` — they become the `auto.lock` field set. `items_filter` may be empty; pass it anyway (the lock writer drops empty values). The item-runner handles everything the driver used to do inline (design/build spawns, model extraction, audit lens fanout, commit + close) — proceed to Substep 3.4 to route on its reply.
+The item-runner handles everything the driver used to do inline (design/build spawns, model extraction, audit lens fanout, commit + full close) — proceed to Substep 3.4 to route on its reply. It needs no run-level flags: the driver owns the run lock (written at Step 2), and every item ships identically (full close).
 
 ### Substep 3.4 — Route on the item-runner's digest
 
 Take the **last non-empty line** of the item-runner's reply as the status line. Match it against:
 
-- `^OK: item #<N> shipped \((--next|full)\) — [0-9a-f]{7,}$` → **success**:
-  1. Set `FIRST_OK_SEEN = true` (arms `is_first = false` for every later item).
-  2. Print the item-runner's full report-card digest to the user (it is the per-item record; the details live in `.task/log/<id>/` and `git`).
-  3. Grep the digest for `task_id:` and assign it to `TASK_ID` (Step 4 needs it — on the last item the full close has already removed `.task-current`).
-  4. If the ship mode was `--next` (not the last item): grep the digest for `roadmap_mtime:` and assign it to the in-memory `ROADMAP_MTIME`. This absorbs the close-induced mtime bump so Substep 3.1 of the next iteration does not fail-stop on it. On `full` (last item) there is no `roadmap_mtime:` line and no next iteration — skip.
-  5. Continue to the next item in the resolved run set.
+- `^OK: item #<N> shipped — [0-9a-f]{7,}$` → **success**:
+  1. Print the item-runner's full report-card digest to the user (it is the per-item record; the details live in `.task/log/<id>/` and `git`).
+  2. Grep the digest for `task_id:` and assign it to `TASK_ID` (Step 4 needs it — the full close has already removed `.task-current`).
+  3. Grep the digest for `roadmap_mtime:` and assign it to the in-memory `ROADMAP_MTIME`. Every item full-closes and auto-marks, bumping the mtime; this refresh absorbs the bump so Substep 3.1 of the next iteration does not fail-stop on it. (On the final item there is no next race check — the refresh is harmless.)
+  4. Continue to the next item in the resolved run set.
 
-- `^FAIL at <stage>: .*\. (See .*|No workspace was created — nothing to clean up\.)$` → **failure** (the item-runner already wrote its own `--- FAIL ---` / `--- ORCHESTRATOR FAIL ---` postmortem, so the driver only relays): show the user the status line + the `See <path>` postmortem path (post-open) or the inline reason (pre-open), plus recovery (`/task:ship` to sweep the partial umbrella; optional `--from #<N>` retry). Then **exit, skip Step 4**. Leave `.task/workspace/<id>/` (and its `auto.lock`) in place as the abort signal — Step 0 gate 3 of the next run trips on it until a bare `/task:ship` sweeps it.
+- `^FAIL at <stage>: .*\. (See .*|No workspace was created — nothing to clean up\.)$` → **failure** (the item-runner already wrote its own `--- FAIL ---` / `--- ORCHESTRATOR FAIL ---` postmortem, so the driver only relays): **remove the run lock** (`rm -f "$LOCK_PATH"` — release the mutex), then show the user the status line + the `See <path>` postmortem path (post-open) or the inline reason (pre-open), plus recovery (`/task:ship` to sweep the partial task; optional `--from #<N>` retry). Then **exit, skip Step 4**. Leave `.task/workspace/<id>/` + `.task-current` in place as the dirty-state signal — Step 0 gate 2 (`.task-current` absent) blocks re-entry until a bare `/task:ship` sweeps them.
 
-- **Anything else** (malformed / absent status) → the item-runner misbehaved and may not have logged. Apply the two-branch postmortem resolution ([`_shared/runner-rules.md` § Postmortem path resolution](../../agents/_shared/runner-rules.md)) at the **driver level**: if `.task-current` exists (post-open), append a `--- ORCHESTRATOR FAIL <ISO> ---` block via `fail-log.sh orchestrator-fail` **directly** (do NOT use the `record_orchestrator_fail` wrapper — it hardcodes `.task-current present = yes`, wrong if the item-runner died pre-open), reason `item-runner returned malformed status: <raw last line>`; otherwise (pre-open) rely on the inline message. Then exit, skip Step 4.
+- **Anything else** (malformed / absent status) → the item-runner misbehaved and may not have logged. **Remove the run lock** (`rm -f "$LOCK_PATH"`), then apply the two-branch postmortem resolution ([`_shared/runner-rules.md` § Postmortem path resolution](../../agents/_shared/runner-rules.md)) at the **driver level**: if `.task-current` exists (post-open), append a `--- ORCHESTRATOR FAIL <ISO> ---` block via `fail-log.sh orchestrator-fail` **directly** (do NOT use the `record_orchestrator_fail` wrapper — it hardcodes `.task-current present = yes`, wrong if the item-runner died pre-open), reason `item-runner returned malformed status: <raw last line>`; otherwise (pre-open) rely on the inline message. Then exit, skip Step 4.
 
-A driver-level mtime race (Substep 3.1) uses the same driver-level `fail-log.sh orchestrator-fail` path when a workspace subfolder exists.
+A driver-level mtime race (Substep 3.1) also removes the run lock and uses the same driver-level `fail-log.sh orchestrator-fail` path when a workspace subfolder exists.
 
 Full failure protocol: [docs/spec/auto-roadmap.md § Failure protocol](../../docs/spec/auto-roadmap.md#failure-protocol--fail-stop-no-rollback).
 
 ## Step 4: Post-run summary
 
-Print to the user (in `config.md` Language):
+The run finished cleanly (every run-set item shipped OK). **Remove the run lock** (`rm -f "$LOCK_PATH"`) — it is the driver's to clean up; the final item's full close already swept its workspace subfolder and `.task-current`. Then print to the user (in `config.md` Language):
 
 ```
 /task:auto-roadmap finished.
@@ -174,8 +174,8 @@ Print to the user (in `config.md` Language):
   Roadmap:          <path>
   Archive:          .task/log/<task-id>/
 
-The workspace subfolder and .task-current have been removed (the
-per-umbrella auto.lock sentinel was swept with the subfolder).
+The last item's full close removed its workspace subfolder and .task-current;
+the run lock (.task/roadmap/<slug>.lock) has been removed.
 You can run /task:auto-roadmap again immediately.
 ```
 
@@ -183,9 +183,8 @@ Substitute the literal task-id from the in-memory `TASK_ID` (assigned from each 
 
 ## Forbidden
 
-- Pre-deriving the umbrella task-id in Step 2 / pre-writing `.task-current` / pre-creating `.task/workspace/<task-id>/`. The first item-runner's design-runner does this via `_lib/derive-task-id.sh`; pre-creation hard-stops the initial-open path.
-- Running the per-item loop with parallelism. The `/task:design --from` continuation contract requires strict serial order — one item-runner at a time.
+- Pre-deriving the task-id in Step 2 / pre-writing `.task-current` / pre-creating `.task/workspace/<task-id>/`. Each item-runner's design-runner does this via `_lib/derive-task-id.sh`; pre-creation hard-stops the initial-open path.
+- Running the per-item loop with parallelism. Each item's `/task:design --from` is a fresh initial open that requires no active-task pointer — the previous item must have fully closed and removed `.task-current` first, so items run strictly serially, one item-runner at a time.
 - Spawning anything other than `auto-roadmap-item-runner` per item, or running audit / commit / close **in the driver**. The driver never spawns design/build-runners or lens auditors and never runs `/task:build` / `/task:ship` — the item-runner owns the entire per-item cycle. The driver's only per-item action is one `Agent(task:auto-roadmap-item-runner)` spawn plus digest routing.
-- Passing `is_last: true` before confirming no later run-set item is still `- [ ]` (Substep 3.3 look-ahead). A premature `is_last` ships a bare full close mid-run and drops the umbrella; a missed one (last worked item shipped `--next`) leaves the umbrella dangling for the next run's Step 0 gate.
-- Reading `.task-current` or `auto.lock` for run state. The driver keeps run state in memory; `.task-current` / `auto.lock` are written and read inside the item-runner. (Only the mtime race check and status re-check read the roadmap file itself.)
-- Removing `workspace/<task-id>/auto.lock` mid-run — the sentinel is the cross-worktree mutex and the abort signal for failure paths; only a bare `/task:ship` (which sweeps the whole subfolder) may take it down.
+- Reading `.task-current` for run state, or reading the run lock at all after writing it. The driver keeps run state in memory; `.task-current` is written and read inside the item-runner. (Only the mtime race check and status re-check read the roadmap file itself.)
+- Leaving the run lock (`.task/roadmap/<slug>.lock`) behind on a handled exit. The driver owns its whole lifecycle: written at Step 2, removed on clean finish (Step 4) **and** on every handled failure (Substep 3.1 / 3.4). Only an unhandled crash leaves it stuck — Step 0 gate 3 then reports it for a manual `rm`.

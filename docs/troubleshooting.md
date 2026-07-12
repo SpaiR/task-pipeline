@@ -51,14 +51,6 @@ Then reopen the `/` menu. If it was already installed, make sure it isn't disabl
 
 **Fix** — run `/task:bootstrap` from any worktree; it records `task.root` and every worktree then resolves the same `.task/`. To point the pipeline at an existing `.task/` yourself (e.g. an unusual bare-repo layout), set it directly: `git config --local task.root /abs/path/containing/dot-task` (the directory that *contains* `.task`, not `.task` itself).
 
-### `--auto stopped: <reason>`
-
-**Symptom** — `/task:build --auto` (or `/task:auto-roadmap`) prints `--auto stopped: <reason>. See <path>.` and halts.
-
-**Cause** — expected, not a crash: a per-phase budget was reached (implement runs once; audit stops after 2 non-converging iterations).
-
-**Fix** — open the named artifact (`audit.md` / `summary.md`), finish what's left by hand or with a plain `/task:build`, then continue. `--auto` is intentionally one-shot.
-
 ## Escape hatches (advanced flags)
 
 Day-to-day you never need a flag: `/task:design`, `/task:build`, and `/task:ship` walk you through the whole cycle with a question at each phase boundary, and `/task:ship` infers its close mode. The flags below still exist — as shortcuts that **skip** the corresponding question, as a way to **force** a phase when auto-detect guessed wrong, and as the interface the non-interactive `/task:auto-roadmap` runners drive internally. They are deliberately off the everyday surface; this is where they live.
@@ -67,19 +59,16 @@ Day-to-day you never need a flag: `/task:design`, `/task:build`, and `/task:ship
 
 | Flag | Skill | What it forces / skips | Interactive equivalent (the default) |
 |------|-------|------------------------|--------------------------------------|
-| `--phase <open\|idea\|blueprint\|refine>` | `/task:design` | Force one design phase, bypassing auto-detect. The **main recovery hatch** when the workspace state makes auto-detect pick the wrong phase. | Auto-detect from workspace state + the advance questions. |
+| `--phase <open\|blueprint\|refine>` | `/task:design` | Force one design phase, bypassing auto-detect. The **main recovery hatch** when the workspace state makes auto-detect pick the wrong phase. | Auto-detect from workspace state + the advance questions. |
 | `--phase <implement\|audit>` | `/task:build` | Force one build phase. | Auto-detect + the implement→audit advance question. |
-| `--idea [<context>]` | `/task:design` | Jump straight into the multi-round Description brainstorm (architect from scratch, or Socratic on a filled Description). | Entry-fork chip **"Brainstorm the idea"** on a bare fresh `/task:design`. |
 | `--from <path>[#<N>]` | `/task:design` | Open a specific roadmap item as the umbrella (with `#<N>`, that exact item). | Entry-fork chip **"Open from a roadmap"** → roadmap picker → item picker. |
-| `--auto` | `/task:build` | Chain `implement → audit` unattended in one call (budgets: ≤1 implement, ≤2 audit). | The **"Run audit now?"** question after a clean implement. |
-| `--next` | `/task:ship` | Force subtask-transition close (keep `task.md`, clear Description). | Ship infers close-vs-transition and lets you flip it in the one confirmation. |
 | `--refine [<slug>]` | `/task:roadmap` | Parallel three-lens audit (Coverage / Decomposition / Clarity, ≤2 iterations) of an existing roadmap. | The inline refine offer that authoring makes when its light self-check finds enough to warrant it. |
 
 ### Repair-level: refine an existing plan
 
 **When** — a `plan.md` is complete but you suspect it is wrong: the decomposition is off, a step's approach won't work, or a better alternative surfaced after blueprint. This is a repair capability, not part of the routine design → build → ship flow, and it is the **only** design phase with no auto/question path — you must ask for it.
 
-**Fix** — run `/task:design --phase refine` (equivalently `/task:design --refine`) on the active umbrella. The refine phase critically reviews the current `plan.md`, proposes alternatives, and records the chosen changes in `## Decisions` so `/task:build` implement honors them. Use it only when the plan itself needs rework; for normal progress after blueprint, just answer **"Start implementing now?"** with yes (or run `/task:build`).
+**Fix** — run `/task:design --phase refine` on the active umbrella. The refine phase critically reviews the current `plan.md`, proposes alternatives, and records the chosen changes in `## Decisions` so `/task:build` implement honors them. Use it only when the plan itself needs rework; for normal progress after blueprint, just answer **"Start implementing now?"** with yes (or run `/task:build`).
 
 > Note: this is design's plan-refine, distinct from `/task:roadmap --refine` (a roadmap audit, in the table above).
 

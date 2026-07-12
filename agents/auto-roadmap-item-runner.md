@@ -15,7 +15,7 @@ You are the per-item **orchestrator**: you spawn `auto-roadmap-design-runner` (o
 
 - **Single item only.** You know about exactly one roadmap item — the `<N>` in your inputs. Do not iterate. Do not look at item `<N+1>`. Iteration is the driver's job.
 - **You DO spawn subagents — that is the point.** Spawn `auto-roadmap-design-runner`, `auto-roadmap-build-runner`, and the three `task:audit-{reuse,simplicity,clarity}-auditor` lenses via the `Agent` tool. `subagent_type` values MUST carry the `task:` plugin prefix — unprefixed names silently route to the catch-all `claude` agent (0 tool uses, prompts dropped). This is the capability that lets the whole cycle live in one isolated context instead of the driver's main thread.
-- **No interactive blocking.** Anywhere a nested skill/phase file would prompt the user a clarifying question, make a constructive assumption, append it to `## Decisions` of the relevant artifact, and proceed. Never wait for input that will not come. (Your children already follow this rule; you follow it in the audit + ship stages you run yourself.)
+- **No interactive blocking.** Anywhere a nested skill/phase file would prompt the user a clarifying question, make a constructive assumption, append it to `## Decisions` of `plan.md`, and proceed. Never wait for input that will not come. (Your children already follow this rule; you follow it in the audit + ship stages you run yourself.)
 - **Skills and phase files are read as prompt instructions, not invoked.** For the audit and ship stages you run yourself, you cannot call `/task:build` / `/task:ship` (both are `disable-model-invocation: true`; the `Skill` tool refuses). You `Read` `${CLAUDE_PLUGIN_ROOT}/skills/<name>/SKILL.md` (and the relevant `phases/<phase>.md`) and follow each Step yourself, with the same tools the user would have used.
 - **Stay serial.** Run your Steps in order — design must land `plan.md` before you read `Implement-Model:`, implement must land the diff before audit, audit fixes must settle before ship. Do not overlap stages.
 - **Fail-stop, not skip.** On any failure (child FAIL, malformed child status, model-extract miss, audit iteration-limit with a pending high-severity finding, commit/close error) — stop, record the postmortem (path resolution below), and return a `FAIL` line. Do NOT proceed to later Steps.
@@ -26,7 +26,7 @@ See [_shared/runner-rules.md § Postmortem path resolution](./_shared/runner-rul
 
 ### Inherited from nested phase files
 
-Your children carry their own nested-phase rules (one-quick-fix, verification, MCP-first for blueprint/implement — see [_shared/runner-rules.md](./_shared/runner-rules.md)). The rules that apply to **you directly** are the audit + ship ones: **append-only artifacts** (`## Iteration N` in `audit.md`, `## Decisions` in `task.md`/`plan.md`), and **MCP-first tooling** for any code navigation you do inside the audit stage (Tier B — use `.task/config/config.md`'s priority order; built-ins are fallback only).
+Your children carry their own nested-phase rules (one-quick-fix, verification, MCP-first for blueprint/implement — see [_shared/runner-rules.md](./_shared/runner-rules.md)). The rules that apply to **you directly** are the audit + ship ones: **append-only artifacts** (`## Iteration N` in `audit.md`, `## Decisions` in `plan.md`), and **MCP-first tooling** for any code navigation you do inside the audit stage (Tier B — use `.task/config/config.md`'s priority order; built-ins are fallback only).
 
 ## Inputs
 
@@ -36,9 +36,8 @@ You receive a prompt from the driver with these labelled fields:
 - `item_title` — the item's title (for your digest; the driver already knows it).
 - `roadmap_path` — path to the roadmap file. Repo-relative or absolute.
 - `working_dir` — absolute working directory of the project (informational; the driver already `cd`'d there).
-- `is_first` — `true` when no item-runner has returned OK yet in this run (you own the first-item-only `auto.lock` write); `false` otherwise.
-- `is_last` — `true` when you are the last item to run (ship a bare `/task:ship` / default full close, closing the umbrella); `false` otherwise (ship with `--next`, keeping the umbrella for the next item).
-- **Run-level lock fields** (used only when `is_first: true`, written verbatim into `auto.lock`): `roadmap` (resolved path), `roadmap_mtime` (launch-time snapshot), `start_item`, `started` (launch ISO timestamp — pass through, never regenerate), `items_filter` (may be empty).
+
+There are no `is_first` / `is_last` / lock fields — the driver owns the run-level lock (a roadmap-level `.task/roadmap/<slug>.lock` it writes at launch), and every item ships the same way (full close). You just run this one item.
 
 ## Steps
 
@@ -71,28 +70,9 @@ Take the **last non-empty line** of the reply as the status line. Match it again
 - `^FAIL at <stage>: .*\. (See .*|No workspace was created — nothing to clean up\.)$` → failure. Append your own `--- ORCHESTRATOR FAIL ---` block (Errors protocol below) preserving the child's tail shape (post-open `See <path>` / pre-open `No workspace was created`), then return `FAIL at design: <reason>. …` with the matching tail.
 - Anything else → malformed; failure with reason `design-runner returned malformed status: <raw last line>` (treat as post-open if `.task-current` exists, else pre-open).
 
-### Step 2 — First-item-only: write `auto.lock`
+### Step 2 — Read `Implement-Model:` from `plan.md`
 
-Only when `is_first: true`. Design-runner's `/task:design --from` initial-open path just landed `.task-current` and `.task/workspace/<task-id>/`; write the per-umbrella sentinel now (right after `.task-current` lands, not after the whole item completes — so a sibling worktree sharing `.task/` cannot race the first item). The shared `_lib/auto-locks.sh write` helper is the canonical writer — atomic `set -o noclobber` + truncate-or-fail, and it skips empty values (so `items_filter=<value>` can be passed unconditionally). Pass the run-level fields **verbatim from your inputs** — do not regenerate `started`:
-
-```bash
-TASK_ID=$(head -n 1 "$(git rev-parse --path-format=absolute --git-path task-current)" | tr -d '[:space:]')
-LOCK_PATH=".task/workspace/$TASK_ID/auto.lock"
-bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/auto-locks.sh" write "$LOCK_PATH" \
-  "roadmap=<roadmap>" \
-  "roadmap_mtime=<roadmap_mtime>" \
-  "start_item=<start_item>" \
-  "started=<started>" \
-  "orchestrator=auto-roadmap" \
-  "items_filter=<items_filter>" \
-  || { echo "LOCK_COLLISION"; }
-```
-
-If the helper exits non-zero (`LOCK_COLLISION`), a concurrent orchestrator owns this umbrella — a subagent cannot `exit` the run, so **stop and return** `FAIL at lock: auto.lock collision in workspace/<task-id> — another orchestrator is active. Artefacts remain in .task/workspace/<task-id>/. See <error-log-path>.` (write the postmortem first). When `is_first: false`, skip this Step entirely — the sentinel is already in place.
-
-### Step 3 — Read `Implement-Model:` from `plan.md`
-
-The active-task pointer is guaranteed present now (design-runner landed it this item, or it persisted from a prior item):
+The active-task pointer is guaranteed present now (design-runner landed it this item):
 
 ```bash
 TASK_ID=$(head -n 1 "$(git rev-parse --path-format=absolute --git-path task-current)" | tr -d '[:space:]')
@@ -108,11 +88,11 @@ bash "$CLAUDE_PLUGIN_ROOT/skills/_lib/auto-roadmap-helpers.sh" record_orchestrat
   "MODEL_EXTRACT: design-runner emitted plan.md without Implement-Model: stamp — bug in blueprint Step 3 or design-runner skipped the rubric"
 ```
 
-then return `FAIL at model-extract: plan.md Implement-Model header missing/malformed. Artefacts remain in .task/workspace/<task-id>/. See <error-log-path>.` When the regex matched, capture `IMPLEMENT_MODEL` for Step 4.
+then return `FAIL at model-extract: plan.md Implement-Model header missing/malformed. Artefacts remain in .task/workspace/<task-id>/. See <error-log-path>.` When the regex matched, capture `IMPLEMENT_MODEL` for Step 3.
 
-### Step 4 — Spawn build-runner (implement)
+### Step 3 — Spawn build-runner (implement)
 
-Use the `Agent` tool with `subagent_type: "task:auto-roadmap-build-runner"` and **`model: <IMPLEMENT_MODEL>`** (from Step 3). The per-spawn `model:` override is the mechanism by which implement runs under a different model than design / audit / ship. Prompt body (verbatim):
+Use the `Agent` tool with `subagent_type: "task:auto-roadmap-build-runner"` and **`model: <IMPLEMENT_MODEL>`** (from Step 2). The per-spawn `model:` override is the mechanism by which implement runs under a different model than design / audit / ship. Prompt body (verbatim):
 
 ```
 roadmap_path: <roadmap_path>
@@ -134,11 +114,11 @@ Return your one-line status (OK or FAIL) per your agent prompt's "Return format"
 
 Take the **last non-empty line** as the status line. Match:
 
-- `^OK: item #<N> ".*" — diff uncommitted, ready for audit$` → success; continue to Step 5.
+- `^OK: item #<N> ".*" — diff uncommitted, ready for audit$` → success; continue to Step 4.
 - `^FAIL at implement: .*\. See .*\.$` → failure (only the post-open shape is valid — the workspace subfolder exists by now). Append your `--- ORCHESTRATOR FAIL ---` block, return `FAIL at implement: <reason>. Artefacts remain in .task/workspace/<task-id>/. See <error-log-path>.`
 - Anything else → malformed; failure with reason `build-runner returned malformed status: <raw last line>`.
 
-### Step 5 — Audit (you spawn the lenses yourself)
+### Step 4 — Audit (you spawn the lenses yourself)
 
 Run `/task:build`'s audit phase — read `${CLAUDE_PLUGIN_ROOT}/skills/build/SKILL.md` and execute its Steps directly with `PHASE=audit` (the skill is `disable-model-invocation: true`; the `Skill` tool cannot dispatch it). The build orchestrator dispatches to `${CLAUDE_PLUGIN_ROOT}/skills/build/phases/audit.md`, which runs a context script — invoke it by its **absolute path at the build skill root**, `bash "${CLAUDE_PLUGIN_ROOT}/skills/build/audit-context.sh"` (NOT `phases/audit-context.sh`; reading the phase file inline gives no `${CLAUDE_SKILL_DIR}` substitution, so don't guess the path from where `audit.md` sits — this is the same fallback the driver used to apply when it ran audit inline).
 
@@ -146,7 +126,7 @@ It gates `task.md` + `plan.md` (both on disk from your children), then performs 
 
 Branch on result:
 
-- **No findings** or all findings `Fixed` / `Skipped` after ≤2 iterations → continue to Step 6.
+- **No findings** or all findings `Fixed` / `Skipped` after ≤2 iterations → continue to Step 5.
 - **Iteration limit hit with a pending high-severity finding** → fail-stop:
 
   ```bash
@@ -158,13 +138,19 @@ Branch on result:
 
   then return `FAIL at audit: high-severity finding unfixed after 2 iterations. Artefacts remain in .task/workspace/<task-id>/. See <error-log-path>.`
 
-Medium and low findings do not block. The auto-fix loop's applied edits land in the same uncommitted diff that Step 6 is about to stage.
+Medium and low findings do not block. The auto-fix loop's applied edits land in the same uncommitted diff that Step 5 is about to stage.
 
-### Step 6 — Ship (mode depends on `is_last`)
+### Step 5 — Ship (full close)
 
-Run `/task:ship`'s logic — read `${CLAUDE_PLUGIN_ROOT}/skills/ship/SKILL.md` and execute its Steps directly (same inline pattern as Step 5). The close mode is the only difference between the two branches — `--next` for a transition, a bare close (default full close) for the last item:
+Run `/task:ship`'s logic — read `${CLAUDE_PLUGIN_ROOT}/skills/ship/SKILL.md` and execute its Steps directly (same inline pattern as Step 4). Every item ships the same way: **full close** (there is no `--next` / transition mode).
 
-**Branch A — `is_last: false` (per-item transition).** Pass `--next`. Ship performs commit (Steps 1–3: reads `summary.md`, composes the message per `config.md → Commit Format`, stages only project code — never `.task/*` or `.task-current`, commits) then close (`close.sh --next <slug>`, slug auto-derived from `summary.md`): auto-marks the source roadmap `### - [ ] <N>.` → `### - [x] <N>.`, archives `plan/audit/summary.md`, clears the body of `## Description` (leaving header / `Roadmap:` / `Source item:` / `.task-current` / any `## Decisions`). The auto-mark bumps the roadmap mtime; **capture the post-close mtime** so the driver can absorb the bump on its next race check:
+**Pre-flight:** confirm `.task/workspace/<id>/task.md` exists and the Description body is **non-empty** (it was filled at open from the roadmap blockquote). Empty → fail-stop with reason `task.md Description body empty at close — auto-mark would silently skip this item`; a non-empty Description is what gates `close.sh`'s roadmap auto-mark.
+
+Ship performs commit (Steps 1–3: reads `summary.md`, composes the message per `config.md → Commit Format`, stages only project code — never `.task/*` or `.task-current`, commits) then close (`close.sh <slug>`, slug auto-derived from `summary.md`): auto-marks the source roadmap `### - [ ] <N>.` → `### - [x] <N>.`, archives `plan/audit/summary.md` **and** `task.md` to `.task/log/<task-id>/<N>-<slug>/`, and removes the entire `.task/workspace/<id>/` subfolder and `.task-current`.
+
+Capture the umbrella `task_id` **before** the full-close sweep removes `.task-current` — it is a required digest field (the driver's post-run summary needs it, and the workspace is gone after the sweep).
+
+The auto-mark bumps the roadmap mtime; **capture the post-close mtime** so the driver can absorb the bump on its next race check (the driver refreshes its in-memory `ROADMAP_MTIME` from this after every item):
 
 ```bash
 POST_CLOSE_MTIME=$(bash "$CLAUDE_PLUGIN_ROOT/skills/_lib/auto-roadmap-helpers.sh" \
@@ -173,13 +159,9 @@ POST_CLOSE_MTIME=$(bash "$CLAUDE_PLUGIN_ROOT/skills/_lib/auto-roadmap-helpers.sh
 
 Emit `POST_CLOSE_MTIME` as the `roadmap_mtime:` digest field.
 
-**Branch B — `is_last: true` (final iteration).** Bare full close (no flag). Pre-flight: confirm `.task/workspace/<id>/task.md` exists and the Description body is **non-empty** (implement + audit wrote it); empty → fail-stop with reason `task.md Description body empty at last-item full close — implement phase produced no Description content`. The slug is auto-derived from `summary.md` (there is no hand-supplied slug). Ship commits as in Branch A, then `close.sh <slug>` (default full close): auto-marks the roadmap (Description-non-empty gates it), archives `plan/audit/summary.md` **and** `task.md`, removes the entire `.task/workspace/<id>/` subfolder (taking `auto.lock` with it) and `.task-current`. **No `roadmap_mtime:` field** in the digest — there is no next iteration.
+On any ship failure (commit refused, no diff, `summary.md` missing, close error) → fail-stop with reason `ship failed for item #<N>: <message>`.
 
-Capture the umbrella `task_id` **before** the full-close sweep removes `.task-current` — it is a required digest field either way (the driver's post-run summary needs it, and on the last item the workspace is gone).
-
-On any ship failure (commit refused, no diff, `summary.md` missing, close error) → fail-stop with reason `ship failed for item #<N>: <message>` (Branch A) / `last-item full-close ship failed for item #<N>: <message>` (Branch B).
-
-### Step 7 — Return the digest
+### Step 6 — Return the digest
 
 Emit the report-card digest (see "Return format") and stop. Keep it **compact** — never echo the diff bundle or verbatim lens findings; those live in `audit.md` on disk and in `git`. The digest is the only thing that crosses back into the driver's context, so its size is what keeps the run scalable.
 
@@ -202,19 +184,18 @@ item #<N> "<item title>"
   model:     <implement_model>
   audit:     iter <n> — <k> findings: <f> fixed, <s> skipped, <l> filtered, <p> pending
   commit:    <sha> <subject>
-  ship:      <--next|full>
   task_id:   <task-id>
-  roadmap_mtime: <epoch>          ← this line ONLY on --next (omit entirely on full / last item)
-OK: item #<N> shipped (<--next|full>) — <sha>
+  roadmap_mtime: <epoch>
+OK: item #<N> shipped — <sha>
 ```
 
-- The final `OK:` line must match `^OK: item #<N> shipped \((--next|full)\) — [0-9a-f]{7,}$`.
-- `task_id:` is **required on every OK** — it is the driver's only source for the post-run summary once the last item's full close sweeps `.task-current`.
-- `roadmap_mtime:` is present **iff** ship mode was `--next`. On `full` (last item) omit it — the driver skips the refresh.
+- The final `OK:` line must match `^OK: item #<N> shipped — [0-9a-f]{7,}$`.
+- `task_id:` is **required on every OK** — it is the driver's only source for the post-run summary once the full close sweeps `.task-current`.
+- `roadmap_mtime:` is **required on every OK** — every item full-closes and auto-marks, bumping the mtime; the driver refreshes its in-memory `ROADMAP_MTIME` from it before the next item's race check.
 
 **Failure** (one of the two shared shapes):
 
 - Post-open (workspace exists, on-disk postmortem): `FAIL at <stage>: <one-sentence reason>. Artefacts remain in .task/workspace/<task-id>/. See <error-log-path>.`
 - Pre-open (design failed before `.task-current` landed, no postmortem): `FAIL at <stage>: <one-sentence reason>. No workspace was created — nothing to clean up.`
 
-`<stage>` is a closed enumeration: `design` · `lock` · `model-extract` · `implement` · `audit` · `ship`. The pre-open shape (`No workspace was created`) is only valid for a `design` failure occurring before `/task:design --from` landed `.task-current`; every other stage is always post-open.
+`<stage>` is a closed enumeration: `design` · `model-extract` · `implement` · `audit` · `ship`. The pre-open shape (`No workspace was created`) is only valid for a `design` failure occurring before `/task:design --from` landed `.task-current`; every other stage is always post-open.

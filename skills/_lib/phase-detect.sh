@@ -9,7 +9,7 @@
 #   PHASE=$(bash "${CLAUDE_SKILL_DIR}/../_lib/phase-detect.sh" <design|build>)
 #
 # Output: one of (on stdout):
-#   open | idea | blueprint | refine-prompt     (for design)
+#   open | blueprint | refine-prompt            (for design)
 #   implement | audit | done                    (for build)
 #
 # Special values:
@@ -20,7 +20,7 @@
 # Detection logic (first match wins):
 #   design:
 #     1. no .task-current OR no task.md           → open
-#     2. ## Description body empty                → idea
+#     2. ## Description body empty                → error (fill it / re-run with a description)
 #     3. no plan.md                               → blueprint
 #     4. plan.md exists                           → refine-prompt
 #
@@ -93,8 +93,8 @@ if [[ "$SCOPE" == "design" ]]; then
   ' "$TASK_FILE" | tr '\n' ' ' | sed -E 's/<!--[^-]*(-[^-]+)*-->//g' | tr -d '[:space:]')
 
   if [[ -z "$DESC_CONTENT" ]]; then
-    echo "idea"
-    exit 0
+    echo "ERROR: task.md has an empty Description. Fill it in, or re-run /task:design with a description to quick-draft it." >&2
+    exit 1
   fi
 
   if [[ ! -f "$PLAN_FILE" ]]; then
