@@ -42,13 +42,11 @@ If you've ever tried to cram Claude into one big "do everything in this ticket" 
 
 Concretely, you get:
 
-- **Invisible to the project.** All pipeline state lives in `.task/`, excluded via `.git/info/exclude` (not `.gitignore`). A colleague who clones the repo without the pipeline sees no trace of it.
 - **Multilingual.** Task descriptions and discussion happen in your language (English, Russian, anything). The plan, audit, and commits follow the policy in `config.md`.
 - **Three explicit checkpoints.** `/task:design` (plan), `/task:build` (implementation + checks), `/task:ship` (commit + close). You decide when to move on; stop, fix an artifact by hand, and continue.
 - **A paper trail.** `task.md` (what and why), `plan.md` (how), `audit.md` (what the audit found), `summary.md` (the result). Plain Markdown, readable without an agent.
 - **Project-aware.** A single `/task:bootstrap` pins down the stack, the MCP tool priority (whatever code-navigation / library-docs servers you happen to have connected), and the commit format. Every step follows it afterward.
-- **Bounded auto-fix + filters.** `/task:build` applies the problems it finds (≤2 iterations), but only within the declared `Touches` scope. Weak or out-of-scope findings land in `### Filtered (low confidence)` for manual review.
-- **An archive.** `/task:ship` files completed subtasks under `.task/log/{task-id}/{N}-{slug}/` — six months later you can still see what was done, and when.
+- **An archive.** `/task:ship` files completed subtasks under `.task/log/<task-id>/<N>-<slug>/` — six months later you can still see what was done, and when.
 
 ## Why you can trust this
 
@@ -95,21 +93,6 @@ In a new project you don't have to run setup by hand first: the first `/task:des
 
 ## Command reference
 
-```text
-/task:bootstrap  — once per project (or auto-runs on 1st design/roadmap); creates .task/config/config.md
-  ↓
-[/task:roadmap]  — optional; roadmap for a large initiative → .task/roadmap/<slug>.md
-  ↓
-  ├─→ [/task:auto-roadmap] — optional; autopilot over an approved roadmap
-  ↓                         in the current interactive session.
-/task:design  — open a task, write the Description, plan it out
-  ↓             (asks how to start, then walks open → plan with a question at each step)
-/task:build   — implementation + audit with an auto-fix loop
-  ↓             (asks before advancing implement → audit)
-/task:ship    — commit + close
-                (one commit + full close, confirmed once)
-```
-
 **Re-entry semantics:** `/task:design` and `/task:build` look at the state of `.task/workspace/<task-id>/` and automatically resume from the right phase — you just run the bare command and answer the questions. If a phase was auto-detected wrong, or you need to force a specific one, that's what the advanced `--phase` escape hatch is for — see [docs/troubleshooting.md](docs/troubleshooting.md).
 
 **Next-step footer:** every core command ends its output with a single copy-pasteable `→ Next: <command>` line naming the exact next step (or `→ Done.` when the flow is complete), so you never have to remember which command comes next — just paste the line. The convention is defined once in [`docs/spec/invariants.md § Interaction conventions`](docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar).
@@ -118,7 +101,7 @@ In a new project you don't have to run setup by hand first: the first `/task:des
 
 ### One task per cycle; roadmaps group items in the log
 
-Each `/task:design → /task:build → /task:ship` cycle is one task, closed and archived by `/task:ship` under `.task/log/<task-id>/<N>-<slug>/`. Working through a **roadmap** produces several tasks that share one `task-id` (the roadmap slug), so their archives collect as numbered subfolders under a single `.task/log/<roadmap-slug>/` — `/task:design --from <roadmap>` opens the next unchecked item, and each item's `/task:ship` archives its own `task.md` and marks the item done. There is no separate "transition" mode: every ship is a full close, and the next item simply re-opens.
+Each `/task:design → /task:build → /task:ship` cycle is one task, closed and archived by `/task:ship` under `.task/log/<task-id>/<N>-<slug>/`. Working through a **roadmap** produces several tasks that share one `task-id` (the roadmap slug), so their archives collect as numbered subfolders under a single `.task/log/<roadmap-slug>/` — `/task:design` (answering *open from a roadmap*) opens the next unchecked item, and each item's `/task:ship` archives its own `task.md` and marks the item done. There is no separate "transition" mode: every ship is a full close, and the next item simply re-opens.
 
 ## Commands
 

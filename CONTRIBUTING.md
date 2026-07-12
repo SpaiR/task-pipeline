@@ -32,8 +32,8 @@ skills/                          SKILL.md + companion phase files + bash helpers
   roadmap/                       SKILL.md (roadmap brainstorm) +
                                    phases/refine.md (only for --refine)
   design/                        SKILL.md (thin orchestrator) + phases/
-                                   {open,idea,blueprint,refine}.md
-  build/                         SKILL.md (orchestrator + --auto chain + bounded audit
+                                   {open,blueprint,refine}.md
+  build/                         SKILL.md (orchestrator + bounded audit
                                    auto-fix loop) + phases/{implement,audit}.md +
                                    audit-context.sh
   ship/                          SKILL.md + close.sh + commit-context.sh
@@ -200,7 +200,7 @@ Must be one of the following:
 
 **Do NOT invent new scopes.** Pick from the list below; if none fits, omit the scope entirely.
 
-* **A skill name** (no `task:` prefix): `bootstrap`, `roadmap`, `auto`, `open`, `idea`, `blueprint`, `refine`, `implement`, `audit`, `commit`, `close`, `validate`.
+* **A skill name** (no `task:` prefix): `bootstrap`, `roadmap`, `auto`, `open`, `blueprint`, `refine`, `implement`, `audit`, `commit`, `close`, `validate`.
 * **An agent name**: the build-audit lenses `audit-reuse`, `audit-simplicity`, `audit-clarity`; the roadmap-refine lenses `audit-roadmap-coverage`, `audit-roadmap-decomposition`, `audit-roadmap-clarity`.
 * **`skills`** — cross-cutting change that touches several skills at once.
 * **`agents`** — cross-cutting change that touches several agents at once (e.g. a shared rule in `agents/_shared/`).
