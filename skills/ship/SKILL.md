@@ -67,8 +67,9 @@ If the context block contains `===== referenced: <path> =====` sections, that do
 - **Do not stage** `.env`, credentials, or other secrets.
 - **Single confirmation (interactive).** On every interactive ship, present the staged file list and the composed commit message **once**, then ask **exactly once** using the canonical **accept / decline / edit** grammar (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar), section (b)): **accept** — commit as shown and run the close; **decline** — abort without committing; **edit** — adjust the file list or message, then commit and close. The prompt always fires — there is no "if in doubt" conditional.
 - **Non-interactive carve-out.** When ship runs non-interactively — the `auto-roadmap-item-runner` executing these Steps inline, where there is no user to answer — skip the prompt and commit the composed message directly, mirroring that runner's "No interactive blocking" rule (`agents/auto-roadmap-item-runner.md`). The interactive checkpoint stays intact for users; the autopilot ship stays unattended.
+- **Empty-diff carve-out.** If nothing task-related is stageable — no committable project diff (e.g. a bare `/task:ship` sweeping a `workspace/<id>/` left by a `/task:auto-roadmap` item that failed **before** implement) — do **not** run `git commit`; it would error with "nothing to commit" and stop ship before the close, orphaning the workspace + active-task pointer. Instead skip the commit, report that there was nothing to commit, and proceed to Step 4 and Step 5 (close) so the workspace subfolder and active-task pointer are still swept. This branch never fires under the `auto-roadmap-item-runner`, which ships only after a successful implement.
 
-Create the commit using HEREDOC:
+Otherwise, create the commit using HEREDOC:
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -117,10 +118,11 @@ If `close.sh` returns ERROR — relay the message to the user and stop. (The com
 - Commit hash + commit message (from Step 3).
 - List of committed files.
 - Path to the archive subfolder (from `close.sh` output).
+- A one-line review hint: `Review the commit with \`git show <hash>\` — nothing was pushed.` (Omit when the empty-diff carve-out skipped the commit — there is no hash to show.)
 - End with the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)) — the task is closed and archived:
   - If the task was roadmap-tracked and `close.sh` reports remaining items:
     > → Done. Task closed and archived under `.task/log/`.
-    > → Next: `/task:design --from <roadmap-slug>` for the next roadmap item.
+    > → Next: `/task:design` for the next roadmap item (its entry fork offers "open from a roadmap").
   - Otherwise:
     > → Done. Task closed and archived under `.task/log/`.
     > → Next: `/task:design "<your next task>"` to start a new task.
