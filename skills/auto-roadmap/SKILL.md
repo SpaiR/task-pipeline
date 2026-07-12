@@ -13,7 +13,7 @@ Drive an entire approved roadmap through the full pipeline from inside the **use
 
 **Runtime + orchestrator mechanics** (per-stage model split, context budget thresholds, the three Step 0 gates, `--items` grammar, sentinel invariants, failure protocol, cross-worktree safety, "inline" sub-skill execution semantics): [docs/spec/auto-roadmap.md](../../docs/spec/auto-roadmap.md). Reminders: this skill (the driver) itself does not navigate or modify project code and spawns no lens auditors — all per-item work, including audit + ship, happens inside the `auto-roadmap-item-runner` subagent it spawns. The item-runner executes `/task:build` / `/task:ship` **inline** (reads their SKILL.md + phase companion and follows the Steps directly, since both are `disable-model-invocation: true` and the `Skill` tool refuses them) — the driver never runs them.
 
-**Recommended:** run the session in auto mode (auto-accept edits) so implement-stage `Edit` calls don't interrupt the run with prompts.
+**Recommended:** run the session in auto mode (auto-accept edits) so implement-stage `Edit` calls don't interrupt the run with prompts. The **parent-session model** (set via `/model` before launching) governs the item-runner, its design-runner, audit orchestration, and ship — implement alone is governed per-item by `plan.md → Implement-Model:`. For a roadmap dominated by rote items, launching under `/model sonnet` speeds those non-implement stages; reach for `/model opus` when the items carry genuine design difficulty. Recommendation only — not a precondition, not enforced.
 
 ## Step 0: Hard-stop preconditions
 

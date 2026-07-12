@@ -111,7 +111,7 @@ Detection is automatic — no flag. A bare `/task:roadmap "add dark mode"` with 
 > **Limitations.**
 > - Each item's cycle runs in a disposable `auto-roadmap-item-runner`, so the driver accumulates only a one-screen digest per item — the old ~15 (Sonnet 200k) / ~25 (Opus 1M) auto-compact ceiling is greatly relaxed and a long run is bounded by wall-clock, not context. Slice with `--items <range>` if you still want to bound one.
 > - Live per-lens audit output shows in each item-runner's own subagent view, not the main transcript; the main thread prints the item-runner's report-card digest and the full detail stays in `.task/log/<id>/` + `git log`.
-> - One session model for the whole run's orchestration (implement still uses each item's `plan.md → Implement-Model:`). For opus, run `/model opus` BEFORE starting.
+> - One session model for the whole run's orchestration — the item-runner, design-runner, audit orchestration, and ship (implement still uses each item's `plan.md → Implement-Model:`, which blueprint sets per item, leaning `haiku` for rote-class roadmap items). Set it with `/model` BEFORE starting: `/model opus` for design-heavy roadmaps, `/model sonnet` for rote-dominated ones to speed the orchestration stages.
 > - The session window must stay open for the whole run.
 
 `/task:auto-roadmap` is **not for resume**: it refuses when an active-task pointer exists for this worktree or a run lock for the roadmap is present. It skips design's refine phase — roadmap items already have a curated `Ready description`.
