@@ -18,13 +18,13 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" plan
 If either exits non-zero, **stop** and report the validator output; the plan is malformed and execution would silently misinterpret it.
 
 1. Read `.task/config/config.md` — tool configuration. Use the MCP tools described there for code navigation and editing. Build/test commands — from this file.
-2. Read `.task/workspace/<task-id>/task.md` — task description. Use it as the source of truth for *why* the work is being done; fall back to it when the plan is ambiguous. Also extract its `## Decisions` section if present — Socratic-mode idea phase records umbrella-level decisions there; follow them when the plan does not mention a constraint they impose.
+2. Read `.task/workspace/<task-id>/task.md` — task description. Use it as the source of truth for *why* the work is being done; fall back to it when the plan is ambiguous.
 3. Read `.task/workspace/<task-id>/plan.md` — implementation plan. This is your primary source of actions. Each step in `## Steps` has three layers:
    - **Goal** — detailed description of intent and the expected end state. This is what you must achieve; read it in full.
    - **Touches** — the concrete symbols (classes, functions, methods, interfaces, exports) the step affects. Treat this as the bounded scope of what the step is allowed to modify.
    - **Logic** (optional, not always present) — pseudocode sketch clarifying non-obvious branching or conditions. Treat it as guidance, **not a literal template**. If `Logic` conflicts with `Goal` — `Goal` wins (the pseudocode is a sketch and can drift from intent).
 
-   Also extract the `## Decisions` section of `plan.md` if present — the refine phase records there the choices that override the original plan; follow them when a step's `Goal`/`Logic` conflicts with the recorded decision. Plan-level decisions take precedence over task-level decisions when both speak to the same point.
+   Also extract the `## Decisions` section of `plan.md` if present — the refine phase records there the choices that override the original plan; follow them when a step's `Goal`/`Logic` conflicts with the recorded decision.
 4. Resolve `tests_required`: `plan.md` has a non-empty `## Tests` section. This is the **only** signal — do not re-read `Testing Policy`. If the blueprint phase did not emit `## Tests`, tests are out of scope for this task.
 
 ## Step 2: Materialize plan steps as tracked tasks
@@ -88,7 +88,7 @@ If build or tests fail mid-execution, do **one** quick attempt grounded in a cle
 2. If the cause is obvious from the output (typo, missing import, wrong symbol name in `Touches`) — apply **one** targeted fix and re-run.
 3. If the fix succeeds — continue execution.
 4. If the fix fails, or the cause is not obvious from the output — **stop** and tell the user, ending with the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)):
-   > Step {N} failed. One quick-fix attempt did not resolve it (or the root cause is not obvious from one pass). Inspect the diff, then rerun after manual investigation — or run `/task:design --refine` if the scope needs revisiting.
+   > Step {N} failed. One quick-fix attempt did not resolve it (or the root cause is not obvious from one pass). Inspect the diff, then rerun after manual investigation — or run `/task:design --phase refine` if the scope needs revisiting.
    >
    > → Next: `/task:build`
 

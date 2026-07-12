@@ -12,10 +12,10 @@
 # Hard-stop preconditions (exit 1 with ERROR ... message on stderr):
 #   - .task/config/config.md missing
 #   - an active-task pointer exists for this worktree (auto-roadmap refuses
-#     mid-flight umbrellas — resume is the user's manual job)
-#   - .task/workspace/*/auto.lock exists (stale per-umbrella sentinel
-#     from a previously failed /task:auto-roadmap run, or an active run owned
-#     by another worktree sharing this .task/)
+#     mid-flight tasks — resume is the user's manual job)
+#   - .task/roadmap/*.lock exists (a run lock from a still-active
+#     /task:auto-roadmap run — possibly in another worktree sharing this
+#     .task/ — or one left behind by a crashed run)
 #
 # When arg passed: validate.sh roadmap <arg> is invoked; failure → exit 1.
 # When arg omitted: skip roadmap-related sections (caller wizard will pick).
@@ -43,34 +43,32 @@ set_workspace_root
 # mid-flight umbrella (manual or from a prior failed run) that auto-roadmap must
 # not silently overwrite. Resume = user's manual job (/task:ship).
 # The pointer lives in git's per-worktree dir (task_current_path), so it is
-# naturally scoped to THIS worktree regardless of cwd; a legacy worktree-root
-# pointer left by a pre-upgrade run is read as a fallback.
+# naturally scoped to THIS worktree regardless of cwd.
 TASK_CURRENT="$(task_current_path)"
-[[ -f "$TASK_CURRENT" ]] || TASK_CURRENT="$(dirname "$AI_DIR")/.task-current"
 if [[ -f "$TASK_CURRENT" ]]; then
   CURRENT=$(head -n 1 "$TASK_CURRENT" | tr -d '[:space:]')
   echo "ERROR: an active-task pointer exists for this worktree (points to '$CURRENT') — auto-roadmap is not for resume." >&2
-  echo "  Either run /task:ship --next to transition the current subtask," >&2
-  echo "  or /task:ship to drop the umbrella entirely. Then rerun /task:auto-roadmap." >&2
+  echo "  Run /task:ship to close the current task, then rerun /task:auto-roadmap." >&2
   exit 1
 fi
 
-# --- Precondition: no stale auto.lock anywhere in the workspace ---
-# A per-umbrella auto.lock present means a prior /task:auto-roadmap run
-# failed and left the sentinel behind, OR another worktree (sharing this .task/)
-# currently owns an autopilot run on that umbrella. Either way, this worktree
-# must not start a new run until the user cleans up.
+# --- Precondition: no run lock under .task/roadmap/ ---
+# A `.task/roadmap/<slug>.lock` present means a /task:auto-roadmap run is
+# currently active (possibly in another worktree sharing this .task/), OR a run
+# crashed and left the lock behind. Either way, this worktree must not start a
+# new run until the user cleans up. (The driver removes its own lock on clean
+# finish and on every handled failure — a lingering lock is a crash.)
 STALE_LOCKS=()
-if [[ -d "$WS_DIR" ]]; then
+if [[ -d "$AI_DIR/roadmap" ]]; then
   while IFS= read -r f; do
     [[ -n "$f" ]] && STALE_LOCKS+=("$f")
-  done < <(find "$WS_DIR" -mindepth 2 -maxdepth 2 -type f -name auto.lock 2>/dev/null)
+  done < <(find "$AI_DIR/roadmap" -mindepth 1 -maxdepth 1 -type f -name '*.lock' 2>/dev/null)
 fi
 if (( ${#STALE_LOCKS[@]} > 0 )); then
-  echo "ERROR: stale auto.lock present in the workspace:" >&2
+  echo "ERROR: a /task:auto-roadmap run lock is present:" >&2
   for l in "${STALE_LOCKS[@]}"; do echo "  $l" >&2; done
-  echo "  A prior /task:auto-roadmap run was aborted (or another worktree owns it)." >&2
-  echo "  If you are sure no run is active, run /task:ship to clean up the corresponding umbrella, or remove the sentinel manually." >&2
+  echo "  A run is active (possibly in another worktree), or a prior run crashed." >&2
+  echo "  If you are sure no run is active, remove the lock file(s) above and rerun." >&2
   exit 1
 fi
 

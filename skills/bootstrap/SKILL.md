@@ -96,7 +96,7 @@ Which language policy for task artifacts?
 
 - Option **1** → record: every artifact and commit in English.
 - Option **2** → use the defaults baked into the template below.
-- Option **3** → ask for each of: `task.md` Description, `plan.md`, `summary.md`, `## Decisions`, commits, design idea phase dialog language, design refine phase dialog language. Record the per-artifact answers into the `Language` section.
+- Option **3** → ask for each of: `task.md` Description, `plan.md`, `summary.md`, `## Decisions`, commits, design refine phase dialog language. Record the per-artifact answers into the `Language` section.
 
 **Edit menu — Testing Policy** (shown only if the user edits the testing-policy mode; for section `Testing Policy`):
 
@@ -202,13 +202,12 @@ Rules about which language to use for each artifact produced by task-* skills. S
  - Option 2 (default): emit the block below verbatim.
  - Option 3: reflect the user's per-artifact answers.}
 
-- `task.md` Description and header fields (title, Goal, Modules, Packages, Key files) — language chosen by the user. When design's idea phase (Socratic mode) rewrites Description, preserve the original language.
+- `task.md` Description and header fields (title, Goal, Modules, Packages, Key files) — language chosen by the user.
 - `plan.md` — same language as `task.md` Description.
 - `summary.md` — same language as `task.md` Description.
-- `## Decisions` in `task.md` — same language as `task.md` Description.
 - `## Decisions` in `plan.md` — same language as `task.md` Description.
 - Commit messages — see "Commit Format" above.
-- User-facing communication during design's idea phase and design's refine phase (questions, clarifications, in-chat discussion rounds) — same language as `task.md` Description.
+- User-facing communication during design's refine phase (questions, clarifications, in-chat discussion rounds) — same language as `task.md` Description.
 - All other skill outputs (status reports, verification tables, step execution notes) — English.
 
 ## Testing Policy
@@ -291,7 +290,7 @@ Ensure:
 - Detected Language policy and Testing Policy mode, and whether the user accepted them as-is or edited any (bare repo: include the `.task` location if edited).
 - List of sections emitted in **reference mode** (pointing into `CLAUDE.md`) vs. **full mode**.
 - Local git exclusion status: `.task` added to `.git/info/exclude`, already present, or skipped (not a git repo).
-- Remind the pipeline: `/task:design` → [design's idea phase] → `/task:design` (blueprint phase) → [design's refine phase] → `/task:build implement phase` → [`/task:build audit phase`] → `/task:ship` → `/task:ship`. Steps in brackets are optional.
+- Remind the pipeline: `/task:design` (open + blueprint) → [design's refine phase] → `/task:build implement phase` → [`/task:build audit phase`] → `/task:ship`. Steps in brackets are optional.
 
 Then print this getting-started primer (translate to the `config.md` Language if it is not English; otherwise reproduce verbatim):
 
@@ -300,6 +299,6 @@ Then print this getting-started primer (translate to the `config.md` Language if
 > - **`/task:build`** — implement the plan, then audit it → `audit.md` (findings)
 > - **`/task:ship`** — commit and close → `summary.md` (result)
 >
-> Those four files are plain Markdown under `.task/` — read or edit them by hand any time. Re-running the same command resumes where you left off (phases are auto-detected from those files). One `task.md` is an *umbrella*; each design→build→ship cycle under it is a *subtask*, and `/task:ship --next` starts the next one.
+> Those four files are plain Markdown under `.task/` — read or edit them by hand any time. Re-running the same command resumes where you left off (phases are auto-detected from those files). Each design→build→ship cycle is one task; `/task:ship` closes it and archives everything under `.task/log/`.
 >
 > → Next: `/task:design "<what you want to do>"`

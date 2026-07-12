@@ -8,15 +8,14 @@ user-invocable: true
 Open a task, write its Description, build the implementation plan, and optionally refine the plan. This orchestrator auto-detects which phase to run based on the current state of `.task/workspace/<task-id>/`; pass `--phase <name>` to force a specific phase.
 
 **Input:** `$ARGUMENTS` — forwarded to the dispatched phase verbatim. Common forms:
-- `<free-form context>` — manual-mode open (ticket id / title / sentence about the task). Open's Step 2a writes a quick-draft `## Description` in the same call for any non-empty **paraphrasable** context — a filled `task.md` one-shot, and the next `/task:design` call auto-enters blueprint. (A bare ticket id with no prose has nothing to paraphrase → header-only, then the idea phase.)
-- (empty) — if no task is in flight, the orchestrator presents an **entry fork** (brainstorm / draft directly / open from a roadmap) via `AskUserQuestion` and proceeds accordingly (Step 1; interactive-only — non-interactive defaults to idea/architect). If a task is already in flight, continue with the next auto-detected phase.
-- `--idea [<free-form context>]` — explicit brainstorm over `## Description`. With no task yet: the header is written (Description left empty) and idea phase runs **architect mode** (the context, if any, seeds round 0). With an existing task whose Description is filled: idea phase runs **Socratic mode** (refinement). Mutually exclusive with `--from`, `--phase`, `--refine`.
+- `<free-form context>` — manual-mode open (ticket id / title / sentence about the task). Open's Step 2a writes a quick-draft `## Description` in the same call for any non-empty **paraphrasable** context — a filled `task.md` one-shot, and the next `/task:design` call auto-enters blueprint. (A bare ticket id with no prose to paraphrase → open elicits a one-sentence description, then quick-drafts.)
+- (empty) — if no task is in flight, the orchestrator presents an **entry fork** (draft directly / open from a roadmap) via `AskUserQuestion` and proceeds accordingly (Step 1; interactive-only). If a task is already in flight, continue with the next auto-detected phase.
 - `--from <roadmap>[#<N>]` — open from a roadmap file (auto-picks first un-checked item if `#<N>` omitted).
-- `--phase <open|idea|blueprint|refine>` — force a specific phase (override auto-detect). `refine` is a repair-level phase (critically review an existing `plan.md`), not part of the routine flow — see [docs/troubleshooting.md](../../docs/troubleshooting.md).
+- `--phase <open|blueprint|refine>` — force a specific phase (override auto-detect). `refine` is a repair-level phase (critically review an existing `plan.md`), not part of the routine flow — see [docs/troubleshooting.md](../../docs/troubleshooting.md).
 
 **Phase companion files** live at `skills/design/phases/<phase>.md`. The orchestrator reads them and follows their instructions verbatim — they contain the full prompt for each phase. Treat each file as the authoritative contract for its phase.
 
-**Preconditions, tool tier, language:** see [docs/spec/invariants.md](../../docs/spec/invariants.md#tier-a--no-code-navigation) for the open-phase Tier; idea is [Tier C](../../docs/spec/invariants.md#tier-c--shallow-scan); blueprint and refine are [Tier B](../../docs/spec/invariants.md#tier-b--mcp-first-tooling). Per-phase tier applies inside each companion file; the orchestrator itself only does config gate + phase detection + dispatch, which is Tier A.
+**Preconditions, tool tier, language:** see [docs/spec/invariants.md](../../docs/spec/invariants.md#tier-a--no-code-navigation) for the open-phase Tier; blueprint and refine are [Tier B](../../docs/spec/invariants.md#tier-b--mcp-first-tooling). Per-phase tier applies inside each companion file; the orchestrator itself only does config gate + phase detection + dispatch, which is Tier A.
 
 ## Step 0: Config gate
 
@@ -31,23 +30,19 @@ Auto-setup is a **prompt-layer response** to the bash gate's failure followed by
 ## Step 1: Phase detection
 
 Parse `$ARGUMENTS`:
-- If contains `--idea`, validate mutual exclusion first: it must not co-occur with `--from`, `--phase`, or `--refine`. On collision — stop with: "`--idea` is mutually exclusive with `--from`, `--phase`, `--refine`. Pick one." Otherwise → `PHASE=idea`; keep `--idea` in the forwarded `$ARGUMENTS`. (open.md consumes `--idea` in Step 1 / Step 2a as the quick-draft opt-out signal **only on the fresh-start branch where open.md runs**; on the task-in-flight branch open.md is not invoked and idea.md derives its mode from Description content, so the flag is inert there.) The fresh-start open→idea chain is handled in Step 2's idea-phase dispatch.
 - If contains `--phase <name>` → use `<name>` as `PHASE`, skip auto-detect.
-- If contains `--refine` (alone or as the only flag besides positional context) → `PHASE=refine`.
-- If contains `--from` (anywhere) → `PHASE=open`. The from-roadmap path always enters open.md — either initial-open (no active-task pointer) or continuation (existing pointer with empty Description and matching `Roadmap:` header per open.md Mode 2 → Step 3). Auto-detect would otherwise route an empty-Description continuation to idea, which then hard-stops with a roadmap-mode guard telling the user to do exactly what they did.
+- If contains `--from` (anywhere) → `PHASE=open`. The from-roadmap path always enters open.md as an initial open.
 - Otherwise → run `PHASE=$(bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/phase-detect.sh" design)`. A non-empty positional context with no flags stays `PHASE=open` (quick-draft — the intent is unambiguous, no fork). **Ambiguous fresh start → entry fork:** if auto-detect returns `open` (no task in flight) **and** `$ARGUMENTS` carries no positional context, the intent is genuinely undetermined — present the entry fork below instead of silently defaulting.
 
 **Entry fork (ambiguous fresh start).** This is an instance of the structured-choice convention (c) in [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar) — **interactive-only**, flags are the non-interactive equivalent and override it.
 
-- **Non-interactive carve-out.** In a non-interactive run (the `auto-roadmap-design-runner` executing this inline) the fork is never reached: the driver always passes `--from <roadmap>[#<N>]`, so a flag is present and one of the branches above already resolved `PHASE`. A bare no-context call in that context defaults to `PHASE=idea` (the prior empty-call behavior) with no question. Do **not** call `AskUserQuestion` outside an interactive session.
+- **Non-interactive carve-out.** In a non-interactive run (the `auto-roadmap-design-runner` executing this inline) the fork is never reached: the driver always passes `--from <roadmap>[#<N>]`, so a flag is present and one of the branches above already resolved `PHASE`. A bare no-context call in that context is an error (there is nothing to open) — stop with: "no context provided; pass `--from <roadmap>` or a description." Do **not** call `AskUserQuestion` outside an interactive session.
 - **Interactive.** Ask one `AskUserQuestion` (single-select) — "How do you want to start this task?" — with these options; then resolve as if the matching flag had been passed:
-  - **Brainstorm the idea** → `PHASE=idea`; follow Step 2's idea-phase fresh-start dispatch (equivalent to `--idea` with no context). This is the default/first option.
-  - **Draft it directly** → ask the user to describe the task in a sentence, **wait**, then dispatch `open.md` with that prose as positional context (no `--idea`) so its Step 2a writes a quick-draft `## Description` in one shot; the next `/task:design` call auto-detects blueprint.
+  - **Draft it directly** → ask the user to describe the task in a sentence, **wait**, then dispatch `open.md` with that prose as positional context so its Step 2a writes a quick-draft `## Description` in one shot; the next `/task:design` call auto-detects blueprint. This is the default/first option.
   - **Open from a roadmap** → resolve the from-roadmap path: build a second `AskUserQuestion` from the `.task/roadmap/*.md` files (chips per roadmap slug), then set `$ARGUMENTS` to `--from <chosen-slug>` and re-enter Step 1 (`--from` branch above → `PHASE=open`). Item selection within the roadmap is handled downstream by `open.md` (see its from-roadmap item picker).
 
 Possible auto-detect outputs:
 - `open` — no active-task pointer or no `task.md` in resolved workspace.
-- `idea` — `task.md` exists, `## Description` body empty (whitespace + HTML comments only).
 - `blueprint` — Description filled, no `plan.md`.
 - `refine-prompt` — `plan.md` exists. Orchestrator should NOT auto-enter refine. Instead, tell the user:
   > Plan already exists at `.task/workspace/<task-id>/plan.md`. The design phase appears complete — next is `/task:build` to start implementation. To start a different umbrella, close the current one first: `/task:ship`. (If the plan itself needs a critical rework, `--phase refine` is a repair-level option — see docs/troubleshooting.md.)
@@ -65,13 +60,9 @@ Read `skills/design/phases/${PHASE}.md` (resolve via `${CLAUDE_PLUGIN_ROOT}/skil
 
 Pass `$ARGUMENTS` through to the phase (the companion files expect access to it — e.g. blueprint may use any extra context provided by the user).
 
-**Idea-phase dispatch (`PHASE=idea`).** The idea phase brainstorms `## Description`. Branch on whether a task is in flight (the active-task pointer exists and points at a `task.md`):
-- **No task in flight (fresh start).** This needs a header before the brainstorm can run. (a) If `$ARGUMENTS` carries no positional context, ask the user to describe the idea in a sentence and **wait** for the answer; use that answer as the context. (b) Dispatch `open.md` with `--idea` plus the context (header-only — open's Step 2a sees `--idea` and leaves Description empty). (c) Then dispatch `idea.md`, **forwarding the context as its `$ARGUMENTS`** so architect mode uses it as the round-0 seed and does **not** re-prompt for the idea (idea.md's Step A.0 elicitation is a fallback for when no seed was forwarded). idea.md finds an empty Description and runs **architect mode**. Header creation stays owned by open.md — do not duplicate task-id derivation here.
-- **Task already in flight.** Dispatch `idea.md` directly; it auto-detects architect (empty Description) vs Socratic (filled Description) from the current content. Do **not** re-run open.
+Read each phase's companion file and follow it directly.
 
-For every other phase, read its companion file and follow it directly.
-
-If `${PHASE}` is not one of `open`, `idea`, `blueprint`, `refine` — stop with an error: "Unknown phase '${PHASE}'. Valid: open, idea, blueprint, refine."
+If `${PHASE}` is not one of `open`, `blueprint`, `refine` — stop with an error: "Unknown phase '${PHASE}'. Valid: open, blueprint, refine."
 
 ## Step 3: Advance loop (chain phases without re-invocation)
 
@@ -81,8 +72,7 @@ After the dispatched phase completes successfully, don't stop at a passive foote
 
 **Interactive advance.** Re-run `phase-detect.sh design` to get the next state, then:
 
-- Next = `idea` (Description still empty — e.g. a header-only bare-ticket open; the `--idea`/empty-call paths already ran idea inline in Step 2, so this fires only for the bare-ticket manual open) → ask "Brainstorm the Description now?" — **Brainstorm now** / **Stop**. *Brainstorm now* → dispatch `idea.md` (architect) inline, then continue the loop. *Stop* → footer `→ Next: \`/task:design\`` and stop.
-- Next = `blueprint` (Description ready — after quick-draft, from-roadmap, or idea) → ask "Description ready — build the plan now?" — **Plan it now** / **Review the Description first** / **Stop**. *Plan it now* → dispatch `blueprint.md` inline, then continue the loop. *Review first* / *Stop* → footer `→ Next: \`/task:design\`` and stop (the user edits `task.md`, then re-runs). Default: **Review first** after a quick-draft (it may have mis-paraphrased); **Plan it now** after an idea phase (the Description was just discussed).
+- Next = `blueprint` (Description ready — after quick-draft or from-roadmap) → ask "Description ready — build the plan now?" — **Plan it now** / **Review the Description first** / **Stop**. *Plan it now* → dispatch `blueprint.md` inline, then continue the loop. *Review first* / *Stop* → footer `→ Next: \`/task:design\`` and stop (the user edits `task.md`, then re-runs). Default after a quick-draft: **Review first** (it may have mis-paraphrased).
 - Next = `refine-prompt` (plan.md now exists — **design is complete**; this is the design→build boundary) → ask "Plan ready — start implementing now?" — **Implement it now** / **Stop**. *Implement it now* → invoke `/task:build` (the whole skill: it auto-detects implement, then runs its own implement→audit advance question, then proposes ship — the wizard continues across the skill boundary, mirroring how build flows into ship). *Stop* → footer `→ Next: \`/task:build\`` and stop.
 
 The loop ends when the user declines a transition, a phase stops on its own precondition, or `/task:build` takes over. Never auto-enter `refine` (repair-level, explicit only).

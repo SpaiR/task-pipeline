@@ -107,7 +107,7 @@ In a new project you don't have to run setup by hand first: the first `/task:des
 /task:build   — implementation + audit with an auto-fix loop
   ↓             (asks before advancing implement → audit)
 /task:ship    — commit + close
-                (infers full-close vs transition-to-next-subtask and proposes it)
+                (one commit + full close, confirmed once)
 ```
 
 **Re-entry semantics:** `/task:design` and `/task:build` look at the state of `.task/workspace/<task-id>/` and automatically resume from the right phase — you just run the bare command and answer the questions. If a phase was auto-detected wrong, or you need to force a specific one, that's what the advanced `--phase` escape hatch is for — see [docs/troubleshooting.md](docs/troubleshooting.md).
@@ -116,9 +116,9 @@ In a new project you don't have to run setup by hand first: the first `/task:des
 
 `validate` is an internal utility: the pipeline invokes it as a precondition gate, not via a slash command. For a manual check: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`.
 
-### Umbrella task vs subtask
+### One task per cycle; roadmaps group items in the log
 
-`task.md` is an **umbrella task**: a task with one `task-id` and a shared title, under which there may be several subtasks. Each `/task:design → /task:build → /task:ship` cycle is one subtask. Interactive `/task:ship` **proposes** close-or-transition based on whether pending work remains and acts on one confirmation — you can flip the proposal there, so you never have to name the mode yourself. A full close ends the umbrella task entirely; a transition clears the Description and keeps the title, so the next cycle starts from the same umbrella task. (Under `/task:auto-roadmap` the mode is chosen by the autopilot, not proposed interactively.)
+Each `/task:design → /task:build → /task:ship` cycle is one task, closed and archived by `/task:ship` under `.task/log/<task-id>/<N>-<slug>/`. Working through a **roadmap** produces several tasks that share one `task-id` (the roadmap slug), so their archives collect as numbered subfolders under a single `.task/log/<roadmap-slug>/` — `/task:design --from <roadmap>` opens the next unchecked item, and each item's `/task:ship` archives its own `task.md` and marks the item done. There is no separate "transition" mode: every ship is a full close, and the next item simply re-opens.
 
 ## Commands
 
@@ -127,9 +127,9 @@ In a new project you don't have to run setup by hand first: the first `/task:des
 | `/task:bootstrap` | Initializes the pipeline in a project: creates `.task/config/config.md`, sets up the local git exclusion for `.task/`, and prints a short getting-started primer. Idempotent. |
 | `/task:roadmap <idea>` *(opt.)* | Brainstorms an initiative roadmap → `.task/roadmap/<slug>.md` with ready-made task descriptions to pick up in design; each task's Size and Class are inferred during authoring (Size from the outcome count, Class from task shape, user-overridable) rather than asked for. When the call follows a prior chat discussion of the initiative, authoring first surfaces a **Decision Inventory** of everything settled (small details included) and confirms it before writing — so nothing discussed drops silently. An optional sidecar `.task/roadmap/<slug>.spec.md` pins down key technical decisions (Blueprint reads them during planning). Authoring closes with a light, report-only three-lens self-check over the saved file, offering a deeper refine pass inline when the findings warrant it. |
 | `/task:auto-roadmap [<roadmap>] [--next \| --from #<N> \| --items <spec>]` *(opt.)* | Autopilot over a roadmap in the current interactive Claude Code session: for each item — design → build → ship. Launched with no arguments it asks (via chips) which roadmap and, when several items are open, how much to run. This is the one surface that keeps its flags as a documented interface: `--next` — the first unclosed item; `--from #N` — start from item N; `--items 3-5` or `1,3-5,8` — a selection. |
-| `/task:design [<context>]` | Open a task, write the Description, and plan it out — then walk you through the whole cycle with a question at each step (draft/brainstorm → plan → build). A bare `/task:design` with no task in flight asks how to start (brainstorm / draft directly / open from a roadmap) via chips; giving a sentence of context drafts the Description directly. Phase is auto-detected from the workspace state, so re-running the bare command always resumes correctly. |
+| `/task:design [<context>]` | Open a task, write the Description, and plan it out — then walk you through the whole cycle with a question at each step (draft → plan → build). A bare `/task:design` with no task in flight asks how to start (draft directly / open from a roadmap) via chips; giving a sentence of context drafts the Description directly. Phase is auto-detected from the workspace state, so re-running the bare command always resumes correctly. |
 | `/task:build` | Implementation (`implement`) + audit with bounded auto-fix (`audit`). Auto-detects the phase; after a clean `implement` it asks whether to run the audit now (chips). Fixes outside `Touches` from `plan.md` are marked `Skipped: out-of-scope`. A clean build proposes the ship and acts on one confirmation (accept ships, declining holds). |
-| `/task:ship` | Commit + archiving under `.task/log/`. Interactive ship infers close-vs-transition from remaining work and proposes it in the single commit confirmation (you can flip it there — no need to name the mode). Full close removes `workspace/<task-id>/` and `.task-current`; transition keeps `task.md` (Description cleared) for the next subtask. Auto-marks the roadmap item when `Roadmap:` + `Source item:` are present. The commit slug is always auto-derived. |
+| `/task:ship` | Commit + archiving under `.task/log/`. One commit + full close, confirmed once. Archives `plan/audit/summary.md` + `task.md`, removes `workspace/<task-id>/` and `.task-current`. Auto-marks the roadmap item when `Roadmap:` + `Source item:` are present. The commit slug is always auto-derived. |
 | `validate` *(utility)* | Formal validator of artifact format. Invoked automatically. For a manual check: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" [task\|plan\|roadmap <path>\|all]`. |
 
 ## Example — a single task
@@ -149,7 +149,7 @@ In a new project you don't have to run setup by hand first: the first `/task:des
 # command again — the phase is auto-detected from the workspace state.
 ```
 
-Starting from scratch instead of a one-line description? Run a bare `/task:design` with no task in flight: it asks **how to start** (brainstorm the idea / draft directly / open from a roadmap) and, if you pick brainstorm, runs a short multi-round architect dialogue before drafting the Description — then continues into the same plan → build → ship walk.
+Starting from scratch instead of a one-line description? Run a bare `/task:design` with no task in flight: it asks **how to start** (draft it directly / open from a roadmap) and continues into the same plan → build → ship walk. To develop a rough idea first, talk it through in chat, then hand the result to `/task:design "<the description>"`.
 
 > [!NOTE]
 > If something goes wrong mid-way through the `/task:build` implement phase (a test/build fails), the skill makes **one** targeted quick-fix attempt, then stops. No automatic shotgun "try it and see" fixes.

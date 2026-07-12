@@ -10,10 +10,13 @@
 #   derive-task-id.sh <roadmap-path> <item-N> [extra-context-string]
 #
 # Priority (highest to lowest):
-#   1. Ticket pattern ([A-Z]+-[0-9]+) inside the extra-context-string. Case preserved.
-#   2. Ticket pattern inside the item title (heading "### (- \[[ x~>-]\] )?<N>\. (.+)$"). Case preserved.
-#   3. Roadmap basename slug (.md stripped, lowercased). If longer than 30 chars,
-#      truncated at the last hyphen before position 30.
+#   1. Ticket pattern ([A-Z]+-[0-9]+) inside the extra-context-string. Case
+#      preserved. This is the ONLY override — it opts a single item out of the
+#      shared roadmap-slug umbrella.
+#   2. Roadmap basename slug (.md stripped, lowercased). If longer than 30 chars,
+#      truncated at the last hyphen before position 30. Default for --from mode:
+#      a ticket in the item TITLE does not override it, so all items of one
+#      roadmap share a task-id and group under one .task/log/<slug>/ umbrella.
 #
 # Output: task-id to stdout, exit 0 on success. The header in task.md preserves
 # the original case (e.g. `# [DT-1234] ...`); callers must lowercase the output
@@ -47,19 +50,11 @@ if [[ -n "$EXTRA" ]]; then
   fi
 fi
 
-# Priority 2: ticket inside the item title for the requested N. Case preserved.
-# Matches "### <N>. ..." with or without a leading checkbox like "- [ ]"/"- [x]"/"- [~]"/"- [>]"/"- [-]".
-TITLE=$(grep -E "^### (- \[[ x~>-]\] )?${ITEM_N}\. .+$" "$ROADMAP" | head -n 1 || true)
-if [[ -n "$TITLE" ]]; then
-  TITLE_TEXT=$(printf '%s' "$TITLE" | sed -E "s/^### (- \[[ x~>-]\] )?${ITEM_N}\. //")
-  T=$(printf '%s' "$TITLE_TEXT" | grep -oE '[A-Z]+-[0-9]+' | head -n 1 || true)
-  if [[ -n "$T" ]]; then
-    printf '%s\n' "$T"
-    exit 0
-  fi
-fi
-
-# Priority 3: roadmap basename slug, lowercased, ≤30 chars (truncated at last hyphen).
+# Priority 2: roadmap basename slug, lowercased, ≤30 chars (truncated at last hyphen).
+# A ticket in the item title deliberately does NOT override the slug — all items
+# of one roadmap must share a task-id so they group under a single
+# .task/log/<roadmap-slug>/ umbrella. Only an explicit ticket in the extra
+# context (priority 1) opts a single item out.
 SLUG=$(basename "$ROADMAP" .md | tr '[:upper:]' '[:lower:]')
 if (( ${#SLUG} > 30 )); then
   TRUNC="${SLUG:0:30}"

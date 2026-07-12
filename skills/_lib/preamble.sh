@@ -63,23 +63,19 @@ require_config_md() {
 
 # --- source_resolve_ws ---
 # Source the workspace resolver and run it. Caller must have set SCRIPT_DIR.
-# Migrates a pre-upgrade pointer first (`migrate_legacy_pointer` moves a
-# worktree-root `.task-current` into git's per-worktree dir), then self-heals a
-# *provably-stale* pointer (empty, or pointing at a missing `workspace/<id>/`
-# subfolder): `heal_stale_pointer` removes it with a one-line stderr notice, so
-# the following `resolve_ws` reports the clean "no active task" terminal state
-# instead of the old "Restore … manually" error. A valid pointer (workspace
-# present) is a no-op for the heal, so `close.sh` (which resolves via this
-# wrapper against a live umbrella) is unaffected. Both are best-effort — return
-# codes intentionally ignored. Only this wrapper and design's open phase
-# migrate/heal; the direct sourcers (`validate.sh`, `phase-detect.sh`) call
-# `resolve_ws` read-only and never mutate (they read the legacy location as a
-# read-only fallback instead). On resolver failure the resolver prints to
-# stderr and we exit 1.
+# Self-heals a *provably-stale* pointer first (empty, or pointing at a missing
+# `workspace/<id>/` subfolder): `heal_stale_pointer` removes it with a one-line
+# stderr notice, so the following `resolve_ws` reports the clean "no active task"
+# terminal state instead of the old "Restore … manually" error. A valid pointer
+# (workspace present) is a no-op for the heal, so `close.sh` (which resolves via
+# this wrapper against a live task) is unaffected. Best-effort — the heal return
+# code is intentionally ignored. Only this wrapper and design's open phase heal;
+# the direct sourcers (`validate.sh`, `phase-detect.sh`) call `resolve_ws`
+# read-only and never mutate. On resolver failure the resolver prints to stderr
+# and we exit 1.
 source_resolve_ws() {
   # shellcheck source=resolve-ws.sh
   source "$SCRIPT_DIR/../_lib/resolve-ws.sh"
-  migrate_legacy_pointer || true
   heal_stale_pointer || true
   resolve_ws "$@" || exit 1
 }

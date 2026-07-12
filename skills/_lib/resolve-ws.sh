@@ -102,36 +102,14 @@ find_ai_dir
 # project tree entirely (no `.git/info/exclude` entry needed — it is inside the
 # git dir). `--path-format=absolute` makes it independent of cwd.
 #
-# Outside a git repo, fall back to the legacy worktree-root location
-# `<root>/.task-current` beside `.task`.
+# Outside a git repo (no per-worktree git dir), fall back to the worktree-root
+# location `<root>/.task-current` beside `.task`.
 task_current_path() {
   if command -v git >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1; then
     git rev-parse --path-format=absolute --git-path task-current
   else
     printf '%s\n' "$(dirname "$AI_DIR")/.task-current"
   fi
-}
-
-# migrate_legacy_pointer — one-time move of a pre-upgrade pointer.
-#
-# Runs bootstrapped repos forward: a pointer written by an older version lives
-# at the worktree-root `<root>/.task-current`; this moves it into the git-dir
-# location `task_current_path` reports. Idempotent — no-ops once migrated, when
-# the two locations coincide (non-git), or when there is nothing to move.
-#
-# MUTATING — only the explicit healers call it (preamble's `source_resolve_ws`);
-# the read-only direct sourcers (`validate.sh`, `phase-detect.sh`) never do.
-# `resolve_ws` reads the legacy location as a read-only fallback instead.
-migrate_legacy_pointer() {
-  local new legacy
-  new="$(task_current_path)"
-  legacy="$(dirname "$AI_DIR")/.task-current"
-  [[ "$new" != "$legacy" ]] || return 1   # non-git: locations coincide
-  [[ -e "$new" ]] && return 1              # already migrated
-  [[ -f "$legacy" ]] || return 1           # nothing to migrate
-  mv "$legacy" "$new"
-  echo "note: migrated active-task pointer into the git dir (was '$legacy')." >&2
-  return 0
 }
 
 # heal_stale_pointer — clear a *provably-stale* active-task pointer, with a notice.
@@ -156,8 +134,7 @@ migrate_legacy_pointer() {
 # healers (preamble's `source_resolve_ws` wrapper, design's open phase) mutate,
 # so the direct sourcers `phase-detect.sh` / `validate.sh` never delete the
 # pointer during read-only detection. Not invoked at source time. Resolves the
-# pointer path through `task_current_path` (git-dir location), so it runs AFTER
-# `migrate_legacy_pointer` has moved any pre-upgrade root pointer into place.
+# pointer path through `task_current_path` (git-dir location).
 heal_stale_pointer() {
   local pointer id
   pointer="$(task_current_path)"
@@ -179,16 +156,9 @@ heal_stale_pointer() {
 resolve_ws() {
   local source_label="" id=""
   # The active-task pointer lives in git's per-worktree dir (see
-  # task_current_path). A pointer written by a pre-upgrade run still sits at the
-  # legacy worktree-root `<root>/.task-current`; read that as a read-only
-  # fallback so a read-only caller (validate.sh / phase-detect.sh) resolves an
-  # in-flight umbrella even before a mutating skill migrates it.
-  local task_current legacy
+  # task_current_path).
+  local task_current
   task_current="$(task_current_path)"
-  legacy="$(dirname "$AI_DIR")/.task-current"
-  if [[ ! -f "$task_current" && -f "$legacy" ]]; then
-    task_current="$legacy"
-  fi
   if [[ -n "${TASK_ID_OVERRIDE:-}" ]]; then
     id="$TASK_ID_OVERRIDE"
     source_label='$TASK_ID_OVERRIDE'

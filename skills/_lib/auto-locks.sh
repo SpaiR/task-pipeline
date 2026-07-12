@@ -1,19 +1,18 @@
 #!/usr/bin/env bash
-# auto-locks.sh — Shared read/write for the orchestrator sentinel
-# (`.task/workspace/<task-id>/auto.lock`).
+# auto-locks.sh — Shared read/write for the orchestrator run lock
+# (`.task/roadmap/<slug>.lock`).
 #
 # Flat `key=value` lines, English keys, parser-stable, written atomically once
-# per run in Substep 3.4 after `auto-roadmap-design-runner`'s `/task:design --from`
-# lands `.task-current` and the workspace subfolder. This helper centralises the
-# two operations the `/task:auto-roadmap` orchestrator used to repeat verbatim:
+# per run by the `/task:auto-roadmap` driver at its Step 2 (launch). This helper
+# centralises the two operations the orchestrator used to repeat verbatim:
 #
 #   read_lock_field <file> <key>          — print value or empty; rc always 0
 #   write_lock <path> kv1 kv2 ...         — atomic create via `set -o noclobber`
 #
-# No in-place update primitive: `auto.lock` is intentionally a launch-time
+# No in-place update primitive: the lock is intentionally a launch-time
 # snapshot — `roadmap_mtime` is refreshed in main-thread memory after every
 # successful `/task:ship`, never on disk. If the design ever needs a mutable
-# field, add a dedicated primitive then; do not hand-roll sed/awk over `auto.lock`.
+# field, add a dedicated primitive then; do not hand-roll sed/awk over the lock.
 #
 # Dual usage. The file is both source-able (defines functions) and directly
 # executable (dispatches on `$1`):
@@ -23,7 +22,7 @@
 #   value=$(read_lock_field "$LOCK_FILE" roadmap)
 #
 #   # As executable (used from SKILL.md bash snippets — keeps prompts short):
-#   bash "$CLAUDE_PLUGIN_ROOT/skills/_lib/auto-locks.sh" write .task/workspace/<id>/auto.lock \
+#   bash "$CLAUDE_PLUGIN_ROOT/skills/_lib/auto-locks.sh" write .task/roadmap/<slug>.lock \
 #     roadmap=.task/roadmap/foo.md \
 #     roadmap_mtime=1746810000 \
 #     start_item=3 \
