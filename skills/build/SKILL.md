@@ -17,13 +17,11 @@ Implement the plan, then audit code quality through 3 parallel read-only lenses 
 
 ## Step 0: Artifact gates
 
-Run sequentially:
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" task
-bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" plan
+bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
 ```
 
-If either exits non-zero, stop and report the validator output — the artifacts are malformed and execution would silently misinterpret them. If `plan.md` is missing entirely, redirect to `/task:design` and stop.
+If it exits non-zero, stop and report the validator output — the artifacts are malformed and execution would silently misinterpret them. If `plan.md` is missing entirely, redirect to `/task:design` and stop.
 
 ## Step 1: Argument parsing
 
@@ -38,7 +36,7 @@ Otherwise → run `PHASE=$(bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/phase-detect.
 Possible auto-detect outputs:
 - `implement` — no `summary.md` OR no diff vs HEAD (work hasn't started yet).
 - `audit` — `summary.md` exists, `audit.md` missing OR any `## Iteration N` block contains `pending fix` (parser greps the whole file per `_lib/phase-detect.sh:115`; the audit phase replaces every `pending fix` with `Fixed` per iteration, so practically only the last block ever holds one).
-- `done` — all artifacts complete. Print "Build complete." (The `done` phase-detect token itself is parser-facing — do not alter it; only the human-facing message changes.) Then branch on the run: an **interactive run** is clean here, so proceed into the **Clean-build ship proposal** (shared note before Step 5) instead of the passive footer; a **non-interactive run** (the item-runner executing inline) stops here and lets the item-runner drive ship. On a declined proposal (interactive), fall back to the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)) — flag-free: `→ Next: \`/task:ship\``. (Ship commits and fully closes the task.)
+- `done` — all artifacts complete. Print "Build complete." (The `done` phase-detect token itself is parser-facing — do not alter it; only the human-facing message changes.) Then branch on the run: an **interactive run** is clean here, so proceed into the **Clean-build ship proposal** (shared note before Step 5) instead of the passive footer — that section owns the accept/decline/edit outcomes, including the declined-proposal fallback to `→ Next: \`/task:ship\``. A **non-interactive run** (the item-runner executing inline) stops here and lets the item-runner drive ship.
 
 ## Step 2: Phase dispatch
 
@@ -65,8 +63,9 @@ passes_done = 0
 while passes_done < 2:
     # Follow skills/build/phases/audit.md Steps 1-3 for this iteration:
     #   - Step 1: load context via audit-context.sh (yields config.md, full
-    #     task.md, full plan.md, CLAUDE.md, iteration number, diff size, diff
-    #     bundle, and neighborhood map; the orchestrator extracts `## Decisions`
+    #     task.md, full plan.md, a CLAUDE.md presence marker (content read
+    #     lazily off disk — see audit.md Step 3b), iteration number, diff size,
+    #     diff bundle, and neighborhood map; the orchestrator extracts `## Decisions`
     #     from plan.md and per-step `Touches:` from plan.md when
     #     composing the per-lens prompt template in audit.md Step 2b). The
     #     `iteration` section is the canonical N = max(## Iteration N in
@@ -141,9 +140,9 @@ On a **non-interactive run** — the `auto-roadmap-item-runner` executing these 
 
 ## Step 5: Advance question / chain hint
 
-After the dispatched phase completes successfully (no verify failure, no iteration limit surfaced), print the chain hint as the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)) and stop:
+After the dispatched phase completes successfully (no verify failure, no iteration limit surfaced), print the chain hint as the canonical next-step footer (convention (a)) and stop:
 
-- After a clean `implement` (completed, no quick-fix-exhausted hand-off) → **advance question.** On an **interactive** run, instead of printing the passive footer, ask one `AskUserQuestion` (single-select) — "Implement done. Run the audit now?" — with **Run audit now** / **Stop here** (structured-choice convention (c) in [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)). **Run audit now** → loop back to Step 1a (re-run phase-detect → `audit`, run the Step 4 bounded loop), then apply the normal clean-build outcome. **Stop here** → print `→ Next: \`/task:build\`` (auto-detects audit). This is a single opt-in advance — the audit runs its own Step 4 bounded loop and stops there. **Non-interactive carve-out:** the `auto-roadmap-item-runner` running build inline never asks — it drives phases with literal flags; print no question and let it proceed. On a non-interactive run print `→ Next: \`/task:build\``.
+- After a clean `implement` (completed, no quick-fix-exhausted hand-off) → **advance question.** On an **interactive** run, instead of printing the passive footer, ask one `AskUserQuestion` (single-select) — "Implement done. Run the audit now?" — with **Run audit now** / **Stop here** (structured-choice convention (c)). **Run audit now** → loop back to Step 1a (re-run phase-detect → `audit`, run the Step 4 bounded loop), then apply the normal clean-build outcome. **Stop here** → print `→ Next: \`/task:build\`` (auto-detects audit). This is a single opt-in advance — the audit runs its own Step 4 bounded loop and stops there. **Non-interactive carve-out:** the `auto-roadmap-item-runner` running build inline never asks — it drives phases with literal flags; print no question and let it proceed. On a non-interactive run print `→ Next: \`/task:build\``.
 - After `audit` (loop completed cleanly) → print the compact one-line summary first — `Audit: <total> found · <fixed> fixed · <filtered> filtered — full detail in \`audit.md\``, with the three numbers read from the just-written iteration's `### Result` line. Do not re-print the Findings/Details tables; they stay in `audit.md`. The build is now clean: on an **interactive run**, follow the compact summary with the **Clean-build ship proposal** (flow into ship's single confirmation) instead of the passive footer; on a **non-interactive run**, or when the proposal is declined, print `→ Next: \`/task:ship\`` (commit + close).
 - After `audit` (loop hit iteration limit) → user action required; print the Step 4 iteration-limit message (which ends with its own `→ Next:` line), no chain hint and **no ship proposal** — the build is not clean.
 
@@ -162,5 +161,5 @@ After the dispatched phase completes successfully (no verify failure, no iterati
 After the dispatched phase completes:
 - Print whatever the companion phase's "Output" section specifies (iteration counts, findings, build/test results).
 - For audit (clean/converged case): the **default** human-facing output is a single compact line — `Audit: <total> found · <fixed> fixed · <filtered> filtered — full detail in \`audit.md\`` — where the three numbers come from the just-written iteration's `### Result` line. Do NOT re-print the Findings/Details tables by default; they remain retrievable from `audit.md` on request. The Step 4 iteration-limit and verify-failure paths keep their existing full blocking-finding surfacing — the compact summary never replaces those.
-- On a **clean interactive build** (both clean endpoints — Step 1a `done` and Step 5 audit-clean): after the applicable completion / compact-summary line, surface the **Clean-build ship proposal** (see the shared note before Step 5) — flow into ship's single accept/decline/edit confirmation (accept → commit + close; decline → no commit, print the manual `→ Next: \`/task:ship\`` footer; edit → ship's edit branch). Non-interactive runs and every blocking path never propose.
+- On a **clean interactive build** (both clean endpoints — Step 1a `done` and Step 5 audit-clean): after the applicable completion / compact-summary line, surface the **Clean-build ship proposal** (the sole owner of the accept/decline/edit outcomes is the dedicated section before Step 5). Non-interactive runs and every blocking path never propose.
 - Add the chain hint / advance question (Step 5).

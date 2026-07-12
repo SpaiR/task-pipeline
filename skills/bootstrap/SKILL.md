@@ -41,7 +41,7 @@ echo "IS_BARE=$IS_BARE"; echo "ROOT=$ROOT"
 - **Normal git repo / non-git dir** (`IS_BARE=false`): `ROOT` is the main worktree root (or `pwd` for a non-git dir). This is deterministic — do not ask; just report it in the output. `.task/` is created at `$ROOT/.task`.
 - **Bare repo** (`IS_BARE=true`): there is no main worktree, so the default `ROOT` (the bare repo's container) is a best-effort guess. **Surface it for confirmation in Step 2** (see the location line + edit option there) so the user can redirect `.task/` to wherever their worktrees actually live.
 
-`ROOT` is carried into Step 3 (where `.task/` is created and `git config --local task.root "$ROOT"` is recorded) and Step 3a. There is no worktree "join" — sharing is automatic once `task.root` is set. Do **not** create or touch any `.task` symlink; the mechanism no longer exists.
+`ROOT` is carried into Step 3 (where `.task/` is created and `git config --local task.root "$ROOT"` is recorded) and Step 3a (sharing is automatic — see intro).
 
 ### Step 1: Analyze project
 
@@ -127,7 +127,7 @@ git config --local task.root "$ROOT"
 
 Always write `config.md` from the full template, replacing any prior version. If `$ROOT/.task/config/config.md` already exists, overwrite it — note this in the output ("recreated existing config.md"). Manual edits to `config.md` will be lost; durable preferences should live in `CLAUDE.md` (which `/task:bootstrap` references) or be reproducible from the prompts.
 
-Also pre-create the workspace container (`mkdir -p "$ROOT/.task/workspace"`) so subsequent skills (`/task:design`, `/task:auto-roadmap`) have it ready. The directory stays empty after init; each umbrella creates its own subfolder `.task/workspace/<task-id>/` when `/task:design` (or `/task:auto-roadmap`) runs, and a per-worktree active-task pointer (inside git's per-worktree dir — `git rev-parse --git-path task-current`) names the active subfolder for that worktree.
+Also pre-create the workspace container (`mkdir -p "$ROOT/.task/workspace"`) so subsequent skills (`/task:design`, `/task:auto-roadmap`) have it ready. The directory stays empty after init; each umbrella creates its own subfolder `.task/workspace/<task-id>/` when `/task:design` (or `/task:auto-roadmap`) runs, and a per-worktree active-task pointer (in the git dir — `git rev-parse --git-path task-current`; see Step 3a) names the active subfolder for that worktree.
 
 **Dedup rule.** Each section emits in one of two modes based on `CLAUDE.md` coverage from Step 1:
 
@@ -247,7 +247,7 @@ When `tests_required` is `true`, `/task:design` (blueprint phase) emits a `## Te
 - Commit format — determine from actual `git log`, do not impose a style.
 - **No decorative XML tags.** Use Markdown headers and formatting only. XML tags are allowed only when they carry semantic metadata that Markdown cannot express.
 - **Every run regenerates the file in full.** Manual edits to `config.md` are not preserved — durable preferences belong in `CLAUDE.md` (referenced via `**Source:**`) or in the prompt answers (Language, Testing Policy).
-- **Pipeline is invisible to the project.** Do not modify `CLAUDE.md`, `README.md`, `.gitignore`, or any other tracked file outside `.task/`. The pipeline must leave no trace in shared project files — anyone not using it should be unable to tell from the repo that it exists. All pipeline configuration lives under `.task/`; the only sanctioned artifact that may sit at the pipeline root is `.task/` itself (git-excluded through `.git/info/exclude`, Step 3a). The per-worktree active-task pointer lives **inside git's per-worktree dir** (`git rev-parse --git-path task-current`), so it is already outside the work tree and needs no exclusion. The `task.root` anchor lives in the repo-local git config, not in any tracked file. There is no `.task` symlink — worktree sharing is via `task.root` (Step 3).
+- **Pipeline is invisible to the project.** Do not modify `CLAUDE.md`, `README.md`, `.gitignore`, or any other tracked file outside `.task/`. The pipeline must leave no trace in shared project files — anyone not using it should be unable to tell from the repo that it exists. All pipeline configuration lives under `.task/`; the only sanctioned artifact that may sit at the pipeline root is `.task/` itself (git-excluded through `.git/info/exclude`, Step 3a). The per-worktree active-task pointer (`git rev-parse --git-path task-current`) needs no exclusion — it lives in the git dir (see Step 3a). The `task.root` anchor lives in the repo-local git config, not in any tracked file. Worktree sharing is automatic via `task.root` — see intro.
 
 ### Step 3a: Set up local git exclusion
 

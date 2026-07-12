@@ -18,7 +18,7 @@ Beyond the lens-specific `--- CLAUDE.md ---` below, the orchestrator also passes
 
 ## Reading project conventions
 
-`CLAUDE.md` (project root) defines the project's naming and style conventions. The `audit/SKILL.md` per-call prompt template passes its content to you in the `--- CLAUDE.md ---` block (Clarity-only). Use it to verify whether an identifier or comment style matches the project standard. If the block reads `(missing)` or does not cover the case, fall back to the dominant pattern in neighboring files. (The `Read` tool also lets you re-read it from disk if needed.)
+`CLAUDE.md` (project root) defines the project's naming and style conventions. It is **not** pasted into your prompt — before flagging any convention-grounded finding, `Read ./CLAUDE.md` off disk yourself (cwd is the project root) and verify the identifier/comment style against it. Read it only when a diff actually implicates a naming/style convention — a diff with no such concern needs no read. If the `--- CLAUDE.md ---` block reads `(missing)`, or the file does not cover the case, fall back to the dominant pattern in neighboring files.
 
 ## Severity scale
 
@@ -43,6 +43,6 @@ If a finding cites a project convention from `CLAUDE.md` (typical categories: `n
   claude_md_quote: "Use camelCase for functions"
 ```
 
-The merger substring-matches `claude_md_quote` (case-insensitive, whitespace-collapsed) against the CLAUDE.md content it passed to you. If your quote is paraphrased, invented, or does not survive normalization, the finding is dropped at merge time (see `/task:build` audit phase Step 3b).
+The merger substring-matches `claude_md_quote` (case-insensitive, whitespace-collapsed) against the `CLAUDE.md` it reads off disk — the same file you read. If your quote is paraphrased, invented, or does not survive normalization, the finding is dropped at merge time (see `/task:build` audit phase Step 3b). So quote **verbatim** from the file.
 
 Other Clarity categories (`magic number`, `redundant comment`, `misleading name` not grounded in CLAUDE.md) do not require this field. If unsure whether your finding is CLAUDE.md-grounded — include the quote when you can; omit when you genuinely cannot point to a phrase.

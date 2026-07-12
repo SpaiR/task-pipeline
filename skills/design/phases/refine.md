@@ -13,11 +13,10 @@ Critically review the implementation plan — propose alternatives, discuss trad
 Validate pipeline artifacts before reading them:
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" task
-bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" plan
+bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
 ```
 
-If either exits non-zero, **stop** and report the validator output.
+If it exits non-zero, **stop** and report the validator output.
 
 1. Read `.task/config/config.md` — tool configuration.
 2. Read `.task/workspace/<task-id>/task.md` — task description. This defines the goal and constraints.
@@ -128,7 +127,7 @@ Write the file directly — no in-chat preview, no confirmation prompt. The user
 ```
 
 3. Record only decisions that **changed** the plan or **confirmed a non-obvious choice**. If the user accepted the original plan for a decision — do not record it.
-4. Print the path and a brief summary of what was changed. Tell the user to open the file to review/edit. End with the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)): `→ Next: \`/task:build\``.
+4. Print the path and a brief summary of what was changed. Tell the user to open the file to review/edit. End with the canonical next-step footer (convention (a)): `→ Next: \`/task:build\``.
 
 ## Forbidden
 

@@ -11,11 +11,10 @@ Implement the task strictly according to the prepared plan.
 Validate pipeline artifacts before reading them:
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" task
-bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" plan
+bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
 ```
 
-If either exits non-zero, **stop** and report the validator output; the plan is malformed and execution would silently misinterpret it.
+If it exits non-zero, **stop** and report the validator output; the plan is malformed and execution would silently misinterpret it.
 
 1. Read `.task/config/config.md` — tool configuration. Use the MCP tools described there for code navigation and editing. Build/test commands — from this file.
 2. Read `.task/workspace/<task-id>/task.md` — task description. Use it as the source of truth for *why* the work is being done; fall back to it when the plan is ambiguous.
@@ -87,7 +86,7 @@ If build or tests fail mid-execution, do **one** quick attempt grounded in a cle
 1. Read the **full** error output (not just exit code or last line).
 2. If the cause is obvious from the output (typo, missing import, wrong symbol name in `Touches`) — apply **one** targeted fix and re-run.
 3. If the fix succeeds — continue execution.
-4. If the fix fails, or the cause is not obvious from the output — **stop** and tell the user, ending with the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)):
+4. If the fix fails, or the cause is not obvious from the output — **stop** and tell the user, ending with the canonical next-step footer (convention (a)):
    > Step {N} failed. One quick-fix attempt did not resolve it (or the root cause is not obvious from one pass). Inspect the diff, then rerun after manual investigation — or run `/task:design --phase refine` if the scope needs revisiting.
    >
    > → Next: `/task:build`
