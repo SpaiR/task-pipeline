@@ -1,26 +1,25 @@
 # task-pipeline
 
-A linear task workflow for Claude Code: from intake to commit, through explicit checkpoints, on your terms.
+A chat-first task workflow for Claude Code: discuss freely, then fix the discussion into an artifact with one short command.
 
 [![Release](https://img.shields.io/github/v/release/SpaiR/task-pipeline?sort=semver)](https://github.com/SpaiR/task-pipeline/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 ![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-8A2BE2)
 
 ```text
-/task:bootstrap              # once per project (or auto-runs on 1st design/roadmap)
+discuss freely in chat
   ↓
-[/task:roadmap]              ← optional: roadmap for a large initiative
-  ↓
-  ├─ [/task:auto-roadmap] ─┐ ← optional: autopilot over an approved roadmap
-  ↓                         │
-/task:design                │  open + plan — walks you through with a question at each step
-  ↓                         │
-/task:build                 │  implement + audit
-  ↓                         │
-/task:ship  ────────────────┘  commit + close
+/task:to-task            capture what and why — no plan
+/task:to-plan             …  + a Plan (Goal/Touches/Logic steps)
+/task:to-roadmap          … a whole multi-task initiative
+  ↓                                          ↓
+implement it now,                /task:roadmap-to-workflow
+in a fresh session:                fans unchecked items out to
+"implement .task/task/<slug>.md"   a dynamic Workflow, one per item
+  → /verify → /code-review → commit
 ```
 
-Just run the bare commands — the pipeline asks what to do next at each step (like plan mode), so there are no flags to remember. Power-user flags still exist as shortcuts and escape hatches; they're documented in [docs/troubleshooting.md](docs/troubleshooting.md) rather than here.
+Depth of capture is the skill you pick, not a flag: `to-task` for a quick "what and why", `to-plan` when you already know the approach, `to-roadmap` for a multi-task initiative. There is no execution skill — capture ends with a copy-pasteable path, and any session (the same one, a fresh one, or one spawned by `roadmap-to-workflow`) executes the artifact directly.
 
 ## Quickstart
 
@@ -28,40 +27,40 @@ Just run the bare commands — the pipeline asks what to do next at each step (l
 /plugin marketplace add https://github.com/SpaiR/task-pipeline.git
 /plugin install task@task-pipeline
 
-/task:bootstrap                              # once per project (optional — 1st design/roadmap auto-runs it)
-/task:design "fix the flaky retry logic"     # opens the task, then walks you through
-                                             # draft → plan → implement → audit → ship,
-                                             # asking before each step (answer "Stop" to pause)
+# talk it through in chat, then:
+/task:to-plan "fix the flaky retry logic"    # captures Description + Plan into .task/task/<slug>.md
+# → Next: implement it now, or in a fresh session run: `implement .task/task/<slug>.md`
 ```
 
-That single `/task:design` call carries the whole cycle by asking a question at each phase boundary — no flags, no re-typing. Stop at any question to pause; run the bare command again to resume from where you left off. `design → build → ship` is the whole core; `roadmap` and `auto-roadmap` are optional. Power-user flags are hidden by default — see [docs/troubleshooting.md](docs/troubleshooting.md).
+The session that implements it follows the artifact's own `## Execution` block: implement the plan, run `/verify` and `/code-review`, apply review fixes within the files named in **Touches**, then commit per `config.md` → Commit Format.
+
+The first `to-task` / `to-plan` / `to-roadmap` call in a fresh project also sets up `.task/config/config.md` inline (detect language + test policy, one confirmation) — there's no separate setup command to run first.
 
 ## Why
 
-If you've ever tried to cram Claude into one big "do everything in this ticket" session, you know how it ends: the model starts writing code before it understands the task; it "fixes" one bug and breaks three others; it reports "done" while half the acceptance criteria are still stubs. `task-pipeline` solves this not with magic but with boring discipline: each stage of a task is a separate slash command with an explicit contract, artifacts live as files in `.task/`, and nothing runs "by itself."
+If you've ever tried to cram Claude into one big "do everything in this ticket" session, you know how it ends: the model starts writing code before it understands the task, "fixes" one bug and breaks three others, and reports "done" while half the acceptance criteria are still stubs. `task-pipeline` doesn't fight this with more machinery — it leans on what Claude Code already ships (dynamic Workflows, `/verify`, `/code-review`) and adds just enough structure around them: one artifact per task (`.task/task/<slug>.md`) that carries the discussion's "what, why, and how," and a fixed `## Execution` block that hands the rest to the platform.
 
 Concretely, you get:
 
-- **Multilingual.** Task descriptions and discussion happen in your language (English, Russian, anything). The plan, audit, and commits follow the policy in `config.md`.
-- **Three explicit checkpoints.** `/task:design` (plan), `/task:build` (implementation + checks), `/task:ship` (commit + close). You decide when to move on; stop, fix an artifact by hand, and continue.
-- **A paper trail.** `task.md` (what and why), `plan.md` (how), `audit.md` (what the audit found), `summary.md` (the result). Plain Markdown, readable without an agent.
-- **Project-aware.** A single `/task:bootstrap` pins down the stack, the MCP tool priority (whatever code-navigation / library-docs servers you happen to have connected), and the commit format. Every step follows it afterward.
-- **An archive.** `/task:ship` files completed subtasks under `.task/log/<task-id>/<N>-<slug>/` — six months later you can still see what was done, and when.
+- **Chat-first.** Think out loud, explore approaches, change your mind — all in normal conversation. Only when you're ready do you fix it into `.task/task/<slug>.md` with `to-task` or `to-plan`.
+- **Multilingual.** The Description is written in your language; everything parser-stable (headers, commit trailers, the `## Execution` block) stays English, per the policy in `config.md`.
+- **No execution skill.** There is no `build`/`ship` step to run — any session told `implement .task/task/<slug>.md` reads the artifact and follows its own `## Execution` block through to a commit.
+- **Built on the platform, not around it.** Verification is `/verify`, review is `/code-review` — no hand-rolled audit loop.
+- **A durable handle, not a pointer.** The artifact's path (`.task/task/<slug>.md`) is the handle. Pick it up in this session or a brand-new one — there's no active-task state to lose or heal.
 
 ## Why you can trust this
 
 It runs bash, edits files, and writes commits — so here is exactly what it will and won't touch:
 
-- **Nothing is committed until `/task:ship`.** Until then every change is just working-tree edits; back them out with plain `git restore` / `git checkout`.
-- **`/task:ship` only _stages_ task files, and never pushes.** It writes a local commit for you to review; nothing leaves your machine, and it never stages anything under `.task/`.
-- **The audit agents are read-only.** The three review lenses (Reuse / Simplicity / Clarity) run with a `Read`/`Grep`/`Glob` allowlist — they cannot edit your code.
-- **Auto-fix is bounded and scoped.** The build audit applies fixes for at most 2 iterations, and only within the files the plan declared under `Touches`; anything out of scope is flagged, not changed.
+- **Nothing is committed until the implementing session does so, per `## Execution`.** Until then every change is just working-tree edits; back them out with plain `git restore` / `git checkout`.
+- **Commits stage only task-related files, and never push.** Nothing leaves your machine.
+- **No hidden orchestration.** There are no subagents in this plugin's capture skills; `/task:roadmap-to-workflow` is a plain Workflow this skill itself authors, which you can inspect before it runs.
 - **The pipeline leaves no trace in the repo.** `.task/` is excluded via `.git/info/exclude` (not `.gitignore`), so it never shows up in `git status`; delete it with `rm -rf .task` and the repo is exactly as before.
 
 ## Requirements
 
 - [Claude Code](https://docs.claude.com/en/docs/claude-code) — this ships as a Claude Code plugin.
-- MCP code-navigation tools are **optional** and the pipeline is agnostic about which one you use: `/task:bootstrap` records whichever servers you have connected (by role, not by product), and the built-in `Grep`/`Glob`/`Read` are always the fallback.
+- `/verify` and `/code-review` available in your Claude Code install (both ship with Claude Code) — every task's `## Execution` block invokes them directly.
 
 ## Installation
 
@@ -74,12 +73,9 @@ The pipeline ships as a Claude Code plugin (`task`) inside the `task-pipeline` m
 
 From then on, updates are a single command: `/plugin marketplace update task-pipeline`.
 
-After installation, Claude Code gains the commands `/task:bootstrap`, `/task:design`, `/task:build`, `/task:ship`, `/task:roadmap`, `/task:auto-roadmap`, plus nine named agents and a PreToolUse artifact-validator hook that activates automatically.
+After installation, Claude Code gains the commands `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, `/task:roadmap-to-workflow`. There is no hook — enforcement is by convention, not a gate.
 
-In a new project you don't have to run setup by hand first: the first `/task:design` or `/task:roadmap` in an unconfigured project auto-runs setup inline (inspect the repo → detect language and test policy → one confirmation), then continues the requested action. You can still call `/task:bootstrap` explicitly to do it deliberately — it inspects the repo, detects language and test policy, presents both as defaults, and writes `.task/config/config.md` after a single confirmation (accept, edit either value, or decline). The explicit command stays available and idempotent for re-running setup on demand. (`/task:build`, `/task:ship`, and `/task:auto-roadmap` do **not** auto-run setup — they presuppose prior pipeline state, so a fresh-project first-use of them still hard-stops with a "run `/task:bootstrap` first" redirect.)
-
-> [!NOTE]
-> Invoking the agents manually via `Agent(...)`, or hitting a `No such file or directory` from a skill's bash script? See [docs/troubleshooting.md](docs/troubleshooting.md).
+In a new project you don't have to run setup by hand first: the first `/task:to-task`, `/task:to-plan`, or `/task:to-roadmap` in an unconfigured project detects language and test policy, presents both for one confirmation, writes `.task/config/config.md`, and continues with the requested capture. `/task:roadmap-to-workflow` presupposes an existing roadmap, so a fresh-project first-use of it hard-stops with a redirect to run a capture skill first.
 
 <details>
 <summary>Local development</summary>
@@ -93,54 +89,45 @@ In a new project you don't have to run setup by hand first: the first `/task:des
 
 ## Command reference
 
-**Re-entry semantics:** `/task:design` and `/task:build` look at the state of `.task/workspace/<task-id>/` and automatically resume from the right phase — you just run the bare command and answer the questions. If a phase was auto-detected wrong, or you need to force a specific one, that's what the advanced `--phase` escape hatch is for — see [docs/troubleshooting.md](docs/troubleshooting.md).
+**Next-step footer:** every capture skill ends its output with a copy-pasteable `→ Next: ...` line naming the artifact path explicitly, e.g. `implement .task/task/<slug>.md` — the path *is* the handle, so there's nothing else to remember.
 
-**Next-step footer:** every core command ends its output with a single copy-pasteable `→ Next: <command>` line naming the exact next step (or `→ Done.` when the flow is complete), so you never have to remember which command comes next — just paste the line. The convention is defined once in [`docs/spec/invariants.md § Interaction conventions`](docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar).
+`validate` is an internal, optional self-check — not a slash command, not a gate. For a manual check: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`.
 
-`validate` is an internal utility: the pipeline invokes it as a precondition gate, not via a slash command. For a manual check: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`.
+### One file per task; a roadmap is a backlog of items
 
-### One task per cycle; roadmaps group items in the log
-
-Each `/task:design → /task:build → /task:ship` cycle is one task, closed and archived by `/task:ship` under `.task/log/<task-id>/<N>-<slug>/`. Working through a **roadmap** produces several tasks that share one `task-id` (the roadmap slug), so their archives collect as numbered subfolders under a single `.task/log/<roadmap-slug>/` — `/task:design` (answering *open from a roadmap*) opens the next unchecked item, and each item's `/task:ship` archives its own `task.md` and marks the item done. There is no separate "transition" mode: every ship is a full close, and the next item simply re-opens.
+Each capture produces exactly one `.task/task/<slug>.md`, where `<slug>` is both the filename and the identity — no task-id, no umbrella folder. A closed task is just a file that stays in `.task/task/` (or you delete it); git history is the record, there is no archive. A **roadmap** (`.task/roadmap/<slug>.md`) groups several such items into one initiative; `to-task`/`to-plan` can open the next unchecked item directly, or `roadmap-to-workflow` fans the whole backlog out at once.
 
 ## Commands
 
 | Command | In brief |
 |--------|--------|
-| `/task:bootstrap` | Initializes the pipeline in a project: creates `.task/config/config.md`, sets up the local git exclusion for `.task/`, and prints a short getting-started primer. Idempotent. |
-| `/task:roadmap <idea>` *(opt.)* | Brainstorms an initiative roadmap → `.task/roadmap/<slug>.md` with ready-made task descriptions to pick up in design; each task's Size and Class are inferred during authoring (Size from the outcome count, Class from task shape, user-overridable) rather than asked for. When the call follows a prior chat discussion of the initiative, authoring first surfaces a **Decision Inventory** of everything settled (small details included) and confirms it before writing — so nothing discussed drops silently. An optional sidecar `.task/roadmap/<slug>.spec.md` pins down key technical decisions (Blueprint reads them during planning). Authoring closes with a light, report-only three-lens self-check over the saved file, offering a deeper refine pass inline when the findings warrant it. |
-| `/task:auto-roadmap [<roadmap>] [--next \| --from #<N> \| --items <spec>]` *(opt.)* | Autopilot over a roadmap in the current interactive Claude Code session: for each item — design → build → ship. Launched with no arguments it asks (via chips) which roadmap and, when several items are open, how much to run. This is the one surface that keeps its flags as a documented interface: `--next` — the first unclosed item; `--from #N` — start from item N; `--items 3-5` or `1,3-5,8` — a selection. The session model (set via `/model` before launching) drives every stage except implement (which uses each item's planned `Implement-Model:`) — pick `sonnet` for rote-dominated roadmaps, `opus` for design-heavy ones. |
-| `/task:design [<context>]` | Open a task, write the Description, and plan it out — then walk you through the whole cycle with a question at each step (draft → plan → build). A bare `/task:design` with no task in flight asks how to start (draft directly / open from a roadmap) via chips; giving a sentence of context drafts the Description directly. Phase is auto-detected from the workspace state, so re-running the bare command always resumes correctly. |
-| `/task:build` | Implementation (`implement`) + audit with bounded auto-fix (`audit`). Auto-detects the phase; after a clean `implement` it asks whether to run the audit now (chips). Fixes outside `Touches` from `plan.md` are marked `Skipped: out-of-scope`. A clean build proposes the ship and acts on one confirmation (accept ships, declining holds). |
-| `/task:ship` | Commit + archiving under `.task/log/`. One commit + full close, confirmed once. Archives `plan/audit/summary.md` + `task.md`, removes `workspace/<task-id>/` and `.task-current`. Auto-marks the roadmap item when `Roadmap:` + `Source item:` are present. The commit slug is always auto-derived. |
-| `validate` *(utility)* | Formal validator of artifact format. Invoked automatically. For a manual check: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" [task\|plan\|roadmap <path>\|all]`. |
+| `/task:to-task [<context>]` | Fixes the chat discussion (or a roadmap item) into `.task/task/<slug>.md` — Description only, no Plan. Lightest of the three capture skills; use it to record the "what and why" before diving in directly, or before `to-plan` later. |
+| `/task:to-plan [<context>]` | Fixes the chat discussion (or a roadmap item) into `.task/task/<slug>.md` with **`## Description` + `## Plan`** (Goal/Touches/Logic steps) and, when the testing policy calls for it, `## Tests`. Deepest one-task capture — hand straight to implementation. Re-running it on a `to-task`-only file adds the Plan in place. |
+| `/task:to-roadmap <idea>` | Fixes a multi-task initiative discussed in chat into `.task/roadmap/<slug>.md` — a phase-grouped backlog of ready-to-pick-up items, each with optional `**Dependencies:**` and `**Model:**` hints, plus an optional `<slug>.spec.md` sidecar for load-bearing technical decisions. Closes with a report-only self-check; findings are surfaced, never silently rewritten into the file. |
+| `/task:roadmap-to-workflow [<roadmap>]` | Autopilot over an approved roadmap: authors and invokes a dynamic Workflow that runs the roadmap's unchecked items in dependency-ordered waves (parallel within a wave, isolated worktrees). Default per-item shape is opus-plans/sonnet-implements — a first agent runs `to-plan` for the item, a second implements + verifies + reviews + commits, using the item's `**Model:**` hint if present. The driver ticks the roadmap checkbox after each item lands. Launched with no arguments it asks (via chips) which roadmap and how much to run; falls back to one-item-at-a-time by hand if the Workflow tool is unavailable. |
+| `validate` *(utility)* | Optional formal validator of `.task/task/<slug>.md` / roadmap format. Never invoked automatically — no hook calls it. Manual check: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" [task <slug>\|roadmap <slug>\|all]`. |
 
 ## Example — a single task
 
 ```text
-/task:bootstrap                                  # once per project (optional — 1st design/roadmap auto-runs it)
+# talk through an HTTP retry system with backoff and dead-letter in chat, then:
 
-/task:design "I want an HTTP retry system with backoff and dead-letter"
-#   → drafts the Description from your sentence (### Problem / ### Outcome / ...)
-#   → "Build the plan now?"        → Plan it now      → writes plan.md with steps
-#   → "Start implementing now?"    → Implement it now → implements per the plan
-#   → "Run the audit now?"         → Run audit now    → lens fanout + bounded auto-fix
-#                                                        (one summary line; detail in audit.md)
-#   → clean build proposes the ship → accept          → commit + close
-#
-# Answer "Stop" at any question to pause. Resume later by running the bare
-# command again — the phase is auto-detected from the workspace state.
+/task:to-plan
+#   → drafts .task/task/http-retry-backoff.md: ## Description + ## Plan (Goal/Touches/Logic steps)
+#   → footer: implement it now, or in a fresh session run:
+#     `implement .task/task/http-retry-backoff.md`
+
+# tell any session (this one or a fresh one) to implement it:
+"implement .task/task/http-retry-backoff.md"
+#   → follows the artifact's ## Execution block: implement per the plan
+#   → runs /verify (does it actually work?) and /code-review (is it clean?)
+#   → commits per config.md → Commit Format
 ```
 
-Starting from scratch instead of a one-line description? Run a bare `/task:design` with no task in flight: it asks **how to start** (draft it directly / open from a roadmap) and continues into the same plan → build → ship walk. To develop a rough idea first, talk it through in chat, then hand the result to `/task:design "<the description>"`.
-
-> [!NOTE]
-> If something goes wrong mid-way through the `/task:build` implement phase (a test/build fails), the skill makes **one** targeted quick-fix attempt, then stops. No automatic shotgun "try it and see" fixes.
-
-Every phase boundary is a single question with a **Stop** option, so the whole cycle runs from one command without any flags to remember. Power users who want to jump straight to a phase, chain phases unattended, or force a close mode can still do so with the escape-hatch flags in [docs/troubleshooting.md](docs/troubleshooting.md).
+Prefer a lighter touch? `/task:to-task` skips the Plan — good for a quick capture you'll flesh out with `/task:to-plan` later, or hand straight to implementation when the fix is obvious.
 
 > [!TIP]
-> More scenarios — roadmap-driven initiatives, the `/task:auto-roadmap` autopilot, several subtasks under one umbrella, and returning to a closed task — live in **[docs/usage.md](docs/usage.md)**.
+> More scenarios — roadmap-driven initiatives, `/task:roadmap-to-workflow`, and returning to a task later — live in **[docs/usage.md](docs/usage.md)**.
 
 ## Comparison with alternatives
 
@@ -151,16 +138,14 @@ Three references: default Claude Code (plan mode + TodoWrite), [obra/superpowers
 
 | | Default Claude Code | task-pipeline |
 |---|---|---|
-| **Where the plan lives** | Text in chat; lost on `/clear` | `plan.md` as a file in `.task/workspace/`; editable by hand, readable by a colleague |
+| **Where the plan lives** | Text in chat; lost on `/clear` | `## Plan` inside `.task/task/<slug>.md`; editable by hand, readable by a colleague |
 | **Plan-step contract** | Arbitrary text | `### Step N` with three layers: `Goal` / `Touches` / opt. `Logic` |
-| **Step verification** | None | A step closes only if the `Touches` symbols are in `git diff` (+ RED→GREEN when `## Tests`) |
-| **Auto-fix audit findings** | None | Bounded loop ≤2 iterations, scope-gated by `Touches` |
-| **Interrupt / resume** | Lost on `/clear` | Plan + progress are files; auto-resumable via `TaskList` |
-| **Result review** | Only whatever the model decides | `/task:build` audit phase with a 3-lens fanout (Reuse / Simplicity / Clarity) + bounded auto-fix loop; reports one summary line by default, full detail in `audit.md` |
-| **Multi-task initiatives** | None | `/task:roadmap` → `/task:design` (or autopilot `/task:auto-roadmap`) |
-| **Archive** | None | `.task/log/<task-id>/<N>-<slug>/` |
+| **Result review** | Only whatever the model decides | The artifact's `## Execution` block runs `/verify` (does it work end-to-end?) and `/code-review` (is it clean?) before commit |
+| **Interrupt / resume** | Lost on `/clear` | The task file is on disk; pick it up in any session with `implement .task/task/<slug>.md` |
+| **Multi-task initiatives** | None | `/task:to-roadmap` → `/task:to-plan`/`/task:to-task` per item (or autopilot `/task:roadmap-to-workflow`) |
+| **Record of what shipped** | None | git history of `.task/task/<slug>.md` and the diff it produced |
 
-**Use default Claude Code** if the task is one or two files and twenty minutes. **Use task-pipeline** if the task is longer than one session, refactors >5 files, needs review by eye, or the plan itself should be a working artifact.
+**Use default Claude Code** if the task is one or two files and twenty minutes. **Use task-pipeline** if the task is longer than one session, needs a plan you can hand-edit, or should leave a record.
 
 </details>
 
@@ -170,13 +155,13 @@ Three references: default Claude Code (plan mode + TodoWrite), [obra/superpowers
 | | task-pipeline | superpowers |
 |---|---|---|
 | Initiation | By hand: `/task:…` | Auto-triggers by context |
-| Form | Linear pipeline with checkpoints | A library of situational skills |
-| Project config | `config.md` (stack, MCP, commits, language) | Minimal |
-| TDD | On demand (`tests_required`) | Iron Law |
+| Form | Linear capture → hand off to any session | A library of situational skills |
+| Project config | `config.md` (stack, commits, language) | Minimal |
+| Result review | `/verify` + `/code-review` | Iron Law TDD |
 | Artifact languages | Any, via `config.md` | English by default |
 | Platforms | Claude Code only | Claude Code, Codex, Cursor, Gemini CLI, Copilot CLI |
 
-**Use task-pipeline** if you want a controlled checkpointed process, non-English languages, and an MCP-aware config.
+**Use task-pipeline** if you want a controlled capture-then-implement process, non-English languages, and no hand-rolled audit machinery.
 
 </details>
 
@@ -185,7 +170,7 @@ Three references: default Claude Code (plan mode + TodoWrite), [obra/superpowers
 
 | | task-pipeline | OpenSpec |
 |---|---|---|
-| Paradigm | Per-task workflow | Spec-driven (living `specs/` + deltas) |
+| Paradigm | Per-task capture, chat-first | Spec-driven (living `specs/` + deltas) |
 | Storage | `.task/` locally, not in the repo | `openspec/` committed to the repo |
 | Team visibility | Invisible (a personal tool) | Part of the repository |
 | Language | Multilingual via `config.md` | English |
@@ -196,23 +181,22 @@ Three references: default Claude Code (plan mode + TodoWrite), [obra/superpowers
 
 ## Configuration & policy
 
-All of this lives in `.task/config/config.md`, written by `/task:bootstrap`:
+All of this lives in `.task/config/config.md`, written inline on first use of a capture skill:
 
-- **Language** — by default the `task.md` Description is in your language, everything else is in English, commits follow "Commit Format".
-- **Test policy** — `Testing Policy → Mode`: `always` / `on-demand` *(default)* / `never`. In `on-demand`, tests are written only if `## Description` explicitly asks for them ("needs tests" / "with tests" / "cover with tests").
-- **Idempotency** — `/task:bootstrap` regenerates `config.md` in full every time. After an interruption, `/task:build` reads the `TaskList` and resumes from the first unclosed step of the implement phase.
+- **Language** — by default the Description is in your language, everything else (headers, the `## Execution` block, commits) is in English, per "Commit Format".
+- **Test policy** — `Testing Policy → Mode`: `always` / `on-demand` *(default)* / `never`. In `on-demand`, `## Tests` is written only if the Description explicitly asks for it ("needs tests" / "with tests" / "cover with tests").
+- **Idempotency** — `config.md` is regenerated in full whenever setup runs again. After an interruption, implementation picks up from `.task/task/<slug>.md` as it stands.
 
 ## How it works
 
-The pipeline is built on a few invariants; the full reasoning lives in [`docs/spec/`](docs/spec/README.md).
+The pipeline is built on a small set of invariants; the full contract lives in [`docs/contract.md`](docs/contract.md).
 
-- **Artifacts.** Each `.task/` subfolder has one role — `config/`, `roadmap/`, `workspace/<task-id>/`, `log/<task-id>/<N>-<slug>/`. The pointer to the active umbrella is a one-line file inside git's per-worktree dir (`git rev-parse --git-path task-current`), so each worktree has its own. If it is ever left empty or pointing at a closed or deleted workspace, the next command clears it automatically with a one-line notice — no manual cleanup — while a valid in-flight task is never touched. Full producer/consumer contract: [docs/spec/artifact-contract.md](docs/spec/artifact-contract.md).
-- **Code-navigation tiers.** Each skill reads only as much of your code as its job needs — from `.task/`-only (`/task:ship`, `validate`) through a structural scan to MCP-first navigation (`/task:design` blueprint, `/task:build`). Details: [docs/spec/invariants.md § Three code-navigation tiers](docs/spec/invariants.md#three-code-navigation-tiers).
-- **Validator hook.** A PreToolUse hook intercepts `Skill(task:build|ship|auto-roadmap)` and runs `validate.sh all` before the skill body. `bootstrap` / `roadmap` / `design` are deliberately excluded (the intake phase): each can be the first command in a fresh project and auto-runs setup inline, so a blocking pre-hook would make that inline setup unreachable. `design` still runs the identical `validate.sh all` in its own Step 0, so mid-pipeline validation coverage is preserved. Disable with `/plugin disable task` or by removing [`hooks/hooks.json`](hooks/hooks.json) locally.
-- **Parallel worktrees.** All worktrees of a repo share one `.task/` automatically — `/task:bootstrap` records its location in `git config task.root`, so nested, sibling, and bare-repo worktrees resolve it with zero setup (no symlink, no join step). Each worktree keeps its own active umbrella. Discipline and edge cases: [docs/spec/auto-roadmap.md § Cross-worktree safety](docs/spec/auto-roadmap.md#cross-worktree-safety).
+- **Artifacts.** `.task/` is flat — one file per task under `.task/task/<slug>.md`, one file per initiative under `.task/roadmap/<slug>.md` (+ optional `<slug>.spec.md`). No workspace subfolders, no log, no archive, no active-task pointer — the artifact's path is the only handle there is. Full producer/consumer table: [docs/contract.md](docs/contract.md).
+- **No hook gate.** `hooks/hooks.json` ships empty (`{"hooks": {}}`). Enforcement is by convention: `validate.sh` is available as an optional self-check, never wired to a PreToolUse matcher.
+- **Parallel worktrees.** All worktrees of a repo share one `.task/` automatically — its location is recorded in `git config task.root` on first setup, so nested, sibling, and bare-repo worktrees resolve it with zero setup (no symlink, no join step). This is what lets `/task:roadmap-to-workflow` fan items out to isolated worktrees that still share one `.task/`.
 
 ## Contributing
 
 > *This section is for those editing the tool itself.* Start with [`CONTRIBUTING.md`](CONTRIBUTING.md) — it carries the commit format, the list of allowed scopes, the release procedure, and the repository layout.
 
-`SKILL.md` (and the companion `phases/<phase>.md` files) is a prompt contract that another Claude instance will read in someone else's project. The invariants that must not be broken — the artifact contract, the three code-navigation tiers, append-only iterations, the build audit auto-fix loop with the touches-gate — are pinned in [`docs/spec/`](docs/spec/README.md); a compact checklist is in [`CLAUDE.md`](CLAUDE.md). If you change something, update the relevant `docs/spec/*.md` file and this README in the same commit; `CHANGELOG.md` is edited only on explicit request.
+Each `SKILL.md` is a prompt contract that another Claude instance will read in someone else's project. The invariants that must not be broken — the `task.md` format, the flat `.task/` layout, the pipeline staying invisible outside `.task/` — are pinned in [`docs/contract.md`](docs/contract.md); a compact checklist is in [`CLAUDE.md`](CLAUDE.md). If you change something, update `docs/contract.md` and this README in the same commit; `CHANGELOG.md` is edited only on explicit request.
