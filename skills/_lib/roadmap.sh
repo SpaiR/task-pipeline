@@ -14,7 +14,6 @@
 #                                      $AI_DIR/roadmap
 #   roadmap_mtime <path>             — cross-platform stat (BSD %m / GNU %Y)
 #   roadmap_progress_counts <path>   — prints three lines: total / done / unchecked
-#   list_roadmap_items <path>        — tab-separated `<N>\t<status>\t<title>` per item
 #
 # Conventions:
 #   - $AI_DIR is expected to be resolved by the caller via `find_ai_dir`
@@ -79,20 +78,4 @@ roadmap_progress_counts() {
   echo "total: $total"
   echo "done: $done_n"
   echo "unchecked: $unchecked"
-}
-
-# --- list_roadmap_items <path> ---
-# Emit "N<TAB>status<TAB>title" per roadmap item. Status is one of ` x~>-`
-# (literal checkbox char).
-list_roadmap_items() {
-  local file="$1"
-  awk '
-    /^### - \[[ x~>-]\] [0-9]+\. / {
-      raw = $0
-      s = raw; sub(/^### - \[/, "", s); status = substr(s, 1, 1)
-      n = raw; sub(/^### - \[[ x~>-]\] /, "", n); sub(/\..*$/, "", n)
-      t = raw; sub(/^### - \[[ x~>-]\] [0-9]+\. /, "", t)
-      printf "%s\t%s\t%s\n", n, status, t
-    }
-  ' "$file"
 }

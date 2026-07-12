@@ -56,7 +56,7 @@ For each step in `## Steps` order (skipping `completed` ones from Step 2):
    e. Re-run the affected test(s). Expect **GREEN**. If still RED — invoke the **Errors** protocol below.
    f. Refactor only when tests are green. Re-run after each refactor.
 
-   **If `tests_required` is false** — execute the step directly:
+   **If `tests_required` is false, or the step is not referenced by any `### Test K`** — execute the step directly (the TDD micro-loop above is reserved strictly for test-referenced steps, so every step lands in exactly one branch):
    - Use `Goal` as the primary anchor — what must be true after the step is done.
    - Restrict edits to the symbols listed in `Touches`. Do not modify unrelated symbols in the same file unless the `Goal` explicitly requires it.
    - If `Logic` is present — use it as a sketch, not a literal template. Prefer idiomatic code that matches the file's neighboring style over verbatim transcription of pseudocode.

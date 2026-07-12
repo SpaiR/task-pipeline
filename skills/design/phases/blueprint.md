@@ -21,8 +21,9 @@ If it exits non-zero, **stop** and report the validator output; the task header 
 3. Resolve `tests_required` from `config.md` → `Testing Policy` → `Mode`:
    - `always` → `tests_required = true`.
    - `never` → `tests_required = false`.
-   - `on-demand` → `tests_required = true` **only** if `task.md` Description explicitly asks for tests (phrases like "with tests", "add tests", "write tests"). If the Description is silent or ambiguous → `tests_required = false`. Responsibility is on the user.
-   - If ambiguous and you are uncertain, ask the user a single yes/no question before writing the plan. In non-interactive runs (`/task:auto-roadmap`, where there is no user to ask) do not block — default to `false` per the rule above.
+   - `on-demand` → `tests_required = true` **only** if `task.md` Description explicitly asks for tests (phrases like "with tests", "add tests", "write tests"). Otherwise resolve the two remaining cases distinctly:
+     - **Silent** — the Description says nothing about tests → `tests_required = false`, no prompt. Responsibility is on the user.
+     - **Testing-adjacent but unclear** — the Description mentions tests/testing but not whether *new* tests are wanted → interactively, ask the user a single yes/no question before writing the plan; non-interactively (`/task:auto-roadmap`, where there is no user to ask) do not block — default to `false`.
 
 ## Step 1.5: Read pinned spec decisions (if the item references them)
 
