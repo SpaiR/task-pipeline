@@ -21,8 +21,8 @@
 #     file). If this file is somehow sourced first, we call find_ai_dir when it
 #     is already defined, else fall back to the relative `.task` default.
 #   - Task heading shape: `### - [ x~>-] N. <title>`. The 5-state checkbox
-#     class is the contract close.sh:Step 1.5 and `/task:design --from` auto-pick
-#     both depend on; do not narrow it to `[ x]` only.
+#     class is the contract `roadmap-to-workflow`'s driver-side auto-mark and
+#     `to-task <slug>#N` item-pick both depend on; do not narrow it to `[ x]` only.
 
 if declare -F find_ai_dir >/dev/null 2>&1; then
   find_ai_dir
@@ -65,7 +65,7 @@ roadmap_mtime() {
 #   total: <N>
 #   done: <N>
 #   unchecked: <N>
-# DONE counts the same 5-state class close.sh:Step 1.5 treats as "already
+# DONE counts the same 5-state class the driver's auto-mark treats as "already
 # marked" ([x]/[~]/[>]/[-]); without this, a roadmap with [~]/[>]/[-] items
 # would report done<total even when no [ ] remains, and the wizard's
 # (complete) flag would never fire for it.
