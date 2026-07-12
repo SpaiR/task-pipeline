@@ -11,7 +11,7 @@ Prepare a task file `.task/workspace/<task-id>/task.md` from the provided contex
 1. **Manual mode (default).** Arguments are free-form context (a ticket number, a brief title, or a sentence/paragraph about the task). Always writes the header. The `## Description` body is **filled in this call via quick-draft** (paraphrase of the provided context — Tier C shallow scan + structured `### Problem` / `### Outcome` / `### Scope` / `### Constraints`). If the input carries no paraphrasable prose (e.g. a bare ticket id), open **elicits a one-sentence description** first, then quick-drafts from it.
 2. **From-roadmap mode (`--from`).** Arguments start with `--from <path>` (auto-picks the first un-checked item) or `--from <path>#<N>` (explicit item). Every `--from` call is an **initial open**: it derives the task-id from the roadmap slug and writes a fresh `task.md` + active-task pointer. Working a roadmap = repeatedly `/task:design --from <path>` → build → ship (full close); each item shares the roadmap-slug task-id, so its archive lands under `.task/log/<roadmap-slug>/<N>-<slug>/`.
 
-**Precondition (hard-stop) — active-task pointer.** Refuse if the per-worktree active-task pointer already exists. Its presence means a task is in flight in this worktree and the workspace subfolder `.task/workspace/<task-id>/` is reserved — run `/task:ship` to close it first. The pointer lives in git's per-worktree dir — resolve it with `git rev-parse --path-format=absolute --git-path task-current`; let `<id>` = `cat` of that path:
+**Precondition (hard-stop) — active-task pointer.** Refuse if the per-worktree active-task pointer already exists. Its presence means a task is in flight in this worktree and the workspace subfolder `.task/workspace/<task-id>/` is reserved — run `/task:ship` to close it first. Resolve it with `git rev-parse --path-format=absolute --git-path task-current` (see intro); let `<id>` = `cat` of that path:
 
 - **Self-heal a provably-stale pointer first (evaluated before the refuse case below).** If the pointer exists but is **provably stale** — its content is empty after whitespace-strip, OR its `.task/workspace/<id>/` subfolder is absent — remove it, print a one-line notice that a stale pointer was cleaned (see the mode outputs), and proceed as an **initial open** exactly as if no pointer had existed. This is the "next command self-heals and continues" behavior. The staleness definition must match the shared one in `skills/_lib/resolve-ws.sh`'s `heal_stale_pointer` (empty OR missing workspace subfolder); the executor may run that helper (via `source_resolve_ws`) or an inline `test`/`rm` against the resolved pointer path.
 - Otherwise (a **valid** pointer — workspace subfolder present) → refuse: "a task is in progress. Run `/task:ship` first."
@@ -56,7 +56,7 @@ Compute `<task-id-lc>` — the lowercase form of task-id from Step 1 (used for w
    ```bash
    printf '%s\n' "<task-id-lc>" > "$(git rev-parse --path-format=absolute --git-path task-current)"
    ```
-   The pointer lives inside git's per-worktree dir (`.git/worktrees/<name>/task-current`, or `.git/task-current` in the main worktree), so each git worktree has its own active umbrella while they all share one `.task/`. Being inside the git dir, it is never part of the work tree and needs no git-exclude entry.
+   (see intro)
 
 ### Step 2a: Quick-draft Description (Tier C path)
 
@@ -103,7 +103,7 @@ Triggered when the **first** argument is `--from`.
 2. **Pick `N`:**
    - If `#<N>` was given, use it.
    - If `#<N>` was omitted, collect **all** headings matching `^### - \[ \] [0-9]+\. (.+)$` (the open items). If none exist — **stop** with: "All roadmap items in `<path>` are closed (or none have a `- [ ]` checkbox). Run `/task:ship` to drop the umbrella, or pick an item explicitly with `--from <path>#<N>`."
-     - **More than one open item, interactive run** → **item picker.** Present one `AskUserQuestion` (single-select) — "Which item of `<slug>` do you want to open?" — with a chip per open item (`#<N> — <title>`); the first (lowest `<N>`) is the default/first option. The chosen `<N>` drives the rest of the parse. This is an instance of the structured-choice convention (c) in [docs/spec/invariants.md § Interaction conventions](../../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar) — `--from <path>#<N>` is the explicit non-interactive equivalent and skips the picker.
+     - **More than one open item, interactive run** → **item picker.** Present one `AskUserQuestion` (single-select) — "Which item of `<slug>` do you want to open?" — with a chip per open item (`#<N> — <title>`); the first (lowest `<N>`) is the default/first option. The chosen `<N>` drives the rest of the parse. This is an instance of the structured-choice convention (c) — `--from <path>#<N>` is the explicit non-interactive equivalent and skips the picker.
      - **Exactly one open item, or a non-interactive run** (the `auto-roadmap-design-runner` executing this inline — the driver always passes an explicit `#<N>`, so `#<N>` omitted here means an interactive user) → auto-pick the **first** open item without asking. The captured number drives the rest of the parse.
 3. Locate the heading for the chosen `N`: `### (- \[[ x~>-]\] )?<N>\. (.+)$`. Capture group 2 is the **item title**.
 4. From the heading down to the next `### ` heading or `---` boundary, locate **`**Ready description:**`** followed by a blockquote. The blockquote (lines starting with `> `) is the description body. Strip the leading `> ` from each line — that becomes `## Description`. The blockquote's sub-headings (`### Context`, `### Goal`, `### Outcomes`, `### Invariants`, optional `### Contracts`, `### Acceptance criteria`, optional `### Spec references`) are passed through unchanged. A `### Spec references` block may cite the roadmap's spec sidecar (`<slug>.spec.md §N`); copy it verbatim — design's blueprint phase reads those sections (Step 1.5 of `blueprint.md`) to ground the plan in pinned technical decisions.
@@ -147,7 +147,7 @@ Every `--from` open is an **initial open** (the precondition above already refus
    {Body of the `**Ready description:**` blockquote, with `> ` prefix stripped from each line.}
    ```
 
-3. Write the per-worktree active-task pointer into git's per-worktree dir (so it is naturally scoped to this worktree and needs no git-exclude entry):
+3. Write the per-worktree active-task pointer (see intro):
 
    ```bash
    printf '%s\n' "<task-id-lc>" > "$(git rev-parse --path-format=absolute --git-path task-current)"
@@ -161,7 +161,7 @@ The `Roadmap:` line is written as a repo-relative path so `/task:ship`'s close s
 
 ### From-roadmap-mode output
 
-- **If a stale pointer was self-healed on entry** (Precondition self-heal clause), open the output with the one-line notice that the stale pointer was cleaned (e.g. `note: cleared stale active-task pointer (was empty) — no active task now.`) before the lines below — the run then proceeds as an initial open.
+- **If a stale pointer was self-healed on entry** — open the output with the same one-line self-heal notice as Mode 1's output, then proceed as an initial open.
 - Print the path to the created task file and that the active-task pointer was written.
 - Print the resolved roadmap source (`<path>#<N>`).
 - Print the chosen task-id and which rule produced it.
@@ -169,7 +169,7 @@ The `Roadmap:` line is written as a repo-relative path so `/task:ship`'s close s
 - Print **Roadmap progress:** `<K> of <M> items remaining`.
 - If dependencies are listed in the roadmap entry — print them as a reminder.
 - Note that the next `/task:design` call will auto-enter blueprint phase (Description is already filled).
-- End with the canonical next-step footer (per [`docs/spec/invariants.md § Interaction conventions`](../../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)): `→ Next: \`/task:design\``.
+- End with the canonical next-step footer (convention (a)): `→ Next: \`/task:design\``.
 
 ## Forbidden
 

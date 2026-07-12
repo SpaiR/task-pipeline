@@ -18,7 +18,7 @@ Brainstorm a **multi-stage roadmap** for a large initiative — multi-phase, mul
 
 **Precondition (interactive, brainstorm mode only) — too small for a roadmap.** If the initiative is small enough to be a single task (no obvious phases, no inter-task dependencies, < ~3 atomic steps) — **stop and suggest** a single `/task:design` instead. Roadmap overhead is wasted on small ideas.
 
-**Language — bilingual by convention** (roadmap-specific override of Tier C): **structural labels stay English** regardless of `config.md` — file section headers (`## Prerequisites`, `## Phase summary`, `## Phase A — …`, `## Out of scope`, `## Backlinks`), table column names, per-task field labels (`**Size:**` / `**Class:**` / `**Dependencies:**` / `**Ready description:**`), the blockquote sub-headings (`### Context` / `### Goal` / `### Outcomes` / `### Invariants` / optional `### Contracts` / `### Acceptance criteria` / optional `### Spec references`), and brainstorm round headings (`## Roadmap Brainstorm — Round N`, `### Decomposition options`, `### My recommendation`, etc.) are parser contracts. **The optional spec sidecar `<slug>.spec.md` follows the same split** — its structural labels (`## N.` section headers, `**Decision:**` / `**Rationale:**` / `**Constrains:**`) stay English; the decision/rationale prose follows config language. **Content follows `config.md` → "Language"** — initiative title, task titles, prose (intros, body of `### Context`/`### Goal`/`### Outcomes`/`### Invariants`/`### Contracts`/AC/spec items, `## Out of scope` items, summary-table rationale, brainstorm proposal/recommendation/risk text). Normative names from spec/CLAUDE.md stay verbatim; **project-specific** file paths, type names, and function names do NOT belong in `### Outcomes` / `### Goal` / `### Invariants` / `### Contracts` (see "Forbidden" below) — they belong in `/task:design`'s blueprint phase.
+**Language — bilingual by convention** (roadmap-specific override of Tier C): **structural labels stay English** regardless of `config.md` — file section headers (`## Prerequisites`, `## Phase summary`, `## Phase A — …`, `## Out of scope`, `## Backlinks`), table column names, per-task field labels (`**Size:**` / `**Class:**` / `**Dependencies:**` / `**Ready description:**`), the blockquote sub-headings (`### Context` / `### Goal` / `### Outcomes` / `### Invariants` / optional `### Contracts` / `### Acceptance criteria` / optional `### Spec references`), and brainstorm round headings (`## Roadmap Brainstorm — Round N`, `### Decomposition options`, `### My recommendation`, etc.) are parser contracts. **The optional spec sidecar `<slug>.spec.md` follows the same split** — its structural labels (`## N.` section headers, `**Decision:**` / `**Rationale:**` / `**Constrains:**`) stay English; the decision/rationale prose follows config language. **Content follows `config.md` → "Language"** — initiative title, task titles, prose (intros, body of `### Context`/`### Goal`/`### Outcomes`/`### Invariants`/`### Contracts`/AC/spec items, `## Out of scope` items, summary-table rationale, brainstorm proposal/recommendation/risk text). Normative names from spec/CLAUDE.md stay verbatim; **project-specific** file/type/function names follow behavioral discipline — see "Forbidden" below.
 
 ## Instructions
 
@@ -183,7 +183,7 @@ A **local single-item UI / detail decision FAILS the sidecar boundary test** (it
 
 **Derive `Size` and `Class` mechanically — never ask the user for either.** Both are computed while drafting, not deliberated:
 
-- **`Size` is a function of `### Outcomes` bullet count.** After drafting each task's `### Outcomes`, count the bullets and set `**Size:**` to the matching token: `small` = 1–2, `medium` = 3–6, `large` = 7+. Never treat it as a free choice; the outcome count decides it. (If a count lands at ≥ 7 — or the outcomes span ≥ 2 unrelated domains — the item is compound; split it rather than labeling it `large`.)
+- **Set `**Size:**` from the `### Outcomes` bullet count** (thresholds per Format notes); never a free choice, the outcome count decides it. ≥ 7 outcomes — or outcomes spanning ≥ 2 unrelated domains — means the item is compound; split it rather than labeling it `large`.
 - **`Class` is inferred from the task's shape** via this rubric, mapping to the existing closed list; the user is free to override it in-file:
   - refactor with no behavior change → `rote-refactor`
   - introduces a new subsystem / contract → `new-substrate`
@@ -202,8 +202,8 @@ This is the **pre-save integrity gate** — the checklist you run and fix inline
 
 1. **Phase coverage:** Does every fork raised during the brainstorm have a home in some phase, or an explicit "what's not in this plan" mention?
 2. **Description completeness:** Skim each task's `**Ready description:**` blockquote. Does it stand alone (a reader who has not seen the roadmap could write a design's blueprint phase from it)? Are `### Context`, `### Goal`, `### Outcomes`, `### Invariants`, `### Contracts` (when present), `### Acceptance criteria`, and `### Spec references` (when present) each concrete and self-contained? Context must answer "why this task, what it unblocks" — not restate Goal.
-3. **Behavioral discipline:** `### Outcomes` / `### Goal` / `### Invariants` / `### Contracts` describe **observable properties of the system / world**, not implementation choices. They MUST NOT name project-specific files, modules, functions, types, or constants. Normative names from the project's spec or `CLAUDE.md` ARE allowed (they address shared concepts, not implementation choices). When in doubt, ask: "would design's blueprint be free to pick a different file or symbol name?" — if yes, the name doesn't belong in the roadmap.
-4. **Sizing by outcomes count:** verify each computed `Size:` still matches its `### Outcomes` bullet count (Step 5 sets it; this catches a miscount, not a mislabel). `small` = 1–2 outcomes, `medium` = 3–6, `large` = 7+ — by count, not modules or files. If an item lists ≥ 7 outcomes or outcomes spanning ≥ 2 unrelated domains — split it.
+3. **Behavioral discipline:** `### Outcomes` / `### Goal` / `### Invariants` / `### Contracts` describe observable properties only — no project-specific symbols. See "Forbidden" for the full rule (normative-name carve-out + the blueprint heuristic).
+4. **Sizing by outcomes count:** verify each computed `Size:` still matches its `### Outcomes` bullet count per Format notes (Step 5 sets it; this catches a miscount, not a mislabel). ≥ 7 outcomes, or outcomes spanning ≥ 2 unrelated domains → split it.
 5. **No placeholders:** Search the draft for `TBD`, `TODO`, `???`, `fill in`, `add appropriate ...`, `handle edge cases` — these are plan failures. Either fill them in or remove them.
 6. **Dependency consistency:** Each task's `**Dependencies:**` line cites task numbers that exist elsewhere in the file. No dangling references.
 7. **Slug uniqueness within file:** Each task heading produces a unique kebab-case slug (used by `/task:design --from <file>#<slug>`).
@@ -321,9 +321,8 @@ After each task: format → lint → test (the project-specific commands from
 > ### Outcomes
 > - <Observable property of the system / world after this task — what
 >   a reader, user, or downstream developer would see / measure / grep.
->   NO project-specific file paths, type names, function names, or
->   constants. Normative names from spec or CLAUDE.md ARE allowed
->   (they address shared concepts, not implementation choices).>
+>   Observable properties only — no project-specific symbols; normative
+>   names OK.>
 > - <Outcome 2>
 > - <...>
 >

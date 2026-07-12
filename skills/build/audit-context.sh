@@ -60,16 +60,18 @@ emit_file "$WS_DIR/plan.md"
 echo
 
 # --- CLAUDE.md (project root, optional) ---
-# Consumed by the Clarity lens ONLY (per skills/build/phases/audit.md table
-# "Per-agent context — kept lean" and Step 2b "Per-call prompt template").
-# The orchestrator MUST drop this section from the prompts it builds for the
-# Reuse and Simplicity agents; passing CLAUDE.md to them is dead context and
-# violates the lensed-context contract. Section header stays `CLAUDE.md` (not
-# `CLAUDE.md (clarity-only)`) because audit.md's per-call template forwards
-# the section as `--- CLAUDE.md ---` to the Clarity agent verbatim.
+# Emitted as a PRESENCE MARKER, not content. The project CLAUDE.md is large
+# and consumed by the Clarity lens ONLY, and only when a diff implicates a
+# naming/style convention — so it is loaded lazily off disk by whoever needs
+# it (the Clarity auditor before flagging a convention finding; the merger at
+# audit.md Step 3b when a Clarity finding carries `claude_md_quote`), never
+# eagerly cat'd into the orchestrator/item-runner context. cwd is the project
+# root here, so `Read ./CLAUDE.md` resolves the same file this marker reports.
+# Section header stays `CLAUDE.md` so audit.md's per-call template and Step 3b
+# can key off it.
 emit_section "CLAUDE.md"
 if [[ -f "CLAUDE.md" ]]; then
-  cat "CLAUDE.md"
+  echo "(present at project root — read ./CLAUDE.md on demand)"
 else
   echo "(missing)"
 fi

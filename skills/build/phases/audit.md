@@ -31,9 +31,9 @@ The audit path is **adaptive** — it scales with diff size:
 |-------|-----------|----------------|------------------|----------------|-------------|
 | Reuse | ✓ | — | ✓ (from script) | — | — |
 | Simplicity | ✓ | ✓ | — | ✓ (from script) | — |
-| Clarity | ✓ | — | — | — | ✓ (from script) |
+| Clarity | ✓ | — | — | — | ✓ (reads from disk) |
 
-The diff bundle goes to all of them — that is unavoidable and the dominant cost.
+The diff bundle goes to all of them — that is unavoidable and the dominant cost. `CLAUDE.md` is **not** pasted into any prompt: it is large and Clarity-only, so the Clarity agent reads `./CLAUDE.md` off disk itself, and only when a diff actually implicates a convention (`audit-context.sh` emits just a presence marker). This keeps the full file out of the accumulating orchestrator/item-runner context.
 
 ## Step 1: Load context
 
@@ -50,7 +50,7 @@ It outputs all context needed for the audit in one block:
 - `.task/config/config.md` — tool configuration. Extract MCP priority list and the project's `CLAUDE.md` references.
 - `.task/workspace/<task-id>/task.md` — extract `## Description`.
 - `.task/workspace/<task-id>/plan.md` — extract `## Scope` and the `Goal`/`Touches` of each step in `## Steps`. `Touches` defines what should have changed; anything outside it is a candidate for a "scope creep" finding.
-- `CLAUDE.md` (project root, if exists) — used by the Clarity agent for naming/style conventions.
+- `CLAUDE.md` (project root) — a **presence marker** (`(present …)` / `(missing)`), not content. The Clarity agent reads `./CLAUDE.md` off disk when it needs to verify a convention; the merger reads it at Step 3b only to run the quote-gate.
 - `iteration` — next iteration number (1 if `audit.md` missing, else `max(## Iteration N) + 1`).
 - `diff size` — `files: N`, `lines_changed: N`, `trivial: true|false`.
 - `diff bundle` — list of changed files plus per-file `git diff HEAD`, already filtered.
@@ -75,13 +75,13 @@ When `trivial: true`, do the audit yourself in the main thread.
 
 ### Step 2b: Non-trivial diff — single round (parallel: Reuse ‖ Simplicity ‖ Clarity)
 
-When `trivial: false`, send **three** `Agent` calls in a **single tool-call message** so they run concurrently. Each call delegates to a **named agent** bundled with the `task` plugin (the `subagent_type` value MUST carry the `task:` plugin prefix — unprefixed names do not resolve and silently fall through to the `claude` catch-all).
+When `trivial: false`, send **three** `Agent` calls in a **single tool-call message** so they run concurrently. Each call delegates to a **named agent** bundled with the `task` plugin (the `subagent_type` value MUST carry the `task:` plugin prefix — see the read-only note above for the silent-fallback failure mode).
 
 | Agent | `subagent_type` | Per-call data |
 |-------|-----------------|---------------|
 | Reuse Auditor | `task:audit-reuse-auditor` | Decisions(plan) · **Neighborhood map** · Diff bundle |
 | Simplicity Auditor | `task:audit-simplicity-auditor` | Decisions(plan) · **Plan touches (scope)** · **Recent history** · Diff bundle |
-| Clarity Auditor | `task:audit-clarity-auditor` | Decisions(plan) · **CLAUDE.md** · Diff bundle |
+| Clarity Auditor | `task:audit-clarity-auditor` | Decisions(plan) · Diff bundle (**reads `./CLAUDE.md` itself**) |
 
 #### Per-call prompt template
 
@@ -107,7 +107,10 @@ in your agent prompt.
 {paste neighborhood_map}
 
 --- CLAUDE.md ---                  # Clarity ONLY
-{paste CLAUDE.md content from audit-context.sh, or "(missing)" if absent}
+{Do NOT paste CLAUDE.md content. If the marker from audit-context.sh reads
+ "(present …)", write: "Read ./CLAUDE.md from the project root to verify any
+ naming/style convention." If it reads "(missing)", write: "(missing — fall
+ back to the dominant pattern in neighboring files.)"}
 
 --- Diff bundle ---
 {paste diff bundle}
@@ -135,9 +138,9 @@ Three gates fire in order before the surviving findings reach the iteration bloc
 
    Dropped findings → `### Filtered (low confidence)` with note `(line not in diff hunks)`.
 
-3b. **CLAUDE.md quote-gate** (Clarity findings only) — drop findings claiming a CLAUDE.md convention if the quote is not verbatim in the CLAUDE.md block.
+3b. **CLAUDE.md quote-gate** (Clarity findings only) — drop findings claiming a CLAUDE.md convention if the quote is not verbatim in `CLAUDE.md`.
 
-   Clarity findings whose category implies a project convention (`naming inconsistency`, or any category whose `problem` text mentions CLAUDE.md / project convention) MUST carry a `claude_md_quote: "<phrase>"` field (see `agents/audit-clarity-auditor.md`). The merger normalizes both the quote and the CLAUDE.md block (case-insensitive, collapse whitespace, strip trailing punctuation) and substring-matches the quote against the block. No match → drop.
+   Clarity findings whose category implies a project convention (`naming inconsistency`, or any category whose `problem` text mentions CLAUDE.md / project convention) MUST carry a `claude_md_quote: "<phrase>"` field (see `agents/audit-clarity-auditor.md`). **Only when at least one surviving Clarity finding carries a `claude_md_quote`**, the merger `Read`s `./CLAUDE.md` off disk (cwd is the project root; skip entirely if there are no such findings — the common case, so `CLAUDE.md` never enters context). It then normalizes both the quote and the `CLAUDE.md` content (case-insensitive, collapse whitespace, strip trailing punctuation) and substring-matches the quote against the file. No match → drop. If `CLAUDE.md` is absent, every quote-bearing finding drops (there is no convention source to confirm against).
 
    Dropped findings → `### Filtered (low confidence)` with note `(claude_md_quote not found)`.
 

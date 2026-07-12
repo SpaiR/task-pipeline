@@ -127,7 +127,7 @@ It gates `task.md` + `plan.md` (both on disk from your children), then audits **
 - **`trivial: true`** (1 file AND <30 changed lines) → run the **inline combined audit** (`audit.md` Step 2a) yourself in this context — apply all three lenses in one pass, **no lens subagents**. This is the common case for rote roadmap items and skips three spawns + a merge round.
 - **`trivial: false`** → lens fanout: **you** send the three `Agent(task:audit-{reuse,simplicity,clarity}-auditor, context: fork)` calls in a single message (this works because you are the spawning context — it is the whole reason the cycle can live in one runner).
 
-Either way the build orchestrator wraps the pass in its bounded auto-fix loop (≤2 iterations, fixes applied by you in-context in severity order, each scope-gated by `_lib/touches-gate.sh` against `plan.md → Touches`). The adaptive gate is **purely size-based** — reusing the existing `trivial` flag. Do **not** add a `Class`-based skip (e.g. skipping fanout for `rote-refactor` regardless of size): a rote change spread across many files can still carry cross-file reuse/clarity issues the lenses catch. This is also distinct from the "don't fall back to inline if lens agents are *missing*" rule — that guards a degraded environment; the `trivial` branch is a deliberate pre-spawn size decision.
+Either way the build orchestrator wraps the pass in its bounded auto-fix loop (≤2 iterations, fixes applied by you in-context in severity order, each scope-gated by `_lib/touches-gate.sh` against `plan.md → Touches`). The adaptive audit gate is purely size-based — the existing `trivial` flag from `audit-context.sh`; never skip the lens fanout by `Class`.
 
 Branch on result:
 
@@ -196,7 +196,7 @@ OK: item #<N> shipped — <sha>
 
 - The final `OK:` line must match `^OK: item #<N> shipped — [0-9a-f]{7,}$`.
 - `task_id:` is **required on every OK** — it is the driver's only source for the post-run summary once the full close sweeps `.task-current`.
-- `roadmap_mtime:` is **required on every OK** — every item full-closes and auto-marks, bumping the mtime; the driver refreshes its in-memory `ROADMAP_MTIME` from it before the next item's race check.
+- `roadmap_mtime:` is **required on every OK** — the driver refreshes `ROADMAP_MTIME` from it (absorbs the auto-mark bump).
 
 **Failure** (one of the two shared shapes):
 

@@ -49,7 +49,7 @@ Possible auto-detect outputs:
   >
   > → Next: `/task:build`
 
-  (Canonical footer per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar).) Then stop without dispatching. Only continue to Step 2 if the user explicitly forced `--phase refine`.
+  (Canonical footer, convention (a).) Then stop without dispatching. Only continue to Step 2 if the user explicitly forced `--phase refine`.
 
 ## Step 2: Phase dispatch
 
@@ -60,13 +60,11 @@ Read `skills/design/phases/${PHASE}.md` (resolve via `${CLAUDE_PLUGIN_ROOT}/skil
 
 Pass `$ARGUMENTS` through to the phase (the companion files expect access to it — e.g. blueprint may use any extra context provided by the user).
 
-Read each phase's companion file and follow it directly.
-
 If `${PHASE}` is not one of `open`, `blueprint`, `refine` — stop with an error: "Unknown phase '${PHASE}'. Valid: open, blueprint, refine."
 
 ## Step 3: Advance loop (chain phases without re-invocation)
 
-After the dispatched phase completes successfully, don't stop at a passive footer — offer to continue into the next phase in the **same call**, so the user runs `/task:design` once and is walked through the rest by questions rather than re-typing commands. Each transition is gated by one `AskUserQuestion` (structured-choice convention (c) in [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar)) whose decline path prints the flag-free next-step footer and stops.
+After the dispatched phase completes successfully, don't stop at a passive footer — offer to continue into the next phase in the **same call**, so the user runs `/task:design` once and is walked through the rest by questions rather than re-typing commands. Each transition is gated by one `AskUserQuestion` (structured-choice convention (c)) whose decline path prints the flag-free next-step footer and stops.
 
 **Non-interactive carve-out (mandatory).** In a non-interactive run — the `auto-roadmap-design-runner` executing this inline — present **no** advance question and **never** invoke `/task:build`. Complete the dispatched phase and stop; the runner drives the next phase (open→blueprint) and the item-runner drives build separately. The advance loop below is interactive-only. (Detector: same "runner executing inline" signal as ship Step 2.5/3 and build's clean-build proposal.)
 
@@ -88,5 +86,5 @@ The loop ends when the user declines a transition, a phase stops on its own prec
 
 After each dispatched phase completes:
 - Print whatever the companion phase's "Output" section specifies (paths, summary).
-- Then run the Step 3 advance loop: in an interactive run, offer the next-phase question; on decline (or in a non-interactive run) end with the canonical next-step footer — a single **flag-free** `→ Next: <runnable command>` line (per [`docs/spec/invariants.md § Interaction conventions`](../../docs/spec/invariants.md#interaction-conventions-next-step-footer--choice-grammar); never suggest a flag to the user). If the phase's own Output already emits the footer, do not duplicate it.
+- Then run the Step 3 advance loop: in an interactive run, offer the next-phase question; on decline (or in a non-interactive run) end with the canonical next-step footer — a single **flag-free** `→ Next: <runnable command>` line (convention (a); never suggest a flag to the user). If the phase's own Output already emits the footer, do not duplicate it.
 - When the loop advances into another phase, print that phase's Output too; when it advances into `/task:build`, that skill owns its own output from there.
