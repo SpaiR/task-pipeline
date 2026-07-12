@@ -13,17 +13,17 @@ You improve; you do not audit. The Invariants auditor owns *declared* rules that
 - **Read-only.** You MUST NOT call `Edit`, `Write`, or any MCP edit tool. You MAY use Read, Grep, Glob, Bash for `git`/`ls` reads. Never use `Bash` to modify anything — no `>`, `>>`, `sed -i`, `tee`, `mv`, `rm`, or any write; it is for read-only navigation only.
 - **Stay strictly within the Coverage lens.** Ambiguous existing instructions belong to Clarity; redundancy/over-engineering belongs to Leanness; human-facing wording belongs to Ergonomics. Coverage is about something *missing* that should exist.
 - Each finding must name **the concrete gap** and **the foreseeable failure it lets through** — not a hypothetical "would be nice".
-- **Respect this repo's simplicity discipline.** CLAUDE.md and the Simplicity auditor push back on speculative generality and "defensive validation outside system boundaries". Only flag a missing guardrail when the failure it prevents is *reachable* given real callers — never propose defensive checks for impossible states. A proposed addition that the Simplicity lens would reject is a bad finding.
+- **Respect this repo's leanness discipline.** CLAUDE.md and the Leanness lens push back on speculative generality and defensive validation outside system boundaries (this is a solo tool that trades enforcement for convention — no hook gate, `validate.sh` is opt-in). Only flag a missing guardrail when the failure it prevents is *reachable* given real callers — never propose defensive checks for impossible states. A proposed addition that the Leanness lens would reject is a bad finding.
 - **Boundary with self-audit:** a *declared* invariant that a skill breaks is a violation (`defer: self-audit`). A useful safeguard that was simply never written is yours.
 
 ## What counts as a Coverage improvement (representative, non-exhaustive)
 
 - A flow step whose failure mode is unhandled (e.g. a parser step with no stated behavior when the expected header is absent, on a path where absence is reachable).
 - A branch an agent must decide with no worked-example, where a one-line example would pin the intended output shape.
-- A precondition that is checked in one entry path but not a sibling path that reaches the same artifact.
-- A `--flag` combination whose interaction is unspecified (e.g. two mutually-exclusive flags with no stated conflict behavior), where a user could reach it.
-- A behavior implemented in a skill but absent from README/spec, so a future editor cannot know it is load-bearing (documentation coverage).
-- An edge-case in a bash helper (empty input, missing file, multi-match) with no guard, reachable from a real caller.
+- A precondition that is checked in one entry path but not a sibling path that reaches the same artifact (e.g. the config hard-stop present in one skill but not another that also writes `.task/`).
+- A capture-depth or roadmap-item-pickup branch whose behavior is unspecified where a user could reach it (e.g. re-running `to-plan` on a `to-task`-only file, or `to-plan` picking up a roadmap item — the intended merge/write behavior left implicit).
+- A behavior implemented in a skill but absent from README / `docs/contract.md`, so a future editor cannot know it is load-bearing (documentation coverage).
+- An edge-case in a bash helper (`preamble.sh`, `resolve-ws.sh`, `roadmap.sh`, `validate.sh` — empty input, missing file, multi-match) with no guard, reachable from a real caller.
 
 ## Tier rule (which findings can be auto-applied)
 

@@ -9,22 +9,22 @@ Improve **this repository** (the task-pipeline skills repo itself) — not by fi
 
 ## improve vs audit — the split that defines this skill
 
-`/self-audit` asks *"does the repo obey its own declared rules?"* — it has an oracle (CLAUDE.md invariants, the artifact contract, the real `skills/`/`agents/` tree), the fix direction is determined, and every gated finding is applied.
+`/self-audit` asks *"does the repo obey its own declared rules?"* — it has an oracle (CLAUDE.md invariants, the artifact contract in `docs/contract.md`, the real `skills/` tree), the fix direction is determined, and every gated finding is applied.
 
 `/self-improve` asks *"nothing is violated — but where is the repo weaker than it could be?"* — there is **no oracle**. An "improvement" is a judgement call, and its direction is a design decision, not a mechanical correction. That is the literal difference between fixes (audit) and improvements (improve), and it drives the whole apply model:
 
 - **Audit applies everything that passes its gate** — the source of truth says which way to go.
-- **Improve applies only a narrow, mechanical, behavior-preserving subset automatically**, at a higher confidence bar, and **proposes** everything that changes the design for the user to greenlight. Improvements that reshape a flow, merge phases, or add a guardrail are decisions a human must nod at.
+- **Improve applies only a narrow, mechanical, behavior-preserving subset automatically**, at a higher confidence bar, and **proposes** everything that changes the design for the user to greenlight. Improvements that reshape a flow, merge sections, or add a guardrail are decisions a human must nod at.
 
 **Boundary rule (hard):** if a lens finds an actual violation of a declared rule (an invariant, a producer↔consumer mismatch, README↔code drift), that is audit's job, not improve's. The agent must set `defer: self-audit` on it and **not** propose a fix. `/self-improve` never edits under the banner of a rule violation — it only makes not-yet-broken things better.
 
-This is a **meta-skill**. It operates on the repo's own files (`skills/*/SKILL.md`, `skills/*/phases/*.md`, `skills/*/*.sh`, `agents/*.md`, `CLAUDE.md`, `README.md`, `docs/spec/*.md`), not on `.task/*` artifacts. It is independent of the `/task:design` → `/task:build` → `/task:ship` pipeline (and `/task:auto-roadmap`) and can be invoked at any time.
+This is a **meta-skill**. It operates on the repo's own files (`skills/*/SKILL.md`, `skills/_lib/*.sh`, `skills/validate/validate.sh`, `CLAUDE.md`, `README.md`, `docs/contract.md`), not on `.task/*` artifacts. The pipeline it improves is the v3 chat-first protocol (four user skills — `to-task`, `to-plan`, `to-roadmap`, `roadmap-to-workflow` — plus the internal `validate`); there is no `design`/`build`/`ship`/`auto-roadmap` pipeline and no repo-level `agents/` directory. It can be invoked at any time.
 
 **Input:**
 - Optional scope hint: $ARGUMENTS (e.g. a single skill name to focus on; default: full repo).
-- Optional flag `--propose-only` (alias `--dry-run`) in $ARGUMENTS: apply nothing; report both tiers only.
+- Optional flag `--propose-only` (alias `--dry-run`) in $ARGUMENTS: apply nothing; report both tiers only. (This is a flag of the meta-skill itself, not of the audited pipeline — the pipeline is flag-free.)
 
-**Precondition (hard-stop):** This skill is local to the task-pipeline repo. Verify the working directory contains `skills/bootstrap/`, `agents/`, and `CLAUDE.md` at the repo root. If not, stop with: "This skill is local and only works inside the task-pipeline repository."
+**Precondition (hard-stop):** This skill is local to the task-pipeline repo. Verify the working directory contains `skills/to-task/`, `skills/validate/`, and `CLAUDE.md` at the repo root. If not, stop with: "This skill is local and only works inside the task-pipeline repository."
 
 **Communication language:** Russian (per global user instructions). Findings text stays in English (it grounds in English source files and matches the existing auditor convention).
 
@@ -37,9 +37,9 @@ Four directions of "better" — sharper / leaner / more complete / kinder-to-the
 | Lens | Local agent | Vector | Facing | What it looks for |
 |------|-------------|--------|--------|-------------------|
 | **Clarity** | `self-clarity-improver` | modify in place | the agent reading the prompt | Ambiguous steps, weak output templates, internal contradictions in one file — places an LLM will plausibly do the wrong thing. |
-| **Leanness** | `self-leanness-improver` | subtract / link | — | Prose duplication with no single owner (→ collapse to a pointer) and over-engineering (a helper wrapping one line, a dead flag, a phase split that adds ceremony). |
+| **Leanness** | `self-leanness-improver` | subtract / link | — | Prose duplication with no single owner (→ collapse to a pointer) and over-engineering (a helper wrapping one line, a dead branch, ceremony that adds no seam). |
 | **Coverage** | `self-coverage-improver` | add robustness | the agent reading the prompt | Missing guardrails, absent worked-examples where an agent guesses, unhandled edge-cases in the flow, a missing test/doc. |
-| **Ergonomics** | `self-ergonomics-improver` | modify / add | the human operator | Error / hard-stop wording, flag-name consistency across skills, next-step hints, discoverability, quality of final feedback. |
+| **Ergonomics** | `self-ergonomics-improver` | modify / add | the human operator | Error / hard-stop wording, next-step / handoff footers, discoverability, quality of final feedback. |
 
 Boundaries against `/self-audit` (each agent enforces its own; `defer: self-audit` when crossed):
 - **Leanness ≠ Contract auditor**: Contract flags copies that *disagree today*; Leanness flags copies that *exist and should be collapsed* even while they still agree — removing future-drift risk.
@@ -53,18 +53,15 @@ All four are **read-only** named agents at `.claude/agents/self-{clarity,leannes
 ### Step 1: Gather context
 
 In one parallel batch, run:
-- `ls skills/` — full skill list (folder names = canonical slugs).
-- `ls agents/` — agent files at the repo level.
+- `ls skills/` — full skill list (folder names = canonical slugs; expect `to-task`, `to-plan`, `to-roadmap`, `roadmap-to-workflow`, `validate`, `_lib`).
 - `ls .claude/agents/` — local self-* agents (sanity check before fan-out).
 - `git status --porcelain` — flag a dirty tree to the user before starting (proposals against working state may diverge from `HEAD`).
 - Read `.claude/.improve-baseline.json` if it exists (prior ratchet metrics; absent on first run — treat as no baseline).
-- Read `CLAUDE.md` and `README.md` in full.
-- Read every `docs/spec/*.md` (one batched call) — Leanness and Coverage receive these; dedup targets and spec-level coverage gaps live here.
-- Read every `skills/*/SKILL.md` and `skills/*/phases/*.md` (one batched call).
-- Read every bash helper `skills/*/*.sh` (one batched call).
-- Read every `agents/*.md` (one batched call).
+- Read `CLAUDE.md`, `README.md`, and `docs/contract.md` in full.
+- Read every `skills/*/SKILL.md` (one batched call).
+- Read every bash helper `skills/_lib/*.sh` plus `skills/validate/validate.sh` (one batched call).
 
-If `$ARGUMENTS` names a single skill (e.g. `audit`), still load the full `CLAUDE.md` + `README.md` + agent list (lenses cross-reference), but you may narrow the SKILL.md / phase reads to that skill plus any skill it explicitly produces/consumes for.
+There is **no repo-level `agents/` directory** and **no `docs/spec/`** in v3 — do not attempt to read them. If `$ARGUMENTS` names a single skill (e.g. `to-plan`), still load the full `CLAUDE.md` + `README.md` + `docs/contract.md` (lenses cross-reference), but you may narrow the SKILL.md reads to that skill plus any skill it explicitly produces/consumes for.
 
 ### Step 2: Run four agents in parallel
 
@@ -74,7 +71,7 @@ Send **one tool message** with four `Agent` calls, `subagent_type` set to:
 - `self-coverage-improver`
 - `self-ergonomics-improver`
 
-If any of those agent files is missing under `.claude/agents/`, stop and tell the user which agent file is missing — do not fall back to inline prompts (it would lose the read-only allowlist guarantee, same rule as `/task:build` audit phase and `/self-audit`).
+If any of those agent files is missing under `.claude/agents/`, stop and tell the user which agent file is missing — do not fall back to inline prompts (it would lose the read-only allowlist guarantee, same rule as `/self-audit`).
 
 #### Per-call prompt template
 
@@ -94,16 +91,13 @@ set `defer: self-audit` on them and do not propose a fix.
 --- Skill list ---
 {ls skills/}
 
---- Agent list (skills repo) ---
-{ls agents/}
-
 --- CLAUDE.md ---
 {full file contents}
 
 {lens-specific block — see table}
 
---- SKILL.md + phases bundle ---
-{concatenated skills/*/SKILL.md and skills/*/phases/*.md, each preceded by `=== <relative path> ===`}
+--- SKILL.md bundle ---
+{concatenated skills/*/SKILL.md, each preceded by `=== <relative path> ===`}
 
 --- Bash helpers ---
 {lens-specific — see table}
@@ -114,9 +108,8 @@ Lens-specific blocks:
 | Block | Clarity | Leanness | Coverage | Ergonomics |
 |-------|---------|----------|----------|------------|
 | `--- README.md ---` | — | full file | — | full file |
-| `--- docs/spec/*.md ---` | — | full (dedup targets live here) | full | — |
-| `--- agents/ contents ---` (full text of each repo-level agent file) | full | full | full | paths + frontmatter only |
-| `--- Bash helpers ---` | paths + first-line description | **full text of every `*.sh`** (over-engineering lives there) | **full text of every `*.sh`** (missing guards live there) | paths + any user-facing `echo`/error strings |
+| `--- docs/contract.md ---` | — | full (dedup targets live here) | full | — |
+| `--- Bash helpers ---` | paths + first-line description | **full text of every `skills/_lib/*.sh` + `validate.sh`** (over-engineering lives there) | **full text of every `skills/_lib/*.sh` + `validate.sh`** (missing guards live there) | paths + any user-facing `echo`/error strings |
 
 ### Step 3: Merge and report
 
@@ -133,12 +126,12 @@ Lens-specific blocks:
    ### Applied (Tier 1 — mechanical, behavior-preserving)
    | # | Lens | Val | Conf | Location | Improvement |
    |---|------|-----|------|----------|-------------|
-   | 1 | Clarity | med | 94 | `skills/build/phases/audit.md:88` | … |
+   | 1 | Clarity | med | 94 | `skills/to-plan/SKILL.md:88` | … |
 
    ### Proposed (Tier 2 — needs your greenlight; reply e.g. "apply 2, 5")
    | # | Lens | Val | Conf | Location | Improvement | Blast radius |
    |---|------|-----|------|----------|-------------|--------------|
-   | 2 | Ergonomics | high | — | `skills/bootstrap/SKILL.md:31` | … | … |
+   | 2 | Ergonomics | high | — | `skills/to-task/SKILL.md:31` | … | … |
    ```
 
    Then a `Details` list (one entry per finding with `Lens`, `Confidence`, `Behavior-preserving: yes/no`, `Status: pending`).
@@ -152,9 +145,9 @@ Lens-specific blocks:
 **Tier 1 — auto-apply.** Unless `--propose-only` was passed, edit each Tier 1 finding via `Edit` in the main thread, value order (high → low). These are behavior-preserving by construction — wording clarifications, exact-duplicate → pointer collapses, provably-dead flag removals.
 - After each applied edit, mark `applied` (in memory only); do **not** rewrite the chat report between edits.
 - For a `dedup-to-pointer` edit, sanity-check the pointer target exists and the collapsed copy carried no unique content before deleting it.
-- For a `dead-flag-removal` edit, first `grep -rn` the flag token across `skills/`, `agents/`, `README.md`, `CLAUDE.md`, and `docs/` — the removal is only safe if it appears nowhere but the definition being deleted. Any other hit (a doc, another skill, a user-facing mention) means the flag is not dead → downgrade to `proposed` instead of applying.
+- For a `dead-flag-removal` edit, first `grep -rn` the flag token across `skills/`, `README.md`, `CLAUDE.md`, and `docs/` — the removal is only safe if it appears nowhere but the definition being deleted. Any other hit (a doc, another skill, a user-facing mention) means the flag is not dead → downgrade to `proposed` instead of applying.
 - If a Tier 1 finding's `improvement` is too vague to act on safely, mark `skipped-underspecified` and move on rather than guessing.
-- If applying it would contradict an explicit decision elsewhere in `CLAUDE.md`/spec, mark `skipped-out-of-scope`.
+- If applying it would contradict an explicit decision elsewhere in `CLAUDE.md` / `docs/contract.md`, mark `skipped-out-of-scope`.
 
 **Tier 2 — propose only.** Never auto-applied. They stay `proposed` in the report. When the user replies naming numbers (e.g. "apply 2 and 5"), apply exactly those in the main thread **in the same session** — re-checking each against the current file before editing. A Tier 2 finding the user does not pick is left untouched.
 
@@ -202,7 +195,7 @@ Then **write** the new baseline to `.claude/.improve-baseline.json` (the only sa
 
 - This skill is **local** (`.claude/skills/self-improve/` + `.claude/agents/self-*-improver.md`). It is not installed globally and not bundled into the public skill set. To remove: delete those paths (and the gitignored `.claude/.improve-baseline.json`).
 - The ratchet baseline `.claude/.improve-baseline.json` is the **sole** on-disk artifact this skill writes (gitignored, per-clone). The skill must not modify `.gitignore` at runtime — the baseline entry is added once at bootstrap.
-- Findings about `agents/*.md` and `docs/spec/*.md` themselves **are** in scope — they are part of the prompt contract.
-- Findings about `.task/` are **out of scope** (working artifacts, archived by `/task:ship`).
+- Findings about `docs/contract.md` itself **are** in scope — it is part of the prompt contract.
+- Findings about `.task/` are **out of scope** (working artifacts; git history is their record — no archive in v3).
 - This skill must not modify `.task/` or the project's `.gitignore`.
 - Sibling skill: [`/self-audit`](../self-audit/SKILL.md) — run it for rule-violation fixes; `/self-improve` defers all violations to it.
