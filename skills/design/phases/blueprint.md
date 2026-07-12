@@ -54,6 +54,14 @@ Analysis algorithm:
 - **`sonnet`** — the strong default. Straightforward execution against a clear, fixed plan that still needs code-level judgment — including large multi-module changes with no subtle invariants, since a large context window holds the whole working set.
 - **`haiku`** — mechanical edits with no behavioural branching and no judgment involved: textual / config / template substitution, one-to-one renames, changes against an already-fixed contract. Stay conservative on very large or broad mechanical sweeps — Haiku's lower ceiling can still be tripped by sheer breadth even when each individual edit is trivial.
 
+**Roadmap `Class:` as a soft prior.** When `task.md` carries a `Roadmap: <path>` header, open that roadmap file, find the source item (`Source item: #<N>` header → the `### - [ ] <N>.` entry), and read its `**Class:**` field. Use it only to **shift the default** — reasoning difficulty above still wins, this never overrides it:
+
+- `rote-refactor` / `content-vocabulary` / `tooling` → lean `haiku` (keep the "conservative on very large / broad mechanical sweeps" caution — breadth can still trip Haiku); escalate only if a genuine subtle invariant is present.
+- `product-feature` / `new-substrate` / `cross-module-migration` → lean `sonnet`; reach `opus` only on genuine execution-time reasoning difficulty.
+- No `Roadmap:` header, or `Class` missing / off-list → no signal; fall through to the `sonnet` default below.
+
+`Class` is a best-effort hint (may be absent or off-list per the roadmap spec) — a miss is "no signal", never a fail-stop (mirrors how the roadmap Clarity auditor treats a missing `Class` as a no-op).
+
 When uncertain, default to `sonnet`. The stamp is parser-validated by `validate.sh` and load-bearing for `/task:auto-roadmap` — it selects the model used to spawn `auto-roadmap-build-runner` for the implement stage. Harmless in manual flows.
 
 Write the plan to `.task/workspace/<task-id>/plan.md` strictly following this template:

@@ -118,11 +118,16 @@ Take the **last non-empty line** as the status line. Match:
 - `^FAIL at implement: .*\. See .*\.$` → failure (only the post-open shape is valid — the workspace subfolder exists by now). Append your `--- ORCHESTRATOR FAIL ---` block, return `FAIL at implement: <reason>. Artefacts remain in .task/workspace/<task-id>/. See <error-log-path>.`
 - Anything else → malformed; failure with reason `build-runner returned malformed status: <raw last line>`.
 
-### Step 4 — Audit (you spawn the lenses yourself)
+### Step 4 — Audit (adaptive: inline combined audit or lens fanout)
 
 Run `/task:build`'s audit phase — read `${CLAUDE_PLUGIN_ROOT}/skills/build/SKILL.md` and execute its Steps directly with `PHASE=audit` (the skill is `disable-model-invocation: true`; the `Skill` tool cannot dispatch it). The build orchestrator dispatches to `${CLAUDE_PLUGIN_ROOT}/skills/build/phases/audit.md`, which runs a context script — invoke it by its **absolute path at the build skill root**, `bash "${CLAUDE_PLUGIN_ROOT}/skills/build/audit-context.sh"` (NOT `phases/audit-context.sh`; reading the phase file inline gives no `${CLAUDE_SKILL_DIR}` substitution, so don't guess the path from where `audit.md` sits — this is the same fallback the driver used to apply when it ran audit inline).
 
-It gates `task.md` + `plan.md` (both on disk from your children), then performs lens fanout: **you** send the three `Agent(task:audit-{reuse,simplicity,clarity}-auditor, context: fork)` calls in a single message (this works now that you are the spawning context — it is the whole reason the cycle can live in one runner). The build orchestrator wraps the pass in its bounded auto-fix loop (≤2 iterations, fixes applied by you in-context in severity order, each scope-gated by `_lib/touches-gate.sh` against `plan.md → Touches`).
+It gates `task.md` + `plan.md` (both on disk from your children), then audits **adaptively** — this honors `build/SKILL.md` Step 4's existing branch on the context script's `diff size` block, exactly as an interactive `/task:build` would; do not force one path:
+
+- **`trivial: true`** (1 file AND <30 changed lines) → run the **inline combined audit** (`audit.md` Step 2a) yourself in this context — apply all three lenses in one pass, **no lens subagents**. This is the common case for rote roadmap items and skips three spawns + a merge round.
+- **`trivial: false`** → lens fanout: **you** send the three `Agent(task:audit-{reuse,simplicity,clarity}-auditor, context: fork)` calls in a single message (this works because you are the spawning context — it is the whole reason the cycle can live in one runner).
+
+Either way the build orchestrator wraps the pass in its bounded auto-fix loop (≤2 iterations, fixes applied by you in-context in severity order, each scope-gated by `_lib/touches-gate.sh` against `plan.md → Touches`). The adaptive gate is **purely size-based** — reusing the existing `trivial` flag. Do **not** add a `Class`-based skip (e.g. skipping fanout for `rote-refactor` regardless of size): a rote change spread across many files can still carry cross-file reuse/clarity issues the lenses catch. This is also distinct from the "don't fall back to inline if lens agents are *missing*" rule — that guards a degraded environment; the `trivial` branch is a deliberate pre-spawn size decision.
 
 Branch on result:
 
