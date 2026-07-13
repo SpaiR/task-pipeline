@@ -22,15 +22,15 @@ Check whether `.task/config/config.md` exists (resolve the pipeline root the sam
 - **Absent → inline setup.** Identical to `to-task`'s Step 0 — this skill does not defer to a separate setup command:
   1. Determine the pipeline root `ROOT` (main worktree root; `pwd` for a non-git dir; for a bare repo the default is a best-effort guess — surface it in the proposal below so the user can redirect it).
   2. Analyze the project: read `CLAUDE.md` if present, detect language/stack, build/test commands, a project commit-format doc (check in order `CONTRIBUTING.md`, `docs/CONTRIBUTING.md`, `.github/CONTRIBUTING.md`), detected language policy (repo's dominant natural language from `git log -10 --oneline` + `CLAUDE.md`/`README.md` prose — default to "follow `task.md` Description" for English/mixed repos), and detected testing-policy mode (`always` if a TDD convention is documented, `on-demand` otherwise — never silently detect `never`).
-  3. Present ONE accept/decline/edit proposal (convention (b)):
+  3. Show the detected config, then pose ONE `AskUserQuestion` confirmation (convention (b)):
      ```
      Detected — Language: <policy>; Testing policy: <mode>.
-     accept / decline / edit
      ```
      Bare repo: add a third clause, `.task location: <ROOT>/.task`, editable the same way.
-     - **accept** → adopt as-is.
-     - **edit** → ask which field(s) to amend (language policy / testing-policy mode / bare-repo `.task` location), then continue.
-     - **decline** → do not write anything; report "config.md not written — run `to-plan` again when ready" and **stop**.
+     Chips **Accept** / **Edit** / **Decline**:
+     - **Accept** → adopt as-is.
+     - **Edit** → follow-up asks which field(s) to amend (language policy / testing-policy mode / bare-repo `.task` location), then continue.
+     - **Decline** → do not write anything; report "config.md not written — run `to-plan` again when ready" and **stop**.
   4. Write `.task/config/config.md` (create `.task/task/` alongside it) using the standard template — sections: Code Navigation, Code Editing, Library Documentation, Project Conventions, Build and Tests, Commit Format, Language, Testing Policy, Directories — Do Not Search. Reference mode (a short `**Source:** \`CLAUDE.md\` → \`## <Heading>\`` pointer, ≤3 summary lines) when `CLAUDE.md` already documents a section; full mode otherwise. Commit Format: reference mode with just `**Source:** <path>` when a commit-format doc was found, else derive rules from `git log`.
   5. Record `git config --local task.root "$ROOT"` (repo-common, shared by every worktree).
   6. Exclude `.task` locally: `EXCLUDE=$(git rev-parse --git-path info/exclude); mkdir -p "$(dirname "$EXCLUDE")"; touch "$EXCLUDE"; grep -qxF '.task' "$EXCLUDE" || echo '.task' >> "$EXCLUDE"`. Skip with a warning if not a git repo.
@@ -164,7 +164,7 @@ Run through this checklist against the draft; fix inline before Step 7, don't pr
 - [ ] No placeholders (`TBD`, `TODO`, `???`) anywhere outside an explicitly-marked `Logic` pseudocode block?
 - [ ] Steps ordered so nothing depends on a not-yet-established fact?
 
-## Step 7: Present for accept/decline/edit
+## Step 7: Present for confirmation
 
 Content shown depends on mode (convention (b) throughout):
 
@@ -172,9 +172,11 @@ Content shown depends on mode (convention (b) throughout):
 - **Promote** — show only the new `## Plan` (+ `## Tests` if newly added); state plainly that the existing Description is untouched.
 - **Revise** — show the new `## Plan` next to a one-line note of what changed from the old one; state plainly that Description and any pre-existing Tests are untouched unless the chat explicitly asked to change them too.
 
-- **accept** → proceed to Step 8 as drafted.
-- **edit** → apply the requested changes, re-show, repeat until accepted.
-- **decline** → write nothing, stop with "`task.md` not written" (promote/revise: "no changes made to `task.md`").
+Then pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline**:
+
+- **Accept** → proceed to Step 8 as drafted.
+- **Edit** → follow-up asks what to change, apply it, re-show, repeat until accepted.
+- **Decline** → write nothing, stop with "`task.md` not written" (promote/revise: "no changes made to `task.md`").
 
 ## Step 8: Write
 

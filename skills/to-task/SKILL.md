@@ -19,15 +19,15 @@ Check whether `.task/config/config.md` exists (resolve the pipeline root the sam
 - **Absent → inline setup.** This skill is the home of what used to be a separate `bootstrap` step; run it inline, do not defer to another command:
   1. Determine the pipeline root `ROOT` (main worktree root; `pwd` for a non-git dir; for a bare repo the default is a best-effort guess — surface it in the proposal below so the user can redirect it).
   2. Analyze the project: read `CLAUDE.md` if present, detect language/stack, build/test commands, a project commit-format doc (check in order `CONTRIBUTING.md`, `docs/CONTRIBUTING.md`, `.github/CONTRIBUTING.md`), detected language policy (repo's dominant natural language from `git log -10 --oneline` + `CLAUDE.md`/`README.md` prose — default to "follow `task.md` Description" for English/mixed repos), and detected testing-policy mode (`always` if a TDD convention is documented, `on-demand` otherwise — never silently detect `never`).
-  3. Present ONE accept/decline/edit proposal (convention (b)):
+  3. Show the detected config, then pose ONE `AskUserQuestion` confirmation (convention (b)):
      ```
      Detected — Language: <policy>; Testing policy: <mode>.
-     accept / decline / edit
      ```
      Bare repo: add a third clause, `.task location: <ROOT>/.task`, editable the same way.
-     - **accept** → adopt as-is.
-     - **edit** → ask which field(s) to amend (language policy / testing-policy mode / bare-repo `.task` location), same option menus as the language/testing-policy questions below, then continue.
-     - **decline** → do not write anything; report "config.md not written — run `to-task` again when ready" and **stop**.
+     Chips **Accept** / **Edit** / **Decline**:
+     - **Accept** → adopt as-is.
+     - **Edit** → follow-up asks which field(s) to amend (language policy / testing-policy mode / bare-repo `.task` location), same option menus as the language/testing-policy questions below, then continue.
+     - **Decline** → do not write anything; report "config.md not written — run `to-task` again when ready" and **stop**.
   4. Write `.task/config/config.md` using the standard template — sections: Code Navigation, Code Editing, Library Documentation, Project Conventions, Build and Tests, Commit Format, Language, Testing Policy, Directories — Do Not Search. Reference mode (a short `**Source:** \`CLAUDE.md\` → \`## <Heading>\`` pointer, ≤3 summary lines) when `CLAUDE.md` already documents a section; full mode otherwise. Commit Format: reference mode with just `**Source:** <path>` when a commit-format doc was found, else derive rules from `git log`.
   5. Record `git config --local task.root "$ROOT"` (repo-common, shared by every worktree — this is what gives all worktrees the same `.task/` with no symlink or join step).
   6. Exclude `.task` locally: `EXCLUDE=$(git rev-parse --git-path info/exclude); mkdir -p "$(dirname "$EXCLUDE")"; touch "$EXCLUDE"; grep -qxF '.task' "$EXCLUDE" || echo '.task' >> "$EXCLUDE"`. Skip with a warning if not a git repo.
@@ -52,7 +52,7 @@ Branch on `$ARGUMENTS`:
 2. Pick `<N>`: if given, use it. Otherwise collect open items (`- [ ]` checkbox headings); if none — stop: "all items in `<slug>` are closed; pick one explicitly with `<slug>#<N>`, or draft from chat instead." If more than one open item, ask via `AskUserQuestion` (chip per `#<N> — <title>`, first/lowest default); if exactly one, auto-pick it.
 3. Read the item's `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria` block. `### Context` becomes the Description's "why"; the rest folds into the "what".
 4. Derive `<item-slug>` — kebab-case English from the item's own title (not the roadmap's). No task-id, no `derive-task-id` helper: the item gets its own `<item-slug>.md`, independent of the roadmap's slug.
-5. Present the drafted Description body for accept/decline/edit (same grammar as chat-draft mode) before writing anything.
+5. Present the drafted Description body, then pose an `AskUserQuestion` (Accept / Edit / Decline — same mechanism as chat-draft mode's Step 2.3) before writing anything.
 6. **On accept**, write `.task/task/<item-slug>.md` (creating `.task/task/` if needed):
 
    ```markdown
@@ -80,15 +80,15 @@ Branch on `$ARGUMENTS`:
 
 ### Step 2: Chat-draft mode
 
-1. **Slug.** Derive a kebab-case English slug (2–5 words) from the chat's essence / the drafted title. This is both the filename and the task's identity — no task-id, no bracket. If `.task/task/<slug>.md` already exists, surface it before writing: ask (accept/decline/edit grammar) whether to overwrite it, or pick a more specific slug instead.
+1. **Slug.** Derive a kebab-case English slug (2–5 words) from the chat's essence / the drafted title. This is both the filename and the task's identity — no task-id, no bracket. If `.task/task/<slug>.md` already exists, surface it before writing: pose an `AskUserQuestion` (Accept overwrite / Edit → propose a different slug / Decline → stop without writing).
 2. **Distil the chat.** Read back over the discussion in this conversation (not the codebase) and write:
    - `## Description` — the why + what, in the user's own framing. Use `### Problem` / `### Outcome` / `### Scope` / `### Constraints` sub-headers where the discussion gives signal for them; omit a sub-header rather than inventing content. Do not fabricate anything not actually discussed.
    - `## Tests` — only if `.task/config/config.md` → Testing Policy resolves `tests_required` true for this task (`always`, or `on-demand` with the discussion explicitly asking for tests). List test intents as `### Test N: <what it checks>`; no code yet — the executing session writes the real tests.
    - **No `## Plan` section** — that is `to-plan`'s job.
-3. **Present the draft** for accept/decline/edit (convention (b)):
-   - accept → write the file as drafted.
-   - edit → apply the requested changes, re-show, repeat until accepted.
-   - decline → do not write anything; stop with "task.md not written."
+3. **Present the draft**, then pose an `AskUserQuestion` (convention (b)) with chips **Accept** / **Edit** / **Decline**:
+   - **Accept** → write the file as drafted.
+   - **Edit** → follow-up asks what to change, apply it, re-show, repeat until accepted.
+   - **Decline** → do not write anything; stop with "task.md not written."
 4. **On accept**, write `.task/task/<slug>.md` (creating `.task/task/` if needed, no `Roadmap:` / `Source item:` lines in this mode):
 
    ```markdown

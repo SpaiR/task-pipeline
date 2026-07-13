@@ -17,12 +17,12 @@ Fix a **multi-task initiative** — something with phases, dependencies, or more
 
 Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`.
 
-- **`config.md not found`** → `/task:to-roadmap` is intake-capable: run the inline setup gate exactly as `skills/to-task/SKILL.md` Step 0 does (detect stack → one accept/decline/edit proposal → write `config.md` + `git config --local task.root` + exclude `.task`), then re-run `validate.sh all`. If config is now present → continue. If the user declined setup → report "config.md not written — run `to-roadmap` again when ready" and **stop**.
+- **`config.md not found`** → `/task:to-roadmap` is intake-capable: run the inline setup gate exactly as `skills/to-task/SKILL.md` Step 0 does (detect stack → one `AskUserQuestion` confirmation, Accept / Edit / Decline chips → write `config.md` + `git config --local task.root` + exclude `.task`), then re-run `validate.sh all`. If config is now present → continue. If the user declined setup → report "config.md not written — run `to-roadmap` again when ready" and **stop**.
 - **Any other non-zero exit** (config present but malformed) → **stop**, report the validator output.
 
 ### Preconditions
 
-- **Slug collision (soft).** Create `.task/roadmap/` if missing. If a file at the proposed slug already exists → **stop and ask** whether to overwrite or pick a different slug. Never silently overwrite.
+- **Slug collision (soft).** Create `.task/roadmap/` if missing. If a file at the proposed slug already exists → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). Never silently overwrite.
 - **Too small for a roadmap.** If the initiative has no obvious phases, no inter-task dependencies, and fewer than ~3 atomic steps → **stop and suggest** `/task:to-task` or `/task:to-plan` instead.
 
 ### Step 1: Load context
@@ -59,13 +59,13 @@ the file, here is every decision I captured — confirm nothing dropped.}
 ### Coverage caveat
 {Only if part of the discussion is out of context. Omit the heading
 otherwise.}
-
-accept / decline / edit
 ```
 
-- **accept** → proceed to Step 3 if open forks remain, else straight to Step 4 (draft).
-- **decline** → you misread the discussion; ask the user to restate it, rebuild the inventory.
-- **edit** → the user adds/corrects a decision or moves it between locked/open, then proceed as accept.
+Then pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline**:
+
+- **Accept** → proceed to Step 3 if open forks remain, else straight to Step 4 (draft).
+- **Edit** → follow-up: the user adds/corrects a decision or moves it between locked/open, then proceed as Accept.
+- **Decline** → you misread the discussion; ask the user to restate it, rebuild the inventory.
 
 Include the Coverage caveat only when you suspect the discussion was truncated or summarized out of context — a false alarm erodes trust.
 
@@ -103,7 +103,7 @@ Always propose **2–3 decomposition options** with different phase boundaries (
 - **Behavioral decisions** — observable properties the user locked in (including small details). These land in an item's `### Outcomes` / `### Acceptance criteria`.
 - **Technical anchors** — load-bearing technical decisions (a protocol, a cross-cutting data shape, a "we picked X over Y because…" whose reasoning wouldn't survive re-derivation). These land in the `<slug>.spec.md` sidecar (Step 4), never in behavioral item bodies.
 
-Before drafting, reprint the full list (behavioral + anchors) and confirm with `accept / decline / edit` — the cold-start twin of Step 2H's inventory.
+Before drafting, reprint the full list (behavioral + anchors) and pose an `AskUserQuestion` (**Accept** / **Edit** / **Decline**) to confirm — the cold-start twin of Step 2H's inventory.
 
 Topics the user explicitly said to skip stay skipped — do not raise them again.
 

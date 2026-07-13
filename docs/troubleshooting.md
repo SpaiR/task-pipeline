@@ -25,7 +25,7 @@ Then reopen the `/` menu. If it was already installed, make sure it isn't disabl
 
 **Cause** — every skill except `to-task` / `to-plan` / `to-roadmap` requires `.task/config/config.md`, and it hasn't been written in this project yet. There is no separate `bootstrap` command in v3 to run first — setup is folded inline into the three capture skills.
 
-**Fix** — run any of `/task:to-task`, `/task:to-plan`, or `/task:to-roadmap`. On a fresh project each detects language and test policy, presents both for one accept/decline/edit confirmation, writes `.task/config/config.md`, records `git config task.root`, and continues straight into the requested capture. If you specifically hit this from `/task:roadmap-to-workflow`, that skill is *not* intake-capable by design (a roadmap can't exist without config, so a missing config there means something upstream is broken) — run a capture skill first, then retry.
+**Fix** — run any of `/task:to-task`, `/task:to-plan`, or `/task:to-roadmap`. On a fresh project each detects language and test policy, presents both, then poses one `AskUserQuestion` confirmation (**Accept** / **Edit** / **Decline** chips), writes `.task/config/config.md`, records `git config task.root`, and continues straight into the requested capture. If you specifically hit this from `/task:roadmap-to-workflow`, that skill is *not* intake-capable by design (a roadmap can't exist without config, so a missing config there means something upstream is broken) — run a capture skill first, then retry.
 
 ### `.task/` shows up in `git status`
 
