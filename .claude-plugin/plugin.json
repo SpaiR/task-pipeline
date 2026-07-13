@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "task",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "Linear task workflow with explicit checkpoints (design → build → ship), plus the /task:auto-roadmap autopilot. 7 skills (3 orchestrators + bootstrap + 2 off-cycle + validate) + 9 subagents (3 read-only build-audit lenses + 3 read-only roadmap-refine lenses + 3 auto-roadmap runners — an item-runner running the whole per-item cycle plus its design and build halves, the build half spawned with per-item model override from plan.md → Implement-Model).",
   "author": {
     "name": "Ilya Prymshyts (SpaiR)",

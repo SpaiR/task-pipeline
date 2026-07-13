@@ -4,6 +4,46 @@ All notable changes to this project are documented here. Format — [Keep a Chan
 
 This file is maintained in **English** — see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-policy).
 
+## [2.0.0] — 2026-07-13
+
+Interactive-first release. The pipeline now carries a task through each phase with structured questions, so a single bare command replaces most flag fiddling; the advanced flags stay fully functional but move off the everyday surface into a documented "Escape hatches" registry. This release also removes several redundant flags/modes and reworks the multi-worktree `.task/` model — both are breaking. See **Migration**.
+
+### Added
+- **Interactive structured-choice layer** — discrete path forks are now asked as `AskUserQuestion` chips in interactive runs: design's fresh-start entry fork and `--from` item picker, build's implement→audit advance, `/task:auto-roadmap`'s roadmap picker and item-scope question (all remaining / only next / pick range). Interactive-only — the autopilot runners still pass explicit flags.
+- **Design phase-advance loop** — after each design phase the skill re-detects state and asks once before chaining (Description-ready → build the plan; plan-ready → invoke `/task:build`), so one `/task:design` invocation walks the whole design half instead of needing repeated calls.
+- **Bootstrap language + testing-policy detection** — `/task:bootstrap` now detects the repo's language policy and testing-policy mode and presents both as a single accept/decline/edit proposal instead of asking cold.
+- **Roadmap decision harvest** — `/task:roadmap` can harvest decisions already settled in the prior conversation into a confirmed Decision Inventory before drafting, converging with the cold-start path on one pre-draft decision list.
+- **Roadmap light self-check** — after authoring, `/task:roadmap` runs a report-only three-lens self-check (Coverage / Decomposition / Clarity) over the saved file and offers `--refine` inline only when findings warrant escalation.
+
+### Changed
+- **Question-driven cycle; advanced flags hidden** — `--idea` / `--from` / `--auto` / `--next` / `--refine` / `--phase` are removed from README signatures, skill `description` frontmatter, examples, and every user-facing next-step footer. The surviving flags remain functional and are documented once in `docs/troubleshooting.md` § "Escape hatches", each paired with its interactive equivalent; `/task:auto-roadmap`'s own flags stay a documented power surface.
+- **Clean build proposes ship; ship commit composed from artifacts** — a clean interactive build flows into ship's single accept/decline/edit confirmation, and the commit header+body are composed from `summary.md` (fallback `task.md`) rather than free-text authoring. The audit tail is quieted to a one-line `### Result` summary (full detail stays in `audit.md`; blocking findings are always shown in full).
+- **Bootstrap auto-runs on first design/roadmap** — the first `/task:design` or `/task:roadmap` in an unconfigured project auto-runs `/task:bootstrap` inline, then continues the original request (stops only if you decline).
+- **Roadmap `Size` computed, `Class` inferred** — `Size` is derived from the `### Outcomes` count and `**Class:**` is a best-effort inferred, user-overridable hint; a codified archive path replaces ad-hoc naming.
+- **Stale active-task pointer self-heals** — a provably-stale pointer (empty / missing workspace subfolder) is cleared with a one-line notice instead of hard-stopping.
+- **Canonical next-step footer + one interaction grammar** — every core command ends with a `→ Next:` footer (or `→ Done.`), and content confirmations use one accept/decline/edit grammar.
+- **Faster `/task:auto-roadmap` per item** — per-item token load and interactive validate round-trips trimmed; per-item time cut via the model split and lighter audit.
+
+### Changed (breaking)
+- **Multi-worktree `.task/` model reworked** — the `.task` symlink and `/task:bootstrap` join-mode are removed. All worktrees of a repo now share one `.task/` resolved via `git config --local task.root` (written by bootstrap; `dirname(git-common-dir)` fallback), and the per-worktree active-task pointer moved from the worktree-root `.task-current` into git's per-worktree dir (`git rev-parse --git-path task-current`). Bootstrapped repos migrate automatically on the next command.
+
+### Removed (breaking)
+- **`/task:ship --full` and the hand-supplied commit slug** — `/task:ship` has one mode (full close); the slug is always auto-derived. Both removed forms now fail loud.
+- **`/task:ship --next` subtask-transition mode** — removed. This also fixed a bug where `--next` wiped a subtask's Description without archiving `task.md`; every close now archives `task.md`.
+- **`/task:build --auto`** — removed; the interactive implement→audit advance question replaces it (the audit ≤2-iteration bound is unaffected).
+- **`/task:design --idea` and the design idea phase** — removed; brainstorm a task in chat, then run `/task:design "<description>"`.
+- **`--full chore-finalize` recovery convention** — collapsed to a bare `/task:ship`.
+- **`validate.sh todo` legacy intake name** — removed; use `validate.sh roadmap <path|slug>`.
+
+### Migration
+- Run bare `/task:ship` (default full close, slug auto-derived) instead of `/task:ship --full` or `/task:ship <slug>`.
+- Clean up an aborted `/task:auto-roadmap` run with a bare `/task:ship` instead of `/task:ship --full chore-finalize`.
+- Replace `/task:build --auto` with a normal `/task:build` and accept the implement→audit advance question when prompted.
+- Replace `/task:design --idea` by discussing the task in chat first, then `/task:design "<description>"`; work a multi-item roadmap by re-running `/task:design --from <roadmap>` per item.
+- Reach design's plan-refine via `/task:design --phase refine` (repair-level, documented in `docs/troubleshooting.md`).
+- Use `validate.sh roadmap <path|slug>` in place of `validate.sh todo`.
+- Multi-worktree setups: standalone per-worktree `.task/` is no longer supported — all worktrees share one `.task/` via `git config task.root`, migrated automatically on the next command. To point the pipeline at an existing `.task/` yourself: `git config --local task.root /abs/path/containing/dot-task`.
+
 ## [1.1.0] — 2026-07-11
 
 ### Added
