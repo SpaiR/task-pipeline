@@ -58,7 +58,7 @@ Branch on `$ARGUMENTS`:
    ```markdown
    # {Item title}
    Roadmap: {slug}
-   Source item: #{N} — {item title}
+   Source item: #{N}
    Spec: {spec-slug}          (one line per spec the item cites; omit entirely if none)
    ---
    ## Description

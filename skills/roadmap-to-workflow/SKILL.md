@@ -80,7 +80,7 @@ awk '
     next
   }
   /^\*\*Dependencies:\*\*/ && pend { deps=$0; sub(/^\*\*Dependencies:\*\* */,"",deps); gsub(/[ \t]/,"",deps); if (deps=="—"||deps=="-") deps="" }
-  /^\*\*Model:\*\*/       && pend { model=$0; sub(/^\*\*Model:\*\* */,"",model); gsub(/[ \t]/,"",model) }
+  /^\*\*Model:\*\*/       && pend { model=$0; sub(/^\*\*Model:\*\* */,"",model); gsub(/[ \t]/,"",model); if (model!="haiku" && model!="sonnet" && model!="opus") model="" }
   END { flush() }
 ' "$ROADMAP"
 ```
@@ -182,7 +182,7 @@ for (const [w, items] of waves.entries()) {
 return "roadmap-to-workflow: all items shipped.";
 ```
 
-**Graceful fallback:** if the Workflow tool isn't available in this environment, run the items one at a time by hand, respecting the same wave order: for each item, run `to-plan` for that roadmap item (writes `.task/task/<item-slug>.md`), then in a plain session say `implement .task/task/<item-slug>.md`, then manually tick its checkbox in `.task/roadmap/<slug>.md` before moving to the next.
+**Graceful fallback:** if the Workflow tool isn't available in this environment, run the items one at a time by hand, respecting the same wave order: for each item, run `to-plan` for that roadmap item (writes `.task/task/<item-slug>.md`), then in a plain session say `implement .task/task/<item-slug>.md` **and tell it not to tick the roadmap checkbox itself** (despite its `## Execution` block), then — as the driver — manually tick that item's checkbox in `.task/roadmap/<slug>.md` before moving to the next. This keeps the auto-mark the driver's job, exactly as in the Workflow path.
 
 ## Output
 

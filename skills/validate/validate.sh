@@ -241,6 +241,12 @@ validate_roadmap() {
       next
     }
 
+    # A top-level `### Spec references → <slug> §N` citation may appear inside an
+    # item (per docs/contract.md); it is NOT a block terminator. Skip it so it
+    # never prematurely flushes the item and triggers false missing-sub-heading
+    # errors — must come before the generic `^### ` flush rule below.
+    /^### Spec references/ { next }
+
     # Stop at next `### ` heading that is NOT a sub-heading of this block.
     # Sub-headings inside the blockquote start with `> ### `, so they do not
     # match `^### `. Other top-level `### ` headings end the block.
