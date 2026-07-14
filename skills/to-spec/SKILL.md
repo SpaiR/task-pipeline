@@ -62,7 +62,7 @@ survive — confirm nothing dropped or misstated.}
 
 Then pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline**:
 
-- **Accept** → proceed to Step 3 if open forks remain (resolve them first), else straight to Step 3 (draft).
+- **Accept** → if open forks remain, resolve them first; then proceed to Step 3 (draft).
 - **Edit** → follow-up: the user adds/corrects a decision or its reasoning, or moves it between locked/open, then proceed as Accept.
 - **Decline** → you misread the discussion; ask the user to restate it, rebuild the inventory.
 
