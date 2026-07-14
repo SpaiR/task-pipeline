@@ -17,7 +17,7 @@ Distil the chat discussion so far (or a roadmap item) into `.task/task/<slug>.md
 
 ## Step 0: Setup gate
 
-Check whether `.task/config/config.md` exists (resolve the pipeline root the same way `find_ai_dir` in `skills/_lib/resolve-ws.sh` does: `git config --local task.root` → ancestor walk for a `.task/config/config.md` ancestor → `dirname(git-common-dir)` → `$CLAUDE_PROJECT_DIR/.task` or `./.task`).
+Check whether `.task/config/config.md` exists — resolve the pipeline root via `skills/_lib/resolve-ws.sh` (source it; it exports `AI_DIR`, walking `task.root` → ancestor `config.md` → git-common-dir → `.task`).
 
 - **Absent → inline setup.** Run the inline setup gate exactly as [`skills/to-task/SKILL.md`](../to-task/SKILL.md) Step 0 does (detect stack → ONE `AskUserQuestion` confirmation with **Accept** / **Edit** / **Decline** chips → write `config.md` + `git config --local task.root "$ROOT"` + exclude `.task`) — this skill does not defer to a separate setup command; `to-task`'s Step 0 is the single source of truth for the sub-steps. Two `to-plan`-specific notes: create `.task/task/` alongside `config.md`, and on **Decline** report "`config.md` not written — run `/task:to-plan` again when ready" and **stop**. On success, continue to the validate call below with the original `$ARGUMENTS` unchanged.
 - **Present → skip silently**, proceed to validate.

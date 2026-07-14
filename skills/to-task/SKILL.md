@@ -14,7 +14,7 @@ Distil the chat discussion so far (or a roadmap item) into `.task/task/<slug>.md
 
 ## Step 0: Setup gate
 
-Check whether `.task/config/config.md` exists (resolve the pipeline root the same way `find_ai_dir` in `skills/_lib/resolve-ws.sh` does: `git config --local task.root` → ancestor walk → `dirname(git-common-dir)` → `.task` relative to cwd).
+Check whether `.task/config/config.md` exists — resolve the pipeline root via `skills/_lib/resolve-ws.sh` (source it; it exports `AI_DIR`, walking `task.root` → ancestor `config.md` → git-common-dir → `.task`).
 
 - **Absent → inline setup.** This skill is the home of what used to be a separate `bootstrap` step; run it inline, do not defer to another command:
   1. Determine the pipeline root `ROOT` (main worktree root; `pwd` for a non-git dir; for a bare repo the default is a best-effort guess — surface it in the proposal below so the user can redirect it).
@@ -100,15 +100,8 @@ Branch on `$ARGUMENTS`:
    {drafted body}
 
    ## Execution
-   > If any `Spec:` headers are present, first read each referenced `.task/spec/<slug>.md`
-   > as a fixed technical anchor — honor its decisions, do not re-derive them. Then implement
-   > the plan above (or the Description if there is no Plan), reading and editing code with the
-   > tools in `.task/config/config.md` → Code Navigation / Code Editing (MCP tools first,
-   > built-ins as fallback). Then run the `/verify` skill end-to-end and `/code-review` on the
-   > diff; apply review fixes ONLY within the files named in **Touches** (report the rest). If
-   > there is no `## Plan`, and so no **Touches**, scope review fixes to the files you changed
-   > for the Description. Commit per `.task/config/config.md` → Commit Format. If `Roadmap:` +
-   > `Source item:` headers are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
+   {the canonical `## Execution` block, stamped verbatim — byte-for-byte identical
+    to the blockquote in Step 1a's template above; do not paraphrase it}
    ```
 
 ## Step 3: Output
