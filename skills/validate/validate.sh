@@ -113,18 +113,15 @@ validate_task() {
   fi
 
   # `## Plan` is OPTIONAL (only to-plan writes it). If present, it must carry
-  # at least one `### Step N:` block.
-  if grep -qE '^## Plan[[:space:]]*$' "$file"; then
-    if ! awk '/^## Plan[[:space:]]*$/{flag=1; next} /^## /{flag=0} flag && /^### Step [0-9]+/{found=1} END{exit !found}' "$file"; then
-      err "$label" "'## Plan' section is present but contains no '### Step N:' blocks"
-    fi
+  # at least one `### Step N:` block. One awk pass does both the presence and
+  # the step check: exit non-zero only when a Plan heading is seen with no step.
+  if ! awk '/^## Plan[[:space:]]*$/{seen=1; flag=1; next} /^## /{flag=0} flag && /^### Step [0-9]+/{found=1} END{exit (seen && !found)}' "$file"; then
+    err "$label" "'## Plan' section is present but contains no '### Step N:' blocks"
   fi
 
   # `## Tests` is OPTIONAL. If present, it must carry at least one `### Test N:`.
-  if grep -qE '^## Tests[[:space:]]*$' "$file"; then
-    if ! awk '/^## Tests[[:space:]]*$/{flag=1; next} /^## /{flag=0} flag && /^### Test [0-9]+/{found=1} END{exit !found}' "$file"; then
-      err "$label" "'## Tests' section is present but contains no '### Test N:' blocks"
-    fi
+  if ! awk '/^## Tests[[:space:]]*$/{seen=1; flag=1; next} /^## /{flag=0} flag && /^### Test [0-9]+/{found=1} END{exit (seen && !found)}' "$file"; then
+    err "$label" "'## Tests' section is present but contains no '### Test N:' blocks"
   fi
 
   # `## Execution` boilerplate must be present — the executing session reads it
@@ -207,7 +204,13 @@ validate_roadmap() {
     done <<< "$dup"
   fi
 
-  awk -v label="$label" '
+  # Run the block-parser in a process substitution (not a pipe) so the loop
+  # body executes in THIS shell and can bump ERRORS directly — no temp-file
+  # counter needed.
+  while IFS= read -r line; do
+    echo "$line" >&2
+    [[ "$line" == ERROR* ]] && ERRORS=$((ERRORS + 1))
+  done < <(awk -v label="$label" '
     function flush_block() {
       if (in_block == 0) return
       if (!has_context)  print "ERROR " label ": Task " task_no " missing '\''### Context'\'' sub-heading"
@@ -262,17 +265,10 @@ validate_roadmap() {
     }
 
     END { flush_block() }
-  ' "$file" | while IFS= read -r line; do
-      echo "$line" >&2
-      [[ "$line" == ERROR* ]] && echo x >> "$MARKER_FILE"
-  done
+  ' "$file")
 }
 
 # ---------------- main ----------------
-# Marker file collects ERROR lines from awk subshells (counter doesn't survive).
-MARKER_FILE=$(mktemp 2>/dev/null || echo "/tmp/task-validate-$$.marker")
-: > "$MARKER_FILE"
-
 cmd="${1:-}"
 shift || true
 case "$cmd" in
@@ -280,7 +276,6 @@ case "$cmd" in
     require_config
     if [[ -z "${1:-}" ]]; then
       echo "ERROR usage: 'validate.sh task <slug>' requires a slug argument." >&2
-      rm -f "$MARKER_FILE"
       exit 2
     fi
     validate_task "$(resolve_artifact_path task "$1")"
@@ -289,7 +284,6 @@ case "$cmd" in
     require_config
     if [[ -z "${1:-}" ]]; then
       echo "ERROR usage: 'validate.sh roadmap <slug>' requires a slug argument." >&2
-      rm -f "$MARKER_FILE"
       exit 2
     fi
     validate_roadmap "$1"
@@ -298,7 +292,6 @@ case "$cmd" in
     require_config
     if [[ -z "${1:-}" ]]; then
       echo "ERROR usage: 'validate.sh spec <slug>' requires a slug argument." >&2
-      rm -f "$MARKER_FILE"
       exit 2
     fi
     spec_path=$(resolve_artifact_path spec "$1")
@@ -347,22 +340,13 @@ as an explicit path.
 
 Exit codes: 0 ok, 1 validation errors, 2 usage / precondition.
 EOF
-    rm -f "$MARKER_FILE"
     exit 2
     ;;
   *)
     echo "ERROR usage: unknown subcommand '$cmd'. Run 'validate.sh --help'." >&2
-    rm -f "$MARKER_FILE"
     exit 2
     ;;
 esac
-
-# Roll up awk-emitted errors into the counter.
-if [[ -f "$MARKER_FILE" ]]; then
-  AWK_ERRS=$(wc -l < "$MARKER_FILE" | tr -d ' ')
-  ERRORS=$((ERRORS + AWK_ERRS))
-  rm -f "$MARKER_FILE"
-fi
 
 if (( ERRORS > 0 )); then
   echo "FAIL $ERRORS error(s), $WARNS warning(s)" >&2
