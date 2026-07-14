@@ -288,7 +288,7 @@ Every skill carries `disable-model-invocation: true` and `user-invocable: true` 
 ### `roadmap-to-workflow` execution shape (driver contract)
 
 - **Per-item default is OPUS-PLANS / SONNET-IMPLEMENTS:** a first `agent()` runs `to-plan` for the item on `{ model: 'opus' }` (writes `.task/task/<item-slug>.md`); a second `agent()` implements + verifies + reviews + commits on `{ model: item.model ?? 'sonnet' }`. Context passes via the on-disk task file — no chat transfer.
-- **Dependency-ordered waves:** items in a wave run via `parallel()` with `{ isolation: 'worktree' }`; a barrier separates waves.
+- **Dependency-ordered waves:** items in a wave run via `parallel()` with `{ isolation: 'worktree' }`; a barrier separates waves. A dependency **cycle** among scoped items (no wave can be formed) is a hard stop, reported for the user to break — never run an item before its dependency lands.
 - **Driver auto-marks:** after an item's agent returns OK, the driver ticks that item's checkbox in the roadmap file (never the per-item agent — avoids parallel writes racing).
 - **Stop-on-FAIL;** parser-stable digest last line `OK|FAIL #N <slug> <summary>`.
 - **Graceful fallback:** if the Workflow tool is unavailable, run items one at a time via `to-plan` + a plain implement session, manually. Being a skill whose instructions invoke Workflow is itself the sanctioned opt-in.

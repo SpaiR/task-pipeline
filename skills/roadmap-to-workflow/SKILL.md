@@ -49,13 +49,13 @@ What v3 drops vs the old run-roadmap (v2).
 
 ```bash
 source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # sourcing runs find_ai_dir → sets AI_DIR
-[[ -f "$AI_DIR/config/config.md" ]] || { echo "no-config"; }
+[[ -f "$AI_DIR/config/config.md" ]] || echo "config.md not found"
 bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
 ```
 
-- **`config.md not found`** → hard-stop redirect (do **not** bootstrap here):
+- **`config.md not found`** (the guard above echoes it; `validate.sh all` also exits 2 with the same message) → hard-stop redirect (do **not** bootstrap here):
   > The project isn't set up yet. Capture something first with `to-task`, `to-plan`, or `to-roadmap` — those set the project up inline.
-- **Any other non-zero exit from `validate.sh`** → stop and report the validator output (this is a self-check, not a hard gate, so a non-fatal warning can be surfaced and the run continued at your judgment; a structural failure on the chosen roadmap file should stop).
+- **Any other non-zero exit from `validate.sh`** → `validate.sh all` checks every artifact, so an error may sit on a task or roadmap unrelated to this run. A validation **error on the roadmap you are about to run** stops the run — report it and do not proceed. Errors on other artifacts are surfaced but do **not** block. (WARN lines never set a non-zero exit; they are informational only.)
 
 ### Roadmap
 
@@ -116,6 +116,7 @@ Filter that list to the Step 0 scope. Then **topologically sort into waves**, co
 - Wave 1 = every filtered item whose `Dependencies` are empty, or whose dependencies are all *already checked* (`[x]`/`[~]`/`[>]`/`[-]`) in the roadmap file — i.e. nothing left in this run blocks it.
 - Wave 2 = every remaining filtered item whose dependencies are all satisfied by Wave 1 (already-checked items, or items landing in Wave 1).
 - Continue until every filtered item is placed. A dependency on an item **outside** the filtered/scoped set that is still unchecked is a hard stop — surface it and ask the user to widen the scope or drop the item.
+- If a round places **no** new item while items remain unplaced, the scoped items form a dependency **cycle** (e.g. #1 depends on #2 and #2 on #1). Hard stop — report the cycle and ask the user to break it; never guess an order that would run an item before its dependency lands. (Roadmaps are user-edited and `to-roadmap`'s cyclic-deps check is report-only, so a cycle can reach this skill.)
 
 The result is a `waves: Item[][]` structure — bake it into the Workflow script's literal in Step 2.
 
