@@ -19,22 +19,7 @@ Distil the chat discussion so far (or a roadmap item) into `.task/task/<slug>.md
 
 Check whether `.task/config/config.md` exists (resolve the pipeline root the same way `find_ai_dir` in `skills/_lib/resolve-ws.sh` does: `git config --local task.root` → ancestor walk for a `.task/config/config.md` ancestor → `dirname(git-common-dir)` → `$CLAUDE_PROJECT_DIR/.task` or `./.task`).
 
-- **Absent → inline setup.** Identical to `to-task`'s Step 0 — this skill does not defer to a separate setup command:
-  1. Determine the pipeline root `ROOT` (main worktree root; `pwd` for a non-git dir; for a bare repo the default is a best-effort guess — surface it in the proposal below so the user can redirect it).
-  2. Analyze the project: read `CLAUDE.md` if present, detect language/stack, build/test commands, a project commit-format doc (check in order `CONTRIBUTING.md`, `docs/CONTRIBUTING.md`, `.github/CONTRIBUTING.md`), detected language policy (repo's dominant natural language from `git log -10 --oneline` + `CLAUDE.md`/`README.md` prose — default to "follow `task.md` Description" for English/mixed repos), and detected testing-policy mode (`always` if a TDD convention is documented, `on-demand` otherwise — never silently detect `never`).
-  3. Show the detected config, then pose ONE `AskUserQuestion` confirmation (convention (b)):
-     ```
-     Detected — Language: <policy>; Testing policy: <mode>.
-     ```
-     Bare repo: add a third clause, `.task location: <ROOT>/.task`, editable the same way.
-     Chips **Accept** / **Edit** / **Decline**:
-     - **Accept** → adopt as-is.
-     - **Edit** → follow-up asks which field(s) to amend (language policy / testing-policy mode / bare-repo `.task` location), then continue.
-     - **Decline** → do not write anything; report "`config.md` not written — run `/task:to-plan` again when ready" and **stop**.
-  4. Write `.task/config/config.md` (create `.task/task/` alongside it) using the standard template — sections: Code Navigation, Code Editing, Library Documentation, Project Conventions, Build and Tests, Commit Format, Language, Testing Policy, Directories — Do Not Search. Reference mode (a short `**Source:** \`CLAUDE.md\` → \`## <Heading>\`` pointer, ≤3 summary lines) when `CLAUDE.md` already documents a section; full mode otherwise. Commit Format: reference mode with just `**Source:** <path>` when a commit-format doc was found, else derive rules from `git log`.
-  5. Record `git config --local task.root "$ROOT"` (repo-common, shared by every worktree).
-  6. Exclude `.task` locally: `EXCLUDE=$(git rev-parse --git-path info/exclude); mkdir -p "$(dirname "$EXCLUDE")"; touch "$EXCLUDE"; grep -qxF '.task' "$EXCLUDE" || echo '.task' >> "$EXCLUDE"`. Skip with a warning if not a git repo.
-  7. Report what was written, then continue to Step 0's validate call below with the original `$ARGUMENTS` unchanged.
+- **Absent → inline setup.** Run the inline setup gate exactly as [`skills/to-task/SKILL.md`](../to-task/SKILL.md) Step 0 does (detect stack → ONE `AskUserQuestion` confirmation with **Accept** / **Edit** / **Decline** chips → write `config.md` + `git config --local task.root "$ROOT"` + exclude `.task`) — this skill does not defer to a separate setup command; `to-task`'s Step 0 is the single source of truth for the sub-steps. Two `to-plan`-specific notes: create `.task/task/` alongside `config.md`, and on **Decline** report "`config.md` not written — run `/task:to-plan` again when ready" and **stop**. On success, continue to the validate call below with the original `$ARGUMENTS` unchanged.
 - **Present → skip silently**, proceed to validate.
 
 Then run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all` as a self-check — v3 has no gate, so report any findings and continue rather than blocking. The only thing that should stop the flow here is a genuine config-precondition failure (exit 2), which shouldn't occur since Step 0 just confirmed `config.md` exists.
@@ -135,7 +120,7 @@ Rules:
 - If a step is a new file, `Goal` states its role and `Touches` still names it; if a step modifies an existing file, `Goal` states the nature of the change and, where the file holds more than one unrelated concern, name the specific symbol(s) touched alongside the path (e.g. `` `src/auth/session.ts` (exports `refreshToken`) ``) so the implementing session doesn't have to guess.
 - `Logic` is the only place a pseudocode block or a `...` placeholder belongs.
 - Dry technical text throughout — but never at the cost of `Goal` being too thin to execute against.
-- Order steps so a later step never depends on a fact only a later step establishes.
+- Order steps so no step depends on a fact that only a later step establishes.
 
 If `tests_required` (Step 4) is `true`, append:
 
