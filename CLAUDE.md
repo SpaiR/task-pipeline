@@ -10,20 +10,21 @@ A collection of user-invocable Claude Code skills implementing a chat-first "con
 discuss freely in chat
   ↓
 to-task | to-plan | to-roadmap        ← capture depth is the skill, not a flag
+to-spec                               ← pins technical decisions, cited via Spec:
   ↓                       ↓
 implement session   roadmap-to-workflow   ← the launcher fans items out to sessions
 ```
 
-`to-task` captures `## Description` only into `.task/task/<slug>.md`; `to-plan` adds `## Plan` (Goal/Touches/Logic steps); `to-roadmap` captures a multi-task initiative into `.task/roadmap/<slug>.md` (+ optional `<slug>.spec.md` sidecar for load-bearing technical decisions). There is **no execution skill** — every artifact carries a stamped `## Execution` block, and an ordinary session told `implement .task/task/<slug>.md` follows it: implement the plan, run `/verify` + `/code-review`, apply review fixes only within **Touches**, commit per `config.md` → Commit Format, tick the roadmap item if `Roadmap:`/`Source item:` are present. `roadmap-to-workflow` is the one launcher: authors + invokes a dynamic Workflow over a roadmap's unchecked items, dependency-ordered waves, opus-plans/sonnet-implements per item by default.
+`to-task` captures `## Description` only into `.task/task/<slug>.md`; `to-plan` adds `## Plan` (Goal/Touches/Logic steps); `to-roadmap` captures a multi-task initiative into `.task/roadmap/<slug>.md`; `to-spec` captures load-bearing technical decisions into a standalone `.task/spec/<slug>.md`, referenced by tasks/roadmaps via a `Spec:` header and read by the executing session as a fixed anchor. There is **no execution skill** — every artifact carries a stamped `## Execution` block, and an ordinary session told `implement .task/task/<slug>.md` follows it: implement the plan, run `/verify` + `/code-review`, apply review fixes only within **Touches**, commit per `config.md` → Commit Format, tick the roadmap item if `Roadmap:`/`Source item:` are present. `roadmap-to-workflow` is the one launcher: authors + invokes a dynamic Workflow over a roadmap's unchecked items, dependency-ordered waves, opus-plans/sonnet-implements per item by default.
 
 Full artifact shapes, producer/consumer table, and bash-layer contract: [docs/contract.md](docs/contract.md). Read it before any non-trivial edit to a skill or bash helper.
 
 ## Invariants — don't break these when editing skills
 
-- `.task/` is **flat**: `.task/config/config.md`, `.task/task/<slug>.md` (one file per task), `.task/roadmap/<slug>.md` (+ optional `.spec.md`). No `.task/workspace/`, no `.task/log/`, no `<task-id>/` subfolders, no archive — git history is the record.
+- `.task/` is **flat**: `.task/config/config.md`, `.task/task/<slug>.md` (one file per task), `.task/roadmap/<slug>.md`, `.task/spec/<slug>.md` (one file per spec). No `.task/workspace/`, no `.task/log/`, no `<task-id>/` subfolders, no `.spec.md` roadmap sidecar (specs are standalone under `.task/spec/`), no archive — git history is the record.
 - **Slug is the identity.** Kebab-case English, derived from the title; it is the filename, not a header. No task-id, no `[TASK-ID]` bracket, no umbrella grouping.
-- Every skill except `to-task` / `to-plan` / `to-roadmap` checks `.task/config/config.md` and hard-stops if absent; those three auto-run setup inline in a fresh project instead (bash-layer precondition, not relaxed by prompt edits).
-- `task.md` is the single contract: `# <Title>` (plain, no bracket), optional `Roadmap:` / `Source item: #N` headers, `---`, `## Description`, optional `## Plan` (`### Step N:` blocks with Goal/Touches/Logic), optional `## Tests` (`### Test N:`), and a stamped `## Execution` block (English, parser-stable, ~4 lines) that is the mechanism replacing the deleted `build`/`ship` skills. `Roadmap:` + `Source item:` are load-bearing for the auto-mark step — keep them ASCII, above the `---`.
+- Every skill except `to-task` / `to-plan` / `to-roadmap` / `to-spec` checks `.task/config/config.md` and hard-stops if absent; those four auto-run setup inline in a fresh project instead (bash-layer precondition, not relaxed by prompt edits).
+- `task.md` is the single contract: `# <Title>` (plain, no bracket), optional `Roadmap:` / `Source item: #N` / repeatable `Spec: <slug>` headers, `---`, `## Description`, optional `## Plan` (`### Step N:` blocks with Goal/Touches/Logic), optional `## Tests` (`### Test N:`), and a stamped `## Execution` block (English, parser-stable) that is the mechanism replacing the deleted `build`/`ship` skills. `Roadmap:` + `Source item:` are load-bearing for the auto-mark step, `Spec:` for the executing session's fixed-anchor read — keep them ASCII, above the `---`. Specs themselves live at `.task/spec/<slug>.md`, authored only by `to-spec`.
 - Pipeline is invisible to the project — no tracked edits outside `.task/`, excluded via `.git/info/exclude` (pattern `.task`). Markers are exactly `git config task.root` + the exclude entry — **nothing else**: no active-task pointer, no `TASK_ID_OVERRIDE`, no per-worktree pointer file.
 - `resolve-ws.sh` is a pure `.task/`-root finder (exports `AI_DIR`): `task.root` git config → ancestor walk for `.task/config/config.md` → `dirname(git-common-dir)/.task` → `./.task`. No workspace resolution, no pointer read/write/self-heal logic anywhere.
 - Orchestration, verification, review, and commits are delegated to the platform (`/verify`, `/code-review`, dynamic Workflows) — never hand-rolled inside a skill.
@@ -47,7 +48,7 @@ Source of truth: [`CONTRIBUTING.md`](CONTRIBUTING.md). Summary:
 
 - Header: `<type>(<scope>): <short summary>` — under 72 chars, imperative, lowercase first letter, no trailing period.
 - Types: `feat | fix | refactor | perf | docs | test | chore | revert`. **Do not invent types.**
-- Scopes (optional but strongly preferred): skill names (`to-task`, `to-plan`, `to-roadmap`, `roadmap-to-workflow`, `validate`), or cross-cutting keys (`skills`, `lib`, `hooks`, `plugin`, `github`, `readme`, `claudemd`, `changelog`, `contributing`, `contract`). **Do not invent scopes.**
+- Scopes (optional but strongly preferred): skill names (`to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`, `validate`), or cross-cutting keys (`skills`, `lib`, `hooks`, `plugin`, `github`, `readme`, `claudemd`, `changelog`, `contributing`, `contract`). **Do not invent scopes.**
 - Body: mandatory for all non-trivial commits; explain **why**, not what; 2–5 bullet list, imperative tense.
 - Footer: `BREAKING CHANGE:` when header carries `!`; `Fixes #N` / `Closes #N` for issues/PRs.
 - AI attribution: every Claude-assisted commit must carry `Co-Authored-By: Claude <noreply@anthropic.com>` as the last footer line.

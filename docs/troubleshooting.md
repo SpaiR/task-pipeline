@@ -23,9 +23,9 @@ Then reopen the `/` menu. If it was already installed, make sure it isn't disabl
 
 **Symptom** — a skill stops with `.task/config/config.md not found`.
 
-**Cause** — every skill except `to-task` / `to-plan` / `to-roadmap` requires `.task/config/config.md`, and it hasn't been written in this project yet. There is no separate `bootstrap` command in v3 to run first — setup is folded inline into the three capture skills.
+**Cause** — every skill except `to-task` / `to-plan` / `to-roadmap` / `to-spec` requires `.task/config/config.md`, and it hasn't been written in this project yet. There is no separate `bootstrap` command in v3 to run first — setup is folded inline into those four intake skills.
 
-**Fix** — run any of `/task:to-task`, `/task:to-plan`, or `/task:to-roadmap`. On a fresh project each detects language and test policy, presents both, then poses one `AskUserQuestion` confirmation (**Accept** / **Edit** / **Decline** chips), writes `.task/config/config.md`, records `git config task.root`, and continues straight into the requested capture. If you specifically hit this from `/task:roadmap-to-workflow`, that skill is *not* intake-capable by design (a roadmap can't exist without config, so a missing config there means something upstream is broken) — run a capture skill first, then retry.
+**Fix** — run any of `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, or `/task:to-spec`. On a fresh project each detects language and test policy, presents both, then poses one `AskUserQuestion` confirmation (**Accept** / **Edit** / **Decline** chips), writes `.task/config/config.md`, records `git config task.root`, and continues straight into the requested capture. If you specifically hit this from `/task:roadmap-to-workflow`, that skill is *not* intake-capable by design (a roadmap can't exist without config, so a missing config there means something upstream is broken) — run a capture skill first, then retry.
 
 ### `.task/` shows up in `git status`
 
@@ -42,6 +42,14 @@ Then reopen the `/` menu. If it was already installed, make sure it isn't disabl
 **Cause** — a `task.md` or roadmap file drifted from the expected format: a missing `# <Title>` first line, no `---` separator, no `## Description`, a `## Plan` present with zero `### Step N:` blocks, or a roadmap item missing its checkbox prefix or a required `### Context`/`### Goal`/`### Outcomes`/`### Acceptance criteria` sub-heading.
 
 **Fix** — read each `ERROR <label>:` line (it names the file and the exact problem) and fix the artifact by hand — these are plain Markdown files. Re-check with `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`. `validate.sh` is an optional self-check, not a gate — nothing stops you from continuing with a `WARN`, only genuine structural `ERROR`s are worth fixing before you hand the file to an implementing session.
+
+### `validate.sh` warns `Spec: <slug> — no such spec ... (dangling reference)`
+
+**Symptom** — a `WARN` line names a `Spec: <slug>` header on a task or roadmap that points at a `.task/spec/<slug>.md` which doesn't exist.
+
+**Cause** — the `Spec:` header names a spec that was never written, was renamed, or was deleted. This is the pipeline's one cross-file check, and it is only ever a `WARN` — the implementing session will simply find no anchor at that path.
+
+**Fix** — either capture the missing spec with `/task:to-spec` (using that slug), correct the slug in the `Spec:` header, or drop the header if the reference is stale. It's a plain Markdown edit either way.
 
 ## Working with roadmaps
 

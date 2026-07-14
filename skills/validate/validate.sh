@@ -4,11 +4,14 @@
 # Usage:
 #   validate.sh task <slug>     — validate .task/task/<slug>.md
 #   validate.sh roadmap <slug>  — validate a roadmap file
-#   validate.sh all             — every .task/task/*.md + every .task/roadmap/*.md
+#   validate.sh spec <slug>     — validate .task/spec/<slug>.md
+#   validate.sh all             — every task + roadmap + spec file
 #
 # v3 is flat: <slug> is both the filename and the identity — there is no
 # task-id, no workspace, no active-task pointer. This is an OPTIONAL
-# self-check; no hook calls it.
+# self-check; no hook calls it. A task/roadmap `Spec: <slug>` header that
+# doesn't resolve to a .task/spec/<slug>.md is reported as a WARN (dangling
+# reference), never an ERROR — the only cross-file check, and advisory only.
 #
 # Exit codes:
 #   0 — all checks passed
@@ -69,6 +72,33 @@ resolve_task_path() {
   echo ""
 }
 
+# --- resolve_spec_path <arg> ---
+# Echoes the resolved spec path on stdout, or empty string if no match.
+# Lookup order: explicit path → $AI_DIR/spec/<arg> → $AI_DIR/spec/<arg>.md.
+resolve_spec_path() {
+  local arg="$1"
+  if [[ -f "$arg" ]]; then echo "$arg"; return; fi
+  if [[ -f "$AI_DIR/spec/$arg" ]]; then echo "$AI_DIR/spec/$arg"; return; fi
+  if [[ -f "$AI_DIR/spec/$arg.md" ]]; then echo "$AI_DIR/spec/$arg.md"; return; fi
+  echo ""
+}
+
+# --- check_spec_refs <file> <label> ---
+# WARN (never ERROR) for any `Spec: <slug>` header in <file> that does not
+# resolve to an existing .task/spec/<slug>.md. This is the only cross-file
+# check in the pipeline, and it is advisory — validate.sh is not a gate.
+# Runs in the caller's shell (not a subshell), so WARNS is updated directly.
+check_spec_refs() {
+  local file="$1" label="$2" slug
+  [[ -f "$file" ]] || return
+  while IFS= read -r slug; do
+    [[ -z "$slug" ]] && continue
+    if [[ ! -f "$AI_DIR/spec/$slug.md" ]]; then
+      warn "$label" "Spec: $slug — no such spec at $AI_DIR/spec/$slug.md (dangling reference)"
+    fi
+  done < <(grep -E '^Spec:[[:space:]]' "$file" 2>/dev/null | sed -E 's/^Spec:[[:space:]]*//; s/[[:space:]]+$//')
+}
+
 # ---------------- task.md ----------------
 # One format for both to-task and to-plan output:
 #   line 1   — `# <Title>` (plain title, no task-id)
@@ -114,6 +144,35 @@ validate_task() {
       err "$label" "'## Tests' section is present but contains no '### Test N:' blocks"
     fi
   fi
+
+  # Dangling `Spec:` header references → WARN (advisory, not an error).
+  check_spec_refs "$file" "$label"
+}
+
+# ---------------- spec.md ----------------
+# Standalone technical-decision spec (.task/spec/<slug>.md):
+#   line 1     — `# <Title>` (a title; conventionally `# Spec: <Title>`)
+#   >=1 `## N.` numbered decision section.
+# No `---` separator: a spec carries no parser-stable headers above a body,
+# so there is nothing to separate (unlike task.md).
+validate_spec() {
+  local file="$1"
+  local label="spec($file)"
+
+  if [[ ! -f "$file" ]]; then
+    err "$label" "file not found at $file"
+    return
+  fi
+
+  local first_line
+  first_line=$(head -1 "$file")
+  if ! [[ "$first_line" =~ ^\#\ .+$ ]]; then
+    err "$label" "first line must match '# <Title>'; got: ${first_line:-<empty>}"
+  fi
+
+  if ! grep -qE '^## [0-9]+\. .+$' "$file"; then
+    err "$label" "no numbered decision sections matching '## N. <title>'"
+  fi
 }
 
 # ---------------- roadmap file ----------------
@@ -129,6 +188,9 @@ validate_roadmap() {
   fi
   local label
   label="roadmap($file)"
+
+  # Dangling `Spec:` header references → WARN (advisory, not an error).
+  check_spec_refs "$file" "$label"
 
   # Find task headings: `### - [x] | - [ ] | - [~] | - [>] | - [-] N. <title>`.
   # Checkbox prefix is REQUIRED — the roadmap-to-workflow driver's auto-mark
@@ -225,6 +287,20 @@ case "$cmd" in
     fi
     validate_roadmap "$1"
     ;;
+  spec)
+    require_config
+    if [[ -z "${1:-}" ]]; then
+      echo "ERROR usage: 'validate.sh spec <slug>' requires a slug argument." >&2
+      rm -f "$MARKER_FILE"
+      exit 2
+    fi
+    spec_path=$(resolve_spec_path "$1")
+    if [[ -z "$spec_path" ]]; then
+      err "spec($1)" "file not found (looked at $1, $AI_DIR/spec/$1(.md))"
+    else
+      validate_spec "$spec_path"
+    fi
+    ;;
   all)
     require_config
     # `all` validates every artifact that EXISTS. Tolerates an empty (or
@@ -238,8 +314,16 @@ case "$cmd" in
     if [[ -d "$AI_DIR/roadmap" ]]; then
       for f in "$AI_DIR/roadmap"/*.md; do
         [[ -f "$f" ]] || continue
+        # Skip any orphaned v2 roadmap sidecar (`<slug>.spec.md`). Specs now
+        # live in .task/spec/ — a `.spec.md` under roadmap/ is not a roadmap.
         case "$f" in *.spec.md) continue ;; esac
         validate_roadmap "$f"
+      done
+    fi
+    if [[ -d "$AI_DIR/spec" ]]; then
+      for f in "$AI_DIR/spec"/*.md; do
+        [[ -f "$f" ]] || continue
+        validate_spec "$f"
       done
     fi
     ;;
@@ -248,7 +332,8 @@ case "$cmd" in
 Usage:
   validate.sh task <slug>     — validate .task/task/<slug>.md
   validate.sh roadmap <slug>  — validate a roadmap file
-  validate.sh all             — every .task/task/*.md + every .task/roadmap/*.md
+  validate.sh spec <slug>     — validate .task/spec/<slug>.md
+  validate.sh all             — every task + roadmap + spec file
 
 <slug> is the filename (with or without the .md suffix); it is also accepted
 as an explicit path.

@@ -76,7 +76,7 @@ done
 - **Exactly one** → use it (still refuse if it's fully complete, `done == total > 0`).
 - **More than one** → `AskUserQuestion` (convention (c)), one chip per roadmap labelled `<slug>  (<done>/<total>)`; sort partial roadmaps first, complete ones last with a `(complete)` suffix, and refuse to proceed on a complete pick.
 
-If `.task/roadmap/<slug>.spec.md` exists, note it — every item's plan agent (Step 2) should be told to read it as a fixed technical-decision anchor.
+Read the roadmap's `Spec: <slug>` header lines, if any — collect the referenced `.task/spec/<slug>.md` paths and pass them to every item's plan agent (Step 2) as fixed technical-decision anchors.
 
 ### Item scope
 
@@ -143,10 +143,12 @@ async function runItem(n, title, model, w) {
     `Read skills/to-plan/SKILL.md and run it NON-INTERACTIVELY for roadmap item
      ${slug}#${n} ("${title}"). Draft .task/task/<item-slug>.md (Description +
      ## Plan, + ## Tests if the config Testing Policy calls for it), stamping
-     the header with "Roadmap: ${slug}" and "Source item: #${n}". If
-     .task/roadmap/${slug}.spec.md exists, read it first as a fixed technical
-     anchor. Auto-accept every confirmation; make constructive assumptions;
-     never block on a prompt. Do NOT implement or commit.
+     the header with "Roadmap: ${slug}" and "Source item: #${n}", plus a
+     "Spec: <spec-slug>" line for each spec the item cites (via its
+     "### Spec references → <spec-slug> §N" entries or the roadmap's own
+     "Spec:" headers). Read each referenced .task/spec/<spec-slug>.md first as
+     a fixed technical anchor. Auto-accept every confirmation; make constructive
+     assumptions; never block on a prompt. Do NOT implement or commit.
      Last non-empty line MUST be exactly:
        OK #${n} <item-slug> planned      (on success)
        FAIL #${n} <item-slug> <what failed>   (on failure)`,

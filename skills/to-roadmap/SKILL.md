@@ -1,6 +1,6 @@
 ---
 name: to-roadmap
-description: 'Capture a multi-task initiative discussed in chat into `.task/roadmap/<slug>.md` (+ optional `<slug>.spec.md` sidecar) — a phase-grouped backlog of ready-to-pick-up items for `/task:to-task` / `/task:to-plan`, or for `/task:roadmap-to-workflow` to loop end to end.'
+description: 'Capture a multi-task initiative discussed in chat into `.task/roadmap/<slug>.md` — a phase-grouped backlog of ready-to-pick-up items for `/task:to-task` / `/task:to-plan`, or for `/task:roadmap-to-workflow` to loop end to end. References standalone `.task/spec/<slug>.md` specs via `Spec:` headers.'
 disable-model-invocation: true
 user-invocable: true
 ---
@@ -101,7 +101,7 @@ Always propose **2–3 decomposition options** with different phase boundaries (
 **Track decisions as you go, not in your head.** Two kinds surface:
 
 - **Behavioral decisions** — observable properties the user locked in (including small details). These land in an item's `### Outcomes` / `### Acceptance criteria`.
-- **Technical anchors** — load-bearing technical decisions (a protocol, a cross-cutting data shape, a "we picked X over Y because…" whose reasoning wouldn't survive re-derivation). These land in the `<slug>.spec.md` sidecar (Step 4), never in behavioral item bodies.
+- **Technical anchors** — load-bearing technical decisions (a protocol, a cross-cutting data shape, a "we picked X over Y because…" whose reasoning wouldn't survive re-derivation). These belong in a standalone spec (`.task/spec/<slug>.md`), never in behavioral item bodies. This skill does not author specs — it references them: cite a spec that already exists, or flag the decision for `/task:to-spec` (see Step 3).
 
 Before drafting, reprint the full list (behavioral + anchors) and pose an `AskUserQuestion` (**Accept** / **Edit** / **Decline**) to confirm — the cold-start twin of Step 2H's inventory.
 
@@ -109,16 +109,16 @@ Topics the user explicitly said to skip stay skipped — do not raise them again
 
 ### Step 3: Draft the file
 
-Once the decision list is confirmed, draft the full roadmap per [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd): title + intro, `## Prerequisites`, `## Phase summary` table, one `## Phase X` section per phase with `### - [ ] N. <title>` items (`**Dependencies:**`, optional `**Model:**`, `**Ready description:**` blockquote with `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria`), `## Out of scope`, `## Backlinks`. If any technical anchor was raised, draft the `<slug>.spec.md` sidecar alongside it (see Step 4) — a flat numbered list of decisions, each cited from its item(s) as `### Spec references → §N`.
+Once the decision list is confirmed, draft the full roadmap per [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd): title + intro, `## Prerequisites`, `## Phase summary` table, one `## Phase X` section per phase with `### - [ ] N. <title>` items (`**Dependencies:**`, optional `**Model:**`, `**Ready description:**` blockquote with `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria`), `## Out of scope`, `## Backlinks`. Route any technical anchor to a spec (see the list below) — never into behavioral item bodies. Cite a spec decision from its item(s) as `### Spec references → <spec-slug> §N`.
 
 **Route every confirmed decision to a home:**
 
 - Observable behavior / user-facing effect → the item's `### Outcomes`, or `### Acceptance criteria` when it's a testable assertion.
-- Cross-item technical decision → a numbered entry in the `<slug>.spec.md` sidecar (a separate file, written alongside the roadmap — see Step 4); cite it from each steered item as `### Spec references → §N`.
+- Cross-item technical decision → a standalone spec. If a `.task/spec/<spec-slug>.md` already covers it, add a `Spec: <spec-slug>` header line to the roadmap (ASCII, above the title/intro) and cite it from each steered item as `### Spec references → <spec-slug> §N`. If no spec exists yet, **do not write one here** — surface the decision with a one-line recommendation to capture it via `/task:to-spec`, then reference it on a later run.
 - Scope exclusion → `## Out of scope`, with the reason.
 - Anything else → drop it, but say so to the user with a one-line reason — never a silent omission.
 
-A local, single-item detail decision never goes in the sidecar — it belongs in that item's `### Outcomes` / `### Acceptance criteria`. Reserve the sidecar for choices that would break cross-item consistency if a later `/task:to-plan` (or the executing session) re-derived them differently. No sidecar file is written when no technical anchor was raised — an empty sidecar is worse than none.
+A local, single-item detail decision never goes in a spec — it belongs in that item's `### Outcomes` / `### Acceptance criteria`. Reserve specs for choices that would break cross-item consistency if a later `/task:to-plan` (or the executing session) re-derived them differently. This skill never writes a spec file — capture real ones with `/task:to-spec`; an empty or filler spec is worse than none.
 
 **`**Model:**` is optional** — set it only when you have a real basis to suggest one (e.g. the item is pure content/vocabulary editing → `haiku`; a new subsystem or cross-module change → `sonnet`; leave it off rather than guessing).
 
@@ -131,16 +131,15 @@ Before saving, run a quick self-check and fix inline (not reported — this is d
 3. No placeholders (`TBD`, `TODO`, `???`, `fill in`).
 4. Every `**Dependencies:**` cites a task number that exists in this file.
 5. Every item heading produces a unique kebab-case slug.
-6. Every confirmed decision (Step 2) resolved to a concrete home — `### Outcomes`/`### Acceptance criteria`, `## Out of scope`, or a sidecar `§N` with a live citation — or was explicitly dropped with a stated reason.
+6. Every confirmed decision (Step 2) resolved to a concrete home — `### Outcomes`/`### Acceptance criteria`, `## Out of scope`, a spec `### Spec references → <spec-slug> §N` citation (or a decision flagged for a `/task:to-spec` follow-up) — or was explicitly dropped with a stated reason.
 
 ### Step 4: Save
 
 Write the file directly — no in-chat preview, no confirmation prompt.
 
 1. Slug: kebab-case from the initiative title, ≤ 50 chars (e.g. `add-auth-flow`, `migrate-to-vite`).
-2. Write `.task/roadmap/<slug>.md` with the full content.
-3. If — and only if — at least one technical anchor was routed there in Step 3, write `.task/roadmap/<slug>.spec.md` next to it: a flat numbered list of decisions, each self-contained enough that `to-plan` or an executing session can treat it as a fixed anchor without re-deriving the reasoning.
-4. Do not modify any other file.
+2. Write `.task/roadmap/<slug>.md` with the full content, including any `Spec: <spec-slug>` header lines for specs referenced in Step 3.
+3. Do not write or modify any spec file — specs are authored only by `to-spec`. Do not modify any other file.
 
 ### Step 5: Light self-check (report-only)
 
@@ -148,13 +147,13 @@ After Save, skim the just-saved file — not the in-chat draft — against three
 
 - **Coverage** — phase/fork coverage, dependency integrity (dangling or cyclic `**Dependencies:**`).
 - **Decomposition** — any item that reads as compound (spans ≥ 2 unrelated concerns, or has far more outcomes than the rest) and should be split.
-- **Clarity** — behavioral discipline held, descriptions self-contained, every `### Spec references → §N` citation resolves to a real entry in the sidecar (when one was written).
+- **Clarity** — behavioral discipline held, descriptions self-contained, every `### Spec references → <spec-slug> §N` citation names a `Spec:`-referenced `.task/spec/<spec-slug>.md` that actually contains that `§N`.
 
 Report a compact findings summary — a count per lens plus the obvious issues, a few lines. **Never rewrite the saved file** — anything found here is surfaced for the user to fix by hand or discuss further in chat; there is no inline auto-apply and no `--refine` mode to escalate to.
 
 ### Step 6: Output
 
-- Print the path to the created file (and the sidecar path, if one was written).
+- Print the path to the created file, and list any `Spec:`-referenced specs (plus any decision flagged for a `/task:to-spec` follow-up).
 - One-line summary: "*N* tasks across *M* phases. Recommended order: 1 → 2 → 4 → 3 → 5 …".
 - Print the Step 5 findings summary (or "clean / minor only").
 - End with the canonical next-step footer: `→ Next: \`/task:roadmap-to-workflow\`` (loop the whole roadmap) or `\`/task:to-task <slug>#1\`` (pick up the first item by hand — same for any other item number). Flag-free.
@@ -163,10 +162,10 @@ Report a compact findings summary — a count per lens plus the obvious issues, 
 
 - Naming project-specific files, modules, functions, types, or constants in `### Outcomes` / `### Goal` / `### Invariants` — normative names from spec/CLAUDE.md are the only exception.
 - Planning implementation details (file lists with line numbers, function signatures, code blocks > 5 lines) — that is `/task:to-plan`'s job when the item is picked up.
-- Modifying any file other than `.task/roadmap/<slug>.md` and, when warranted, `.task/roadmap/<slug>.spec.md`.
+- Modifying any file other than `.task/roadmap/<slug>.md` — specs live at `.task/spec/<slug>.md` and are authored only by `to-spec`, never written or edited here.
 - Auto-checking / auto-unchecking item checkboxes — that is the `roadmap-to-workflow` **driver**'s exclusive job, never this skill's and never a per-item agent's.
 - A single-direction monologue in a decomposition round — offer ≥ 2 options or explicitly justify why only one is viable. (The Decision Inventory and the cold-start sign-off are confirmation rounds, not decomposition rounds — exempt.)
 - Generic risks ("watch out for bugs") — risks must be specific to the initiative and project.
 - More than one initiative per file — split and pick one for this run.
 - Persisting topics the user asked to skip; placeholders anywhere.
-- Writing a `.refine.md` sidecar or a `.lock` file — neither exists in v3. Writing a `.spec.md` sidecar with no technical anchor behind it — an empty or filler sidecar is worse than none. Review is chat + `/code-review`, not a lens-audit pass.
+- Writing a `.refine.md` sidecar, a `.spec.md` sidecar, or a `.lock` file — none exists in v3; specs live at `.task/spec/<slug>.md` and are authored only by `to-spec`. Review is chat + `/code-review`, not a lens-audit pass.

@@ -16,7 +16,8 @@ implement session   roadmap-to-workflow   ← the launcher fans items out to ses
 
 - `to-task` — capture chat → `.task/task/<slug>.md`, `## Description` only, no `## Plan`.
 - `to-plan` — same, **with** a `## Plan` section (Goal / Touches / Logic).
-- `to-roadmap` — capture an initiative → `.task/roadmap/<slug>.md` (+ optional `<slug>.spec.md`).
+- `to-roadmap` — capture an initiative → `.task/roadmap/<slug>.md`.
+- `to-spec` — capture load-bearing technical decisions → `.task/spec/<slug>.md`; referenced by tasks/roadmaps via `Spec:` headers, and read by the executing session as a fixed anchor.
 - `roadmap-to-workflow` — the one launcher. Authors + invokes a dynamic Workflow that runs the roadmap's unchecked items.
 
 **Execution is not a skill.** An ordinary session told `implement .task/task/<slug>.md` reads the artifact and follows its `## Execution` block (implement → `/verify` → `/code-review` → commit). There is **no `build` skill and no `ship` skill** in v3 — both are deleted; their behavior is the stamped `## Execution` boilerplate plus the platform skills.
@@ -27,14 +28,14 @@ There are **no user-facing flags** anywhere — footers, descriptions, and examp
 
 ## `.task/` layout (FLAT)
 
-`.task/` sits **once at the pipeline root**, shared by every worktree of the repo. The v3 layout is flat — one file per task, no per-task subfolders, no workspace, no log, no archive.
+`.task/` sits **once at the pipeline root**, shared by every worktree of the repo. The v3 layout is flat — one file per task, one file per spec, no per-task subfolders, no workspace, no log, no archive.
 
 | Path | Role |
 |------|------|
 | `.task/config/config.md` | Project settings — Language, Testing Policy, Commit Format, tool priority. Written by the intake skills' inline Step 0 setup (the folded-in `bootstrap`). Format unchanged from v2. |
 | `.task/task/<slug>.md` | **One file per task.** `<slug>` is both the filename and the identity. Written by `to-task` / `to-plan`. |
 | `.task/roadmap/<slug>.md` | One file per multi-task initiative. Item backlog with checkboxes. |
-| `.task/roadmap/<slug>.spec.md` | **Optional sidecar** holding load-bearing technical decisions for the roadmap. |
+| `.task/spec/<slug>.md` | **One file per spec.** Standalone load-bearing technical decisions, topic-derived slug. Written by `to-spec`. Cited by task/roadmap `Spec:` headers. |
 
 What is **gone from v2**: `.task/workspace/`, `.task/log/`, any `<task-id>/` subfolder, the active-task pointer, and the whole archive concept. A closed task is just a file that stays in `.task/task/` (or the user deletes it). **git history is the record** — there is no archive.
 
@@ -67,6 +68,7 @@ One format, produced by **both** `to-task` and `to-plan`. `to-plan` additionally
 # <Title>
 Roadmap: <slug>          (optional; present only for roadmap items — load-bearing)
 Source item: #N          (optional; the item number in the roadmap)
+Spec: <slug>             (optional, repeatable; each cites a .task/spec/<slug>.md anchor)
 ---
 ## Description
 Why + what, distilled from the chat.
@@ -84,18 +86,21 @@ Why + what, distilled from the chat.
 ### Test 2: ...
 
 ## Execution
-> Implement the plan above (or the Description if there is no Plan), reading and editing
-> code with the tools in `.task/config/config.md` → Code Navigation / Code Editing (MCP
-> tools first, built-ins as fallback). Then run the `/verify` skill end-to-end and
-> `/code-review` on the diff; apply review fixes ONLY within the files named in **Touches**
-> (report the rest). Commit per `.task/config/config.md` → Commit Format. If `Roadmap:` +
-> `Source item:` headers are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
+> If any `Spec:` headers are present, first read each referenced `.task/spec/<slug>.md`
+> as a fixed technical anchor — honor its decisions, do not re-derive them. Then implement
+> the plan above (or the Description if there is no Plan), reading and editing code with the
+> tools in `.task/config/config.md` → Code Navigation / Code Editing (MCP tools first,
+> built-ins as fallback). Then run the `/verify` skill end-to-end and `/code-review` on the
+> diff; apply review fixes ONLY within the files named in **Touches** (report the rest).
+> Commit per `.task/config/config.md` → Commit Format. If `Roadmap:` + `Source item:`
+> headers are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
 ```
 
 Rules:
 
 - **Line 1** is `# <Title>` — a plain title, no bracketed task-id. (The v2 `# [TASK-ID] Title` form is dropped.)
 - **`Roadmap:` / `Source item:`** are optional header lines above the `---` separator. They are load-bearing for the executing session's auto-mark step (see below). Keep them **ASCII and above `---`**.
+- **`Spec:`** is an optional, **repeatable** header line above `---`. Each `Spec: <slug>` names a `.task/spec/<slug>.md` the executing session reads as a fixed technical anchor before implementing (see the `## Execution` block). Load-bearing; keep it **ASCII and above `---`**. One task may carry several.
 - **`---`** on its own line separates the header block from the body.
 - **`## Description`** is mandatory. It carries the "why + what" from the chat.
 - **`## Plan`** is optional (written only by `to-plan`). When present it uses the three-layer step contract — **Goal / Touches / Logic**. `Goal` is the observable target; `Touches` lists the files (and scopes review fixes); `Logic` is optional guidance. Each step is a `### Step N:` block.
@@ -108,15 +113,17 @@ Every `to-task` / `to-plan` run stamps exactly this, unchanged, English regardle
 
 ```markdown
 ## Execution
-> Implement the plan above (or the Description if there is no Plan), reading and editing
-> code with the tools in `.task/config/config.md` → Code Navigation / Code Editing (MCP
-> tools first, built-ins as fallback). Then run the `/verify` skill end-to-end and
-> `/code-review` on the diff; apply review fixes ONLY within the files named in **Touches**
-> (report the rest). Commit per `.task/config/config.md` → Commit Format. If `Roadmap:` +
-> `Source item:` headers are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
+> If any `Spec:` headers are present, first read each referenced `.task/spec/<slug>.md`
+> as a fixed technical anchor — honor its decisions, do not re-derive them. Then implement
+> the plan above (or the Description if there is no Plan), reading and editing code with the
+> tools in `.task/config/config.md` → Code Navigation / Code Editing (MCP tools first,
+> built-ins as fallback). Then run the `/verify` skill end-to-end and `/code-review` on the
+> diff; apply review fixes ONLY within the files named in **Touches** (report the rest).
+> Commit per `.task/config/config.md` → Commit Format. If `Roadmap:` + `Source item:`
+> headers are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
 ```
 
-Artifact prose (Description, Plan, Tests body) follows `config.md` → Language. Structural labels (`## Description`, `## Plan`, `### Step N:`, `## Tests`, `### Test N:`, `## Execution`), header keys (`Roadmap:`, `Source item:`), and the `## Execution` block text stay English — they are parser / contract strings.
+Artifact prose (Description, Plan, Tests body) follows `config.md` → Language. Structural labels (`## Description`, `## Plan`, `### Step N:`, `## Tests`, `### Test N:`, `## Execution`), header keys (`Roadmap:`, `Source item:`, `Spec:`), and the `## Execution` block text stay English — they are parser / contract strings.
 
 ---
 
@@ -157,9 +164,32 @@ Load-bearing item fields for `roadmap-to-workflow`:
 - **`**Dependencies:**`** — `—` (none) or a comma-separated list of item numbers. The driver **topologically sorts** items into dependency-ordered **waves**: items in the same wave have no unmet dependency and run in parallel; a barrier separates waves.
 - **`**Model:**`** — optional per-item hint (`haiku` / `sonnet` / `opus`). The driver passes it as `opts.model` to the per-item implement agent. It is **not** validated — a missing or off-list value simply means no hint (defaults apply).
 
-### `<slug>.spec.md` sidecar
+### Roadmap `Spec:` headers
 
-Load-bearing cross-item **technical decisions** live in an **optional sidecar** `.task/roadmap/<slug>.spec.md`, next to the roadmap file. When present, `to-plan` and the executing session honor it as a fixed anchor while working an item. (This restores the sidecar the v2 draft had folded into an in-file `## Technical decisions` section — that decision was reversed.)
+A roadmap may carry optional, **repeatable** `Spec: <slug>` header lines (above its title/intro, ASCII), each naming a `.task/spec/<slug>.md` that holds load-bearing cross-item technical decisions. Items cite specific decisions as `### Spec references → <slug> §N` (the `<slug>` qualifier is required — several specs may be reachable). When `roadmap-to-workflow` runs the roadmap, it passes these spec paths to each item's plan agent; when `to-plan`/`to-task` open an item by hand, they carry the relevant `Spec:` headers onto the task file so the executing session reads them via `## Execution`.
+
+---
+
+## Spec file format (`.task/spec/<slug>.md`)
+
+Produced by `to-spec`; user-edited thereafter. A **standalone** home for load-bearing technical decisions — anchors a plan or executing session treats as fixed without re-deriving. `<slug>` is the topic-derived filename and identity, independent of any roadmap; one spec may be cited by many tasks and roadmaps via their `Spec:` headers. (This replaces the v2 roadmap-scoped `<slug>.spec.md` sidecar — the sidecar concept is gone.)
+
+```markdown
+# Spec: <Title>
+
+> One-line purpose. Load-bearing technical decisions for <topic> — NOT a full
+> implementation plan (the plan owns that). One numbered section per decision;
+> tasks and roadmap items cite sections as `### Spec references → <slug> §N`.
+
+## 1. <decision title>
+**Decision:** <what was chosen>
+**Rationale:** <why — the reasoning that must survive, not be re-litigated>
+**Constrains:** <what this pins for consumers; what it leaves free>
+
+## 2. ...
+```
+
+Section labels (`## N.`, `**Decision:**` / `**Rationale:**` / `**Constrains:**`) and the `Spec:` header key stay English; prose follows `config.md` → Language.
 
 ---
 
@@ -168,9 +198,9 @@ Load-bearing cross-item **technical decisions** live in an **optional sidecar** 
 | Artifact | Produced by | Consumed by |
 |----------|-------------|-------------|
 | `.task/config/config.md` | intake skills' inline Step 0 setup (folded-in `bootstrap`) | every skill + every executing session — Language, Testing Policy, Commit Format, tool priority |
-| `.task/task/<slug>.md` | `to-task` (header + `## Description` + `## Execution`); `to-plan` (same + `## Plan`, optional `## Tests`) | **the executing session** (reads `## Description`, `## Plan` if present, follows `## Execution`, reads `Roadmap:` + `Source item:` for auto-mark); `roadmap-to-workflow` per-item implement agent |
-| `.task/roadmap/<slug>.md` | `to-roadmap` (initial); user-edited; `roadmap-to-workflow` **driver** flips `- [ ]` → `- [x]` after an item's agent returns OK | `roadmap-to-workflow` driver (loops unchecked items, reads `**Dependencies:**` + `**Model:**`); `to-plan` (when picking up an item) |
-| `.task/roadmap/<slug>.spec.md` | `to-roadmap` (optional) or user | `to-plan` + executing session (technical-decision anchor) |
+| `.task/task/<slug>.md` | `to-task` (header + `## Description` + `## Execution`); `to-plan` (same + `## Plan`, optional `## Tests`) | **the executing session** (reads `## Description`, `## Plan` if present, follows `## Execution`, reads `Spec:` for anchors and `Roadmap:` + `Source item:` for auto-mark); `roadmap-to-workflow` per-item implement agent |
+| `.task/roadmap/<slug>.md` | `to-roadmap` (initial); user-edited; `roadmap-to-workflow` **driver** flips `- [ ]` → `- [x]` after an item's agent returns OK | `roadmap-to-workflow` driver (loops unchecked items, reads `**Dependencies:**` + `**Model:**` + `Spec:`); `to-plan` (when picking up an item) |
+| `.task/spec/<slug>.md` | `to-spec` or user | **the executing session** (via a task's `Spec:` header) + `to-plan` (technical-decision anchor) + `roadmap-to-workflow` per-item plan agent |
 
 The executing session writes no separate pipeline artifacts — its implementation lands in the working tree, and `/verify` / `/code-review` run against the live diff. Auto-mark inside a single-task execution is done by the executing session itself (per the `## Execution` block); auto-mark during a roadmap run is done by the **driver**, not the per-item agent, so parallel item agents never race on the roadmap file.
 
@@ -191,11 +221,13 @@ Keeps the `config.md` precondition and English parser-stable strings. **No hook 
   - a `---` separator line is present;
   - `## Description` is present;
   - `## Plan` is **optional** — if present, it has ≥1 `### Step N:` block;
-  - `## Tests` is **optional** — if present, it has ≥1 `### Test N:` block.
-- **`roadmap <slug>`** — validate `.task/roadmap/<slug>.md` (item headings well-formed).
-- **`all`** — validate every `.task/task/*.md` plus every `.task/roadmap/*.md`.
+  - `## Tests` is **optional** — if present, it has ≥1 `### Test N:` block;
+  - each `Spec: <slug>` header resolves to an existing `.task/spec/<slug>.md` — a miss is a **`WARN`** (dangling reference), not an error (`validate.sh` is advisory, not a gate).
+- **`roadmap <slug>`** — validate `.task/roadmap/<slug>.md` (item headings well-formed); dangling `Spec:` headers `WARN` as for `task`.
+- **`spec <slug>`** — validate `.task/spec/<slug>.md`: line 1 matches `^# .+`; a `---` separator line is present; ≥1 `## N.` numbered decision section.
+- **`all`** — validate every `.task/task/*.md`, every `.task/roadmap/*.md`, plus every `.task/spec/*.md`.
 
-`## Execution` is stamped boilerplate; validation need not re-check its exact text, but the block should be present. There is **no `Implement-Model:` check** — that field is gone; the per-item model hint lives on roadmap items and is not `validate.sh`'s concern.
+`## Execution` is stamped boilerplate; validation need not re-check its exact text, but the block should be present. There is **no `Implement-Model:` check** — that field is gone; the per-item model hint lives on roadmap items and is not `validate.sh`'s concern. The dangling-`Spec:` check is the pipeline's only cross-file validation, and only ever a `WARN`.
 
 ### Keep
 

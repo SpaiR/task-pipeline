@@ -50,7 +50,7 @@ Branch on `$ARGUMENTS`:
 
 1. Resolve `<slug>` to `.task/roadmap/<slug>.md`; if ambiguous or missing — stop and ask.
 2. Pick `<N>`: if given, use it. Otherwise collect open items (`- [ ]` checkbox headings); if none — stop: "all items in `<slug>` are closed; pick one explicitly with `<slug>#<N>`, or draft from chat instead." If more than one open item, ask via `AskUserQuestion` (chip per `#<N> — <title>`, first/lowest default); if exactly one, auto-pick it.
-3. Read the item's `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria` block. `### Context` becomes the Description's "why"; the rest folds into the "what".
+3. Read the item's `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria` block. `### Context` becomes the Description's "why"; the rest folds into the "what". Also note any `### Spec references → <spec-slug> §N` the item carries, and the roadmap's own `Spec: <slug>` header lines — collect the distinct `<spec-slug>`s to stamp as `Spec:` headers on the task (step 6).
 4. Derive `<item-slug>` — kebab-case English from the item's own title (not the roadmap's). No task-id, no `derive-task-id` helper: the item gets its own `<item-slug>.md`, independent of the roadmap's slug.
 5. Present the drafted Description body, then pose an `AskUserQuestion` (Accept / Edit / Decline — same mechanism as chat-draft mode's Step 2.3) before writing anything.
 6. **On accept**, write `.task/task/<item-slug>.md` (creating `.task/task/` if needed):
@@ -59,6 +59,7 @@ Branch on `$ARGUMENTS`:
    # {Item title}
    Roadmap: {slug}
    Source item: #{N} — {item title}
+   Spec: {spec-slug}          (one line per spec the item cites; omit entirely if none)
    ---
    ## Description
 
@@ -69,12 +70,14 @@ Branch on `$ARGUMENTS`:
    {Per config.md Testing Policy resolution below — omit the whole section if tests are not required.}
 
    ## Execution
-   > Implement the plan above (or the Description if there is no Plan), reading and editing
-   > code with the tools in `.task/config/config.md` → Code Navigation / Code Editing (MCP
-   > tools first, built-ins as fallback). Then run the `/verify` skill end-to-end and
-   > `/code-review` on the diff; apply review fixes ONLY within the files named in **Touches**
-   > (report the rest). Commit per `.task/config/config.md` → Commit Format. If `Roadmap:` +
-   > `Source item:` headers are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
+   > If any `Spec:` headers are present, first read each referenced `.task/spec/<slug>.md`
+   > as a fixed technical anchor — honor its decisions, do not re-derive them. Then implement
+   > the plan above (or the Description if there is no Plan), reading and editing code with the
+   > tools in `.task/config/config.md` → Code Navigation / Code Editing (MCP tools first,
+   > built-ins as fallback). Then run the `/verify` skill end-to-end and `/code-review` on the
+   > diff; apply review fixes ONLY within the files named in **Touches** (report the rest).
+   > Commit per `.task/config/config.md` → Commit Format. If `Roadmap:` + `Source item:`
+   > headers are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
    ```
 7. Continue to Step 3 (footer), using `<item-slug>` as `<slug>` there.
 
@@ -85,14 +88,16 @@ Branch on `$ARGUMENTS`:
    - `## Description` — the why + what, in the user's own framing. Use `### Problem` / `### Outcome` / `### Scope` / `### Constraints` sub-headers where the discussion gives signal for them; omit a sub-header rather than inventing content. Do not fabricate anything not actually discussed.
    - `## Tests` — only if `.task/config/config.md` → Testing Policy resolves `tests_required` true for this task (`always`, or `on-demand` with the discussion explicitly asking for tests). List test intents as `### Test N: <what it checks>`; no code yet — the executing session writes the real tests.
    - **No `## Plan` section** — that is `to-plan`'s job.
+   - **Specs (optional).** If `.task/spec/` holds a spec the discussion clearly relies on, add a `Spec: <slug>` header line for each (ASCII, above `---`) so the executing session reads it as a fixed anchor. Only reference specs actually relevant — never invent one, and never write the spec file here (that is `to-spec`'s job).
 3. **Present the draft**, then pose an `AskUserQuestion` (convention (b)) with chips **Accept** / **Edit** / **Decline**:
    - **Accept** → write the file as drafted.
    - **Edit** → follow-up asks what to change, apply it, re-show, repeat until accepted.
    - **Decline** → do not write anything; stop with "task.md not written."
-4. **On accept**, write `.task/task/<slug>.md` (creating `.task/task/` if needed, no `Roadmap:` / `Source item:` lines in this mode):
+4. **On accept**, write `.task/task/<slug>.md` (creating `.task/task/` if needed, no `Roadmap:` / `Source item:` lines in this mode; include a `Spec:` line per relevant spec, or none):
 
    ```markdown
    # {Short task title}
+   Spec: {spec-slug}          (one line per relevant spec; omit entirely if none)
    ---
    ## Description
 
@@ -103,12 +108,14 @@ Branch on `$ARGUMENTS`:
    {drafted body, only if present}
 
    ## Execution
-   > Implement the plan above (or the Description if there is no Plan), reading and editing
-   > code with the tools in `.task/config/config.md` → Code Navigation / Code Editing (MCP
-   > tools first, built-ins as fallback). Then run the `/verify` skill end-to-end and
-   > `/code-review` on the diff; apply review fixes ONLY within the files named in **Touches**
-   > (report the rest). Commit per `.task/config/config.md` → Commit Format. If `Roadmap:` +
-   > `Source item:` headers are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
+   > If any `Spec:` headers are present, first read each referenced `.task/spec/<slug>.md`
+   > as a fixed technical anchor — honor its decisions, do not re-derive them. Then implement
+   > the plan above (or the Description if there is no Plan), reading and editing code with the
+   > tools in `.task/config/config.md` → Code Navigation / Code Editing (MCP tools first,
+   > built-ins as fallback). Then run the `/verify` skill end-to-end and `/code-review` on the
+   > diff; apply review fixes ONLY within the files named in **Touches** (report the rest).
+   > Commit per `.task/config/config.md` → Commit Format. If `Roadmap:` + `Source item:`
+   > headers are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
    ```
 
 ## Step 3: Output
@@ -125,3 +132,4 @@ Report the path to the written `task.md` and a 1–2 line summary of the Descrip
 - Invent, read, or write any active-task pointer — v3 has none; the artifact path is the only handle.
 - Bracket the title with a task-id (`# [TASK-ID] Title`) — v3's title line is plain `# <Title>`; the slug lives only in the filename.
 - Silently overwrite an existing `.task/task/<slug>.md` — surface the collision and let the user choose.
+- Write or edit a `.task/spec/<slug>.md` file — referencing a spec via a `Spec:` header is fine, but authoring specs is `to-spec`'s job.

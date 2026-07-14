@@ -2,7 +2,7 @@
 
 The [README](../README.md) covers the basic single-task flow: discuss in chat, run `to-task` or `to-plan`, then tell any session `implement .task/task/<slug>.md`. This page collects the larger scenarios: a multi-task initiative via a roadmap, the `roadmap-to-workflow` autopilot, mixing hand-picked items with autopilot, and returning to a task later.
 
-Every scenario below builds on the same flat `.task/` layout — `.task/config/config.md`, `.task/task/<slug>.md` (one file per task, the slug is both filename and identity), `.task/roadmap/<slug>.md` (+ optional `<slug>.spec.md`). There is no workspace, no log, no active-task pointer — the artifact's path is the only handle there is. Full shapes: [docs/contract.md](contract.md).
+Every scenario below builds on the same flat `.task/` layout — `.task/config/config.md`, `.task/task/<slug>.md` (one file per task, the slug is both filename and identity), `.task/roadmap/<slug>.md`, `.task/spec/<slug>.md` (standalone technical-decision specs, referenced via `Spec:` headers). There is no workspace, no log, no active-task pointer — the artifact's path is the only handle there is. Full shapes: [docs/contract.md](contract.md).
 
 ## A multi-task initiative, picked up by hand
 
@@ -13,8 +13,9 @@ Every scenario below builds on the same flat `.task/` layout — `.task/config/c
 # → .task/roadmap/api-v2-migration.md — a phase-grouped backlog of ready-to-pick-up
 #   items, each with a Ready description (Context/Goal/Outcomes/Invariants/
 #   Acceptance criteria) and optional **Dependencies:** / **Model:** hints
-# → (opt.) .task/roadmap/api-v2-migration.spec.md — only if a load-bearing
-#   technical decision surfaced during the brainstorm
+# → if a load-bearing technical decision surfaces, capture it separately with
+#   /task:to-spec (writes .task/spec/<slug>.md) and reference it from the roadmap
+#   (and its items) via a Spec: header
 # → footer: → Next: `/task:roadmap-to-workflow` or `/task:to-task api-v2-migration#1`
 
 # Pick up item 1 directly — to-task/to-plan can open a roadmap item as their input:

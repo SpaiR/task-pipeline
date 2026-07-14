@@ -12,6 +12,7 @@ discuss freely in chat
 /task:to-task            capture what and why — no plan
 /task:to-plan             …  + a Plan (Goal/Touches/Logic steps)
 /task:to-roadmap          … a whole multi-task initiative
+/task:to-spec             … pin technical decisions (tasks/roadmaps cite via Spec:)
   ↓                                          ↓
 implement it now,                /task:roadmap-to-workflow
 in a fresh session:                fans unchecked items out to
@@ -19,7 +20,7 @@ in a fresh session:                fans unchecked items out to
   → /verify → /code-review → commit
 ```
 
-Depth of capture is the skill you pick, not a flag: `to-task` for a quick "what and why", `to-plan` when you already know the approach, `to-roadmap` for a multi-task initiative. There is no execution skill — capture ends with a copy-pasteable path, and any session (the same one, a fresh one, or one spawned by `roadmap-to-workflow`) executes the artifact directly.
+Depth of capture is the skill you pick, not a flag: `to-task` for a quick "what and why", `to-plan` when you already know the approach, `to-roadmap` for a multi-task initiative. `to-spec` is orthogonal — it pins load-bearing technical decisions into `.task/spec/<slug>.md`, which tasks and roadmaps reference via a `Spec:` header and the implementing session honors as a fixed anchor. There is no execution skill — capture ends with a copy-pasteable path, and any session (the same one, a fresh one, or one spawned by `roadmap-to-workflow`) executes the artifact directly.
 
 ## Quickstart
 
@@ -34,7 +35,7 @@ Depth of capture is the skill you pick, not a flag: `to-task` for a quick "what 
 
 The session that implements it follows the artifact's own `## Execution` block: implement the plan, run `/verify` and `/code-review`, apply review fixes within the files named in **Touches**, then commit per `config.md` → Commit Format.
 
-The first `to-task` / `to-plan` / `to-roadmap` call in a fresh project also sets up `.task/config/config.md` inline (detect language + test policy, one confirmation) — there's no separate setup command to run first.
+The first `to-task` / `to-plan` / `to-roadmap` / `to-spec` call in a fresh project also sets up `.task/config/config.md` inline (detect language + test policy, one confirmation) — there's no separate setup command to run first.
 
 ## Why
 
@@ -73,9 +74,9 @@ The pipeline ships as a Claude Code plugin (`task`) inside the `task-pipeline` m
 
 From then on, updates are a single command: `/plugin marketplace update task-pipeline`.
 
-After installation, Claude Code gains the commands `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, `/task:roadmap-to-workflow`. There is no hook — enforcement is by convention, not a gate.
+After installation, Claude Code gains the commands `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, `/task:to-spec`, `/task:roadmap-to-workflow`. There is no hook — enforcement is by convention, not a gate.
 
-In a new project you don't have to run setup by hand first: the first `/task:to-task`, `/task:to-plan`, or `/task:to-roadmap` in an unconfigured project detects language and test policy, presents both for one confirmation, writes `.task/config/config.md`, and continues with the requested capture. `/task:roadmap-to-workflow` presupposes an existing roadmap, so a fresh-project first-use of it hard-stops with a redirect to run a capture skill first.
+In a new project you don't have to run setup by hand first: the first `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, or `/task:to-spec` in an unconfigured project detects language and test policy, presents both for one confirmation, writes `.task/config/config.md`, and continues with the requested capture. `/task:roadmap-to-workflow` presupposes an existing roadmap, so a fresh-project first-use of it hard-stops with a redirect to run a capture skill first.
 
 <details>
 <summary>Local development</summary>
@@ -95,7 +96,7 @@ In a new project you don't have to run setup by hand first: the first `/task:to-
 
 ### One file per task; a roadmap is a backlog of items
 
-Each capture produces exactly one `.task/task/<slug>.md`, where `<slug>` is both the filename and the identity — no task-id, no umbrella folder. A closed task is just a file that stays in `.task/task/` (or you delete it); git history is the record, there is no archive. A **roadmap** (`.task/roadmap/<slug>.md`) groups several such items into one initiative; `to-task`/`to-plan` can open the next unchecked item directly, or `roadmap-to-workflow` fans the whole backlog out at once.
+Each capture produces exactly one `.task/task/<slug>.md`, where `<slug>` is both the filename and the identity — no task-id, no umbrella folder. A closed task is just a file that stays in `.task/task/` (or you delete it); git history is the record, there is no archive. A **roadmap** (`.task/roadmap/<slug>.md`) groups several such items into one initiative; `to-task`/`to-plan` can open the next unchecked item directly, or `roadmap-to-workflow` fans the whole backlog out at once. A **spec** (`.task/spec/<slug>.md`) is a standalone file of load-bearing technical decisions that tasks and roadmaps point at with a `Spec:` header.
 
 ## Commands
 
@@ -103,7 +104,8 @@ Each capture produces exactly one `.task/task/<slug>.md`, where `<slug>` is both
 |--------|--------|
 | `/task:to-task [<context>]` | Fixes the chat discussion (or a roadmap item) into `.task/task/<slug>.md` — Description only, no Plan. Lightest of the three capture skills; use it to record the "what and why" before diving in directly, or before `to-plan` later. |
 | `/task:to-plan [<context>]` | Fixes the chat discussion (or a roadmap item) into `.task/task/<slug>.md` with **`## Description` + `## Plan`** (Goal/Touches/Logic steps) and, when the testing policy calls for it, `## Tests`. Deepest one-task capture — hand straight to implementation. Re-running it on a `to-task`-only file adds the Plan in place. |
-| `/task:to-roadmap <idea>` | Fixes a multi-task initiative discussed in chat into `.task/roadmap/<slug>.md` — a phase-grouped backlog of ready-to-pick-up items, each with optional `**Dependencies:**` and `**Model:**` hints, plus an optional `<slug>.spec.md` sidecar for load-bearing technical decisions. Closes with a report-only self-check; findings are surfaced, never silently rewritten into the file. |
+| `/task:to-roadmap <idea>` | Fixes a multi-task initiative discussed in chat into `.task/roadmap/<slug>.md` — a phase-grouped backlog of ready-to-pick-up items, each with optional `**Dependencies:**` and `**Model:**` hints, referencing standalone specs via `Spec:` headers where a load-bearing technical decision applies. Closes with a report-only self-check; findings are surfaced, never silently rewritten into the file. |
+| `/task:to-spec [<context>]` | Fixes load-bearing technical decisions discussed in chat into a standalone `.task/spec/<slug>.md` — numbered Decision / Rationale / Constrains sections. Orthogonal to the depth-capture skills: tasks and roadmaps reference a spec via a `Spec:` header, and the implementing session reads it as a fixed anchor. Capture it before, alongside, or independently of any roadmap. |
 | `/task:roadmap-to-workflow [<roadmap>]` | Autopilot over an approved roadmap: authors and invokes a dynamic Workflow that runs the roadmap's unchecked items in dependency-ordered waves (parallel within a wave, isolated worktrees). Default per-item shape is opus-plans/sonnet-implements — a first agent runs `to-plan` for the item, a second implements + verifies + reviews + commits, using the item's `**Model:**` hint if present. The driver ticks the roadmap checkbox after each item lands. Launched with no arguments it asks (via chips) which roadmap and how much to run; falls back to one-item-at-a-time by hand if the Workflow tool is unavailable. |
 | `validate` *(utility)* | Optional formal validator of `.task/task/<slug>.md` / roadmap format. Never invoked automatically — no hook calls it. Manual check: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" [task <slug>\|roadmap <slug>\|all]`. |
 
@@ -191,7 +193,7 @@ All of this lives in `.task/config/config.md`, written inline on first use of a 
 
 The pipeline is built on a small set of invariants; the full contract lives in [`docs/contract.md`](docs/contract.md).
 
-- **Artifacts.** `.task/` is flat — one file per task under `.task/task/<slug>.md`, one file per initiative under `.task/roadmap/<slug>.md` (+ optional `<slug>.spec.md`). No workspace subfolders, no log, no archive, no active-task pointer — the artifact's path is the only handle there is. Full producer/consumer table: [docs/contract.md](docs/contract.md).
+- **Artifacts.** `.task/` is flat — one file per task under `.task/task/<slug>.md`, one file per initiative under `.task/roadmap/<slug>.md`, one file per spec under `.task/spec/<slug>.md`. No workspace subfolders, no log, no archive, no active-task pointer — the artifact's path is the only handle there is. Full producer/consumer table: [docs/contract.md](docs/contract.md).
 - **No hook gate.** `hooks/hooks.json` ships empty (`{"hooks": {}}`). Enforcement is by convention: `validate.sh` is available as an optional self-check, never wired to a PreToolUse matcher.
 - **Parallel worktrees.** All worktrees of a repo share one `.task/` automatically — its location is recorded in `git config task.root` on first setup, so nested, sibling, and bare-repo worktrees resolve it with zero setup (no symlink, no join step). This is what lets `/task:roadmap-to-workflow` fan items out to isolated worktrees that still share one `.task/`.
 
