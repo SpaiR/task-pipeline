@@ -1,6 +1,6 @@
 ---
 name: validate
-description: Validate the format of task-pipeline artifacts (.task/task/<slug>.md, .task/roadmap/*.md). Internal utility — an optional self-check the intake skills run at Step 0; not user-invocable.
+description: Validate the format of task-pipeline artifacts (.task/task/<slug>.md, .task/roadmap/*.md, .task/spec/*.md). Internal utility — an optional self-check the intake skills run at Step 0; not user-invocable.
 disable-model-invocation: true
 user-invocable: false
 model: inherit
@@ -8,7 +8,7 @@ model: inherit
 
 Validate the format of task-pipeline artifacts. This skill is a thin wrapper around `validate.sh` — it produces a structured pass/fail report so a skill can catch a malformed artifact before it is parsed downstream. **Not user-invocable**: the bash script is dispatched directly by the intake skills. In v3 this is an **optional self-check, not a gate** — there is no PreToolUse hook; a WARN/ERROR is reported, and only a genuinely absent `.task/config/config.md` hard-stops (the setup case the intake skills handle inline).
 
-**Input (when invoked manually via bash):** one of: `task <slug>`, `roadmap <slug|path>`, `all`. `task <slug>` validates `.task/task/<slug>.md`; `all` validates every `.task/task/*.md` and every `.task/roadmap/*.md`, tolerating an empty `.task/task/`.
+**Input (when invoked manually via bash):** one of: `task <slug>`, `roadmap <slug|path>`, `spec <slug>`, `all`. `task <slug>` validates `.task/task/<slug>.md`; `all` validates every `.task/task/*.md`, every `.task/roadmap/*.md`, and every `.task/spec/*.md`, tolerating an empty `.task/task/`.
 
 **Format contract, preconditions:** see [docs/contract.md](../../docs/contract.md) — the bash gate in `validate.sh` itself is authoritative (the script enforces the `.task/config/config.md` precondition and exits 2 on miss). Validator output is fixed English by design, parser-stable.
 
@@ -18,6 +18,7 @@ Validate the format of task-pipeline artifacts. This skill is a thin wrapper aro
 |----------|--------|
 | `.task/task/<slug>.md` | line 1 matches `# <Title>` (`^# .+`, no `[TASK-ID]` bracket); `---` separator present; `## Description` heading present; `## Execution` heading present (presence only). `## Plan` is **optional** — if present, must contain ≥1 `### Step N:` block. `## Tests` is **optional** — if present, must contain ≥1 `### Test N:` block. |
 | `.task/roadmap/<slug>.md` | ≥1 `### N. <title>` heading (with a required `- [ ]`/`- [x]` checkbox prefix); item numbers unique (the driver's auto-mark keys on the number); each task block carries the English sub-headings `### Context`, `### Goal`, `### Outcomes`, `### Acceptance criteria` (the contract consumed by `/task:to-task` / `/task:to-plan` when opening from an item) |
+| `.task/spec/<slug>.md` | line 1 matches `# <Title>` (`^# .+`); ≥1 `## N. <title>` numbered decision section. No `---` separator check (a spec has no parser-stable header block above its body). |
 
 The slug is the identifier and the filename — there is no task-id, no workspace subfolder, and no active-task pointer to resolve. There is no `plan` subcommand (the plan lives inside `task.md` under `## Plan`) and no `Implement-Model:` check (the per-item model hint lives on roadmap items, not in `task.md`).
 
