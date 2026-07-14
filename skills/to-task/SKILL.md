@@ -65,10 +65,6 @@ Branch on `$ARGUMENTS`:
 
    {Why: paraphrase of ### Context. What: paraphrase of ### Goal / ### Outcomes / ### Invariants / ### Acceptance criteria.}
 
-   ## Tests
-
-   {Per config.md Testing Policy resolution below — omit the whole section if tests are not required.}
-
    ## Execution
    > If any `Spec:` headers are present, first read each referenced `.task/spec/<slug>.md`
    > as a fixed technical anchor — honor its decisions, do not re-derive them. Then implement
@@ -86,8 +82,7 @@ Branch on `$ARGUMENTS`:
 1. **Slug.** Derive a kebab-case English slug (2–5 words) from the chat's essence / the drafted title. This is both the filename and the task's identity — no task-id, no bracket. If `.task/task/<slug>.md` already exists, surface it before writing: pose an `AskUserQuestion` (Accept overwrite / Edit → propose a different slug / Decline → stop without writing).
 2. **Distil the chat.** Read back over the discussion in this conversation (not the codebase) and write:
    - `## Description` — the why + what, in the user's own framing. Use `### Problem` / `### Outcome` / `### Scope` / `### Constraints` sub-headers where the discussion gives signal for them; omit a sub-header rather than inventing content. Do not fabricate anything not actually discussed.
-   - `## Tests` — only if `.task/config/config.md` → Testing Policy resolves `tests_required` true for this task (`always`, or `on-demand` with the discussion explicitly asking for tests). List test intents as `### Test N: <what it checks>`; no code yet — the executing session writes the real tests.
-   - **No `## Plan` section** — that is `to-plan`'s job.
+   - **No `## Plan` and no `## Tests` section** — both are `to-plan`'s job. `to-task` captures the Description only; run `to-plan` later to add a Plan (and Tests when the Testing Policy calls for them).
    - **Specs (optional).** If `.task/spec/` holds a spec the discussion clearly relies on, add a `Spec: <slug>` header line for each (ASCII, above `---`) so the executing session reads it as a fixed anchor. Only reference specs actually relevant — never invent one, and never write the spec file here (that is `to-spec`'s job).
 3. **Present the draft**, then pose an `AskUserQuestion` (convention (b)) with chips **Accept** / **Edit** / **Decline**:
    - **Accept** → write the file as drafted.
@@ -103,10 +98,6 @@ Branch on `$ARGUMENTS`:
 
    {drafted body}
 
-   ## Tests
-
-   {drafted body, only if present}
-
    ## Execution
    > If any `Spec:` headers are present, first read each referenced `.task/spec/<slug>.md`
    > as a fixed technical anchor — honor its decisions, do not re-derive them. Then implement
@@ -120,13 +111,14 @@ Branch on `$ARGUMENTS`:
 
 ## Step 3: Output
 
-Report the path to the written `task.md` and a 1–2 line summary of the Description (and whether `## Tests` was included). Close with the v3 handoff footer (convention (a), flag-free) — the path IS the handle, name it explicitly:
+Report the path to the written `task.md` and a 1–2 line summary of the Description. Close with the v3 handoff footer (convention (a), flag-free) — the path IS the handle, name it explicitly:
 
 `→ Next: implement it now, or in a fresh session run: \`implement .task/task/<slug>.md\``
 
 ## Forbidden
 
 - Write a `## Plan` section — that's `to-plan`'s contract.
+- Write a `## Tests` section — that's `to-plan`'s contract too; `to-task` captures the Description only (the contract's producer table attributes `## Tests` to `to-plan`, and `to-plan`'s promote mode assumes a `to-task` file has none).
 - Scan the codebase beyond `CLAUDE.md` + top-level manifests (Tier C-equivalent) — this skill captures discussion, it doesn't investigate implementation.
 - Modify the source roadmap file in from-roadmap mode — auto-marking `- [x]` happens inside the executing session (or the `roadmap-to-workflow` driver), never here.
 - Invent, read, or write any active-task pointer — v3 has none; the artifact path is the only handle.

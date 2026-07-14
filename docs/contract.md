@@ -10,6 +10,7 @@ Enforcement is traded for **convention** (this is a solo tool): there is **no ho
 discuss freely in chat
   ↓
 to-task | to-plan | to-roadmap        ← capture depth is the skill, not a flag
+to-spec                               ← pins technical decisions, cited via Spec:
   ↓                       ↓
 implement session   roadmap-to-workflow   ← the launcher fans items out to sessions
 ```
@@ -224,7 +225,7 @@ Keeps the `config.md` precondition and English parser-stable strings. **No hook 
   - `## Tests` is **optional** — if present, it has ≥1 `### Test N:` block;
   - each `Spec: <slug>` header resolves to an existing `.task/spec/<slug>.md` — a miss is a **`WARN`** (dangling reference), not an error (`validate.sh` is advisory, not a gate).
 - **`roadmap <slug>`** — validate `.task/roadmap/<slug>.md` (item headings well-formed); dangling `Spec:` headers `WARN` as for `task`.
-- **`spec <slug>`** — validate `.task/spec/<slug>.md`: line 1 matches `^# .+`; a `---` separator line is present; ≥1 `## N.` numbered decision section.
+- **`spec <slug>`** — validate `.task/spec/<slug>.md`: line 1 matches `^# .+`; ≥1 `## N.` numbered decision section. (No `---` separator check — a spec has no parser-stable header block above a body, so there is nothing to separate.)
 - **`all`** — validate every `.task/task/*.md`, every `.task/roadmap/*.md`, plus every `.task/spec/*.md`.
 
 `## Execution` is stamped boilerplate; validation need not re-check its exact text, but the block should be present. There is **no `Implement-Model:` check** — that field is gone; the per-item model hint lives on roadmap items and is not `validate.sh`'s concern. The dangling-`Spec:` check is the pipeline's only cross-file validation, and only ever a `WARN`.
@@ -233,13 +234,13 @@ Keeps the `config.md` precondition and English parser-stable strings. **No hook 
 
 | Script | Role |
 |--------|------|
-| `roadmap.sh` | roadmap-file parsing / auto-mark helpers used by `roadmap-to-workflow` (`resolve_roadmap_path`, `roadmap_progress_counts`, item checkbox flip) |
+| `roadmap.sh` | roadmap-file parsing helpers used by `roadmap-to-workflow` (`resolve_roadmap_path`, `roadmap_mtime`, `roadmap_progress_counts`). The driver's per-item checkbox flip is inline `sed`/`awk`, **not** a helper here. |
 | `preamble.sh` | trimmed to `require_config` (config.md hard-stop) + `source_resolve_ws` (source resolve-ws.sh, export AI_DIR). Drop all hook/gate glue, `run_validator`, pointer-heal, `set_workspace_root` |
 | `templates/conventional-commits.md` | commit-format fallback for the executing session |
 
-### Delete (Cleanup phase)
+### Removed in v3 (already deleted)
 
-`close.sh` and `commit-context.sh` (both were `ship`'s) and `derive-task-id.sh` (no task-id in v3). Cleanup also removes the already-orphaned v2 helpers still on disk (`phase-detect.sh`, `touches-gate.sh`, `auto-locks.sh`, `auto-roadmap-helpers.sh`, `fail-log.sh`, `templates/summary.md`). Do not delete these yourself unless assigned — the Cleanup phase owns deletions.
+The v2 helpers are gone from `skills/_lib/` — `close.sh` and `commit-context.sh` (both were `ship`'s), `derive-task-id.sh` (no task-id in v3), plus the orphaned `phase-detect.sh`, `touches-gate.sh`, `auto-locks.sh`, `auto-roadmap-helpers.sh`, `fail-log.sh`, and `templates/summary.md`. Only `preamble.sh`, `resolve-ws.sh`, `roadmap.sh`, and `templates/conventional-commits.md` remain.
 
 ---
 

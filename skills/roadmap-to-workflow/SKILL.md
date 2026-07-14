@@ -197,8 +197,10 @@ for (const [w, items] of waves.entries()) {
     // race on the roadmap file.
     const itemSlug = status.split(" ")[2];
     markRoadmapItemDone(slug, n, itemSlug);   // flips "### - [ ] N." → "### - [x] N." in
-                                               // .task/roadmap/<slug>.md via roadmap.sh's
-                                               // checkbox-flip helper
+                                               // .task/roadmap/<slug>.md with an inline
+                                               // sed/awk edit keyed on item number N —
+                                               // roadmap.sh has no flip helper (it exposes
+                                               // only path/mtime/progress-count helpers)
   }
   // Barrier: do not start wave w+2 until every item in wave w+1 above is marked.
 }
