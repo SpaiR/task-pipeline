@@ -38,10 +38,10 @@ err() { echo "ERROR $1: $2" >&2; ERRORS=$((ERRORS + 1)); }
 warn() { echo "WARN $1: $2" >&2; WARNS=$((WARNS + 1)); }
 
 # Locate this script's directory via the symlink-tolerant idiom used elsewhere
-# in the pipeline, then source the shared helpers. validate.sh is the one
-# helper that does NOT go through `_lib/preamble.sh` — its issue collection /
-# exit semantics differ from the standard `set -euo pipefail` shape. So we
-# source `_lib/resolve-ws.sh` and `_lib/roadmap.sh` directly here.
+# in the pipeline, then source the shared helpers directly: `_lib/resolve-ws.sh`
+# (exports AI_DIR) and `_lib/roadmap.sh` (artifact-path + progress helpers).
+# validate.sh keeps its own issue-collection / exit semantics rather than the
+# standard `set -euo pipefail` shape, so it sources these two on its own.
 SRC="${BASH_SOURCE[0]}"
 while [ -L "$SRC" ]; do D=$(cd "$(dirname "$SRC")" && pwd); SRC=$(readlink "$SRC"); [[ "$SRC" != /* ]] && SRC="$D/$SRC"; done
 SCRIPT_DIR=$(cd "$(dirname "$SRC")" && pwd)
@@ -61,27 +61,9 @@ require_config() {
   fi
 }
 
-# --- resolve_task_path <arg> ---
-# Echoes the resolved task path on stdout, or empty string if no match.
-# Lookup order: explicit path → $AI_DIR/task/<arg> → $AI_DIR/task/<arg>.md.
-resolve_task_path() {
-  local arg="$1"
-  if [[ -f "$arg" ]]; then echo "$arg"; return; fi
-  if [[ -f "$AI_DIR/task/$arg" ]]; then echo "$AI_DIR/task/$arg"; return; fi
-  if [[ -f "$AI_DIR/task/$arg.md" ]]; then echo "$AI_DIR/task/$arg.md"; return; fi
-  echo ""
-}
-
-# --- resolve_spec_path <arg> ---
-# Echoes the resolved spec path on stdout, or empty string if no match.
-# Lookup order: explicit path → $AI_DIR/spec/<arg> → $AI_DIR/spec/<arg>.md.
-resolve_spec_path() {
-  local arg="$1"
-  if [[ -f "$arg" ]]; then echo "$arg"; return; fi
-  if [[ -f "$AI_DIR/spec/$arg" ]]; then echo "$AI_DIR/spec/$arg"; return; fi
-  if [[ -f "$AI_DIR/spec/$arg.md" ]]; then echo "$AI_DIR/spec/$arg.md"; return; fi
-  echo ""
-}
+# Task and spec path resolution reuse `resolve_artifact_path <kind> <arg>` from
+# `_lib/roadmap.sh` (sourced above) — same three-branch lookup as the roadmap
+# resolver, keyed on the .task subdirectory.
 
 # --- check_spec_refs <file> <label> ---
 # WARN (never ERROR) for any `Spec: <slug>` header in <file> that does not
@@ -276,7 +258,7 @@ case "$cmd" in
       rm -f "$MARKER_FILE"
       exit 2
     fi
-    validate_task "$(resolve_task_path "$1")"
+    validate_task "$(resolve_artifact_path task "$1")"
     ;;
   roadmap)
     require_config
@@ -294,7 +276,7 @@ case "$cmd" in
       rm -f "$MARKER_FILE"
       exit 2
     fi
-    spec_path=$(resolve_spec_path "$1")
+    spec_path=$(resolve_artifact_path spec "$1")
     if [[ -z "$spec_path" ]]; then
       err "spec($1)" "file not found (looked at $1, $AI_DIR/spec/$1(.md))"
     else

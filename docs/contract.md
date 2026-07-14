@@ -234,13 +234,12 @@ Keeps the `config.md` precondition and English parser-stable strings. **No hook 
 
 | Script | Role |
 |--------|------|
-| `roadmap.sh` | roadmap-file parsing helpers used by `roadmap-to-workflow` (`resolve_roadmap_path`, `roadmap_mtime`, `roadmap_progress_counts`). The driver's per-item checkbox flip is inline `sed`/`awk`, **not** a helper here. |
-| `preamble.sh` | trimmed to `require_config` (config.md hard-stop) + `source_resolve_ws` (source resolve-ws.sh, export AI_DIR). Drop all hook/gate glue, `run_validator`, pointer-heal, `set_workspace_root` |
+| `roadmap.sh` | artifact-path + roadmap parsing helpers (`resolve_artifact_path` and its `resolve_roadmap_path` wrapper, `roadmap_progress_counts`), used by `roadmap-to-workflow` and `validate.sh`. The driver's per-item checkbox flip is inline `sed`/`awk`, **not** a helper here. |
 | `templates/conventional-commits.md` | commit-format fallback for the executing session |
 
 ### Removed in v3 (already deleted)
 
-The v2 helpers are gone from `skills/_lib/` — `close.sh` and `commit-context.sh` (both were `ship`'s), `derive-task-id.sh` (no task-id in v3), plus the orphaned `phase-detect.sh`, `touches-gate.sh`, `auto-locks.sh`, `auto-roadmap-helpers.sh`, `fail-log.sh`, and `templates/summary.md`. Only `preamble.sh`, `resolve-ws.sh`, `roadmap.sh`, and `templates/conventional-commits.md` remain.
+The v2 helpers are gone from `skills/_lib/` — `close.sh` and `commit-context.sh` (both were `ship`'s), `derive-task-id.sh` (no task-id in v3), plus the orphaned `phase-detect.sh`, `touches-gate.sh`, `auto-locks.sh`, `auto-roadmap-helpers.sh`, `fail-log.sh`, and `templates/summary.md`. Only `resolve-ws.sh`, `roadmap.sh`, and `templates/conventional-commits.md` remain (`preamble.sh` too was dropped — it had no live callers; `validate.sh` carries its own `require_config`).
 
 ---
 
