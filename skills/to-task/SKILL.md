@@ -115,7 +115,7 @@ Branch on `$ARGUMENTS`:
 
 Report the path to the written `task.md` and a 1–2 line summary of the Description. Close with the v3 handoff footer (convention (a), flag-free) — the path IS the handle, name it explicitly:
 
-`→ Next: implement it now, or in a fresh session run: \`implement .task/task/<slug>.md\``
+`→ Next: implement it now; deepen it into a plan with \`/task:to-plan\`; or in a fresh session run: \`implement .task/task/<slug>.md\``
 
 ## Forbidden
 

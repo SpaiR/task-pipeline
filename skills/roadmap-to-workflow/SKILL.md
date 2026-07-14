@@ -5,7 +5,7 @@ disable-model-invocation: true
 user-invocable: true
 ---
 
-Drive an entire approved roadmap through parallel, isolated sessions. This skill collects the roadmap's unchecked items, topologically sorts them into dependency-ordered **waves**, then authors and invokes a **dynamic Workflow** (the Workflow tool) that runs each wave's items in parallel worktrees and ticks off the roadmap as items land. It does **not** hand-roll that fan-out itself.
+Drive an entire approved roadmap through parallel, isolated sessions. This skill collects the roadmap's unchecked items, topologically sorts them into dependency-ordered **waves**, then authors and invokes a **dynamic Workflow** (the Workflow tool) that runs each wave's items in parallel worktrees and ticks off the roadmap as items land. It does **not** hand-roll that fan-out itself. If the Workflow tool isn't available in this environment, it falls back to running the items one at a time by hand in the same dependency order (see the fallback in Step 2) — so the skill still works, just serially.
 
 **Per-item model control.** Each roadmap item may carry a `**Model:**` hint (`haiku | sonnet | opus`); the Workflow passes it to that item's implement agent as `opts.model`.
 
@@ -86,7 +86,7 @@ No flags — always ask interactively unless there's nothing to ask. When the ch
 - **Only next wave** — just the first dependency-wave of unchecked items (see Step 1).
 - **Pick range** — collect a range via the `AskUserQuestion` free-text ("Other") option, e.g. `1,3-5,8`; validate each number exists and is unchecked.
 
-One unchecked item → skip the question, run it. Zero unchecked → stop: "all items in `<slug>` are already done."
+One unchecked item → skip the question, run it. Zero unchecked → stop: "all items in `<slug>` are already done — pick another roadmap, or capture new work with `/task:to-roadmap`."
 
 ## Step 1: Collect items and sort into dependency waves
 
@@ -214,7 +214,7 @@ return "roadmap-to-workflow: all items shipped.";
 
 - Per item: the returned digest line (`OK|FAIL #N <item-slug> <summary>`), printed as each wave lands.
 - End with the canonical next-step footer (convention (a), flag-free):
-  - All items shipped → `→ Done. Roadmap complete — \`.task/roadmap/<slug>.md\` fully checked.`
+  - All items shipped → `→ Done. Roadmap complete — \`.task/roadmap/<slug>.md\` fully checked; review the landed commits with \`git log\`.`
   - Stopped on a `FAIL` → surface the failing digest, then `→ Next: fix the item, then rerun \`/task:roadmap-to-workflow\` — completed items stay checked, only the unchecked remainder reruns.`
 
 ## Forbidden
