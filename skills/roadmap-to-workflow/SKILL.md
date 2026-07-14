@@ -113,7 +113,9 @@ const waves = [                                   // from Step 1 — dependency 
 async function runItem(n, title, model, w) {
   // 1) PLAN on a strong model — capture the item into .task/task/<item-slug>.md
   //    with ## Plan (Goal/Touches/Logic), following docs/contract.md's task.md
-  //    format. This agent does NOT implement or commit.
+  //    format. This agent does NOT implement or commit. Opus is the planner
+  //    floor (the default shape); scale reasoning effort down for lightweight
+  //    items so a tiny `haiku` item doesn't pay a full deep-reasoning pass.
   const plan = await agent(
     `Read skills/to-plan/SKILL.md and run it NON-INTERACTIVELY for roadmap item
      ${slug}#${n} ("${title}"). Draft .task/task/<item-slug>.md (Description +
@@ -127,7 +129,8 @@ async function runItem(n, title, model, w) {
      Last non-empty line MUST be exactly:
        OK #${n} <item-slug> planned      (on success)
        FAIL #${n} <item-slug> <what failed>   (on failure)`,
-    { model: "opus", phase: `Wave ${w} · Item #${n}` }
+    { model: "opus", effort: model === "haiku" ? "low" : "medium",
+      phase: `Wave ${w} · Item #${n}` }
   );
   const planStatus = plan.trim().split("\n").filter(Boolean).pop();
   if (planStatus.startsWith("FAIL")) return planStatus;
