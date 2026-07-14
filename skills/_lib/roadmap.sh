@@ -56,11 +56,11 @@ resolve_roadmap_path() { resolve_artifact_path roadmap "$1"; }
 # (complete) flag would never fire for it.
 roadmap_progress_counts() {
   local file="$1"
-  local total done_n unchecked
-  total=$(awk '/^### - \[[ x~>-]\] [0-9]+\. / {n++} END {print n+0}' "$file")
-  done_n=$(awk '/^### - \[[x~>-]\] [0-9]+\. / {n++} END {print n+0}' "$file")
-  unchecked=$(awk '/^### - \[ \] [0-9]+\. / {n++} END {print n+0}' "$file")
-  echo "total: $total"
-  echo "done: $done_n"
-  echo "unchecked: $unchecked"
+  # One pass, three counters — same regex classes as before, one fork not three.
+  awk '
+    /^### - \[[ x~>-]\] [0-9]+\. / { t++ }
+    /^### - \[[x~>-]\] [0-9]+\. /  { d++ }
+    /^### - \[ \] [0-9]+\. /       { u++ }
+    END { printf "total: %d\ndone: %d\nunchecked: %d\n", t+0, d+0, u+0 }
+  ' "$file"
 }

@@ -54,7 +54,7 @@ find_ai_dir() {
     while :; do
       if [[ -f "$dir/.task/config/config.md" ]]; then root="$dir"; break; fi
       [[ "$dir" == "/" ]] && break
-      dir=$(dirname "$dir")
+      dir=${dir%/*}; [[ -z "$dir" ]] && dir=/   # parent, no `dirname` fork
     done
   fi
 
