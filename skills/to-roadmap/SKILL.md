@@ -27,7 +27,7 @@ Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`.
 
 ### Step 1: Load context
 
-Read `.task/config/config.md` (Language, conventions), `CLAUDE.md` if present, and list `.task/roadmap/*` — match existing structural style and declare any in-flight related roadmap as a Prerequisite. List the `docs/` top level and skim entry points if any exist. Do not open source files — this is a shallow scan, not investigation.
+Issue these independent reads and listings as one parallel batch — none depends on another. Read `.task/config/config.md` (Language, conventions), `CLAUDE.md` if present, and list `.task/roadmap/*` — match existing structural style and declare any in-flight related roadmap as a Prerequisite. List the `docs/` top level and skim entry points if any exist. Do not open source files — this is a shallow scan, not investigation.
 
 ### Step 2: Cold start or harvest
 

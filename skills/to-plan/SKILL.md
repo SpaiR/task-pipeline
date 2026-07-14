@@ -80,6 +80,8 @@ Use the Description (fresh capture) or the existing `## Description` (promote/re
 4. Find existing patterns in neighboring code for reuse.
 5. Assess impact on adjacent modules/components.
 
+The tiers are cost-ordered, but reads *within* a tier are independent — issue them as one parallel batch (several symbol bodies, several neighbor files) rather than one round-trip at a time.
+
 **Pinned technical decisions.** If the task carries (or, on fresh capture, will carry) any `Spec: <slug>` header, read each `.task/spec/<slug>.md` and treat its decisions as a fixed anchor — `## Plan` must honor them, not re-derive a different technical choice. No `Spec:` header at all → no anchors, proceed on the Description alone.
 
 Stop analysis as soon as you can name every file each step will touch and how — deeper investigation than that belongs to the implementing session's own reasoning, not to planning.
