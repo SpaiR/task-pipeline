@@ -208,9 +208,10 @@ Spec: {spec-slug}          (one line per relevant spec; omit if none)
 > the plan above (or the Description if there is no Plan), reading and editing code with the
 > tools in `.task/config/config.md` → Code Navigation / Code Editing (MCP tools first,
 > built-ins as fallback). Then run the `/verify` skill end-to-end and `/code-review` on the
-> diff; apply review fixes ONLY within the files named in **Touches** (report the rest).
-> Commit per `.task/config/config.md` → Commit Format. If `Roadmap:` + `Source item:`
-> headers are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
+> diff; apply review fixes ONLY within the files named in **Touches** (report the rest). If
+> there is no `## Plan`, and so no **Touches**, scope review fixes to the files you changed
+> for the Description. Commit per `.task/config/config.md` → Commit Format. If `Roadmap:` +
+> `Source item:` headers are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
 ```
 
 **Promote:** edit the existing `.task/task/<slug>.md` in place — insert the new `## Plan` block (and `## Tests`, if added) between `## Description`'s content and the existing `## Execution` block (a `to-task`-written file has no `## Tests`, so `## Plan` (+ new `## Tests`) is always inserted directly before `## Execution`). Do not touch the header, the `---` separator, `## Description`, or `## Execution` itself.
