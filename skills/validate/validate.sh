@@ -127,6 +127,14 @@ validate_task() {
     fi
   fi
 
+  # `## Execution` boilerplate must be present — the executing session reads it
+  # to run /verify, /code-review, commit, and auto-mark the roadmap item. Its
+  # text is stamped verbatim by the to-* skills, so check presence only, not
+  # the exact wording.
+  if ! grep -qE '^## Execution[[:space:]]*$' "$file"; then
+    err "$label" "missing '## Execution' section heading — the executing session has no instructions without it"
+  fi
+
   # Dangling `Spec:` header references → WARN (advisory, not an error).
   check_spec_refs "$file" "$label"
 }
@@ -180,6 +188,23 @@ validate_roadmap() {
   if ! grep -qE '^### - \[[ x~>-]\] [0-9]+\. .+$' "$file"; then
     err "$label" "no task headings matching '### - [ ] N. <title>' — every item must carry a checkbox prefix (roadmap-to-workflow auto-mark and item selection rely on it)"
     return
+  fi
+
+  # Item numbers are the driver's auto-mark key — markRoadmapItemDone(slug, n)
+  # flips the checkbox keyed on N, so a duplicate N would tick two items on a
+  # single mark. Flag any number that appears on more than one item heading.
+  local dup
+  dup=$(awk '
+    match($0, /^### - \[[ x~>-]\] [0-9]+\./) {
+      s = substr($0, RSTART, RLENGTH); gsub(/[^0-9]/, "", s); cnt[s]++
+    }
+    END { for (n in cnt) if (cnt[n] > 1) print n }
+  ' "$file")
+  if [[ -n "$dup" ]]; then
+    while IFS= read -r d; do
+      [[ -z "$d" ]] && continue
+      err "$label" "duplicate item number $d — item numbers must be unique (roadmap-to-workflow auto-mark keys on the number)"
+    done <<< "$dup"
   fi
 
   awk -v label="$label" '

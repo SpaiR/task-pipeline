@@ -223,12 +223,13 @@ Keeps the `config.md` precondition and English parser-stable strings. **No hook 
   - `## Description` is present;
   - `## Plan` is **optional** — if present, it has ≥1 `### Step N:` block;
   - `## Tests` is **optional** — if present, it has ≥1 `### Test N:` block;
+  - `## Execution` is present (presence only — the block is stamped verbatim, so its text is not re-checked);
   - each `Spec: <slug>` header resolves to an existing `.task/spec/<slug>.md` — a miss is a **`WARN`** (dangling reference), not an error (`validate.sh` is advisory, not a gate).
-- **`roadmap <slug>`** — validate `.task/roadmap/<slug>.md` (item headings well-formed); dangling `Spec:` headers `WARN` as for `task`.
+- **`roadmap <slug>`** — validate `.task/roadmap/<slug>.md` (item headings well-formed; item numbers unique, since the driver's auto-mark keys on the number); dangling `Spec:` headers `WARN` as for `task`.
 - **`spec <slug>`** — validate `.task/spec/<slug>.md`: line 1 matches `^# .+`; ≥1 `## N.` numbered decision section. (No `---` separator check — a spec has no parser-stable header block above a body, so there is nothing to separate.)
 - **`all`** — validate every `.task/task/*.md`, every `.task/roadmap/*.md`, plus every `.task/spec/*.md`.
 
-`## Execution` is stamped boilerplate; validation need not re-check its exact text, but the block should be present. There is **no `Implement-Model:` check** — that field is gone; the per-item model hint lives on roadmap items and is not `validate.sh`'s concern. The dangling-`Spec:` check is the pipeline's only cross-file validation, and only ever a `WARN`.
+`## Execution` is stamped boilerplate; `validate.sh` now checks the block is **present** (presence only, not its exact text). There is **no `Implement-Model:` check** — that field is gone; the per-item model hint lives on roadmap items and is not `validate.sh`'s concern. The dangling-`Spec:` check is the pipeline's only cross-file validation, and only ever a `WARN`.
 
 ### Keep
 
