@@ -54,7 +54,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
 ```
 
 - **`config.md not found`** (the guard above echoes it; `validate.sh all` also exits 2 with the same message) → hard-stop redirect (do **not** bootstrap here):
-  > The project isn't set up yet. Capture something first with `to-task`, `to-plan`, or `to-roadmap` — those set the project up inline.
+  > The project isn't set up yet. Capture something first with `/task:to-task`, `/task:to-plan`, or `/task:to-roadmap` — those set the project up inline.
 - **Any other non-zero exit from `validate.sh`** → `validate.sh all` checks every artifact, so an error may sit on a task or roadmap unrelated to this run. A validation **error on the roadmap you are about to run** stops the run — report it and do not proceed. Errors on other artifacts are surfaced but do **not** block. (WARN lines never set a non-zero exit; they are informational only.)
 
 ### Roadmap
@@ -72,7 +72,7 @@ for f in "$AI_DIR"/roadmap/*.md; do
 done
 ```
 
-- **No roadmap files** → stop: "no roadmaps found — create one with `to-roadmap`."
+- **No roadmap files** → stop: "no roadmaps found — create one with `/task:to-roadmap`."
 - **Exactly one** → use it (still refuse if it's fully complete, `done == total > 0`).
 - **More than one** → `AskUserQuestion` (convention (c)), one chip per roadmap labelled `<slug>  (<done>/<total>)`; sort partial roadmaps first, complete ones last with a `(complete)` suffix, and refuse to proceed on a complete pick.
 
@@ -215,7 +215,7 @@ return "roadmap-to-workflow: all items shipped.";
 - Per item: the returned digest line (`OK|FAIL #N <item-slug> <summary>`), printed as each wave lands.
 - End with the canonical next-step footer (convention (a), flag-free):
   - All items shipped → `→ Done. Roadmap complete — \`.task/roadmap/<slug>.md\` fully checked.`
-  - Stopped on a `FAIL` → surface the failing digest, then `→ Next: fix the item, then rerun \`roadmap-to-workflow\` — completed items stay checked, only the unchecked remainder reruns.`
+  - Stopped on a `FAIL` → surface the failing digest, then `→ Next: fix the item, then rerun \`/task:roadmap-to-workflow\` — completed items stay checked, only the unchecked remainder reruns.`
 
 ## Forbidden
 

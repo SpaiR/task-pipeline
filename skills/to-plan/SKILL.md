@@ -30,7 +30,7 @@ Check whether `.task/config/config.md` exists (resolve the pipeline root the sam
      Chips **Accept** / **Edit** / **Decline**:
      - **Accept** → adopt as-is.
      - **Edit** → follow-up asks which field(s) to amend (language policy / testing-policy mode / bare-repo `.task` location), then continue.
-     - **Decline** → do not write anything; report "config.md not written — run `to-plan` again when ready" and **stop**.
+     - **Decline** → do not write anything; report "`config.md` not written — run `/task:to-plan` again when ready" and **stop**.
   4. Write `.task/config/config.md` (create `.task/task/` alongside it) using the standard template — sections: Code Navigation, Code Editing, Library Documentation, Project Conventions, Build and Tests, Commit Format, Language, Testing Policy, Directories — Do Not Search. Reference mode (a short `**Source:** \`CLAUDE.md\` → \`## <Heading>\`` pointer, ≤3 summary lines) when `CLAUDE.md` already documents a section; full mode otherwise. Commit Format: reference mode with just `**Source:** <path>` when a commit-format doc was found, else derive rules from `git log`.
   5. Record `git config --local task.root "$ROOT"` (repo-common, shared by every worktree).
   6. Exclude `.task` locally: `EXCLUDE=$(git rev-parse --git-path info/exclude); mkdir -p "$(dirname "$EXCLUDE")"; touch "$EXCLUDE"; grep -qxF '.task' "$EXCLUDE" || echo '.task' >> "$EXCLUDE"`. Skip with a warning if not a git repo.
