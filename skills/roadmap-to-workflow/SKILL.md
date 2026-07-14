@@ -11,37 +11,11 @@ Drive an entire approved roadmap through parallel, isolated sessions. This skill
 
 **Per-item execution is a two-agent split by default: opus plans, the item's model implements.** See Step 2 — this is not an optimization to opt into, it is the default shape.
 
-**This skill *is* the opt-in.** A skill whose instructions tell Claude to author and call the Workflow tool is the sanctioned way to reach for it — there is no magic keyword and no separate confirmation. Reading this file and following the Steps is the authorization.
+**This skill *is* the opt-in** for the Workflow tool — reading it and following the Steps is the authorization; there is no magic keyword and no separate confirmation.
 
 **Input:** `$ARGUMENTS` — optional. A single positional `<roadmap-slug>` (or path) to skip the roadmap picker. No flags — item scope is chosen interactively (Step 0).
 
 **Format contract:** [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd) is the single source of truth for item grammar (`### - [ ] N.`, `**Dependencies:**`, `**Model:**`); [docs/contract.md § task.md format](../../docs/contract.md#taskmd-format) for the artifact each item's plan agent writes.
-
-<!--
-What v3 drops vs the old run-roadmap (v2).
-
-  GONE, not reimplemented:
-    - the lock protocol (cross-worktree `.lock` / `set -o noclobber` mutex) —
-      isolation now comes from Workflow's `parallel({ isolation: 'worktree' })`,
-      a worktree per item, not a mutex over one shared workspace;
-    - the active-task pointer as the per-item context handle — v3 has no
-      pointer at all; the on-disk `.task/task/<item-slug>.md` IS the handle,
-      read fresh by the implement agent, no pointer to write or heal;
-    - per-item inline execution of build/ship skills — those skills are
-      deleted in v3; each item's second agent is just told to "implement,
-      /verify, /code-review, commit" per the artifact's own `## Execution`
-      block, nothing to read but the task file;
-    - sequential-only looping — v2 forced one active task at a time because
-      only one pointer/workspace could exist. v3 has no such constraint, so
-      items in the same dependency wave run in PARALLEL, each in its own
-      worktree.
-
-  NEW in v3:
-    - dependency-ordered WAVES (topological sort on `**Dependencies:**`)
-      instead of trusting file order to encode dependencies;
-    - the driver (not the per-item agent) auto-marks the roadmap checkbox,
-      specifically so parallel writers in a wave never race on one file.
--->
 
 ## Step 0: Config gate, pick roadmap, pick scope
 
@@ -197,11 +171,8 @@ for (const [w, items] of waves.entries()) {
     // inside the (possibly parallel) per-item agents, so wave-mates never
     // race on the roadmap file.
     const itemSlug = status.split(" ")[2];
-    markRoadmapItemDone(slug, n, itemSlug);   // flips "### - [ ] N." → "### - [x] N." in
-                                               // .task/roadmap/<slug>.md with an inline
-                                               // sed/awk edit keyed on item number N —
-                                               // roadmap.sh has no flip helper (it exposes
-                                               // only path/mtime/progress-count helpers)
+    markRoadmapItemDone(slug, n, itemSlug);   // inline sed/awk flip of "### - [ ] N."
+                                               // → "### - [x] N." keyed on N (no roadmap.sh helper)
   }
   // Barrier: do not start wave w+2 until every item in wave w+1 above is marked.
 }
