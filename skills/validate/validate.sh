@@ -218,7 +218,7 @@ validate_roadmap() {
       if (!has_outcomes) print "ERROR " label ": Task " task_no " missing '\''### Outcomes'\'' sub-heading"
       if (!has_accept)   print "ERROR " label ": Task " task_no " missing '\''### Acceptance criteria'\'' sub-heading"
       in_block = 0
-      has_ready = has_context = has_goal = has_outcomes = has_invariants = has_accept = 0
+      has_ready = has_context = has_goal = has_outcomes = has_accept = 0
       task_no = ""
     }
 
@@ -265,7 +265,9 @@ validate_roadmap() {
         if ($0 ~ /^>[[:space:]]+### Context[[:space:]]*$/) has_context = 1
         if ($0 ~ /^>[[:space:]]+### Goal[[:space:]]*$/) has_goal = 1
         if ($0 ~ /^>[[:space:]]+### Outcomes[[:space:]]*$/) has_outcomes = 1
-        if ($0 ~ /^>[[:space:]]+### Invariants[[:space:]]*$/) has_invariants = 1
+        # `### Invariants` is an OPTIONAL sub-heading — not every item carries an
+        # invariant, so it is deliberately not tracked or required here (the
+        # other four are mandatory). See docs/contract.md § Roadmap file format.
         if ($0 ~ /^>[[:space:]]+### Acceptance criteria[[:space:]]*$/) has_accept = 1
       }
     }

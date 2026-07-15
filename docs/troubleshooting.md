@@ -75,7 +75,7 @@ Then reopen the `/` menu. If it was already installed, make sure it isn't disabl
 
 **Cause** — worktrees resolve the shared `.task/` through `git config --local task.root` (fallback: the upward walk, then `dirname(git-common-dir)`). This normally needs no setup, but the anchor can be missing (the repo was set up by an older version) or wrong (a bare repo whose `.task/` lives somewhere non-default).
 
-**Fix** — run any capture skill (`to-task` / `to-plan` / `to-roadmap`) from the worktree that's stuck; its inline setup records `task.root` and every worktree then resolves the same `.task/`. To point the pipeline at an existing `.task/` yourself, set it directly: `git config --local task.root /abs/path/containing/dot-task` (the directory that *contains* `.task`, not `.task` itself).
+**Fix** — run any capture skill (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) from the worktree that's stuck; its inline setup records `task.root` and every worktree then resolves the same `.task/`. To point the pipeline at an existing `.task/` yourself, set it directly: `git config --local task.root /abs/path/containing/dot-task` (the directory that *contains* `.task`, not `.task` itself).
 
 ## No pointer — finding your own state
 

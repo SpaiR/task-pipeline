@@ -153,7 +153,7 @@ Each item:
 > ### Outcomes
 > - Observable property of the system after this task.
 >
-> ### Invariants
+> ### Invariants          (optional — omit when the item has none)
 > - Contract that must hold across the change.
 >
 > ### Acceptance criteria
@@ -202,7 +202,7 @@ Section labels (`## N.`, `**Decision:**` / `**Rationale:**` / `**Constrains:**`)
 |----------|-------------|-------------|
 | `.task/config/config.md` | intake skills' inline Step 0 setup (folded-in `bootstrap`) | every skill + every executing session — Language, Testing Policy, Commit Format, tool priority |
 | `.task/task/<slug>.md` | `to-task` (header + `## Description` + `## Execution`); `to-plan` (same + `## Plan`, optional `## Tests`) | **the executing session** (reads `## Description`, `## Plan` if present, follows `## Execution`, reads `Spec:` for anchors and `Roadmap:` + `Source item:` for auto-mark); `roadmap-to-workflow` per-item implement agent |
-| `.task/roadmap/<slug>.md` | `to-roadmap` (initial); user-edited; `roadmap-to-workflow` **driver** flips `- [ ]` → `- [x]` after an item's agent returns OK | `roadmap-to-workflow` driver (loops unchecked items, reads `**Dependencies:**` + `**Model:**` + `Spec:`); `to-plan` (when picking up an item) |
+| `.task/roadmap/<slug>.md` | `to-roadmap` (initial); user-edited; `roadmap-to-workflow` **driver** flips `- [ ]` → `- [x]` after an item's agent returns OK | `roadmap-to-workflow` driver (loops unchecked items, reads `**Dependencies:**` + `**Model:**` + `Spec:`); `to-plan` / `to-task` (when picking up an item) |
 | `.task/spec/<slug>.md` | `to-spec` or user | **the executing session** (via a task's `Spec:` header) + `to-plan` (technical-decision anchor) + `roadmap-to-workflow` per-item plan agent |
 
 The executing session writes no separate pipeline artifacts — its implementation lands in the working tree, and `/verify` / `/code-review` run against the live diff. Auto-mark inside a single-task execution is done by the executing session itself (per the `## Execution` block); auto-mark during a roadmap run is done by the **driver**, not the per-item agent, so parallel item agents never race on the roadmap file.
@@ -227,7 +227,11 @@ Keeps the `config.md` precondition and English parser-stable strings. **No hook 
   - `## Tests` is **optional** — if present, it has ≥1 `### Test N:` block;
   - `## Execution` is present (presence only — the block is stamped verbatim, so its text is not re-checked);
   - each `Spec: <slug>` header resolves to an existing `.task/spec/<slug>.md` — a miss is a **`WARN`** (dangling reference), not an error (`validate.sh` is advisory, not a gate).
-- **`roadmap <slug>`** — validate `.task/roadmap/<slug>.md` (item headings well-formed; item numbers unique, since the driver's auto-mark keys on the number); dangling `Spec:` headers `WARN` as for `task`.
+- **`roadmap <slug>`** — validate `.task/roadmap/<slug>.md`:
+  - ≥1 item heading matching `^### - \[[ x~>-]\] N\. <title>` — the checkbox prefix is **required** (an item with a bare `### N.` heading and no checkbox is an error, since the driver's auto-mark and item selection both rely on it);
+  - item numbers are unique, since the driver's auto-mark keys on the number;
+  - each item block carries the sub-headings `### Context`, `### Goal`, `### Outcomes`, `### Acceptance criteria` inside its `**Ready description:**` blockquote (matched as `> ### <name>`); `### Invariants` is **optional** and not required;
+  - dangling `Spec:` headers `WARN` as for `task`.
 - **`spec <slug>`** — validate `.task/spec/<slug>.md`: line 1 matches `^# .+`; ≥1 `## N.` numbered decision section. (No `---` separator check — a spec has no parser-stable header block above a body, so there is nothing to separate.)
 - **`all`** — validate every `.task/task/*.md`, every `.task/roadmap/*.md`, plus every `.task/spec/*.md`.
 
