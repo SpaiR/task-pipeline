@@ -20,7 +20,6 @@ We use [GitHub](https://github.com/SpaiR/task-pipeline) to host code, track issu
 hooks/hooks.json                 empty — {"hooks": {}}; no PreToolUse gate in v3
 skills/                          SKILL.md per skill + shared bash helpers
   _lib/                          shared bash helpers:
-                                   preamble.sh (require_config + source_resolve_ws),
                                    resolve-ws.sh (pure .task/-root finder, exports AI_DIR),
                                    roadmap.sh (roadmap parsing / checkbox auto-mark helpers);
                                    templates/conventional-commits.md (commit-format fallback)
@@ -29,7 +28,8 @@ skills/                          SKILL.md per skill + shared bash helpers
   to-plan/                       SKILL.md — Description + `## Plan` (Goal/Touches/Logic);
                                    promotes/revises a to-task-only file in place
   to-roadmap/                    SKILL.md — multi-task initiative → .task/roadmap/<slug>.md
-                                   (+ optional <slug>.spec.md sidecar)
+  to-spec/                       SKILL.md — load-bearing technical decisions →
+                                   .task/spec/<slug>.md, referenced via `Spec:` headers
   roadmap-to-workflow/           SKILL.md — the one launcher; authors + invokes a dynamic
                                    Workflow over a roadmap's unchecked items
   validate/                      SKILL.md + validate.sh (optional self-check; not user-invocable)
@@ -46,7 +46,7 @@ CHANGELOG.md                     public release log (English)
 README.md                        user-facing documentation
 ```
 
-There is no `agents/` directory in v3 — `to-task` / `to-plan` / `to-roadmap` / `roadmap-to-workflow` / `validate` are the only five skills, and `roadmap-to-workflow` reaches for the platform's own `agent()` / `parallel()` Workflow primitives rather than named subagents shipped by this plugin.
+There is no `agents/` directory in v3 — `to-task` / `to-plan` / `to-roadmap` / `to-spec` / `roadmap-to-workflow` / `validate` are the only six skills, and `roadmap-to-workflow` reaches for the platform's own `agent()` / `parallel()` Workflow primitives rather than named subagents shipped by this plugin.
 
 ## All Code Changes Happen Through Pull Requests
 
@@ -65,7 +65,7 @@ Write a short, **descriptive** title for the whole change — do **not** paste t
 - Describe the whole PR, not just its first or largest commit.
 - No `type(scope):` prefix — the **type is carried by the label** (see [Labels](#labels) below), not the title.
 
-Examples — `feat(auto): collapse per-item cycle into one item-runner subagent` (commit) becomes **"Run each roadmap item in a single isolated subagent"** (PR title); `docs: restructure README for public release` becomes **"Restructure the README for the public release"**.
+Examples — `feat(to-spec): add standalone spec artifact and Spec: header` (commit) becomes **"Capture technical decisions in a standalone spec artifact"** (PR title); `docs: restructure README for public release` becomes **"Restructure the README for the public release"**.
 
 ### Pull Request Body
 
@@ -149,9 +149,9 @@ The `footer` is optional. The [Commit Message Footer](#commit-message-footer) fo
   │       │             │
   │       │             └─⫸ Summary in imperative, present tense. Not capitalized. No period at the end.
   │       │
-  │       └─⫸ Commit Scope: skill name | skills | lib | hooks | plugin | readme | claudemd | contract | changelog
+  │       └─⫸ Commit Scope: skill name | skills | lib | hooks | plugin | github | readme | claudemd | contract | changelog | contributing
   │
-  └─⫸ Commit Type: feat | fix | refactor | docs | chore
+  └─⫸ Commit Type: feat | fix | refactor | perf | docs | test | chore | revert
 ```
 
 The `<type>` and `<summary>` fields are mandatory; the `(<scope>)` field is optional but strongly preferred. Append `!` after the type or scope (e.g. `feat!:`, `refactor(plan)!:`) to signal a breaking change — this also requires a `BREAKING CHANGE:` footer.
@@ -165,7 +165,7 @@ Must be one of the following:
 * **refactor** — Internal change that does not add a feature or fix a bug (rename, restructure, extract).
 * **perf** — A change whose primary goal is to shrink a skill/agent's token or context footprint (or its latency) **without** changing behavior. Distinct from `refactor`: the win is measured in tokens/context, not readability.
 * **docs** — Documentation only: `README.md`, `CLAUDE.md`, `CHANGELOG.md`, `docs/`, this file, or prose inside skills.
-* **test** — Changes to the project's only executable QA surface: the artifact validator (`skills/validate/validate.sh`) and the bash unit tests (`skills/_lib/*.test.sh`).
+* **test** — Changes to the project's only executable QA surface: the artifact validator (`skills/validate/validate.sh`).
 * **chore** — Tooling, repo housekeeping, plugin manifest fields that do not affect users (keywords, description tweaks), and repo automation under `.github/`.
 * **revert** — Reverts a previous commit. The body must name the reverted commit (`Reverts <sha>`) and say why.
 
@@ -173,9 +173,9 @@ Must be one of the following:
 
 **Do NOT invent new scopes.** Pick from the list below; if none fits, omit the scope entirely.
 
-* **A skill name** (no `task:` prefix): `to-task`, `to-plan`, `to-roadmap`, `roadmap-to-workflow`, `validate`.
+* **A skill name** (no `task:` prefix): `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`, `validate`.
 * **`skills`** — cross-cutting change that touches several skills at once.
-* **`lib`** — the shared bash helpers under `skills/_lib/` (`resolve-ws.sh`, `preamble.sh`, `roadmap.sh`) and `skills/validate/validate.sh`, plus their templates.
+* **`lib`** — the shared bash helpers under `skills/_lib/` (`resolve-ws.sh`, `roadmap.sh`) and `skills/validate/validate.sh`, plus their templates.
 * **`hooks`** — `hooks/hooks.json`.
 * **`plugin`** — `.claude-plugin/plugin.json` and install-path concerns.
 * **`github`** — files under `.github/` (PR/issue templates, any repo automation).
@@ -231,7 +231,7 @@ The plugin follows [Semantic Versioning](https://semver.org/). The version of re
 ### Bump rules
 
 * **Patch** (`X.Y.z` → `X.Y.(z+1)`) — bug fixes, internal refactors, doc improvements. No change to slash-command names, artifact contract, or install steps. Existing `.task/` directories continue to work without user action.
-* **Minor** (`X.y.z` → `X.(y+1).0`) — new skills, new agents, new hooks, new flags; any backward-compatible addition. Existing flows and `.task/` directories keep working without user action.
+* **Minor** (`X.y.z` → `X.(y+1).0`) — new skills, new hooks; any backward-compatible addition. Existing flows and `.task/` directories keep working without user action.
 * **Major** (`x` → `(x+1).0.0`) — any breaking change to the artifact contract or the slash-command surface. Anything tagged `Changed (breaking)` / `Removed (breaking)` in the changelog forces a major bump and requires a written migration note.
 
 As of `1.0.0` the artifact contract and the slash-command surface are stable, so SemVer applies in full: breaking changes bump major, never minor. Every breaking change is loud — `!` in the commit header, a dedicated `Changed (breaking)` / `Removed (breaking)` changelog section, and a migration note.
@@ -252,7 +252,7 @@ When asked to add an entry, the user-visible difference categories are:
 
 * new, removed, or renamed skill / agent / hook
 * changed slash-command form (e.g. namespace shift, new flag, removed flag)
-* new, removed, or restructured artifact in the [artifact contract](docs/spec/artifact-contract.md)
+* new, removed, or restructured artifact in the [artifact contract](docs/contract.md)
 * changed install / migration steps
 * changed plugin manifest fields users notice (`name`, `version`, `hooks`)
 
@@ -293,12 +293,12 @@ Examples (use the family name, drop the version/tier suffix):
 Full commit message example:
 
 ```
-fix(audit): propagate config language to subagents
+fix(validate): propagate config language to validator output
 
-The three audit-* agents inherit a per-call prompt template, but the
-language block was being filled from a hard-coded English default
-instead of `config.md` → "Language". Pass it through explicitly so
-findings render in the configured language.
+validate.sh inherits a per-call prompt template, but the language
+block was being filled from a hard-coded English default instead of
+`config.md` → "Language". Pass it through explicitly so findings
+render in the configured language.
 
 Fixes #42
 
