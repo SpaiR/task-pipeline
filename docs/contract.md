@@ -2,7 +2,7 @@
 
 Single source of truth for how the chat-first task pipeline stores state and how skills hand work to each other. Maintainer-facing.
 
-v3 is **not** an orchestration engine — it is a **context-serialization protocol**. The user discusses a task freely in chat, then runs **one short skill** that distils the discussion into a fixed-format Markdown artifact under `.task/`. A fresh or isolated Claude Code session then **executes that artifact directly** — there is no execution skill. Orchestration, verification, review, and commits are delegated to the platform (`/verify`, `/code-review`, dynamic Workflows, the Tasks API).
+v3 is **not** an orchestration engine — it is a **context-serialization protocol**. The user discusses a task freely in chat, then runs **one short skill** that distils the discussion into a fixed-format Markdown artifact under `.task/`. A fresh or isolated Claude Code session then **executes that artifact directly** — there is no execution skill. Orchestration, verification, review, and commits are delegated to the platform (`/verify`, `/code-review`, dynamic Workflows).
 
 Enforcement is traded for **convention** (this is a solo tool): there is **no hook gate**, and `validate.sh` is an optional self-check, never a blocking gate. Depth of capture is the **skill name**, never a flag.
 
@@ -111,20 +111,7 @@ Rules:
 
 ### Canonical `## Execution` block — stamp this verbatim
 
-Every `to-task` / `to-plan` run stamps exactly this, unchanged, English regardless of config Language:
-
-```markdown
-## Execution
-> If any `Spec:` headers are present, first read each referenced `.task/spec/<slug>.md`
-> as a fixed technical anchor — honor its decisions, do not re-derive them. Then implement
-> the plan above (or the Description if there is no Plan), reading and editing code with the
-> tools in `.task/config/config.md` → Code Navigation / Code Editing (MCP tools first,
-> built-ins as fallback). Then run the `/verify` skill end-to-end and `/code-review` on the
-> diff; apply review fixes ONLY within the files named in **Touches** (report the rest). If
-> there is no `## Plan`, and so no **Touches**, scope review fixes to the files you changed
-> for the Description. Commit per `.task/config/config.md` → Commit Format. If `Roadmap:` +
-> `Source item:` headers are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
-```
+Every `to-task` / `to-plan` run stamps exactly this, unchanged, English regardless of config Language: stamp the `## Execution` blockquote shown in the format above, verbatim.
 
 Artifact prose (Description, Plan, Tests body) follows `config.md` → Language. Structural labels (`## Description`, `## Plan`, `### Step N:`, `## Tests`, `### Test N:`, `## Execution`), header keys (`Roadmap:`, `Source item:`, `Spec:`), and the `## Execution` block text stay English — they are parser / contract strings.
 
