@@ -190,7 +190,10 @@ Spec: {spec-slug}          (one line per relevant spec; omit if none)
 
 ## Execution
 > If any `Spec:` headers are present, first read each referenced `.task/spec/<slug>.md`
-> as a fixed technical anchor — honor its decisions, do not re-derive them. Then implement
+> as a fixed technical anchor — honor its decisions, do not re-derive them. `.task/` is
+> pipeline-internal and invisible to the repository — never reference `.task/` paths, spec /
+> roadmap / task slugs, or their `§` section numbers in code, comments, docstrings, commit
+> messages, or PR text; treat spec decisions as your own. Then implement
 > the plan above (or the Description if there is no Plan), reading and editing code with the
 > tools in `.task/config/config.md` → Code Navigation / Code Editing (MCP tools first,
 > built-ins as fallback). Then run the `/verify` skill end-to-end and `/code-review` on the
