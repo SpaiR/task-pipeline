@@ -14,11 +14,7 @@ Validate the format of task-pipeline artifacts. This skill is a thin wrapper aro
 
 ## What gets validated
 
-| Artifact | Checks |
-|----------|--------|
-| `.task/task/<slug>.md` | line 1 matches `# <Title>` (`^# .+`, no `[TASK-ID]` bracket); `---` separator present; `## Description` heading present; `## Execution` heading present (presence only). `## Plan` is **optional** — if present, must contain ≥1 `### Step N:` block. `## Tests` is **optional** — if present, must contain ≥1 `### Test N:` block. |
-| `.task/roadmap/<slug>.md` | ≥1 `### N. <title>` heading (with a required `- [ ]`/`- [x]` checkbox prefix); item numbers unique (the driver's auto-mark keys on the number); each task block carries the English sub-headings `### Context`, `### Goal`, `### Outcomes`, `### Acceptance criteria` (the contract consumed by `/task:to-task` / `/task:to-plan` when opening from an item) |
-| `.task/spec/<slug>.md` | line 1 matches `# <Title>` (`^# .+`); ≥1 `## N. <title>` numbered decision section. No `---` separator check (a spec has no parser-stable header block above its body). |
+Per-subcommand checks: see docs/contract.md §validate.sh.
 
 The slug is the identifier and the filename — there is no task-id, no workspace subfolder, and no active-task pointer to resolve. There is no `plan` subcommand (the plan lives inside `task.md` under `## Plan`) and no `Implement-Model:` check (the per-item model hint lives on roadmap items, not in `task.md`).
 

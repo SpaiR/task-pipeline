@@ -322,9 +322,6 @@ case "$cmd" in
     if [[ -d "$AI_DIR/roadmap" ]]; then
       for f in "$AI_DIR/roadmap"/*.md; do
         [[ -f "$f" ]] || continue
-        # Skip any orphaned v2 roadmap sidecar (`<slug>.spec.md`). Specs now
-        # live in .task/spec/ — a `.spec.md` under roadmap/ is not a roadmap.
-        case "$f" in *.spec.md) continue ;; esac
         validate_roadmap "$f"
       done
     fi
