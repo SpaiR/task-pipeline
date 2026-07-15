@@ -55,7 +55,6 @@ Only for fresh capture (skip entirely for promote/revise — see Step 1).
 6. Hold the header lines for Step 8's write:
    ```
    # {Item title}
-
    Roadmap: {slug}
    Source item: #{N}
    Spec: {spec-slug}          (one line per spec the item cites; omit if none)
