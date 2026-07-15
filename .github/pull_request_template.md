@@ -2,7 +2,7 @@
 Title: short descriptive prose for the whole change — NOT the first commit's header, no type(scope): prefix.
 Label:  feat→enhancement · fix→fix · docs→documentation · refactor→refactor · perf→performance · test/chore→chore
         (+ breaking-change if the header has `!` / a BREAKING CHANGE footer)
-See CONTRIBUTING.md § Pull Request Guidelines. Delete any section that does not apply.
+See CONTRIBUTING.md § Pull Request Title / § Pull Request Body. Delete any section that does not apply.
 -->
 
 ## What

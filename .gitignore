@@ -6,8 +6,9 @@
 .serena/project.local.yml
 
 # Task pipeline working artifacts.
-# Dogfooding exception: in consumer projects /task:init excludes `.task/` via
-# `.git/info/exclude` (per-clone) — see the "invisibility" invariant in CLAUDE.md.
+# Dogfooding exception: in consumer projects the intake skills' inline Step 0 setup
+# (to-task/to-plan/to-roadmap/to-spec) excludes `.task/` via `.git/info/exclude`
+# (per-clone) — see the "invisibility" invariant in CLAUDE.md.
 # Here, in the plugin's own repo, we ignore it through shared .gitignore so every
 # contributor inherits the exclusion without repeating the per-clone setup.
 .task/
