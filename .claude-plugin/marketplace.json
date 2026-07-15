@@ -9,11 +9,11 @@
     {
       "name": "task",
       "source": "./",
-      "description": "Chat-first task workflow: discuss freely, then fix the discussion into a Markdown artifact under .task/ with one short skill (to-task / to-plan / to-roadmap / to-spec). No execution skill — any session told to implement the artifact follows its stamped Execution block through /verify + /code-review to commit. 5 skills, zero subagents — roadmap-to-workflow is a thin dynamic-Workflow wrapper, not hand-rolled orchestration.",
+      "description": "Capture a chat discussion into a fixed-format Markdown task artifact, then implement it directly.",
       "homepage": "https://github.com/SpaiR/task-pipeline",
       "repository": "https://github.com/SpaiR/task-pipeline",
       "license": "MIT",
-      "keywords": ["workflow", "task", "pipeline", "audit", "subagents"]
+      "keywords": ["workflow", "task", "pipeline"]
     }
   ]
 }

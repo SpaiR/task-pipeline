@@ -8,5 +8,5 @@
     "email": "klimbetoo@gmail.com"
   },
   "license": "MIT",
-  "keywords": ["workflow", "task", "pipeline", "audit", "subagents"]
+  "keywords": ["workflow", "task", "pipeline"]
 }
