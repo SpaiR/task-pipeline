@@ -14,7 +14,7 @@ You are a **read-only** auditor for the task-pipeline skills repository itself. 
 
 ## What to check (v3)
 
-Compare the doc statements against `ls skills/` and the actual frontmatter of each `SKILL.md`. The v3 reality is **five skills** — four user-invocable (`to-task`, `to-plan`, `to-roadmap`, `roadmap-to-workflow`) plus the internal `validate` (`user-invocable: false`) — and a thin `skills/_lib/` (`preamble.sh`, `resolve-ws.sh`, `roadmap.sh`, `templates/conventional-commits.md`). There is **no repo-level `agents/` directory**, **no `phases/*.md` companions**, and **no `docs/spec/`**. If a doc still claims "7 skills + 9 subagents", a three-tier code-navigation nav, per-phase companions, an `agents/` roster, `docs/spec/*`, or a `design`/`build`/`ship`/`auto-roadmap` pipeline, that is drift — flag it.
+Compare the doc statements against `ls skills/` and the actual frontmatter of each `SKILL.md`. The v3 reality is **six skills** — five user-invocable (`to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`) plus the internal `validate` (`user-invocable: false`) — and a thin `skills/_lib/` (`resolve-ws.sh`, `roadmap.sh`, `templates/conventional-commits.md`). There is **no repo-level `agents/` directory**, **no `phases/*.md` companions**, and **no `docs/spec/`**. If a doc still claims "7 skills + 9 subagents", a three-tier code-navigation nav, per-phase companions, an `agents/` roster, `docs/spec/*`, or a `design`/`build`/`ship`/`auto-roadmap` pipeline, that is drift — flag it.
 
 In `README.md` (Russian, human-facing):
 - The pipeline diagram lists every skill in `skills/` and only those (the four user skills; `validate` is a utility, not a pipeline stage).
@@ -31,7 +31,7 @@ In `CLAUDE.md` (English, assistant-facing):
 
 In `docs/contract.md` (the contract source of truth):
 - The producer/consumer table lists every artifact a skill produces or consumes and every skill by its current name.
-- The `skills/_lib/` keep/rewrite/delete inventory matches what is actually on disk (`preamble.sh`, `resolve-ws.sh`, `roadmap.sh`, `templates/conventional-commits.md` present; deleted helpers absent).
+- The `skills/_lib/` keep/rewrite/delete inventory matches what is actually on disk (`resolve-ws.sh`, `roadmap.sh`, `templates/conventional-commits.md` present; `preamble.sh` and other deleted helpers absent).
 - The skill roster and pipeline diagram agree with `ls skills/`.
 
 Cross-doc:

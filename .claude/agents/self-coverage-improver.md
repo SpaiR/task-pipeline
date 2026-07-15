@@ -23,7 +23,7 @@ You improve; you do not audit. The Invariants auditor owns *declared* rules that
 - A precondition that is checked in one entry path but not a sibling path that reaches the same artifact (e.g. the config hard-stop present in one skill but not another that also writes `.task/`).
 - A capture-depth or roadmap-item-pickup branch whose behavior is unspecified where a user could reach it (e.g. re-running `to-plan` on a `to-task`-only file, or `to-plan` picking up a roadmap item — the intended merge/write behavior left implicit).
 - A behavior implemented in a skill but absent from README / `docs/contract.md`, so a future editor cannot know it is load-bearing (documentation coverage).
-- An edge-case in a bash helper (`preamble.sh`, `resolve-ws.sh`, `roadmap.sh`, `validate.sh` — empty input, missing file, multi-match) with no guard, reachable from a real caller.
+- An edge-case in a bash helper (`resolve-ws.sh`, `roadmap.sh`, `validate.sh` — empty input, missing file, multi-match) with no guard, reachable from a real caller.
 
 ## Tier rule (which findings can be auto-applied)
 

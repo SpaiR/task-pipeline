@@ -7,7 +7,7 @@ user-invocable: true
 
 Audit **this repository** (the task-pipeline skills repo itself) for drift between skills, the artifact contract, and the user-facing docs. Three lenses run in parallel as named subagents: **Invariants**, **Contract**, **Docs-sync**.
 
-This is a **meta-skill**. It operates on the repo's own files (`skills/*/SKILL.md`, `skills/_lib/*.sh`, `skills/validate/validate.sh`, `CLAUDE.md`, `README.md`, `docs/contract.md`), not on `.task/*` artifacts. The pipeline it audits is the v3 chat-first protocol — capture in chat, then `to-task` / `to-plan` / `to-roadmap` fix the discussion into a `.task/` artifact that a plain session (or `roadmap-to-workflow`) executes directly. There is no `design` / `build` / `ship` / `auto-roadmap` pipeline any more, and no repo-level `agents/` directory. The skill can be invoked at any time.
+This is a **meta-skill**. It operates on the repo's own files (`skills/*/SKILL.md`, `skills/_lib/*.sh`, `skills/validate/validate.sh`, `CLAUDE.md`, `README.md`, `docs/contract.md`), not on `.task/*` artifacts. The pipeline it audits is the v3 chat-first protocol — capture in chat, then `to-task` / `to-plan` / `to-roadmap` / `to-spec` fix the discussion into a `.task/` artifact that a plain session (or `roadmap-to-workflow`) executes directly. There is no `design` / `build` / `ship` / `auto-roadmap` pipeline any more, and no repo-level `agents/` directory. The skill can be invoked at any time.
 
 **Input:** Optional scope hint: $ARGUMENTS (e.g. a single skill name to focus on; default: full repo).
 
@@ -23,7 +23,7 @@ This is a **meta-skill**. It operates on the repo's own files (`skills/*/SKILL.m
 |------|-------------|---------------|
 | Invariants | `self-invariants-auditor` | Skills don't violate any bullet in `CLAUDE.md` § "Invariants — don't break these when editing skills". |
 | Contract   | `self-contract-auditor`   | Producer↔consumer artifact protocol is symmetric (templates ↔ `validate.sh`/`roadmap.sh` parsers ↔ consumer rules), per `docs/contract.md`. |
-| Docs-sync  | `self-docs-sync-auditor`  | `README.md`, `CLAUDE.md`, and `docs/contract.md` reflect the actual `skills/` directory (four user skills + `validate`). |
+| Docs-sync  | `self-docs-sync-auditor`  | `README.md`, `CLAUDE.md`, and `docs/contract.md` reflect the actual `skills/` directory (five user skills + `validate`). |
 
 All three are **read-only** named agents at `.claude/agents/self-{invariants,contract,docs-sync}-auditor.md`, with `tools: Read, Grep, Glob, Bash` (no `Edit`/`Write` — read-only is runtime-enforced). Fixes happen only in the main thread (Step 4).
 
@@ -32,7 +32,7 @@ All three are **read-only** named agents at `.claude/agents/self-{invariants,con
 ### Step 1: Gather context
 
 In one parallel batch, run:
-- `ls skills/` — full skill list (folder names = canonical slugs; expect `to-task`, `to-plan`, `to-roadmap`, `roadmap-to-workflow`, `validate`, `_lib`).
+- `ls skills/` — full skill list (folder names = canonical slugs; expect `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`, `validate`, `_lib`).
 - `ls .claude/agents/` — local self-* agents (sanity check before fan-out).
 - `git status --porcelain` — flag a dirty tree to the user before starting (audit findings against working state may diverge from `HEAD`).
 - Read `.claude/.audit-baseline.json` if it exists (prior ratchet metrics; absent on first run — treat as no baseline).

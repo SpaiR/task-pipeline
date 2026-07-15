@@ -18,7 +18,7 @@ Improve **this repository** (the task-pipeline skills repo itself) — not by fi
 
 **Boundary rule (hard):** if a lens finds an actual violation of a declared rule (an invariant, a producer↔consumer mismatch, README↔code drift), that is audit's job, not improve's. The agent must set `defer: self-audit` on it and **not** propose a fix. `/self-improve` never edits under the banner of a rule violation — it only makes not-yet-broken things better.
 
-This is a **meta-skill**. It operates on the repo's own files (`skills/*/SKILL.md`, `skills/_lib/*.sh`, `skills/validate/validate.sh`, `CLAUDE.md`, `README.md`, `docs/contract.md`), not on `.task/*` artifacts. The pipeline it improves is the v3 chat-first protocol (four user skills — `to-task`, `to-plan`, `to-roadmap`, `roadmap-to-workflow` — plus the internal `validate`); there is no `design`/`build`/`ship`/`auto-roadmap` pipeline and no repo-level `agents/` directory. It can be invoked at any time.
+This is a **meta-skill**. It operates on the repo's own files (`skills/*/SKILL.md`, `skills/_lib/*.sh`, `skills/validate/validate.sh`, `CLAUDE.md`, `README.md`, `docs/contract.md`), not on `.task/*` artifacts. The pipeline it improves is the v3 chat-first protocol (five user skills — `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow` — plus the internal `validate`); there is no `design`/`build`/`ship`/`auto-roadmap` pipeline and no repo-level `agents/` directory. It can be invoked at any time.
 
 **Input:**
 - Optional scope hint: $ARGUMENTS (e.g. a single skill name to focus on; default: full repo).
@@ -53,7 +53,7 @@ All four are **read-only** named agents at `.claude/agents/self-{clarity,leannes
 ### Step 1: Gather context
 
 In one parallel batch, run:
-- `ls skills/` — full skill list (folder names = canonical slugs; expect `to-task`, `to-plan`, `to-roadmap`, `roadmap-to-workflow`, `validate`, `_lib`).
+- `ls skills/` — full skill list (folder names = canonical slugs; expect `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`, `validate`, `_lib`).
 - `ls .claude/agents/` — local self-* agents (sanity check before fan-out).
 - `git status --porcelain` — flag a dirty tree to the user before starting (proposals against working state may diverge from `HEAD`).
 - Read `.claude/.improve-baseline.json` if it exists (prior ratchet metrics; absent on first run — treat as no baseline).
