@@ -22,6 +22,7 @@ Drive an entire approved roadmap through parallel, isolated sessions. This skill
 `roadmap-to-workflow` is **not** an intake skill — it never runs setup itself (a roadmap can't exist without config, so an absent config means something upstream is broken).
 
 ```bash
+echo "$CLAUDE_PLUGIN_ROOT"                                 # note this absolute path — bake it as PLUGIN_ROOT in the Step 2 script
 source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # sourcing runs find_ai_dir → sets AI_DIR
 [[ -f "$AI_DIR/config/config.md" ]] || echo "config.md not found"
 bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
@@ -104,6 +105,10 @@ Each item runs as **two agents**, not one. Context passes between them **via the
 
 ```javascript
 const slug  = "<roadmap-slug>";
+const PLUGIN_ROOT = "<absolute value of $CLAUDE_PLUGIN_ROOT>";   // bake the LITERAL path
+// (echo "$CLAUDE_PLUGIN_ROOT" from Step 0 to read it) — the JS sandbox can't expand env
+// vars, and each plan agent runs in an isolated worktree of the USER's project where a
+// relative "skills/…" path doesn't exist. An absolute plugin path is Readable from there.
 const waves = [                                   // from Step 1 — dependency order
   [ { n: 1, title: "…", model: "sonnet" }, { n: 2, title: "…", model: "haiku" } ],
   [ { n: 3, title: "…", model: "opus"   } ],
@@ -117,7 +122,7 @@ async function runItem(n, title, model, w) {
   //    floor (the default shape); scale reasoning effort down for lightweight
   //    items so a tiny `haiku` item doesn't pay a full deep-reasoning pass.
   const plan = await agent(
-    `Read skills/to-plan/SKILL.md and run it NON-INTERACTIVELY for roadmap item
+    `Read ${PLUGIN_ROOT}/skills/to-plan/SKILL.md and run it NON-INTERACTIVELY for roadmap item
      ${slug}#${n} ("${title}"). Draft .task/task/<item-slug>.md (Description +
      ## Plan, + ## Tests if the config Testing Policy calls for it), stamping
      the header with "Roadmap: ${slug}" and "Source item: #${n}", plus a
