@@ -5,11 +5,11 @@ disable-model-invocation: true
 user-invocable: true
 ---
 
-Drive an entire approved roadmap through parallel, isolated sessions. This skill collects the roadmap's unchecked items, topologically sorts them into dependency-ordered **waves**, then authors and invokes a **dynamic Workflow** (the Workflow tool) that runs each wave's items in parallel worktrees and ticks off the roadmap as items land. It does **not** hand-roll that fan-out itself. If the Workflow tool isn't available in this environment, it falls back to running the items one at a time by hand in the same dependency order (see the fallback in Step 2) — so the skill still works, just serially.
+Drive an approved roadmap through parallel, isolated sessions. This skill collects the roadmap's unchecked items, sorts them into dependency-ordered **waves**, then authors and invokes a **dynamic Workflow** (the Workflow tool) that runs each wave's items in parallel worktrees, ticking off the roadmap as items land. It does **not** hand-roll that fan-out itself. If the Workflow tool isn't available, it falls back to running items serially by hand, in the same dependency order (Step 2).
 
 **Per-item model control.** Each roadmap item may carry a `**Model:**` hint (`haiku | sonnet | opus`); the Workflow passes it to that item's implement agent as `opts.model`.
 
-**Per-item execution is a two-agent split by default: opus plans, the item's model implements.** See Step 2 — this is not an optimization to opt into, it is the default shape.
+**Per-item execution is a two-agent split by default — opus plans, the item's model implements (Step 2).**
 
 **This skill *is* the opt-in** for the Workflow tool — reading it and following the Steps is the authorization; there is no magic keyword and no separate confirmation.
 
@@ -97,7 +97,7 @@ The result is a `waves: Item[][]` structure — bake it into the Workflow script
 
 ## Step 2: Author and invoke the Workflow
 
-Author a dynamic Workflow from the computed waves and invoke it via the **Workflow tool**. Items **within** a wave run in **parallel**, each in its own isolated worktree (`parallel({ isolation: 'worktree' })`); a **barrier** separates waves so a later wave never starts before every dependency it needs has landed. Group progress with `{ phase: \`Wave ${w} · Item #${n}\` }`.
+Author a dynamic Workflow from the computed waves and invoke it via the **Workflow tool**. Items **within** a wave run in **parallel**, each in its own isolated worktree (`parallel({ isolation: 'worktree' })`); a **barrier** separates waves so a later wave never starts before every dependency it needs has landed.
 
 ### Per-item shape — OPUS PLANS, SONNET IMPLEMENTS (the default)
 
@@ -106,9 +106,8 @@ Each item runs as **two agents**, not one. Context passes between them **via the
 ```javascript
 const slug  = "<roadmap-slug>";
 const PLUGIN_ROOT = "<absolute value of $CLAUDE_PLUGIN_ROOT>";   // bake the LITERAL path
-// (echo "$CLAUDE_PLUGIN_ROOT" from Step 0 to read it) — the JS sandbox can't expand env
-// vars, and each plan agent runs in an isolated worktree of the USER's project where a
-// relative "skills/…" path doesn't exist. An absolute plugin path is Readable from there.
+// the JS sandbox can't expand env vars, and a relative "skills/…" path won't exist in
+// the item's isolated worktree — Read needs the absolute plugin path (echo it in Step 0).
 const waves = [                                   // from Step 1 — dependency order
   [ { n: 1, title: "…", model: "sonnet" }, { n: 2, title: "…", model: "haiku" } ],
   [ { n: 3, title: "…", model: "opus"   } ],
@@ -116,11 +115,9 @@ const waves = [                                   // from Step 1 — dependency 
 ];
 
 async function runItem(n, title, model, w) {
-  // 1) PLAN on a strong model — capture the item into .task/task/<item-slug>.md
-  //    with ## Plan (Goal/Touches/Logic), following docs/contract.md's task.md
-  //    format. This agent does NOT implement or commit. Opus is the planner
-  //    floor (the default shape); scale reasoning effort down for lightweight
-  //    items so a tiny `haiku` item doesn't pay a full deep-reasoning pass.
+  // 1) PLAN on a strong model — writes .task/task/<item-slug>.md (see prompt below).
+  //    Opus is the planner floor (the default shape); scale reasoning effort down for
+  //    lightweight items so a tiny `haiku` item doesn't pay a full deep-reasoning pass.
   const plan = await agent(
     `Read ${PLUGIN_ROOT}/skills/to-plan/SKILL.md and run it NON-INTERACTIVELY for roadmap item
      ${slug}#${n} ("${title}"). Draft .task/task/<item-slug>.md (Description +
@@ -142,9 +139,8 @@ async function runItem(n, title, model, w) {
 
   const itemSlug = planStatus.split(" ")[2];   // <item-slug>, echoed by the plan agent
 
-  // 2) IMPLEMENT + VERIFY + REVIEW + COMMIT on the item's own model. Reads the
-  //    task file fresh from disk — nothing crosses over from the planning
-  //    agent's chat context.
+  // 2) IMPLEMENT + VERIFY + REVIEW + COMMIT on the item's own model, reading the
+  //    task file fresh from disk (no chat carries over from the plan agent).
   const r = await agent(
     `Implement .task/task/${itemSlug}.md. Follow its ## Execution block
      exactly: implement the ## Plan (or ## Description if no Plan), run
@@ -162,8 +158,8 @@ async function runItem(n, title, model, w) {
 }
 
 for (const [w, items] of waves.entries()) {
-  // Items in one wave are independent by construction (Step 1) — run them
-  // together, each in its own worktree, so they never collide on the working tree.
+  // Wave items are independent by construction (Step 1) — run in parallel, each in its
+  // own worktree, so they never collide on the working tree.
   const results = await parallel(
     items.map(({ n, title, model }) => () => runItem(n, title, model, w + 1)),
     { isolation: "worktree" }

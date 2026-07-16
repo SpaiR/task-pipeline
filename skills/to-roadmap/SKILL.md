@@ -5,7 +5,7 @@ disable-model-invocation: true
 user-invocable: true
 ---
 
-Fix a **multi-task initiative** — something with phases, dependencies, or more than a couple of atomic steps — into `.task/roadmap/<slug>.md`. Multi-task counterpart to `/task:to-task` / `/task:to-plan` (which each fix one task). Depth is fixed: one roadmap file, no phase flags, no `--refine`. Closes with a report-only self-check — findings are surfaced, never silently rewritten into the saved file.
+Fix a **multi-task initiative** (phases, dependencies, or more than a couple of atomic steps) into `.task/roadmap/<slug>.md`. Multi-task counterpart to `/task:to-task` / `/task:to-plan` (which each fix one task). Depth is fixed: one roadmap file, flag-free.
 
 **Input:** `$ARGUMENTS` — a rough description of the initiative, or a reference back to a prior discussion in this conversation ("build a roadmap from what we discussed").
 
@@ -31,7 +31,7 @@ Issue these independent reads and listings as one parallel batch — none depend
 
 ### Step 2: Cold start or harvest
 
-**Branch first.** The whole file is written from decisions settled here — where those decisions come from matters:
+**Branch first** — where the decisions come from matters:
 
 - **Harvest** — the conversation, *before* this call, already settled concrete decisions about **this same initiative** (multiple exchanges, small details included). Tells: "build a roadmap from what we discussed", or `$ARGUMENTS` reads as a handle for prior discussion rather than a fresh idea. → Go to Step 2H.
 - **Cold start** — a rough one-to-few-line description with no prior initiative-specific discussion. → Go to Step 2C.
@@ -45,8 +45,8 @@ Comb the prior conversation and output (chat-only, never written to a file; head
 ```
 ## Roadmap — Decision Inventory
 
-{I'm building this roadmap from our earlier discussion. Before I write
-the file, here is every decision I captured — confirm nothing dropped.}
+{Building this roadmap from our discussion — here is every decision I
+captured; confirm nothing dropped.}
 
 ### Decisions locked so far
 1. {one locked decision at full specificity — small details included
@@ -57,8 +57,8 @@ the file, here is every decision I captured — confirm nothing dropped.}
 - {unresolved question left by the discussion}
 
 ### Coverage caveat
-{Only if part of the discussion is out of context. Omit the heading
-otherwise.}
+{Only if part of the discussion is out of context — a false alarm
+erodes trust. Omit the heading otherwise.}
 ```
 
 Then pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline**:
@@ -66,8 +66,6 @@ Then pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline**:
 - **Accept** → if open forks remain, resolve them first (a focused round as in Step 2C); then proceed to Step 3 (draft).
 - **Edit** → follow-up: the user adds/corrects a decision or moves it between locked/open, then proceed as Accept.
 - **Decline** → you misread the discussion; ask the user to restate it, rebuild the inventory.
-
-Include the Coverage caveat only when you suspect the discussion was truncated or summarized out of context — a false alarm erodes trust.
 
 #### Step 2C: Cold start — brainstorm round
 
@@ -101,7 +99,7 @@ Always propose **2–3 decomposition options** with different phase boundaries (
 **Track decisions as you go, not in your head.** Two kinds surface:
 
 - **Behavioral decisions** — observable properties the user locked in (including small details). These land in an item's `### Outcomes` / `### Acceptance criteria`.
-- **Technical anchors** — load-bearing technical decisions (a protocol, a cross-cutting data shape, a "we picked X over Y because…" whose reasoning wouldn't survive re-derivation). These belong in a standalone spec (`.task/spec/<slug>.md`), never in behavioral item bodies. This skill does not author specs — it references them: cite a spec that already exists, or flag the decision for `/task:to-spec` (see Step 3).
+- **Technical anchors** — load-bearing technical decisions (a protocol, a cross-cutting data shape, a "we picked X over Y because…" whose reasoning wouldn't survive re-derivation). These belong in a standalone spec, never in item bodies — route at draft time (Step 3).
 
 Before drafting, reprint the full list (behavioral + anchors) and pose an `AskUserQuestion` (**Accept** / **Edit** / **Decline**) to confirm — the cold-start twin of Step 2H's inventory.
 
@@ -109,7 +107,7 @@ Topics the user explicitly said to skip stay skipped — do not raise them again
 
 ### Step 3: Draft the file
 
-Once the decision list is confirmed, draft the full roadmap per [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd): title + intro, `## Prerequisites`, `## Phase summary` table, one `## Phase X` section per phase with `### - [ ] N. <title>` items (`**Dependencies:**`, optional `**Model:**`, `**Ready description:**` blockquote with `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria`), `## Out of scope`, `## Backlinks`. Route any technical anchor to a spec (see the list below) — never into behavioral item bodies. Cite a spec decision from its item(s) as `### Spec references → <spec-slug> §N`.
+Once the decision list is confirmed, draft the full roadmap per [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd): title + intro, `## Prerequisites`, `## Phase summary` table, one `## Phase X` section per phase with `### - [ ] N. <title>` items (`**Dependencies:**`, optional `**Model:**`, `**Ready description:**` blockquote with `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria`), `## Out of scope`, `## Backlinks`.
 
 **Route every confirmed decision to a home:**
 
@@ -118,13 +116,13 @@ Once the decision list is confirmed, draft the full roadmap per [docs/contract.m
 - Scope exclusion → `## Out of scope`, with the reason.
 - Anything else → drop it, but say so to the user with a one-line reason — never a silent omission.
 
-A local, single-item detail decision never goes in a spec — it belongs in that item's `### Outcomes` / `### Acceptance criteria`. Reserve specs for choices that would break cross-item consistency if a later `/task:to-plan` (or the executing session) re-derived them differently. This skill never writes a spec file — capture real ones with `/task:to-spec`; an empty or filler spec is worse than none.
+A local, single-item detail decision never goes in a spec — it belongs in that item's `### Outcomes` / `### Acceptance criteria`. Reserve specs for choices that would break cross-item consistency if a later `/task:to-plan` (or the executing session) re-derived them differently.
 
 **`**Model:**` is optional** — set it only when you have a real basis to suggest one (e.g. the item is pure content/vocabulary editing → `haiku`; a new subsystem or cross-module change → `sonnet`; leave it off rather than guessing).
 
 Behavioral discipline: `### Outcomes` / `### Goal` / `### Invariants` describe observable properties only — no project-specific file/symbol names (normative names from spec/CLAUDE.md are fine). If design work would be free to pick a different symbol, the name doesn't belong here — that's `/task:to-plan`'s call, not this file's.
 
-Before saving, run a quick self-check and fix inline (not reported — this is drafting hygiene, distinct from Step 5's post-save pass):
+Before saving, self-check and fix inline (drafting hygiene, distinct from Step 5's post-save pass):
 
 1. Every fork raised in the brainstorm has a home in some phase, or an explicit `## Out of scope` mention.
 2. Each `**Ready description:**` stands alone — a reader who hasn't seen the roadmap could pick it up in `/task:to-plan` from the blockquote alone.
@@ -139,11 +137,11 @@ Write the file directly — no in-chat preview, no confirmation prompt.
 
 1. Slug: kebab-case from the initiative title, ≤ 50 chars (e.g. `add-auth-flow`, `migrate-to-vite`).
 2. Write `.task/roadmap/<slug>.md` with the full content, including any `Spec: <spec-slug>` header lines for specs referenced in Step 3.
-3. Do not write or modify any spec file — specs are authored only by `to-spec`. Do not modify any other file.
+3. Modify no file other than `.task/roadmap/<slug>.md` (spec authorship is `to-spec`'s job — see Forbidden).
 
 ### Step 5: Light self-check (report-only)
 
-After Save, skim the just-saved file — not the in-chat draft — against three lenses, as a checklist you run yourself. **Not** a subagent fanout; there is no lens-audit machinery here.
+After Save, skim the just-saved file (not the in-chat draft) against three lenses yourself — **not** a subagent fanout, no lens-audit machinery.
 
 - **Coverage** — phase/fork coverage, dependency integrity (dangling or cyclic `**Dependencies:**`).
 - **Decomposition** — any item that reads as compound (spans ≥ 2 unrelated concerns, or has far more outcomes than the rest) and should be split.
@@ -168,4 +166,4 @@ Report a compact findings summary — a count per lens plus the obvious issues, 
 - Generic risks ("watch out for bugs") — risks must be specific to the initiative and project.
 - More than one initiative per file — split and pick one for this run.
 - Persisting topics the user asked to skip; placeholders anywhere.
-- Writing a `.refine.md` sidecar, a `.spec.md` sidecar, or a `.lock` file — none exists in v3; specs live at `.task/spec/<slug>.md` and are authored only by `to-spec`. Review is chat + `/code-review`, not a lens-audit pass.
+- Writing a `.refine.md` sidecar, a `.spec.md` sidecar, or a `.lock` file — none exists in v3.

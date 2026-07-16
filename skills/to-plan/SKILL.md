@@ -5,7 +5,7 @@ disable-model-invocation: true
 user-invocable: true
 ---
 
-Distil the chat discussion so far (or a roadmap item) into `.task/task/<slug>.md` — `## Description` **and** `## Plan` (the Goal/Touches/Logic step contract an implementing session consumes), plus `## Tests` when the testing policy calls for it, and the standard `## Execution` block. This is the deepest of the three capture skills (`to-task` / `to-plan` / `to-roadmap`): use it when you already know enough about the approach to hand straight to implementation, or run it again on a task that was only `to-task`-captured to add the Plan in place. The slug is the filename — there is no task-id and no active-task pointer; the artifact path is the handle.
+Distil the chat discussion so far (or a roadmap item) into `.task/task/<slug>.md` — `## Description` **and** `## Plan` (Goal/Touches/Logic steps), plus `## Tests` when the testing policy calls for it, and the standard `## Execution` block. The deepest of the three capture skills (`to-task` / `to-plan` / `to-roadmap`): use it when you know enough about the approach to hand straight to implementation, or run it again on a `to-task`-only file to add the Plan in place. The slug is the filename; the artifact path is the handle.
 
 **Input:** `$ARGUMENTS` — optional. Recognized forms:
 - (empty) — draft from the chat discussion so far, or continue a task this conversation is clearly about (see Step 1).
@@ -17,12 +17,12 @@ Distil the chat discussion so far (or a roadmap item) into `.task/task/<slug>.md
 
 ## Step 0: Setup gate
 
-Check whether `.task/config/config.md` exists — resolve the pipeline root via `skills/_lib/resolve-ws.sh` (source it; it exports `AI_DIR`, walking `task.root` → ancestor `config.md` → git-common-dir → `.task`).
+Check whether `.task/config/config.md` exists — resolve the pipeline root via `skills/_lib/resolve-ws.sh` (source it; it exports `AI_DIR`).
 
-- **Absent → inline setup.** Run the inline setup gate exactly as [`skills/to-task/SKILL.md`](../to-task/SKILL.md) Step 0 does (detect stack → ONE `AskUserQuestion` confirmation with **Accept** / **Edit** / **Decline** chips → write `config.md` + `git config --local task.root "$ROOT"` + exclude `.task`) — this skill does not defer to a separate setup command; `to-task`'s Step 0 is the single source of truth for the sub-steps. Two `to-plan`-specific notes: create `.task/task/` alongside `config.md`, and on **Decline** report "`config.md` not written — run `/task:to-plan` again when ready" and **stop**. On success, continue to the validate call below with the original `$ARGUMENTS` unchanged.
+- **Absent → inline setup.** Run the inline setup gate exactly as [`skills/to-task/SKILL.md`](../to-task/SKILL.md) Step 0 does (detect stack → ONE `AskUserQuestion` confirmation with **Accept** / **Edit** / **Decline** chips → write `config.md` + `git config --local task.root "$ROOT"` + exclude `.task`). `to-task`'s Step 0 is the single source of truth for the sub-steps; do not defer to a separate setup command. Two `to-plan`-specific notes: create `.task/task/` alongside `config.md`, and on **Decline** report "`config.md` not written — run `/task:to-plan` again when ready" and **stop**. On success, continue to the validate call below with the original `$ARGUMENTS` unchanged.
 - **Present → skip silently**, proceed to validate.
 
-Then run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all` as a self-check — v3 has no gate, so report any findings and continue rather than blocking. The only thing that should stop the flow here is a genuine config-precondition failure (exit 2), which shouldn't occur since Step 0 just confirmed `config.md` exists.
+Then run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all` as a self-check — v3 has no gate, so report any findings and continue rather than blocking. Only a config-precondition failure (exit 2) should stop the flow.
 
 ## Step 1: Resolve the target and capture mode
 
@@ -39,7 +39,7 @@ Once a target reference is resolved (1–3), branch on whether the file exists:
 - **Target file exists, no `## Plan` heading present** → **promote mode.** This is the flag-free way to turn a `to-task` capture into a plan: skip Step 2 entirely — header and `## Description` already exist and are untouched. Go straight to Step 3 using the existing Description as context, then in Step 8 **insert** `## Plan` (and `## Tests`) rather than create.
 - **Target file exists, `## Plan` already present** → **revise mode.** `to-plan` was already run on this file. Skip Step 2, go straight to Step 3 using the existing Description (and the current chat) as context, then in Step 8 **replace** the existing `## Plan` (and `## Tests` only if the user's edit touches it) rather than create or blindly append a duplicate section.
 
-No target at all (case 4): if one or more `.task/roadmap/*.md` files have an unchecked (`- [ ]`) item **and** there is no chat discussion to draft from, present an `AskUserQuestion` fork (convention (c)): "How do you want to start this task?" — **Draft from this chat** / **Open from a roadmap**. The latter opens a second `AskUserQuestion` listing the roadmap slugs, then proceeds as Step 2a with the chosen slug. Otherwise (there is chat discussion to draft from, with or without extra free-form `$ARGUMENTS`) proceed as Step 2b.
+No target at all (case 4): if one or more `.task/roadmap/*.md` files have an unchecked (`- [ ]`) item **and** there is no chat discussion to draft from, present an `AskUserQuestion` fork (convention (c)): "How do you want to start this task?" — **Draft from this chat** / **Open from a roadmap**. The latter opens a second `AskUserQuestion` listing the roadmap slugs, then proceeds as Step 2a with the chosen slug. Otherwise (chat discussion exists to draft from) proceed as Step 2b.
 
 ## Step 2: Fresh capture — Title and Description
 
@@ -69,7 +69,7 @@ Only for fresh capture (skip entirely for promote/revise — see Step 1).
 
 ## Step 3: Analyze the codebase
 
-Shared by every mode (fresh chat-draft, fresh from-roadmap, promote, revise) — this is what makes `to-plan` deeper than `to-task`: `## Plan` steps need real paths, not paraphrase.
+Shared by every mode (fresh chat-draft, fresh from-roadmap, promote, revise): `## Plan` steps need real paths, not paraphrase.
 
 Use the Description (fresh capture) or the existing `## Description` (promote/revise) as the "what" to ground against real code. Read code in ascending cost order per `config.md` → Code Navigation (MCP tools first, built-ins as fallback):
 
@@ -79,7 +79,7 @@ Use the Description (fresh capture) or the existing `## Description` (promote/re
 4. Find existing patterns in neighboring code for reuse.
 5. Assess impact on adjacent modules/components.
 
-The tiers are cost-ordered, but reads *within* a tier are independent — issue them as one parallel batch (several symbol bodies, several neighbor files) rather than one round-trip at a time.
+Reads *within* a tier are independent — issue them as one parallel batch, not one round-trip at a time.
 
 **Pinned technical decisions.** If the task carries (or, on fresh capture, will carry) any `Spec: <slug>` header, read each `.task/spec/<slug>.md` and treat its decisions as a fixed anchor — `## Plan` must honor them, not re-derive a different technical choice. No `Spec:` header at all → no anchors, proceed on the Description alone.
 
@@ -95,7 +95,7 @@ From `.task/config/config.md` → Testing Policy → Mode:
   - **Silent** — nothing about tests anywhere → `tests_required = false`, no prompt.
   - **Testing-adjacent but unclear** — tests/testing mentioned but not whether *new* tests are wanted → in an interactive run, ask one yes/no question before drafting `## Tests`; in a non-interactive run (no user to ask — e.g. `to-plan` invoked as `roadmap-to-workflow`'s per-item planning agent) do not block, default to `false`.
 
-If `tests_required` was already decided by an earlier `to-task` capture, note that `to-task` never writes `## Tests` in v3 (only `to-plan` does) — so there is nothing to reuse from it; resolve fresh here. In **revise** mode, reuse the prior `## Tests` resolution unless the current chat discussion or edit explicitly changes the testing ask.
+`to-task` never writes `## Tests` (only `to-plan` does), so there is nothing to reuse from a prior `to-task` capture — resolve fresh here. In **revise** mode, reuse the prior `## Tests` resolution unless the current chat discussion or edit explicitly changes the testing ask.
 
 ## Step 5: Draft the Plan (and Tests)
 
@@ -136,7 +136,7 @@ If `tests_required` (Step 4) is `true`, append:
 
 Each `## Plan` step that satisfies a test references it by number in its `Goal` (e.g. "…; satisfies Test 2"). If `tests_required` is `false`, omit `## Tests` entirely — do not emit an empty heading.
 
-**Dropped on purpose:** no `Implement-Model:` stamp (model hints now live only on roadmap items as `**Model:**`, unrelated to this file), no `## Verification` section, no `## Risks` section. `docs/contract.md`'s `task.md` format is header → Description → Plan → Tests → Execution, nothing else.
+**Dropped on purpose:** no `Implement-Model:` stamp (model hints live only on roadmap items as `**Model:**`), no `## Verification`, no `## Risks` — the `task.md` format ends at Execution.
 
 ## Step 6: Self-check before presenting
 
@@ -209,7 +209,7 @@ Spec: {spec-slug}          (one line per relevant spec; omit if none)
 
 ## Step 9: Output
 
-Report the path to the written `task.md`, the mode used (fresh / promote / revise), and a 1–2 line summary of `## Plan` (step count, whether `## Tests` is present). Close with the v3 handoff footer — the artifact path is the handle, there is no pointer (convention (a), flag-free):
+Report the path to the written `task.md`, the mode used (fresh / promote / revise), and a 1–2 line summary of `## Plan` (step count, whether `## Tests` is present). Close with the v3 handoff footer (convention (a), flag-free):
 
 `→ Next: implement it now, or in a fresh session run: \`implement .task/task/<slug>.md\``
 

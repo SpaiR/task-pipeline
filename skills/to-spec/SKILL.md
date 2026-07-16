@@ -5,7 +5,7 @@ disable-model-invocation: true
 user-invocable: true
 ---
 
-Fix **load-bearing technical decisions** — a protocol, a cross-cutting data shape, a "we picked X over Y because…" whose reasoning wouldn't survive re-derivation — into `.task/spec/<slug>.md`. A spec is orthogonal to the depth-capture skills (`to-task` / `to-plan` / `to-roadmap`): it does not decompose work, it pins the decisions that work must honor. A task or roadmap references a spec with a `Spec: <slug>` header, and the executing session reads it as a fixed anchor (per the artifact's `## Execution` block). One spec may be cited by many tasks and roadmaps, and a spec can be captured before any of them exist.
+Fix **load-bearing technical decisions** — a protocol, a cross-cutting data shape, a "we picked X over Y because…" whose reasoning wouldn't survive re-derivation — into `.task/spec/<slug>.md`. Unlike `to-task` / `to-plan` / `to-roadmap`, a spec does not decompose work; it pins the decisions that work must honor. A task or roadmap references it via a `Spec: <slug>` header, and the executing session reads it as a fixed anchor (per the `## Execution` block). One spec may be cited by many tasks and roadmaps, and can be captured before any exist.
 
 **Input:** `$ARGUMENTS` — a rough description of the decision area, or a reference back to a prior discussion in this conversation ("write a spec from what we settled").
 
@@ -23,7 +23,7 @@ Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`.
 ### Preconditions
 
 - **Slug collision (soft).** Create `.task/spec/` if missing. If a file at the proposed slug already exists → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). Never silently overwrite.
-- **No real decision to pin.** If the discussion settled no load-bearing technical decision — only behavioral outcomes, or details local to one task → **stop and suggest** `/task:to-task` or `/task:to-plan` instead. An empty or filler spec is worse than none.
+- **No real decision to pin.** If the discussion settled no load-bearing technical decision — only behavioral outcomes, or details local to one task → **stop and suggest** `/task:to-task` or `/task:to-plan` instead.
 
 ### Step 1: Load context
 
@@ -45,9 +45,9 @@ Comb the prior conversation and output (chat-only, never written to a file; head
 ```
 ## Spec — Decision Inventory
 
-{I'm writing this spec from our discussion. Before I write the file, here
-is every technical decision I captured, with the reasoning that must
-survive — confirm nothing dropped or misstated.}
+{Writing this spec from our discussion. Before I save the file, here is
+every technical decision I captured with its load-bearing reasoning —
+confirm nothing dropped or misstated.}
 
 ### Decisions locked so far
 1. {decision at full specificity} — because {the load-bearing reason}
@@ -87,13 +87,13 @@ For a decision area with no prior discussion, work each fork with the user befor
 {One focused question on the most load-bearing fork.}
 ```
 
-Offer ≥2 options per fork (or justify why only one is viable). Iterate (`Round N`) until the decisions are settled, then reprint the full list and pose an `AskUserQuestion` (**Accept** / **Edit** / **Decline**) to confirm — the cold-start twin of Step 2H's inventory.
+Offer ≥2 options per fork (or justify why only one is viable). Iterate (`Round N`) until decisions are settled, then reprint the full list and pose an `AskUserQuestion` (**Accept** / **Edit** / **Decline**) to confirm.
 
 Topics the user explicitly said to skip stay skipped.
 
 ### Step 3: Draft the spec
 
-Once the decision list is confirmed, draft per [docs/contract.md § Spec file format](../../docs/contract.md#spec-file-format-taskspecslugmd): a `# Spec: <Title>` line, a blockquote purpose header, then one numbered `## N. <title>` section per decision, each with:
+Once the decision list is confirmed, draft per [docs/contract.md § Spec file format](../../docs/contract.md#spec-file-format-taskspecslugmd): a `# Spec: <Title>` line, a blockquote purpose header, then one numbered `## N. <title>` section per decision:
 
 - **Decision:** what was chosen — concrete, technical, specific (naming real symbols/protocols/shapes is expected here, unlike a roadmap item).
 - **Rationale:** the reasoning that must survive, so a later plan or executing session doesn't re-litigate it.
