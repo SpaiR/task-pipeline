@@ -16,6 +16,8 @@ Validate the format of task-pipeline artifacts. This skill is a thin wrapper aro
 
 Per-subcommand checks: see docs/contract.md §validate.sh.
 
+The pipeline's only cross-file check is advisory: `task` and `roadmap` validation emit a **WARN** (never an ERROR) for any `Spec: <slug>` header that does not resolve to an existing `.task/spec/<slug>.md` (a dangling reference). Everything else is a single-file format check.
+
 The slug is the identifier and the filename — there is no task-id, no workspace subfolder, and no active-task pointer to resolve. There is no `plan` subcommand (the plan lives inside `task.md` under `## Plan`) and no `Implement-Model:` check (the per-item model hint lives on roadmap items, not in `task.md`).
 
 ## How the script is invoked
