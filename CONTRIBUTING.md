@@ -173,7 +173,7 @@ Must be one of the following:
 
 **Do NOT invent new scopes.** Pick from the list below; if none fits, omit the scope entirely.
 
-* **A skill name** (no `task:` prefix): `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`, `validate`.
+* **A skill name** (no `task:` prefix): `grill`, `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`, `validate`.
 * **`skills`** — cross-cutting change that touches several skills at once.
 * **`lib`** — the shared bash helpers under `skills/_lib/` (`resolve-ws.sh`, `roadmap.sh`) and `skills/validate/validate.sh`, plus their templates.
 * **`hooks`** — `hooks/hooks.json`.

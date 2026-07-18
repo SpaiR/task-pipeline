@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "task",
   "version": "3.0.0",
-  "description": "Chat-first task workflow: discuss freely, then fix the discussion into a Markdown artifact under .task/ with one short skill (to-task / to-plan / to-roadmap / to-spec). No execution skill — any session told to implement the artifact follows its stamped Execution block through /verify + /code-review to commit. 5 skills, zero subagents — roadmap-to-workflow is a thin dynamic-Workflow wrapper, not hand-rolled orchestration.",
+  "description": "Chat-first task workflow: discuss freely, grill the decision before you freeze it, then fix the discussion into a Markdown artifact under .task/ with one short skill (to-task / to-plan / to-roadmap / to-spec). No execution skill — any session told to implement the artifact follows its stamped Execution block through /verify + /code-review to commit. 6 skills, zero subagents — grill is a pre-capture interrogation that writes nothing, and roadmap-to-workflow is a thin dynamic-Workflow wrapper, not hand-rolled orchestration.",
   "author": {
     "name": "Ilya Prymshyts (SpaiR)",
     "email": "klimbetoo@gmail.com"

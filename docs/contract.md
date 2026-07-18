@@ -9,12 +9,15 @@ Enforcement is traded for **convention** (this is a solo tool): there is **no ho
 ```
 discuss freely in chat
   ↓
+grill                                 ← pre-capture: interrogate the decision, no artifact
+  ↓
 to-task | to-plan | to-roadmap        ← capture depth is the skill, not a flag
 to-spec                               ← pins technical decisions, cited via Spec:
   ↓                       ↓
 implement session   roadmap-to-workflow   ← the launcher fans items out to sessions
 ```
 
+- `grill` — **pre-capture, produces no artifact.** Interrogates a plan/decision one question at a time, keeps an in-chat decision-plus-rationale ledger, ends with a pre-mortem, and routes to the right capture skill. Touches nothing under `.task/`; its output is a hardened discussion the `to-*` skills then serialize.
 - `to-task` — capture chat → `.task/task/<slug>.md`, `## Description` only, no `## Plan`.
 - `to-plan` — same, **with** a `## Plan` section (Goal / Touches / Logic).
 - `to-roadmap` — capture an initiative → `.task/roadmap/<slug>.md`.
@@ -190,12 +193,21 @@ Section labels (`## N.`, `**Decision:**` / `**Rationale:**` / `**Constrains:**`)
 
 | Artifact | Produced by | Consumed by |
 |----------|-------------|-------------|
+| *(none)* | `grill` | — produces no `.task/` artifact; consumes only the chat discussion, emits a hardened discussion + in-chat decision ledger that a `to-*` capture skill serializes |
 | `.task/config/config.md` | intake skills' inline Step 0 setup (folded-in `bootstrap`) | every skill + every executing session — Language, Testing Policy, Commit Format, tool priority |
 | `.task/task/<slug>.md` | `to-task` (header + `## Description` + `## Execution`); `to-plan` (same + `## Plan`, optional `## Tests`) | **the executing session** (reads `## Description`, `## Plan` if present, follows `## Execution`, reads `Spec:` for anchors and `Roadmap:` + `Source item:` for auto-mark); `roadmap-to-workflow` per-item implement agent |
 | `.task/roadmap/<slug>.md` | `to-roadmap` (initial); user-edited; `roadmap-to-workflow` **driver** flips `- [ ]` → `- [x]` after an item's agent returns OK | `roadmap-to-workflow` driver (loops unchecked items, reads `**Dependencies:**` + `**Model:**` + `Spec:`); `to-plan` / `to-task` (when picking up an item) |
 | `.task/spec/<slug>.md` | `to-spec` or user | **the executing session** (via a task's `Spec:` header) + `to-plan` (technical-decision anchor) + `roadmap-to-workflow` per-item plan agent |
 
 The executing session writes no separate pipeline artifacts — its implementation lands in the working tree, and `/verify` / `/code-review` run against the live diff. Auto-mark inside a single-task execution is done by the executing session itself (per the `## Execution` block); auto-mark during a roadmap run is done by the **driver**, not the per-item agent, so parallel item agents never race on the roadmap file.
+
+### Config-gate categories
+
+Three categories, not two:
+
+- **Intake skills** (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) auto-run setup inline in a fresh project — they write `config.md` on first use.
+- **Consumer skills** (`roadmap-to-workflow`, `validate`) check `config.md` and hard-stop if it is absent.
+- **`grill`** is exempt from both: it neither checks nor creates `config.md` and touches nothing under `.task/`, so it can run at the discussion stage before any config or capture exists. It reads `config.md` → Language for dialog only when a config happens to exist; otherwise it mirrors the language of the chat.
 
 ---
 
