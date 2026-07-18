@@ -1,6 +1,6 @@
 ---
 name: to-spec
-description: 'Capture load-bearing technical decisions discussed in chat into a standalone `.task/spec/<slug>.md` — Decision / Rationale / Constrains sections that tasks and roadmaps reference via `Spec:` headers and the executing session honors as fixed anchors. Not a plan; the reasoning that must survive re-derivation.'
+description: 'Capture load-bearing technical decisions into a standalone `.task/spec/<slug>.md` — Decision/Rationale/Constrains sections cited via `Spec:`.'
 disable-model-invocation: true
 user-invocable: true
 ---

@@ -65,18 +65,14 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
    {Why: paraphrase of ### Context. What: paraphrase of ### Goal / ### Outcomes / ### Invariants / ### Acceptance criteria.}
 
    ## Execution
-   > If any `Spec:` headers are present, first read each referenced `.task/spec/<slug>.md`
-   > as a fixed technical anchor — honor its decisions, do not re-derive them. `.task/` is
-   > pipeline-internal and invisible to the repository — never reference `.task/` paths, spec /
-   > roadmap / task slugs, or their `§` section numbers in code, comments, docstrings, commit
-   > messages, or PR text; treat spec decisions as your own. Then implement
-   > the plan above (or the Description if there is no Plan), reading and editing code with the
-   > tools in `.task/config/config.md` → Code Navigation / Code Editing (MCP tools first,
-   > built-ins as fallback). Then run the `/verify` skill end-to-end and `/code-review` on the
-   > diff; apply review fixes ONLY within the files named in **Touches** (report the rest). If
-   > there is no `## Plan`, and so no **Touches**, scope review fixes to the files you changed
-   > for the Description. Commit per `.task/config/config.md` → Commit Format. If `Roadmap:` +
-   > `Source item:` headers are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
+   > If `Spec:` headers are present, read each `.task/spec/<slug>.md` first and honor its
+   > decisions as fixed. `.task/` is pipeline-internal and invisible to the repo: never name
+   > `.task/` paths, spec/roadmap/task slugs, or `§` numbers in code, comments, commits, or PR
+   > text. Implement the Plan above (or the Description if none) with the tools in
+   > `.task/config/config.md` → Code Navigation / Code Editing. Run `/verify` end-to-end and
+   > `/code-review`, applying fixes ONLY within **Touches** (report the rest); with no `## Plan`,
+   > scope fixes to what you changed. Commit per `.task/config/config.md` → Commit Format. If
+   > `Roadmap:` + `Source item:` are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
    ```
 7. Continue to Step 3 (footer), using `<item-slug>` as `<slug>` there.
 

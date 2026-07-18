@@ -41,7 +41,7 @@ There are **no user-facing flags** anywhere — footers, descriptions, and examp
 | `.task/roadmap/<slug>.md` | One file per multi-task initiative. Item backlog with checkboxes. |
 | `.task/spec/<slug>.md` | **One file per spec.** Standalone load-bearing technical decisions, topic-derived slug. Written by `to-spec`. Cited by task/roadmap `Spec:` headers. |
 
-What is **gone from v2**: `.task/workspace/`, `.task/log/`, any `<task-id>/` subfolder, the active-task pointer, and the whole archive concept. A closed task is just a file that stays in `.task/task/` (or the user deletes it). **git history is the record** — there is no archive.
+What is **gone from v2**: `.task/workspace/`, `.task/log/`, any `<task-id>/` subfolder, the active-task pointer, and the archive concept — a closed task is just a file that stays in `.task/task/` (or the user deletes it); **git history is the record**.
 
 `.task/` is git-excluded via `.git/info/exclude` (pattern `.task`), written once by the intake skills' inline Step 0 setup. No tracked edits ever land outside `.task/` — the pipeline is invisible to the project.
 
@@ -60,7 +60,7 @@ v3 shrinks the resolver to a **pure `.task/`-root finder**. It exports **`AI_DIR
 3. `dirname(git-common-dir)/.task` — main-worktree root / sibling worktrees / bare repos.
 4. `$CLAUDE_PROJECT_DIR/.task` when set, else the relative `./.task` — so a call from outside a project still fails cleanly on the config gate.
 
-**Removed in v3:** every bit of active-task-pointer logic (`task_current_path`, `heal_stale_pointer`, pointer read/write/self-heal), the `WS_DIR` / `resolve_ws` workspace resolution, and `TASK_ID_OVERRIDE`. There is no "which task is active" resolution anywhere — the artifact path is the handle.
+**Removed in v3:** active-task-pointer logic (`task_current_path`, `heal_stale_pointer`), the `WS_DIR` / `resolve_ws` workspace resolution, and `TASK_ID_OVERRIDE` — no "which task is active" resolution exists anywhere; the artifact path is the handle.
 
 ---
 
@@ -90,18 +90,14 @@ Why + what, distilled from the chat.
 ### Test 2: ...
 
 ## Execution
-> If any `Spec:` headers are present, first read each referenced `.task/spec/<slug>.md`
-> as a fixed technical anchor — honor its decisions, do not re-derive them. `.task/` is
-> pipeline-internal and invisible to the repository — never reference `.task/` paths, spec /
-> roadmap / task slugs, or their `§` section numbers in code, comments, docstrings, commit
-> messages, or PR text; treat spec decisions as your own. Then implement
-> the plan above (or the Description if there is no Plan), reading and editing code with the
-> tools in `.task/config/config.md` → Code Navigation / Code Editing (MCP tools first,
-> built-ins as fallback). Then run the `/verify` skill end-to-end and `/code-review` on the
-> diff; apply review fixes ONLY within the files named in **Touches** (report the rest). If
-> there is no `## Plan`, and so no **Touches**, scope review fixes to the files you changed
-> for the Description. Commit per `.task/config/config.md` → Commit Format. If `Roadmap:` +
-> `Source item:` headers are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
+> If `Spec:` headers are present, read each `.task/spec/<slug>.md` first and honor its
+> decisions as fixed. `.task/` is pipeline-internal and invisible to the repo: never name
+> `.task/` paths, spec/roadmap/task slugs, or `§` numbers in code, comments, commits, or PR
+> text. Implement the Plan above (or the Description if none) with the tools in
+> `.task/config/config.md` → Code Navigation / Code Editing. Run `/verify` end-to-end and
+> `/code-review`, applying fixes ONLY within **Touches** (report the rest); with no `## Plan`,
+> scope fixes to what you changed. Commit per `.task/config/config.md` → Commit Format. If
+> `Roadmap:` + `Source item:` are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
 ```
 
 Rules:
@@ -244,22 +240,18 @@ Keeps the `config.md` precondition and English parser-stable strings. **No hook 
 
 | Script | Role |
 |--------|------|
-| `roadmap.sh` | artifact-path + roadmap parsing helpers (`resolve_artifact_path`, `roadmap_progress_counts`), used by `roadmap-to-workflow` and `validate.sh`. The driver's per-item checkbox flip is inline `awk`, **not** a helper here. |
+| `roadmap.sh` | artifact-path + roadmap parsing helpers: `resolve_artifact_path` (called by `roadmap-to-workflow` and `validate.sh`) and `roadmap_progress_counts` (called by `roadmap-to-workflow` only). The driver's per-item checkbox flip is inline `awk`, **not** a helper here. |
 | `templates/conventional-commits.md` | commit-format fallback for the executing session |
 
 ### Removed in v3 (already deleted)
 
-The v2 helpers are gone from `skills/_lib/` — `close.sh` and `commit-context.sh` (both were `ship`'s), `derive-task-id.sh` (no task-id in v3), plus the orphaned `phase-detect.sh`, `touches-gate.sh`, `auto-locks.sh`, `auto-roadmap-helpers.sh`, `fail-log.sh`, and `templates/summary.md`. Only `resolve-ws.sh`, `roadmap.sh`, and `templates/conventional-commits.md` remain (`preamble.sh` too was dropped — it had no live callers; `validate.sh` carries its own `require_config`).
+The v2 helpers are gone from `skills/_lib/` — `close.sh`, `commit-context.sh`, `derive-task-id.sh`, `phase-detect.sh`, `touches-gate.sh`, `auto-locks.sh`, `auto-roadmap-helpers.sh`, `fail-log.sh`, `preamble.sh`, and `templates/summary.md`. Only `resolve-ws.sh`, `roadmap.sh`, and `templates/conventional-commits.md` remain.
 
 ---
 
-## Hook (`hooks/hooks.json`)
+## Hook
 
-The `PreToolUse` matcher is **removed**. Enforcement becomes convention — `build` / `ship` no longer exist to gate, and `validate.sh` is opt-in. The file reduces to:
-
-```json
-{"hooks": {}}
-```
+There is **no hook**. `hooks/hooks.json` is deleted — an absent file and an empty `{"hooks": {}}` are equivalent to the plugin loader. Enforcement is convention: no `PreToolUse` gate (`build` / `ship` no longer exist to gate), and `validate.sh` is opt-in.
 
 ---
 
@@ -292,7 +284,7 @@ All three are cheap and architecture-independent. Human-facing dialog only — p
 
 ### Frontmatter
 
-Every skill carries `disable-model-invocation: true` and `user-invocable: true` (exception: `validate`, `user-invocable: false`). Artifacts and user dialog follow `config.md` → Language; parser-stable strings (header keys, section labels, commit trailers, the `## Execution` block, driver return strings) stay English.
+Every skill carries `disable-model-invocation: true` and `user-invocable: true`. (`validate` is a bash-only utility — `skills/validate/validate.sh`, no `SKILL.md` — so it carries no frontmatter.) Artifacts and user dialog follow `config.md` → Language; parser-stable strings (header keys, section labels, commit trailers, the `## Execution` block, driver return strings) stay English.
 
 ### `roadmap-to-workflow` execution shape (driver contract)
 

@@ -1,6 +1,6 @@
 ---
 name: to-roadmap
-description: 'Capture a multi-task initiative discussed in chat into `.task/roadmap/<slug>.md` — a phase-grouped backlog of ready-to-pick-up items for `/task:to-task` / `/task:to-plan`, or for `/task:roadmap-to-workflow` to loop end to end. References standalone `.task/spec/<slug>.md` specs via `Spec:` headers.'
+description: 'Capture a multi-task initiative into `.task/roadmap/<slug>.md` — a phase-grouped backlog of ready-to-pick-up items.'
 disable-model-invocation: true
 user-invocable: true
 ---

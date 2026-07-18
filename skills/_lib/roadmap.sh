@@ -9,8 +9,10 @@
 #
 # Exposed API:
 #   resolve_artifact_path <kind> <arg>  — slug-or-path → absolute path under
-#                                         $AI_DIR/<kind> (task | roadmap | spec)
-#   roadmap_progress_counts <path>      — prints three lines: total / done / unchecked
+#                                         $AI_DIR/<kind> (task | roadmap | spec).
+#                                         Callers: validate.sh + roadmap-to-workflow.
+#   roadmap_progress_counts <path>      — prints three lines: total / done / unchecked.
+#                                         Sole caller: roadmap-to-workflow.
 #
 # Conventions:
 #   - $AI_DIR must already be resolved by the caller via `find_ai_dir` before
