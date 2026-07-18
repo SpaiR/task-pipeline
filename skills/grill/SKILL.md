@@ -66,7 +66,7 @@ Then pose one `AskUserQuestion` (convention (b)) with chips **Accept** / **Edit*
 
 - **Accept** → proceed to Step 7 (routing).
 - **Edit** → focused follow-up on what to add, correct, or drop; re-print the ledger; repeat until accepted.
-- **Decline** → stop with `nothing captured — re-run /task:grill when you want to re-open the decision`. (Correcting a ledger line is **Edit**; a Decline ends the grill.)
+- **Decline** → stop with `nothing captured. → Next: re-run /task:grill when you want to re-open the decision`. (Correcting a ledger line is **Edit**; a Decline ends the grill.)
 
 ### Step 7: Route to the right capture skill
 

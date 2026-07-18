@@ -17,7 +17,7 @@ Fix a **multi-task initiative** (phases, dependencies, or more than a couple of 
 
 Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`.
 
-- **`config.md not found`** → `/task:to-roadmap` is intake-capable: run the inline setup gate exactly as `skills/to-task/SKILL.md` Step 0 does (detect stack → one `AskUserQuestion` confirmation, Accept / Edit / Decline chips → write `config.md` + `git config --local task.root` + exclude `.task`), then re-run `validate.sh all`. If config is now present → continue. If the user declined setup → report "`config.md` not written — run `/task:to-roadmap` again when ready" and **stop**.
+- **`config.md not found`** → `/task:to-roadmap` is intake-capable: run the inline setup gate exactly as `skills/to-task/SKILL.md` Step 0 does (detect stack → one `AskUserQuestion` confirmation, Accept / Edit / Decline chips → write `config.md` + `git config --local task.root` + exclude `.task`), then re-run `validate.sh all`. If config is now present → continue. If the user declined setup → report "`config.md` not written. → Next: run `/task:to-roadmap` again when ready" and **stop**.
 - **Any other non-zero exit** (config present but malformed) → **stop**, report the validator output.
 
 ### Preconditions

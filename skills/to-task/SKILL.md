@@ -27,7 +27,7 @@ Check whether `.task/config/config.md` exists — resolve the pipeline root via 
      Chips **Accept** / **Edit** / **Decline**:
      - **Accept** → adopt as-is.
      - **Edit** → follow-up asks which field(s) to amend (language policy / testing-policy mode / bare-repo `.task` location), same option menus as the language/testing-policy questions below, then continue.
-     - **Decline** → do not write anything; report "`config.md` not written — run `/task:to-task` again when ready" and **stop**.
+     - **Decline** → do not write anything; report "`config.md` not written. → Next: run `/task:to-task` again when ready" and **stop**.
   4. Write `.task/config/config.md` using the standard template — sections: Code Navigation, Code Editing, Library Documentation, Project Conventions, Build and Tests, Commit Format, Language, Testing Policy, Directories — Do Not Search. Reference mode (a short `**Source:** \`CLAUDE.md\` → \`## <Heading>\`` pointer, ≤3 summary lines) when `CLAUDE.md` already documents a section; full mode otherwise. Commit Format: reference mode with just `**Source:** <path>` when a commit-format doc was found, else derive rules from `git log`.
   5. Record `git config --local task.root "$ROOT"` (repo-common; shared by every worktree). Skip with a warning if not a git repo — the ancestor-`config.md` walk resolves `.task/` without the anchor.
   6. Exclude `.task` locally: `EXCLUDE=$(git rev-parse --git-path info/exclude); mkdir -p "$(dirname "$EXCLUDE")"; touch "$EXCLUDE"; grep -qxF '.task' "$EXCLUDE" || echo '.task' >> "$EXCLUDE"`. Skip with a warning if not a git repo.
@@ -51,7 +51,7 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
 2. Pick `<N>`: if given, use it. Otherwise collect open items (`- [ ]` checkbox headings); if none — stop: "all items in `<slug>` are closed; pick one explicitly with `<slug>#<N>`, or draft from chat instead." If more than one open item, ask via `AskUserQuestion` (chip per `#<N> — <title>`, first/lowest default); if exactly one, auto-pick it.
 3. Read the item's `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria` block. `### Context` becomes the Description's "why"; the rest folds into the "what". Also note any `### Spec references → <spec-slug> §N` the item carries, and the roadmap's own `Spec: <slug>` header lines — collect the distinct `<spec-slug>`s to stamp as `Spec:` headers on the task (step 6).
 4. Derive `<item-slug>` — kebab-case English from the item's own title (not the roadmap's). No task-id, no `derive-task-id` helper: the item gets its own `<item-slug>.md`, independent of the roadmap's slug.
-5. Present the drafted Description body, then pose an `AskUserQuestion` (Accept / Edit / Decline — same mechanism as chat-draft mode's Step 2.3) before writing anything. On **Decline**, write nothing and stop with "`task.md` not written — re-run `/task:to-task` when you want to capture it" (same closing line as chat-draft mode).
+5. Present the drafted Description body, then pose an `AskUserQuestion` (Accept / Edit / Decline — same mechanism as chat-draft mode's Step 2.3) before writing anything. On **Decline**, write nothing and stop with "`task.md` not written. → Next: re-run `/task:to-task` when you want to capture it" (same closing line as chat-draft mode).
 6. **On accept**, write `.task/task/<item-slug>.md` (creating `.task/task/` if needed):
 
    ```markdown
@@ -90,7 +90,7 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
 3. **Present the draft**, then pose an `AskUserQuestion` (convention (b)) with chips **Accept** / **Edit** / **Decline**:
    - **Accept** → write the file as drafted.
    - **Edit** → follow-up asks what to change, apply it, re-show, repeat until accepted.
-   - **Decline** → do not write anything; stop with "`task.md` not written — re-run `/task:to-task` when you want to capture it".
+   - **Decline** → do not write anything; stop with "`task.md` not written. → Next: re-run `/task:to-task` when you want to capture it".
 4. **On accept**, write `.task/task/<slug>.md` (creating `.task/task/` if needed, no `Roadmap:` / `Source item:` lines in this mode; include a `Spec:` line per relevant spec, or none):
 
    ```markdown
