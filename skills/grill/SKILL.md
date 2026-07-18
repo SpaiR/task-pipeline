@@ -1,34 +1,30 @@
 ---
 name: grill
-description: 'Interrogate a plan, decision, or idea one question at a time before it is captured — stress-test the weak spots, keep a decision-plus-rationale ledger, end with a pre-mortem, then route to the right capture skill. Writes no artifacts; hardens the chat discussion so `to-spec` / `to-plan` / `to-task` / `to-roadmap` capture something already examined. Use it when a decision feels under-examined and you want it pressure-tested before you freeze it.'
+description: Interrogate a plan or decision one question at a time before capture, keeping a decision-plus-rationale ledger, then route to the right capture skill.
 disable-model-invocation: true
 user-invocable: true
 ---
 
-Pressure-test a plan, decision, or idea **before** it is frozen into an artifact. `grill` sits at the pipeline's first stage — "discuss freely in chat" — and gives that stage teeth: it interrogates the thinking one question at a time, records every answer as a decision with its rationale, closes with a pre-mortem, then hands off to the right capture skill. It is the pre-capture step, not a capture step: it writes **nothing**. Its output is a hardened discussion plus a decision ledger that a `to-*` skill then serializes.
-
-Adapted from mattpocock/skills' `grilling`. Kept from the original: **one question at a time**; facts are looked up in the environment, only genuine decisions are asked; no acting on the plan until shared understanding is confirmed. Added here: a decision ledger, smart exit routing, an anti-sycophancy rule, and a pre-mortem finale.
+Pressure-test a plan, decision, or idea **before** it is frozen into an artifact. `grill` sits at the pipeline's first stage — "discuss freely in chat" — and gives it teeth: it interrogates the thinking one question at a time, records every answer as a decision with its rationale, closes with a pre-mortem, then hands off to the right capture skill. It writes **nothing**; its output is a hardened discussion plus a decision ledger that a `to-*` skill then serializes.
 
 **Input:** `$ARGUMENTS` — optional. A topic or free-form context to grill (e.g. "the retry design", "whether to shard the queue"). Empty → grill the plan/decision being discussed in the current chat.
 
-**No config gate, no setup.** Unlike every `to-*` skill, `grill` neither checks `.task/config/config.md` nor runs inline setup — it touches nothing under `.task/` and can run in a fresh, unconfigured project before any capture exists. Follow `config.md` → Language for dialog only if a config happens to exist; otherwise mirror the language of the discussion.
-
-## Instructions
+**No config gate, no setup.** `grill` reads nothing under `.task/` — `config.md` included — so it runs in a fresh, unconfigured project before any capture exists. Dialog mirrors the language of the chat; facts are looked up with plain tools (Read / Grep / Glob / Bash).
 
 ### Step 1: Frame what is being grilled
 
 State, in 1–3 sentences, the plan/decision/idea as you currently understand it — from `$ARGUMENTS` if given, else from the chat. This is the target the questions attack. Do not ask the user to confirm the framing with a separate prompt; the first question implicitly tests it.
 
-### Step 2: Separate facts from decisions
+### Step 2: Resolve facts lazily, ask only decisions
 
-Before asking anything, split what you need into two piles:
+Split what stands between you and the **next** question into two piles:
 
-- **Facts** — anything the environment can answer: what a file does, whether a library is already a dependency, how an existing flow behaves, what the config says. **Look these up yourself** (Read / Grep / Glob / Bash per `config.md` → Code Navigation when a config exists, plain tools otherwise). Never ask the user a question the repo already answers.
+- **Facts** — anything the environment can answer: what a file does, whether a library is already a dependency, how an existing flow behaves. **Look these up yourself** with Read / Grep / Glob / Bash. Never ask the user a question the repo already answers.
 - **Decisions** — genuine choices with trade-offs, no single right answer derivable from the environment. **These, and only these, are what you ask.**
 
-If a supposed decision turns out to have a factual answer, resolve it silently and move on — don't burn a question on it.
+Resolve facts **lazily** — only the ones that gate the next question, not everything up front — so the first question reaches the user fast. When several independent reads are needed for one question, batch them in parallel. If a supposed decision turns out to have a factual answer, resolve it silently and move on — don't burn a question on it.
 
-**Nothing to grill.** If, after this split, no genuine decision is left — every fork is already settled, or all of it is factual and answerable from the environment — **stop**. Do not manufacture questions to justify running. Say so plainly and redirect straight to the fitting capture skill (Step 7's routing), e.g. `→ Next: /task:to-plan — nothing left to interrogate; the approach is settled, capture it.`
+**Nothing to grill.** If no genuine decision is left — every fork is already settled, or all of it is factual and answerable from the environment — **stop**. Do not manufacture questions to justify running. Say so plainly and redirect straight to the fitting capture skill (Step 7's routing), e.g. `→ Next: /task:to-plan — nothing left to interrogate; the approach is settled, capture it.`
 
 ### Step 3: Grill — one question at a time
 
@@ -40,20 +36,11 @@ Each question:
 - **Carries a recommendation.** The first chip is your recommended answer, labelled `… (Recommended)`. Each option's `description` states its consequence — what you get and what it costs — so the choice is informed, not blind.
 - **Anti-sycophancy rule.** The recommendation is your honest read, not an echo of where the user seems to be leaning. When the user's implied leaning looks wrong, the recommended chip **must be the disagreement**, and its description must say why the leaning is the weaker call. Agreeing by reflex is a failure of this skill.
 
-Keep going until the forks that matter are resolved. Depth over breadth — chase the one answer that would change everything, not ten that wouldn't.
+**Depth budget.** A typical grill is 3–7 questions. Depth over breadth — chase the one answer that would change everything, not ten that wouldn't. Stop as soon as the remaining forks would not change what gets captured.
 
 ### Step 4: Maintain the decision ledger
 
-After every answered question, append one line to a running ledger, kept in chat (never written to a file):
-
-```
-## Decision ledger
-
-1. {the decision, at full specificity} — because {the load-bearing reason}
-2. {…}
-```
-
-This ledger is the raw material `to-spec` (or another capture skill) will serialize. Keep each line concrete enough that a reader who missed the chat understands both the choice and why it was made.
+Maintain a ledger internally — one line per answered question, in the form `{the decision, at full specificity} — because {the load-bearing reason}`. After each answer, echo only the **new** line, not the whole ledger. Keep each line concrete enough that a reader who missed the chat understands both the choice and why it was made. The full block is printed once, in Step 6.
 
 ### Step 5: Pre-mortem finale
 
@@ -66,11 +53,20 @@ Fold the answer into the ledger as a final decision line (the mitigation, or the
 
 ### Step 6: Confirm the ledger
 
-Reprint the full ledger, then pose one `AskUserQuestion` (convention (b)) with chips **Accept** / **Edit** / **Decline**:
+Print the full ledger once:
+
+```
+## Decision ledger
+
+1. {the decision, at full specificity} — because {the load-bearing reason}
+2. {…}
+```
+
+Then pose one `AskUserQuestion` (convention (b)) with chips **Accept** / **Edit** / **Decline**:
 
 - **Accept** → proceed to Step 7 (routing).
 - **Edit** → focused follow-up on what to add, correct, or drop; re-print the ledger; repeat until accepted.
-- **Decline** → write nothing and stop with `nothing captured — re-run /task:grill when you want to re-open the decision`. (Correcting a ledger line is **Edit**; a Decline ends the grill.)
+- **Decline** → stop with `nothing captured — re-run /task:grill when you want to re-open the decision`. (Correcting a ledger line is **Edit**; a Decline ends the grill.)
 
 ### Step 7: Route to the right capture skill
 
@@ -86,8 +82,8 @@ Pick the one that fits; state the reason in the same language as the dialog. Do 
 ## Forbidden
 
 - **Writing anything, anywhere** — no files, no edits, above all nothing under `.task/`. Serializing the ledger is the `to-*` skills' job; `grill` only hardens the discussion.
+- **Reading or writing anything under `.task/`, `config.md` included** — no config gate, no inline setup; `grill` runs before any config exists and dialog mirrors the chat's language.
 - **Batching questions** — one `AskUserQuestion` per fork, always. No multi-question rounds.
-- **A config gate or inline setup** — `grill` never checks or creates `config.md` and never touches `.task/`.
 - **Acting on the grilled plan** — no implementing, refactoring, or "just fixing it" mid-grill. This skill interrogates; it does not execute.
 - **Asking what the environment can answer** — resolve facts by looking them up; spend questions only on genuine decisions.
 - **Reflexive agreement** — a recommendation that merely mirrors the user's leaning when that leaning is the weaker call violates the anti-sycophancy rule.

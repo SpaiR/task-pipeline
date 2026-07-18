@@ -193,7 +193,7 @@ Section labels (`## N.`, `**Decision:**` / `**Rationale:**` / `**Constrains:**`)
 
 | Artifact | Produced by | Consumed by |
 |----------|-------------|-------------|
-| *(none)* | `grill` | — produces no `.task/` artifact; consumes only the chat discussion, emits a hardened discussion + in-chat decision ledger that a `to-*` capture skill serializes |
+| *(none — chat only)* | `grill` — an in-chat decision ledger, never a file | the `to-*` capture skill the user runs next |
 | `.task/config/config.md` | intake skills' inline Step 0 setup (folded-in `bootstrap`) | every skill + every executing session — Language, Testing Policy, Commit Format, tool priority |
 | `.task/task/<slug>.md` | `to-task` (header + `## Description` + `## Execution`); `to-plan` (same + `## Plan`, optional `## Tests`) | **the executing session** (reads `## Description`, `## Plan` if present, follows `## Execution`, reads `Spec:` for anchors and `Roadmap:` + `Source item:` for auto-mark); `roadmap-to-workflow` per-item implement agent |
 | `.task/roadmap/<slug>.md` | `to-roadmap` (initial); user-edited; `roadmap-to-workflow` **driver** flips `- [ ]` → `- [x]` after an item's agent returns OK | `roadmap-to-workflow` driver (loops unchecked items, reads `**Dependencies:**` + `**Model:**` + `Spec:`); `to-plan` / `to-task` (when picking up an item) |
@@ -207,7 +207,7 @@ Three categories, not two:
 
 - **Intake skills** (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) auto-run setup inline in a fresh project — they write `config.md` on first use.
 - **Consumer skills** (`roadmap-to-workflow`, `validate`) check `config.md` and hard-stop if it is absent.
-- **`grill`** is exempt from both: it neither checks nor creates `config.md` and touches nothing under `.task/`, so it can run at the discussion stage before any config or capture exists. It reads `config.md` → Language for dialog only when a config happens to exist; otherwise it mirrors the language of the chat.
+- **`grill`** is exempt from both: it neither checks nor creates `config.md`, so it can run at the discussion stage before any config or capture exists. It never reads or writes anything under `.task/`; dialog mirrors the chat's language.
 
 ---
 
