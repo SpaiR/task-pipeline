@@ -163,12 +163,12 @@ validate_spec() {
 }
 
 # ---------------- roadmap file ----------------
-# Resolution order is implemented in `_lib/roadmap.sh:resolve_roadmap_path`.
+# Resolution order is implemented in `_lib/roadmap.sh:resolve_artifact_path`.
 
 validate_roadmap() {
   local raw="$1"
   local file
-  file=$(resolve_roadmap_path "$raw")
+  file=$(resolve_artifact_path roadmap "$raw")
   if [[ -z "$file" ]]; then
     err "roadmap($raw)" "file not found (looked at $raw, $AI_DIR/roadmap/$raw(.md))"
     return

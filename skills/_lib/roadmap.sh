@@ -10,23 +10,16 @@
 # Exposed API:
 #   resolve_artifact_path <kind> <arg>  — slug-or-path → absolute path under
 #                                         $AI_DIR/<kind> (task | roadmap | spec)
-#   resolve_roadmap_path <arg>          — thin wrapper: resolve_artifact_path roadmap
 #   roadmap_progress_counts <path>      — prints three lines: total / done / unchecked
 #
 # Conventions:
-#   - $AI_DIR is expected to be resolved by the caller via `find_ai_dir`
-#     (resolve-ws.sh / validate.sh both run it before sourcing this file). If
-#     this file is somehow sourced first, we call find_ai_dir when it is
-#     already defined, else fall back to the relative `.task` default.
+#   - $AI_DIR must already be resolved by the caller via `find_ai_dir` before
+#     sourcing this file — every caller (validate.sh, roadmap-to-workflow Step 0)
+#     sources resolve-ws.sh first, which exports AI_DIR. This file does no
+#     resolution of its own.
 #   - Task heading shape: `### - [ x~>-] N. <title>`. The 5-state checkbox
 #     class is the contract `roadmap-to-workflow`'s driver-side auto-mark and
 #     `to-task <slug>#N` item-pick both depend on; do not narrow it to `[ x]` only.
-
-if declare -F find_ai_dir >/dev/null 2>&1; then
-  find_ai_dir
-else
-  : "${AI_DIR:=.task}"
-fi
 
 # --- resolve_artifact_path <kind> <arg> ---
 # Echoes the resolved artifact path on stdout, or empty string if no match.
@@ -39,11 +32,6 @@ resolve_artifact_path() {
   if [[ -f "$AI_DIR/$kind/$arg.md" ]]; then echo "$AI_DIR/$kind/$arg.md"; return; fi
   echo ""
 }
-
-# --- resolve_roadmap_path <arg> ---
-# Thin wrapper over resolve_artifact_path for the roadmap subdir — kept as a
-# named entry point because `roadmap-to-workflow` and `validate.sh` call it.
-resolve_roadmap_path() { resolve_artifact_path roadmap "$1"; }
 
 # --- roadmap_progress_counts <path> ---
 # Emits three lines on stdout:

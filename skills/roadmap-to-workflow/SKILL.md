@@ -37,7 +37,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
 If `$ARGUMENTS` gives a positional `<roadmap-slug>`/path, resolve it and skip the picker. Otherwise list the available roadmaps with progress (uses the kept `roadmap.sh` helpers):
 
 ```bash
-source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap.sh"      # resolve_roadmap_path, roadmap_progress_counts
+source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap.sh"      # resolve_artifact_path, roadmap_progress_counts
 shopt -s nullglob
 for f in "$AI_DIR"/roadmap/*.md; do
   counts=$(roadmap_progress_counts "$f")
@@ -68,7 +68,7 @@ One unchecked item → skip the question, run it. Zero unchecked → stop: "all 
 Read the resolved roadmap. For each unchecked (`### - [ ] N.`) item in the chosen scope, capture `N`, title, `**Dependencies:**`, and `**Model:**` (default `sonnet` when absent or off-list). This prints one `N<TAB>deps<TAB>model<TAB>title` line per unchecked item:
 
 ```bash
-ROADMAP=$(resolve_roadmap_path "<slug-or-path>")   # roadmap.sh, sourced in Step 0
+ROADMAP=$(resolve_artifact_path roadmap "<slug-or-path>")   # roadmap.sh, sourced in Step 0
 awk '
   function flush() { if (pend) { print n "\t" deps "\t" (model==""?"sonnet":model) "\t" title; pend=0 } }
   /^### - \[[ x~>-]\] [0-9]+\. / {

@@ -243,7 +243,7 @@ Keeps the `config.md` precondition and English parser-stable strings. **No hook 
 
 | Script | Role |
 |--------|------|
-| `roadmap.sh` | artifact-path + roadmap parsing helpers (`resolve_artifact_path` and its `resolve_roadmap_path` wrapper, `roadmap_progress_counts`), used by `roadmap-to-workflow` and `validate.sh`. The driver's per-item checkbox flip is inline `sed`/`awk`, **not** a helper here. |
+| `roadmap.sh` | artifact-path + roadmap parsing helpers (`resolve_artifact_path`, `roadmap_progress_counts`), used by `roadmap-to-workflow` and `validate.sh`. The driver's per-item checkbox flip is inline `awk`, **not** a helper here. |
 | `templates/conventional-commits.md` | commit-format fallback for the executing session |
 
 ### Removed in v3 (already deleted)
