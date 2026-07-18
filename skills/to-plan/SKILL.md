@@ -163,7 +163,7 @@ Then pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline**:
 
 - **Accept** → proceed to Step 8 as drafted.
 - **Edit** → follow-up asks what to change, apply it, re-show, repeat until accepted.
-- **Decline** → write nothing, stop with "`task.md` not written" (promote/revise: "no changes made to `task.md`").
+- **Decline** → write nothing, stop with "`task.md` not written — re-run `/task:to-plan` when you want to capture it" (promote/revise: "no changes made to `task.md`").
 
 ## Step 8: Write
 

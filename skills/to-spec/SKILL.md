@@ -120,7 +120,7 @@ Write the file directly — no in-chat preview, no confirmation prompt (the Deci
 
 - Print the path to the created file.
 - One-line summary: "*N* decisions pinned."
-- End with the canonical next-step footer (convention (a), flag-free): `→ Next: reference it from a task or roadmap — e.g. `/task:to-plan` an item that relies on it, or add a `Spec: <slug>` header to an existing `.task/roadmap/<slug>.md`.`
+- End with the canonical next-step footer (convention (a), flag-free): `→ Next: \`/task:to-plan\` a task that relies on this spec — or add a \`Spec: <slug>\` header to an existing roadmap or task.`
 
 ## Forbidden
 

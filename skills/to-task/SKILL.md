@@ -51,7 +51,7 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
 2. Pick `<N>`: if given, use it. Otherwise collect open items (`- [ ]` checkbox headings); if none — stop: "all items in `<slug>` are closed; pick one explicitly with `<slug>#<N>`, or draft from chat instead." If more than one open item, ask via `AskUserQuestion` (chip per `#<N> — <title>`, first/lowest default); if exactly one, auto-pick it.
 3. Read the item's `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria` block. `### Context` becomes the Description's "why"; the rest folds into the "what". Also note any `### Spec references → <spec-slug> §N` the item carries, and the roadmap's own `Spec: <slug>` header lines — collect the distinct `<spec-slug>`s to stamp as `Spec:` headers on the task (step 6).
 4. Derive `<item-slug>` — kebab-case English from the item's own title (not the roadmap's). No task-id, no `derive-task-id` helper: the item gets its own `<item-slug>.md`, independent of the roadmap's slug.
-5. Present the drafted Description body, then pose an `AskUserQuestion` (Accept / Edit / Decline — same mechanism as chat-draft mode's Step 2.3) before writing anything. On **Decline**, write nothing and stop with "`task.md` not written" (same closing line as chat-draft mode).
+5. Present the drafted Description body, then pose an `AskUserQuestion` (Accept / Edit / Decline — same mechanism as chat-draft mode's Step 2.3) before writing anything. On **Decline**, write nothing and stop with "`task.md` not written — re-run `/task:to-task` when you want to capture it" (same closing line as chat-draft mode).
 6. **On accept**, write `.task/task/<item-slug>.md` (creating `.task/task/` if needed):
 
    ```markdown
@@ -90,7 +90,7 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
 3. **Present the draft**, then pose an `AskUserQuestion` (convention (b)) with chips **Accept** / **Edit** / **Decline**:
    - **Accept** → write the file as drafted.
    - **Edit** → follow-up asks what to change, apply it, re-show, repeat until accepted.
-   - **Decline** → do not write anything; stop with "`task.md` not written".
+   - **Decline** → do not write anything; stop with "`task.md` not written — re-run `/task:to-task` when you want to capture it".
 4. **On accept**, write `.task/task/<slug>.md` (creating `.task/task/` if needed, no `Roadmap:` / `Source item:` lines in this mode; include a `Spec:` line per relevant spec, or none):
 
    ```markdown
@@ -110,7 +110,7 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
 
 Report the written `task.md` path and a 1–2 line Description summary. Close with the handoff footer (convention (a), flag-free) — name the path explicitly:
 
-`→ Next: implement it now; deepen it into a plan with \`/task:to-plan\`; or in a fresh session run: \`implement .task/task/<slug>.md\``
+`→ Next: implement it now, deepen it into a plan with \`/task:to-plan\`, or in a fresh session run: \`implement .task/task/<slug>.md\``
 
 ## Forbidden
 
