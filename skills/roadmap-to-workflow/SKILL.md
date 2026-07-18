@@ -173,17 +173,23 @@ for (const [w, items] of waves.entries()) {
 
     // AUTO-MARK is the DRIVER's job, done here — one write at a time, never
     // inside the (possibly parallel) per-item agents, so wave-mates never
-    // race on the roadmap file.
-    const itemSlug = status.split(" ")[2];
-    markRoadmapItemDone(slug, n, itemSlug);   // inline sed/awk flip of "### - [ ] N."
-                                               // → "### - [x] N." keyed on N (no roadmap.sh helper)
+    // race on the roadmap file. There is NO markRoadmapItemDone() helper —
+    // flip item N's checkbox with an anchored, macOS-portable awk rewrite (no
+    // GNU-only `sed -i`, no roadmap.sh helper). Match ONLY `^### - \[ \] N\. `
+    // so a `> ` blockquote line or a substring number is never touched:
+    //
+    //   awk -v n="${n}" '
+    //     $0 ~ ("^### - \\[ \\] " n "\\. ") { sub(/\[ \]/, "[x]") } { print }
+    //   ' "$ROADMAP" > "$ROADMAP.tmp" && mv "$ROADMAP.tmp" "$ROADMAP"
+    //
+    // Run that against the roadmap file as the single driver-side write for N.
   }
   // Barrier: do not start wave w+2 until every item in wave w+1 above is marked.
 }
 return "roadmap-to-workflow: all items shipped.";
 ```
 
-**Graceful fallback:** if the Workflow tool isn't available in this environment, run the items one at a time by hand, respecting the same wave order: for each item, run `to-plan` for that roadmap item (writes `.task/task/<item-slug>.md`), then in a plain session say `implement .task/task/<item-slug>.md` **and tell it not to tick the roadmap checkbox itself** (despite its `## Execution` block), then — as the driver — manually tick that item's checkbox in `.task/roadmap/<slug>.md` before moving to the next. This keeps the auto-mark the driver's job, exactly as in the Workflow path.
+**Graceful fallback:** if the Workflow tool isn't available in this environment, run the items one at a time by hand, respecting the same wave order: for each item, run `to-plan` for that roadmap item (writes `.task/task/<item-slug>.md`) and take the exact written path from `to-plan`'s own Step 9 output line — do **not** reconstruct `<item-slug>` from the item title, since `to-plan` may disambiguate the slug on a collision (its Step 2a.5). Then in a plain session say `implement <that path>` **and tell it not to tick the roadmap checkbox itself** (despite its `## Execution` block), then — as the driver — manually tick that item's checkbox in `.task/roadmap/<slug>.md` before moving to the next. This keeps the auto-mark the driver's job, exactly as in the Workflow path.
 
 ## Output
 

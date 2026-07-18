@@ -187,9 +187,9 @@ validate_roadmap() {
     return
   fi
 
-  # Item numbers are the driver's auto-mark key — markRoadmapItemDone(slug, n)
-  # flips the checkbox keyed on N, so a duplicate N would tick two items on a
-  # single mark. Flag any number that appears on more than one item heading.
+  # Item numbers are the driver's auto-mark key — the driver's inline awk flip
+  # keys on N, so a duplicate N would tick two items on a single mark. Flag any
+  # number that appears on more than one item heading.
   local dup
   dup=$(awk '
     match($0, /^### - \[[ x~>-]\] [0-9]+\./) {
