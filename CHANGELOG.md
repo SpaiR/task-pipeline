@@ -4,6 +4,25 @@ All notable changes to this project are documented here. Format — [Keep a Chan
 
 This file is maintained in **English** — see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-policy).
 
+## [3.1.0] — 2026-07-19
+
+Adds a pre-capture interrogation skill and tightens the capture flow. Non-breaking — no artifact-shape or layout changes.
+
+### Added
+- **`grill` skill** — a pre-capture interrogation that sits at the "discuss freely" stage: it stress-tests a plan or decision one question at a time, keeps a running decision-plus-rationale ledger, ends with a pre-mortem, and routes to the right capture skill (`to-task` / `to-plan` / `to-roadmap` / `to-spec`). It writes no artifacts and touches nothing under `.task/`, so it can run before any capture exists and needs no `config.md`. Brings the pipeline to 6 skills.
+
+### Changed
+- **Skills and docs compacted** — skill prompts and docs were trimmed to cut runtime token cost without changing behavior. `validate` is now a bash-only utility (`skills/validate/validate.sh`); its `SKILL.md` is removed.
+- **`roadmap.sh` slimmed** — dropped the `resolve_roadmap_path` wrapper and a dead guard.
+
+### Fixed
+- **`roadmap-to-workflow` auto-mark** — checkbox ticking is pinned to an anchored `awk` match and its fallback path is corrected, so the driver marks the right roadmap item.
+- **Capture flow hardened** — `to-task` / `to-plan` / `to-roadmap` / `to-spec` handle empty and edge-case inputs cleanly; decline and stop branches now end with the canonical `→ Next:` footer and aligned resume cues.
+- **`validate` diagnostics** — a task-subcommand miss now reports the paths it searched.
+
+### Docs
+- **Contract** — documents the 5-state roadmap checkbox class in [`docs/contract.md`](docs/contract.md).
+
 ## [3.0.0] — 2026-07-18
 
 Chat-first rewrite. The pipeline is no longer an orchestration engine with phases, locks, and a hook gate — it is a small set of capture skills. Discuss freely in chat, then fix the discussion into a fixed-format Markdown artifact under `.task/` with one short skill; capture depth is the skill name, never a flag. There is no execution skill — every artifact carries a stamped `## Execution` block that an ordinary session follows to implement, verify, review, and commit. This replaces the entire v1/v2 surface and is breaking with no automatic migration. See **Migration**.
