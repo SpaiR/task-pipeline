@@ -19,7 +19,7 @@ Distil the chat discussion so far (or a roadmap item) into `.task/task/<slug>.md
 
 Check whether `.task/config/config.md` exists — resolve the pipeline root via `skills/_lib/resolve-ws.sh` (source it; it exports `AI_DIR`).
 
-- **Absent → inline setup.** Run the inline setup gate exactly as [`skills/to-task/SKILL.md`](../to-task/SKILL.md) Step 0 does (detect stack → ONE `AskUserQuestion` confirmation with **Accept** / **Edit** / **Decline** chips → write `config.md` + `git config --local task.root "$ROOT"` + exclude `.task`). `to-task`'s Step 0 is the single source of truth for the sub-steps; do not defer to a separate setup command. Two `to-plan`-specific notes: create `.task/task/` alongside `config.md`, and on **Decline** report "`config.md` not written — run `/task:to-plan` again when ready" and **stop**. On success, continue to the validate call below with the original `$ARGUMENTS` unchanged.
+- **Absent → inline setup.** Run the inline setup gate exactly as [`skills/to-task/SKILL.md`](../to-task/SKILL.md) Step 0 does (detect stack → ONE `AskUserQuestion` confirmation with **Accept** / **Edit** / **Decline** chips → write `config.md` + `git config --local task.root "$ROOT"` + exclude `.task`). `to-task`'s Step 0 is the single source of truth for the sub-steps; do not defer to a separate setup command. Two `to-plan`-specific notes: create `.task/task/` alongside `config.md`, and on **Decline** report "`config.md` not written. → Next: run `/task:to-plan` again when ready" and **stop**. On success, continue to the validate call below with the original `$ARGUMENTS` unchanged.
 - **Present → skip silently**, proceed to validate.
 
 Then run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all` as a self-check — v3 has no gate, so report any findings and continue rather than blocking. Only a config-precondition failure (exit 2) should stop the flow.
@@ -163,7 +163,7 @@ Then pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline**:
 
 - **Accept** → proceed to Step 8 as drafted.
 - **Edit** → follow-up asks what to change, apply it, re-show, repeat until accepted.
-- **Decline** → write nothing, stop with "`task.md` not written — re-run `/task:to-plan` when you want to capture it" (promote/revise: "no changes made to `task.md`").
+- **Decline** → write nothing, stop with "`task.md` not written. → Next: re-run `/task:to-plan` when you want to capture it" (promote/revise: "no changes made to `task.md`. → Next: re-run `/task:to-plan` when you want to revisit the plan").
 
 ## Step 8: Write
 
