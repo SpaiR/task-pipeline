@@ -1,53 +1,66 @@
 # task-pipeline
 
-A chat-first task workflow for Claude Code: discuss freely, then fix the discussion into an artifact with one short command.
-
 [![Release](https://img.shields.io/github/v/release/SpaiR/task-pipeline?sort=semver)](https://github.com/SpaiR/task-pipeline/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 ![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-8A2BE2)
 
-```text
-discuss freely in chat
-  ↓
-/task:to-task            capture what and why — no plan
-/task:to-plan             …  + a Plan (Goal/Touches/Logic steps)
-/task:to-roadmap          … a whole multi-task initiative
-/task:to-spec             … pin technical decisions (tasks/roadmaps cite via Spec:)
-  ↓                                          ↓
-implement it now,                /task:roadmap-to-workflow
-in a fresh session:                fans unchecked items out to
-"implement .task/task/<slug>.md"   a dynamic Workflow, one per item
-  → /verify → /code-review → commit
-```
+If you've ever tried to cram Claude into one big "do everything in this ticket" session, you know how it ends: the model starts writing code before it understands the task, "fixes" one bug and breaks three others, and reports "done" while half the acceptance criteria are still stubs. And the plan you talked through in chat? Gone the moment you `/clear`.
 
-Depth of capture is the skill you pick, not a flag: `to-task` for a quick "what and why", `to-plan` when you already know the approach, `to-roadmap` for a multi-task initiative. `to-spec` is orthogonal — it pins load-bearing technical decisions into `.task/spec/<slug>.md`, which tasks and roadmaps reference via a `Spec:` header and the implementing session honors as a fixed anchor. There is no execution skill — capture ends with a copy-pasteable path, and any session (the same one, a fresh one, or one spawned by `roadmap-to-workflow`) executes the artifact directly.
+`task-pipeline` keeps the discussion and the doing apart. Discuss the task freely in chat; when you're ready, one command freezes that discussion into a Markdown file under `.task/`. Any session — this one, or a fresh one tomorrow — implements that file the same way: work the plan, run `/verify`, run `/code-review`, commit.
+
+No push, no trace in your repo — delete `.task/` and it's like it was never there. [Here's exactly what it will and won't touch](#why-you-can-trust-this).
+
+It's for tasks longer than one session — a two-file, twenty-minute fix doesn't need this.
+
+```text
+discuss in chat
+  → capture to a file
+  → any session implements it
+```
 
 ## Quickstart
 
 ```text
 /plugin marketplace add https://github.com/SpaiR/task-pipeline.git
 /plugin install task@task-pipeline
-
-# talk it through in chat, then:
-/task:to-plan "fix the flaky retry logic"    # captures Description + Plan into .task/task/<slug>.md
-# → Next: implement it now, or in a fresh session run: `implement .task/task/<slug>.md`
 ```
 
-The session that implements it follows the artifact's own `## Execution` block: implement the plan, run `/verify` and `/code-review`, apply review fixes within the files named in **Touches**, then commit per `config.md` → Commit Format.
+Talk a task through in chat — say, an HTTP retry system with backoff and a dead-letter queue — then capture it:
 
-The first `to-task` / `to-plan` / `to-roadmap` / `to-spec` call in a fresh project also sets up `.task/config/config.md` inline (detect language + test policy, one confirmation) — there's no separate setup command to run first.
+```text
+/task:to-plan
+#   → drafts .task/task/http-retry-backoff.md: ## Description + ## Plan (Goal/Touches/Logic steps)
+#   → footer: implement it now, or in a fresh session run:
+#     `implement .task/task/http-retry-backoff.md`
+```
+
+Hand the file to any session — this one or a fresh one:
+
+```text
+"implement .task/task/http-retry-backoff.md"
+#   → follows the artifact's ## Execution block: implement per the plan
+#   → runs /verify (does it actually work?) and /code-review (is it clean?)
+#   → commits per config.md → Commit Format
+```
+
+That session follows the artifact's own `## Execution` block: implement the plan, run `/verify` and `/code-review`, apply review fixes within the files named in **Touches**, then commit per `config.md` → Commit Format.
+
+The first capture in a fresh project also writes `.task/config/config.md` inline (detect language + test policy, one confirmation) — there's no separate setup command to run first. Prefer a lighter touch? `/task:to-task` skips the Plan — good for a quick capture you'll flesh out with `/task:to-plan` later, or hand straight to implementation when the fix is obvious.
+
+> [!TIP]
+> More scenarios — roadmap-driven initiatives, `/task:roadmap-to-workflow`, and returning to a task later — live in **[docs/usage.md](docs/usage.md)**.
 
 ## Why
 
-If you've ever tried to cram Claude into one big "do everything in this ticket" session, you know how it ends: the model starts writing code before it understands the task, "fixes" one bug and breaks three others, and reports "done" while half the acceptance criteria are still stubs. `task-pipeline` doesn't fight this with more machinery — it leans on what Claude Code already ships (dynamic Workflows, `/verify`, `/code-review`) and adds just enough structure around them: one artifact per task (`.task/task/<slug>.md`) that carries the discussion's "what, why, and how," and a fixed `## Execution` block that hands the rest to the platform.
+`task-pipeline` doesn't fight the one-big-session failure with more machinery — it leans on what Claude Code already ships (dynamic Workflows, `/verify`, `/code-review`) and adds just enough structure around them: one artifact per task (`.task/task/<slug>.md`) that carries the discussion's "what, why, and how," and a fixed `## Execution` block that hands the rest to the platform. The plan lives in that file, not in chat — so it survives the `/clear` that would otherwise erase it.
 
 Concretely, you get:
 
-- **Chat-first.** Think out loud, explore approaches, change your mind — all in normal conversation. Only when you're ready do you fix it into `.task/task/<slug>.md` with `to-task` or `to-plan`.
-- **Multilingual.** The Description is written in your language; everything parser-stable (headers, commit trailers, the `## Execution` block) stays English, per the policy in `config.md`.
-- **No execution skill.** There is no `build`/`ship` step to run — any session told `implement .task/task/<slug>.md` reads the artifact and follows its own `## Execution` block through to a commit.
-- **Built on the platform, not around it.** Verification is `/verify`, review is `/code-review` — no hand-rolled audit loop.
-- **A durable handle, not a pointer.** The artifact's path (`.task/task/<slug>.md`) is the handle. Pick it up in this session or a brand-new one — there's no active-task state to lose or heal.
+- **The plan survives `/clear`, compaction, and tomorrow's fresh session.** The artifact's path (`.task/task/<slug>.md`) is the handle. Pick it up in this session or a brand-new one — there's no active-task state to lose or heal.
+- **Zero ceremony while you think.** Think out loud, explore approaches, change your mind — all in normal conversation. Only when you're ready do you fix it into `.task/task/<slug>.md` with `to-task` or `to-plan`.
+- **Nothing new to learn on the execution side.** There is no `build`/`ship` step to run — any session told `implement .task/task/<slug>.md` reads the artifact and follows its own `## Execution` block through to a commit.
+- **Verification and review are written into every artifact, not left to the model's mood.** Verification is `/verify`, review is `/code-review` — no hand-rolled audit loop.
+- **Your language for content, English only where parsers need it.** The Description is written in your language; everything parser-stable (headers, commit trailers, the `## Execution` block) stays English, per the policy in `config.md`.
 
 ## Why you can trust this
 
@@ -109,31 +122,11 @@ Each capture produces exactly one `.task/task/<slug>.md`, where `<slug>` is both
 | `/task:roadmap-to-workflow [<roadmap>]` | Autopilot over an approved roadmap: authors and invokes a dynamic Workflow that runs the roadmap's unchecked items in dependency-ordered waves (parallel within a wave, isolated worktrees). Default per-item shape is opus-plans/sonnet-implements — a first agent runs `to-plan` for the item, a second implements + verifies + reviews + commits, using the item's `**Model:**` hint if present. The driver ticks the roadmap checkbox after each item lands. Launched with no arguments it asks (via chips) which roadmap and how much to run; falls back to one-item-at-a-time by hand if the Workflow tool is unavailable. |
 | `validate` *(utility)* | Optional formal validator of `.task/task/<slug>.md` / roadmap format. Never invoked automatically — no hook calls it. Manual check: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" [task <slug>\|roadmap <slug>\|spec <slug>\|all]`. |
 
-## Example — a single task
-
-```text
-# talk through an HTTP retry system with backoff and dead-letter in chat, then:
-
-/task:to-plan
-#   → drafts .task/task/http-retry-backoff.md: ## Description + ## Plan (Goal/Touches/Logic steps)
-#   → footer: implement it now, or in a fresh session run:
-#     `implement .task/task/http-retry-backoff.md`
-
-# tell any session (this one or a fresh one) to implement it:
-"implement .task/task/http-retry-backoff.md"
-#   → follows the artifact's ## Execution block: implement per the plan
-#   → runs /verify (does it actually work?) and /code-review (is it clean?)
-#   → commits per config.md → Commit Format
-```
-
-Prefer a lighter touch? `/task:to-task` skips the Plan — good for a quick capture you'll flesh out with `/task:to-plan` later, or hand straight to implementation when the fix is obvious.
-
-> [!TIP]
-> More scenarios — roadmap-driven initiatives, `/task:roadmap-to-workflow`, and returning to a task later — live in **[docs/usage.md](docs/usage.md)**.
-
 ## Comparison with alternatives
 
 Three references: default Claude Code (plan mode + TodoWrite), [obra/superpowers](https://github.com/obra/superpowers), [Fission-AI/OpenSpec](https://github.com/Fission-AI/OpenSpec).
+
+The two contrasts that matter most — where the plan lives, and when a task is too small to bother — are surfaced up top (the `/clear`-durable file, and "a two-file, twenty-minute fix doesn't need this"). The full breakdown is in the collapsed blocks below.
 
 <details>
 <summary><strong>vs default Claude Code</strong></summary>
@@ -190,6 +183,22 @@ All of this lives in `.task/config/config.md`, written inline on first use of a 
 - **Idempotency** — `config.md` is regenerated in full whenever setup runs again. After an interruption, implementation picks up from `.task/task/<slug>.md` as it stands.
 
 ## How it works
+
+```text
+discuss freely in chat
+  ↓
+/task:to-task            capture what and why — no plan
+/task:to-plan             …  + a Plan (Goal/Touches/Logic steps)
+/task:to-roadmap          … a whole multi-task initiative
+/task:to-spec             … pin technical decisions (tasks/roadmaps cite via Spec:)
+  ↓                                          ↓
+implement it now,                /task:roadmap-to-workflow
+in a fresh session:                fans unchecked items out to
+"implement .task/task/<slug>.md"   a dynamic Workflow, one per item
+  → /verify → /code-review → commit
+```
+
+Depth of capture is the skill you pick, not a flag: `to-task` for a quick "what and why", `to-plan` when you already know the approach, `to-roadmap` for a multi-task initiative. `to-spec` is orthogonal — it pins load-bearing technical decisions into `.task/spec/<slug>.md`, which tasks and roadmaps reference via a `Spec:` header and the implementing session honors as a fixed anchor. There is no execution skill — capture ends with a copy-pasteable path, and any session (the same one, a fresh one, or one spawned by `roadmap-to-workflow`) executes the artifact directly.
 
 The pipeline is built on a small set of invariants; the full contract lives in [`docs/contract.md`](docs/contract.md).
 
