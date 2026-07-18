@@ -4,6 +4,33 @@ All notable changes to this project are documented here. Format — [Keep a Chan
 
 This file is maintained in **English** — see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-policy).
 
+## [3.0.0] — 2026-07-18
+
+Chat-first rewrite. The pipeline is no longer an orchestration engine with phases, locks, and a hook gate — it is a small set of capture skills. Discuss freely in chat, then fix the discussion into a fixed-format Markdown artifact under `.task/` with one short skill; capture depth is the skill name, never a flag. There is no execution skill — every artifact carries a stamped `## Execution` block that an ordinary session follows to implement, verify, review, and commit. This replaces the entire v1/v2 surface and is breaking with no automatic migration. See **Migration**.
+
+### Added
+- **Capture skills** — `to-task` (captures `## Description`), `to-plan` (adds `## Plan`: Goal / Touches / Logic steps), `to-roadmap` (a multi-task initiative), and `to-spec` (a standalone load-bearing technical decision under `.task/spec/<slug>.md`, referenced by tasks/roadmaps via a `Spec:` header). Depth of capture is the skill, not a flag.
+- **`roadmap-to-workflow` launcher** — authors and invokes a dynamic Workflow over a roadmap's unchecked items in dependency-ordered waves, opus-plans / sonnet-implements per item by default. The driver ticks each roadmap checkbox after its agent returns OK (never inside the per-item agent).
+- **Stamped `## Execution` block** — every artifact carries an English, parser-stable Execution block that a plain session told `implement .task/task/<slug>.md` follows: implement the plan, run `/verify` + `/code-review`, apply review fixes within **Touches**, commit per `config.md` → Commit Format, and tick the roadmap item when `Roadmap:` / `Source item:` are present.
+- **Single artifact contract** — [`docs/contract.md`](docs/contract.md) documents the full artifact shapes, producer/consumer table, and bash-layer contract in one place.
+
+### Changed (breaking)
+- **Flat `.task/` layout** — `.task/config/config.md`, `.task/task/<slug>.md`, `.task/roadmap/<slug>.md`, `.task/spec/<slug>.md`. No `<task-id>/` subfolders, no `workspace/`, no `log/`, no archive — git history is the record. The **slug** (kebab-case, derived from the title) is the identity; task-ids and `[TASK-ID]` brackets are gone.
+- **Bash layer shrunk** — `resolve-ws.sh` is now a pure `.task/`-root finder (no workspace resolution, no pointer read/write/self-heal). Only `validate.sh` and `roadmap.sh` remain alongside it.
+- **Orchestration delegated to the platform** — verification, review, and per-item fan-out use `/verify`, `/code-review`, and dynamic Workflows instead of hand-rolled skill logic.
+
+### Removed (breaking)
+- **Skills** — `bootstrap`, `design`, `build`, `ship`, `roadmap`, and `auto-roadmap` are removed, along with all phase companion files and the nine audit/runner subagents.
+- **Bash machinery** — the lock protocol (`auto-locks.sh`), phase detection (`phase-detect.sh`), fail-log (`fail-log.sh`), touches-gate (`touches-gate.sh`), `derive-task-id.sh`, `preamble.sh`, and the auto-roadmap helpers are all gone.
+- **Layout markers** — the active-task pointer, `TASK_ID_OVERRIDE`, per-worktree pointer files, and the roadmap `.spec.md` sidecar are removed. Pipeline markers are exactly `git config task.root` plus the `.task` exclude entry.
+- **`docs/spec/*`** — replaced by the single `docs/contract.md`.
+
+### Migration
+- No automatic migration from a v1/v2 `.task/` workspace — this is a clean cut. Start fresh: discuss in chat, then run `to-task` / `to-plan` / `to-roadmap` / `to-spec`.
+- Replace `/task:design` + `/task:build` + `/task:ship` with: capture via `to-task` / `to-plan`, then tell a session `implement .task/task/<slug>.md` and let it follow the stamped `## Execution` block.
+- Replace `/task:auto-roadmap` with `roadmap-to-workflow` over a `.task/roadmap/<slug>.md`.
+- Replace `/task:bootstrap` — the four capture skills auto-run setup inline in a fresh project.
+
 ## [2.0.0] — 2026-07-13
 
 Interactive-first release. The pipeline now carries a task through each phase with structured questions, so a single bare command replaces most flag fiddling; the advanced flags stay fully functional but move off the everyday surface into a documented "Escape hatches" registry. This release also removes several redundant flags/modes and reworks the multi-worktree `.task/` model — both are breaking. See **Migration**.

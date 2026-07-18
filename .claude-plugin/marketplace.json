@@ -1,6 +1,6 @@
 {
   "name": "task-pipeline",
-  "description": "Linear task workflow as a Claude Code plugin (design → build → ship).",
+  "description": "Chat-first task workflow as a Claude Code plugin (capture in chat, then implement the artifact directly).",
   "owner": {
     "name": "Ilya Prymshyts (SpaiR)",
     "email": "klimbetoo@gmail.com"
@@ -9,11 +9,11 @@
     {
       "name": "task",
       "source": "./",
-      "description": "Linear task workflow with explicit checkpoints (design → build → ship), plus the /task:auto-roadmap autopilot. 7 skills (3 orchestrators + bootstrap + 2 off-cycle + validate) + 9 subagents (3 read-only build-audit lenses + 3 read-only roadmap-refine lenses + 3 auto-roadmap runners — an item-runner running the whole per-item cycle plus its design and build halves, the build half spawned with per-item model override from plan.md → Implement-Model).",
+      "description": "Capture a chat discussion into a fixed-format Markdown task artifact, then implement it directly.",
       "homepage": "https://github.com/SpaiR/task-pipeline",
       "repository": "https://github.com/SpaiR/task-pipeline",
       "license": "MIT",
-      "keywords": ["workflow", "task", "pipeline", "audit", "subagents"]
+      "keywords": ["workflow", "task", "pipeline"]
     }
   ]
 }

@@ -1,24 +1,24 @@
 ---
 name: validate
-description: Validate the format of task-pipeline artifacts (task.md, plan.md, .task/roadmap/*.md). Internal utility — invoked from context scripts and the PreToolUse hook; not user-invocable.
+description: Validate the format of task-pipeline artifacts (.task/task/<slug>.md, .task/roadmap/*.md, .task/spec/*.md). Internal utility — an optional self-check the intake skills run at Step 0; not user-invocable.
 disable-model-invocation: true
 user-invocable: false
 model: inherit
 ---
 
-Validate the format of task-pipeline artifacts. This skill is a thin wrapper around `validate.sh` — it produces a structured pass/fail report so the pipeline can fail closed on malformed artifacts before a downstream skill (`/task:design`, `/task:build`, `/task:ship`) parses them and silently misbehaves. **Not user-invocable**: the bash script is dispatched directly from context scripts and the plugin's PreToolUse hook.
+Validate the format of task-pipeline artifacts. This skill is a thin wrapper around `validate.sh` — it produces a structured pass/fail report so a skill can catch a malformed artifact before it is parsed downstream. **Not user-invocable**: the bash script is dispatched directly by the intake skills. In v3 this is an **optional self-check, not a gate** — there is no PreToolUse hook; a WARN/ERROR is reported, and only a genuinely absent `.task/config/config.md` hard-stops (the setup case the intake skills handle inline).
 
-**Input (when invoked manually via bash):** one of: `task [<task-id>]`, `plan [<task-id>]`, `roadmap <path|slug>`, `all`. For `task` / `plan` the workspace subfolder is resolved through `_lib/resolve-ws.sh` (priority: `$TASK_ID_OVERRIDE` > positional > `.task-current`); `all` tolerates a missing `.task-current` and skips workspace validation in that case.
+**Input (when invoked manually via bash):** one of: `task <slug>`, `roadmap <slug|path>`, `spec <slug>`, `all`. `task <slug>` validates `.task/task/<slug>.md`; `all` validates every `.task/task/*.md`, every `.task/roadmap/*.md`, and every `.task/spec/*.md`, tolerating an empty `.task/task/`.
 
-**Preconditions, tool tier, language:** see [docs/spec/invariants.md](../../docs/spec/invariants.md#tier-a--no-code-navigation) — bash gate in `validate.sh` itself is authoritative (the script enforces the `.task/config/config.md` precondition and exits 2 on miss). Internal utility — not user-invocable; the language pointer is informational only (validator output is fixed English by design, parser-stable).
+**Format contract, preconditions:** see [docs/contract.md](../../docs/contract.md) — the bash gate in `validate.sh` itself is authoritative (the script enforces the `.task/config/config.md` precondition and exits 2 on miss). Validator output is fixed English by design, parser-stable.
 
 ## What gets validated
 
-| Artifact | Checks |
-|----------|--------|
-| `.task/workspace/<task-id>/task.md` | line 1 matches `# [task-id] <title>`; `---` separator present; `## Description` heading present |
-| `.task/workspace/<task-id>/plan.md` | line 1 matches `# Plan: <title>`; `## Steps` present with ≥1 `### Step N:` block; each step has non-empty `Goal:` and `Touches:`; `Touches` contains no `...` placeholder; `## Verification` present; if `## Tests` is present, ≥1 `### Test N:` block must exist (`## Risks` is optional and not validated) |
-| `.task/roadmap/<slug>.md` | ≥1 `### N. <title>` heading (with optional `- [ ]`/`- [x]` checkbox); each task block has `**Ready description:**` and the English sub-headings `### Context`, `### Goal`, `### Outcomes`, `### Acceptance criteria` (mandatory contract with `/task:design --from`) |
+Per-subcommand checks: see docs/contract.md §validate.sh.
+
+The pipeline's only cross-file check is advisory: `task` and `roadmap` validation emit a **WARN** (never an ERROR) for any `Spec: <slug>` header that does not resolve to an existing `.task/spec/<slug>.md` (a dangling reference). Everything else is a single-file format check.
+
+The slug is the identifier and the filename — there is no task-id, no workspace subfolder, and no active-task pointer to resolve. There is no `plan` subcommand (the plan lives inside `task.md` under `## Plan`) and no `Implement-Model:` check (the per-item model hint lives on roadmap items, not in `task.md`).
 
 ## How the script is invoked
 
@@ -36,11 +36,7 @@ Exit codes:
 
 ## How other skills use the validator
 
-Context scripts (`audit-context.sh`, `commit-context.sh`) and `close.sh` invoke `validate.sh` directly as a precondition gate after the `config.md` check. A failure aborts the script with a non-zero exit code, which stops the calling skill before it parses an invalid artifact. Orchestrator skills (`/task:design`, `/task:build`) call the validator inline at Step 0.
-
-## PreToolUse hook (shipped with the plugin)
-
-The plugin includes a PreToolUse hook (`hooks/hooks.json`) that runs `validate.sh all` before any `Skill(task:design|build|ship|auto-roadmap)` invocation. The hook tolerates the absence of `.task-current` (so it does not block `/task:bootstrap` or design's open phase or `/task:auto-roadmap` from running before an umbrella exists). This turns the in-skill checks into runtime-enforced gates that survive prompt injection and accidental skill-prompt edits. The hook activates automatically with the plugin.
+The intake skills (`/task:to-task`, `/task:to-plan`, `/task:to-roadmap`) call `validate.sh all` at their Step 0 as an optional self-check after the config precondition: a WARN/ERROR is surfaced alongside the rest of the output, but only the config-absent case hard-stops (and that triggers the inline setup, not an abort). There is no execution skill (`build`/`ship` were removed in v3) and no hook — an executing session or `roadmap-to-workflow` simply reads the artifact directly.
 
 ## Output
 
