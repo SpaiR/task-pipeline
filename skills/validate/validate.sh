@@ -286,7 +286,12 @@ case "$cmd" in
       echo "ERROR usage: 'validate.sh task <slug>' requires a slug argument." >&2
       exit 2
     fi
-    validate_task "$(resolve_artifact_path task "$1")"
+    task_path=$(resolve_artifact_path task "$1")
+    if [[ -z "$task_path" ]]; then
+      err "task($1)" "file not found (looked at $1, $AI_DIR/task/$1(.md))"
+    else
+      validate_task "$task_path"
+    fi
     ;;
   roadmap)
     require_config
