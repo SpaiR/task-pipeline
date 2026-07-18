@@ -29,7 +29,7 @@ Check whether `.task/config/config.md` exists — resolve the pipeline root via 
      - **Edit** → follow-up asks which field(s) to amend (language policy / testing-policy mode / bare-repo `.task` location), same option menus as the language/testing-policy questions below, then continue.
      - **Decline** → do not write anything; report "`config.md` not written — run `/task:to-task` again when ready" and **stop**.
   4. Write `.task/config/config.md` using the standard template — sections: Code Navigation, Code Editing, Library Documentation, Project Conventions, Build and Tests, Commit Format, Language, Testing Policy, Directories — Do Not Search. Reference mode (a short `**Source:** \`CLAUDE.md\` → \`## <Heading>\`` pointer, ≤3 summary lines) when `CLAUDE.md` already documents a section; full mode otherwise. Commit Format: reference mode with just `**Source:** <path>` when a commit-format doc was found, else derive rules from `git log`.
-  5. Record `git config --local task.root "$ROOT"` (repo-common; shared by every worktree).
+  5. Record `git config --local task.root "$ROOT"` (repo-common; shared by every worktree). Skip with a warning if not a git repo — the ancestor-`config.md` walk resolves `.task/` without the anchor.
   6. Exclude `.task` locally: `EXCLUDE=$(git rev-parse --git-path info/exclude); mkdir -p "$(dirname "$EXCLUDE")"; touch "$EXCLUDE"; grep -qxF '.task' "$EXCLUDE" || echo '.task' >> "$EXCLUDE"`. Skip with a warning if not a git repo.
   7. Report what was written, then continue to Step 0's validate call below with the original `$ARGUMENTS` unchanged.
 - **Present → skip silently**, proceed to validate.
@@ -42,7 +42,8 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
 
 1. **Positional roadmap reference** (`<slug>` or `<slug>#<N>`, matching an existing `.task/roadmap/<slug>.md`) → **from-roadmap mode**, Step 1a below.
 2. **No positional roadmap reference, and one or more `.task/roadmap/*.md` files have an unchecked (`- [ ]`) item, and there is no chat discussion to draft from** → present an `AskUserQuestion` fork (convention (c)): "How do you want to start this task?" — **Draft from this chat** / **Open from a roadmap**. The latter opens a second `AskUserQuestion` listing the roadmap slugs, then proceeds as from-roadmap mode with the chosen slug.
-3. **Otherwise** (there is chat discussion to draft from, with or without extra free-form `$ARGUMENTS` context) → **chat-draft mode**, Step 2 below.
+3. **There is chat discussion to draft from** (with or without extra free-form `$ARGUMENTS` context) → **chat-draft mode**, Step 2 below.
+4. **Nothing to draft from** (no chat discussion, no unchecked roadmap item, and empty `$ARGUMENTS`) → **stop** and ask the user what to capture rather than drafting a Description from nothing.
 
 ### Step 1a: From-roadmap mode
 
