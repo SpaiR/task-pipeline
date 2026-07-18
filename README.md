@@ -87,9 +87,9 @@ The pipeline ships as a Claude Code plugin (`task`) inside the `task-pipeline` m
 
 From then on, updates are a single command: `/plugin marketplace update task-pipeline`.
 
-After installation, Claude Code gains the commands `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, `/task:to-spec`, `/task:roadmap-to-workflow`. There is no hook — enforcement is by convention, not a gate.
+After installation, Claude Code gains the commands `/task:grill`, `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, `/task:to-spec`, `/task:roadmap-to-workflow`. There is no hook — enforcement is by convention, not a gate.
 
-In a new project you don't have to run setup by hand first: the first `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, or `/task:to-spec` in an unconfigured project detects language and test policy, presents both for one confirmation, writes `.task/config/config.md`, and continues with the requested capture. `/task:roadmap-to-workflow` presupposes an existing roadmap, so a fresh-project first-use of it hard-stops with a redirect to run a capture skill first.
+In a new project you don't have to run setup by hand first: the first `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, or `/task:to-spec` in an unconfigured project detects language and test policy, presents both for one confirmation, writes `.task/config/config.md`, and continues with the requested capture. `/task:grill` needs no config at all — it writes nothing and can run at the discussion stage before any capture exists. `/task:roadmap-to-workflow` presupposes an existing roadmap, so a fresh-project first-use of it hard-stops with a redirect to run a capture skill first.
 
 <details>
 <summary>Local development</summary>
@@ -115,6 +115,7 @@ Each capture produces exactly one `.task/task/<slug>.md`, where `<slug>` is both
 
 | Command | In brief |
 |--------|--------|
+| `/task:grill [<context>]` | Pre-capture interrogation: stress-tests a plan/decision one question at a time, keeps a decision-plus-rationale ledger, ends with a pre-mortem, then routes to the right capture skill. Writes nothing and touches nothing under `.task/` — grill *before* you capture, so `to-spec`/`to-plan`/`to-task`/`to-roadmap` serialize something already examined. Needs no config; runs before any capture exists. |
 | `/task:to-task [<context>]` | Fixes the chat discussion (or a roadmap item) into `.task/task/<slug>.md` — Description only, no Plan. Lightest of the three capture skills; use it to record the "what and why" before diving in directly, or before `to-plan` later. |
 | `/task:to-plan [<context>]` | Fixes the chat discussion (or a roadmap item) into `.task/task/<slug>.md` with **`## Description` + `## Plan`** (Goal/Touches/Logic steps) and, when the testing policy calls for it, `## Tests`. Deepest one-task capture — hand straight to implementation. Re-running it on a `to-task`-only file adds the Plan in place. |
 | `/task:to-roadmap <idea>` | Fixes a multi-task initiative discussed in chat into `.task/roadmap/<slug>.md` — a phase-grouped backlog of ready-to-pick-up items, each with optional `**Dependencies:**` and `**Model:**` hints, referencing standalone specs via `Spec:` headers where a load-bearing technical decision applies. Closes with a report-only self-check; findings are surfaced, never silently rewritten into the file. |
@@ -187,6 +188,8 @@ All of this lives in `.task/config/config.md`, written inline on first use of a 
 ```text
 discuss freely in chat
   ↓
+/task:grill              grill before you capture — interrogate the decision, no artifact
+  ↓
 /task:to-task            capture what and why — no plan
 /task:to-plan             …  + a Plan (Goal/Touches/Logic steps)
 /task:to-roadmap          … a whole multi-task initiative
@@ -197,6 +200,8 @@ in a fresh session:                fans unchecked items out to
 "implement .task/task/<slug>.md"   a dynamic Workflow, one per item
   → /verify → /code-review → commit
 ```
+
+`/task:grill` is the optional pre-capture step: point it at a plan or decision and it interrogates one question at a time, keeps a decision-plus-rationale ledger, ends with a pre-mortem, and routes you to the right capture skill — writing nothing itself. Grill *before* you capture, so the artifact serializes a decision that has already been pressure-tested.
 
 Depth of capture is the skill you pick, not a flag: `to-task` for a quick "what and why", `to-plan` when you already know the approach, `to-roadmap` for a multi-task initiative. `to-spec` is orthogonal — it pins load-bearing technical decisions into `.task/spec/<slug>.md`, which tasks and roadmaps reference via a `Spec:` header and the implementing session honors as a fixed anchor. There is no execution skill — capture ends with a copy-pasteable path, and any session (the same one, a fresh one, or one spawned by `roadmap-to-workflow`) executes the artifact directly.
 
