@@ -157,6 +157,7 @@ Field labels and blockquote sub-headings (`### Context` / `### Goal` / `### Outc
 
 Load-bearing item fields for `roadmap-to-workflow`:
 
+- **Checkbox state** — the item heading's checkbox is a **5-state** class, `[ x~>-]`. `[ ]` is unchecked (eligible to run); `[x]` / `[~]` / `[>]` / `[-]` all count as **already-marked / not-eligible** — for progress counting (`roadmap.sh:roadmap_progress_counts`), the driver's auto-mark, and wave dependency-satisfaction. Do **not** narrow it to `[ x]` only: `roadmap.sh`, `validate.sh`, and the wave sorter all key on the full class.
 - **`**Dependencies:**`** — `—` (none) or a comma-separated list of item numbers. The driver **topologically sorts** items into dependency-ordered **waves**: items in the same wave have no unmet dependency and run in parallel; a barrier separates waves.
 - **`**Model:**`** — optional per-item hint (`haiku` / `sonnet` / `opus`). The driver passes it as `opts.model` to the per-item implement agent. It is **not** validated — a missing or off-list value simply means no hint (defaults apply).
 
@@ -243,7 +244,7 @@ Keeps the `config.md` precondition and English parser-stable strings. **No hook 
 
 | Script | Role |
 |--------|------|
-| `roadmap.sh` | artifact-path + roadmap parsing helpers (`resolve_artifact_path` and its `resolve_roadmap_path` wrapper, `roadmap_progress_counts`), used by `roadmap-to-workflow` and `validate.sh`. The driver's per-item checkbox flip is inline `sed`/`awk`, **not** a helper here. |
+| `roadmap.sh` | artifact-path + roadmap parsing helpers (`resolve_artifact_path`, `roadmap_progress_counts`), used by `roadmap-to-workflow` and `validate.sh`. The driver's per-item checkbox flip is inline `awk`, **not** a helper here. |
 | `templates/conventional-commits.md` | commit-format fallback for the executing session |
 
 ### Removed in v3 (already deleted)

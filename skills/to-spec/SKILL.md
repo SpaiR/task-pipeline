@@ -22,8 +22,9 @@ Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`.
 
 ### Preconditions
 
-- **Slug collision (soft).** Create `.task/spec/` if missing. If a file at the proposed slug already exists → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). Never silently overwrite.
 - **No real decision to pin.** If the discussion settled no load-bearing technical decision — only behavioral outcomes, or details local to one task → **stop and suggest** `/task:to-task` or `/task:to-plan` instead.
+
+(The slug-collision check runs at save time, once the slug is derived — see Step 4.)
 
 ### Step 1: Load context
 
@@ -111,14 +112,15 @@ Keep one decision per section. Before saving, a quick self-check, fixed inline:
 Write the file directly — no in-chat preview, no confirmation prompt (the Decision Inventory in Step 2 already confirmed the content).
 
 1. Slug: kebab-case from the decision-area topic, ≤ 50 chars (e.g. `event-envelope`, `auth-token-model`). Its own identity — independent of any roadmap.
-2. Write `.task/spec/<slug>.md` with the full content.
-3. Do not modify any other file — wiring a `Spec:` header into a task or roadmap is the job of `to-task` / `to-plan` / `to-roadmap` when they reference this spec.
+2. **Slug collision (soft).** Create `.task/spec/` if missing. If `.task/spec/<slug>.md` already exists → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). Never silently overwrite.
+3. Write `.task/spec/<slug>.md` with the full content.
+4. Do not modify any other file — wiring a `Spec:` header into a task or roadmap is the job of `to-task` / `to-plan` / `to-roadmap` when they reference this spec.
 
 ### Step 5: Output
 
 - Print the path to the created file.
 - One-line summary: "*N* decisions pinned."
-- End with the canonical next-step footer (convention (a), flag-free): `→ Next: reference it from a task or roadmap — e.g. `/task:to-plan` an item that relies on it, or add a `Spec: <slug>` header to an existing `.task/roadmap/<slug>.md`.`
+- End with the canonical next-step footer (convention (a), flag-free): `→ Next: \`/task:to-plan\` a task that relies on this spec — or add a \`Spec: <slug>\` header to an existing roadmap or task.`
 
 ## Forbidden
 

@@ -163,12 +163,12 @@ validate_spec() {
 }
 
 # ---------------- roadmap file ----------------
-# Resolution order is implemented in `_lib/roadmap.sh:resolve_roadmap_path`.
+# Resolution order is implemented in `_lib/roadmap.sh:resolve_artifact_path`.
 
 validate_roadmap() {
   local raw="$1"
   local file
-  file=$(resolve_roadmap_path "$raw")
+  file=$(resolve_artifact_path roadmap "$raw")
   if [[ -z "$file" ]]; then
     err "roadmap($raw)" "file not found (looked at $raw, $AI_DIR/roadmap/$raw(.md))"
     return
@@ -187,9 +187,9 @@ validate_roadmap() {
     return
   fi
 
-  # Item numbers are the driver's auto-mark key — markRoadmapItemDone(slug, n)
-  # flips the checkbox keyed on N, so a duplicate N would tick two items on a
-  # single mark. Flag any number that appears on more than one item heading.
+  # Item numbers are the driver's auto-mark key — the driver's inline awk flip
+  # keys on N, so a duplicate N would tick two items on a single mark. Flag any
+  # number that appears on more than one item heading.
   local dup
   dup=$(awk '
     match($0, /^### - \[[ x~>-]\] [0-9]+\./) {
@@ -286,7 +286,12 @@ case "$cmd" in
       echo "ERROR usage: 'validate.sh task <slug>' requires a slug argument." >&2
       exit 2
     fi
-    validate_task "$(resolve_artifact_path task "$1")"
+    task_path=$(resolve_artifact_path task "$1")
+    if [[ -z "$task_path" ]]; then
+      err "task($1)" "file not found (looked at $1, $AI_DIR/task/$1(.md))"
+    else
+      validate_task "$task_path"
+    fi
     ;;
   roadmap)
     require_config

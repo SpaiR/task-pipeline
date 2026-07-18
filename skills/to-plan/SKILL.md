@@ -39,7 +39,7 @@ Once a target reference is resolved (1–3), branch on whether the file exists:
 - **Target file exists, no `## Plan` heading present** → **promote mode.** This is the flag-free way to turn a `to-task` capture into a plan: skip Step 2 entirely — header and `## Description` already exist and are untouched. Go straight to Step 3 using the existing Description as context, then in Step 8 **insert** `## Plan` (and `## Tests`) rather than create.
 - **Target file exists, `## Plan` already present** → **revise mode.** `to-plan` was already run on this file. Skip Step 2, go straight to Step 3 using the existing Description (and the current chat) as context, then in Step 8 **replace** the existing `## Plan` (and `## Tests` only if the user's edit touches it) rather than create or blindly append a duplicate section.
 
-No target at all (case 4): if one or more `.task/roadmap/*.md` files have an unchecked (`- [ ]`) item **and** there is no chat discussion to draft from, present an `AskUserQuestion` fork (convention (c)): "How do you want to start this task?" — **Draft from this chat** / **Open from a roadmap**. The latter opens a second `AskUserQuestion` listing the roadmap slugs, then proceeds as Step 2a with the chosen slug. Otherwise (chat discussion exists to draft from) proceed as Step 2b.
+No target at all (case 4): if one or more `.task/roadmap/*.md` files have an unchecked (`- [ ]`) item **and** there is no chat discussion to draft from, present an `AskUserQuestion` fork (convention (c)): "How do you want to start this task?" — **Draft from this chat** / **Open from a roadmap**. The latter opens a second `AskUserQuestion` listing the roadmap slugs, then proceeds as Step 2a with the chosen slug. If there **is** chat discussion to draft from, proceed as Step 2b. If there is neither a chat discussion nor any unchecked roadmap item to draw on (nothing to capture), **stop** and ask the user what to capture rather than drafting from nothing.
 
 ## Step 2: Fresh capture — Title and Description
 
@@ -163,7 +163,7 @@ Then pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline**:
 
 - **Accept** → proceed to Step 8 as drafted.
 - **Edit** → follow-up asks what to change, apply it, re-show, repeat until accepted.
-- **Decline** → write nothing, stop with "`task.md` not written" (promote/revise: "no changes made to `task.md`").
+- **Decline** → write nothing, stop with "`task.md` not written — re-run `/task:to-plan` when you want to capture it" (promote/revise: "no changes made to `task.md`").
 
 ## Step 8: Write
 
