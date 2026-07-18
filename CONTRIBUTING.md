@@ -238,11 +238,7 @@ As of `1.0.0` the artifact contract and the slash-command surface are stable, so
 
 ### How to cut a release
 
-A release lands as two commits on `main`, in this exact order. This mirrors [`CLAUDE.md`](CLAUDE.md) § "Release procedure", which is the canonical step list:
-
-1. **Release commit** — in a single commit: bump `"version"` in `.claude-plugin/plugin.json` **and** rename the working `## [Unreleased]` heading in `CHANGELOG.md` to `## [X.Y.Z] — YYYY-MM-DD` (do not leave a fresh empty `## [Unreleased]` above it). For breaking changes, add a `## Migration` block to the entry. Commit message: `chore(changelog): release vX.Y.Z`.
-2. **Version sentinel commit** — `git commit --allow-empty -m "vX.Y.Z"`.
-3. **Tag** the sentinel: `git tag vX.Y.Z`. After confirmation, push with `git push origin main && git push origin vX.Y.Z`.
+A release lands as two commits on `main` (release commit + version sentinel), then the tag. The canonical step list lives in [`CLAUDE.md`](CLAUDE.md) § "Release procedure" — follow it exactly.
 
 ### When to update `CHANGELOG.md`
 

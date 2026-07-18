@@ -67,6 +67,6 @@ Source of truth: [`CONTRIBUTING.md`](CONTRIBUTING.md#pull-request-title). When o
 
 Triggered only when the user explicitly requests a release. Execute in this exact order — do not reorder or merge steps:
 
-1. **Release commit** — rename `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] — YYYY-MM-DD` and bump `"version"` in `.claude-plugin/plugin.json` to match, in one commit: `chore(changelog): release vX.Y.Z`.
+1. **Release commit** — rename `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] — YYYY-MM-DD` (do not leave a fresh empty `## [Unreleased]` above it; for breaking changes, add a `## Migration` block to the entry) and bump `"version"` in `.claude-plugin/plugin.json` to match, in one commit: `chore(changelog): release vX.Y.Z`.
 2. **Version sentinel commit** — `git commit --allow-empty -m "vX.Y.Z"`.
-3. **Tag** — `git tag vX.Y.Z` on the sentinel commit. Then confirm with the user before running `git push --tags`.
+3. **Tag** — `git tag vX.Y.Z` on the sentinel commit. Then confirm with the user before running `git push origin main && git push origin vX.Y.Z` (the tag alone doesn't push the commits).
