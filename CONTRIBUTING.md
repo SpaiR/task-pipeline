@@ -17,7 +17,6 @@ We use [GitHub](https://github.com/SpaiR/task-pipeline) to host code, track issu
 ```
 .claude-plugin/plugin.json       plugin manifest (name `task`, version, metadata)
 .claude-plugin/marketplace.json  catalog for the `task-pipeline` marketplace
-hooks/hooks.json                 empty — {"hooks": {}}; no PreToolUse gate in v3
 skills/                          SKILL.md per skill + shared bash helpers
   _lib/                          shared bash helpers:
                                    resolve-ws.sh (pure .task/-root finder, exports AI_DIR),
@@ -32,7 +31,7 @@ skills/                          SKILL.md per skill + shared bash helpers
                                    .task/spec/<slug>.md, referenced via `Spec:` headers
   roadmap-to-workflow/           SKILL.md — the one launcher; authors + invokes a dynamic
                                    Workflow over a roadmap's unchecked items
-  validate/                      SKILL.md + validate.sh (optional self-check; not user-invocable)
+  validate/                      validate.sh — optional self-check; bash-only utility, no SKILL.md
 CLAUDE.md                        invariants + maintainer guidance
 docs/
   contract.md                    the authoritative artifact contract — flat .task/ layout,
@@ -46,7 +45,7 @@ CHANGELOG.md                     public release log (English)
 README.md                        user-facing documentation
 ```
 
-There is no `agents/` directory in v3 — `to-task` / `to-plan` / `to-roadmap` / `to-spec` / `roadmap-to-workflow` / `validate` are the only six skills, and `roadmap-to-workflow` reaches for the platform's own `agent()` / `parallel()` Workflow primitives rather than named subagents shipped by this plugin.
+There is no `agents/` directory in v3 — `grill` / `to-task` / `to-plan` / `to-roadmap` / `to-spec` / `roadmap-to-workflow` are the only six skills (`validate` is a bash-only utility, not a skill), and `roadmap-to-workflow` reaches for the platform's own `agent()` / `parallel()` Workflow primitives rather than named subagents shipped by this plugin.
 
 ## All Code Changes Happen Through Pull Requests
 

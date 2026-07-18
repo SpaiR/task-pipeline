@@ -1,6 +1,6 @@
 ---
 name: to-plan
-description: 'Fix the chat discussion into task.md with a Plan — Description plus Goal/Touches/Logic steps, ready for a fresh session to implement. The deepest one-task capture; promotes an existing task.md that has no Plan yet, in place, instead of starting over.'
+description: 'Capture the chat into `.task/task/<slug>.md` with `## Description` plus `## Plan` (Goal/Touches/Logic) — the deepest one-task capture.'
 disable-model-invocation: true
 user-invocable: true
 ---
@@ -26,7 +26,7 @@ Then run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all` as a sel
 
 ## Step 1: Resolve the target and capture mode
 
-There is **no active-task pointer** in v3 — the artifact path is the handle. Resolve a target reference, in order:
+The artifact path is the handle. Resolve a target reference, in order:
 
 1. **Explicit slug or path in `$ARGUMENTS`** matching `.task/task/<slug>.md` (existing or not) → that path is the target.
 2. **Roadmap reference in `$ARGUMENTS`** (`<roadmap-slug>` or `<roadmap-slug>#<N>`, matching an existing `.task/roadmap/<slug>.md`) → resolve the item (Step 2a's item-picking logic) and derive its target path `.task/task/<item-slug>.md` from the item title.
@@ -52,14 +52,7 @@ Only for fresh capture (skip entirely for promote/revise — see Step 1).
 3. Read the item's `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria` block. `### Context` becomes the Description's "why"; the rest folds into the "what". `### Acceptance criteria` entries are good candidates to carry into `## Tests` (Step 4) verbatim as test intents when tests are required.
 4. Note the specs this item relies on: any `### Spec references → <spec-slug> §N` in the item body, plus the roadmap's own `Spec: <slug>` header lines. Read each `.task/spec/<spec-slug>.md` now — carry them into Step 3 as pinned anchors (see Step 3's note), and hold the distinct `<spec-slug>`s for the `Spec:` headers in Step 8's write.
 5. Derive the slug: kebab-case of the item title (2–4 words). If it collides with an existing, unrelated `.task/task/<slug>.md`, disambiguate with a short qualifier (e.g. append a second distinguishing word) rather than overwriting.
-6. Hold the header lines for Step 8's write:
-   ```
-   # {Item title}
-   Roadmap: {slug}
-   Source item: #{N}
-   Spec: {spec-slug}          (one line per spec the item cites; omit if none)
-   ```
-   and the drafted `## Description` body (why from Context, what from Goal/Outcomes/Invariants/Acceptance criteria). Continue to Step 3 — do not write the file yet; the full task.md (Description + Plan + Tests) is presented once, together, in Step 7.
+6. Hold, for Step 8's write, the header lines in the shape Step 8 writes — `# {Item title}` plus `Roadmap:` / `Source item:` and a `Spec:` line per cited spec — and the drafted `## Description` body (why from Context, what from Goal/Outcomes/Invariants/Acceptance criteria). Continue to Step 3 — do not write the file yet; the full task.md (Description + Plan + Tests) is presented once, together, in Step 7.
 
 ### Step 2b: Chat-draft
 
@@ -189,18 +182,14 @@ Spec: {spec-slug}          (one line per relevant spec; omit if none)
 {drafted body, only if tests_required}
 
 ## Execution
-> If any `Spec:` headers are present, first read each referenced `.task/spec/<slug>.md`
-> as a fixed technical anchor — honor its decisions, do not re-derive them. `.task/` is
-> pipeline-internal and invisible to the repository — never reference `.task/` paths, spec /
-> roadmap / task slugs, or their `§` section numbers in code, comments, docstrings, commit
-> messages, or PR text; treat spec decisions as your own. Then implement
-> the plan above (or the Description if there is no Plan), reading and editing code with the
-> tools in `.task/config/config.md` → Code Navigation / Code Editing (MCP tools first,
-> built-ins as fallback). Then run the `/verify` skill end-to-end and `/code-review` on the
-> diff; apply review fixes ONLY within the files named in **Touches** (report the rest). If
-> there is no `## Plan`, and so no **Touches**, scope review fixes to the files you changed
-> for the Description. Commit per `.task/config/config.md` → Commit Format. If `Roadmap:` +
-> `Source item:` headers are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
+> If `Spec:` headers are present, read each `.task/spec/<slug>.md` first and honor its
+> decisions as fixed. `.task/` is pipeline-internal and invisible to the repo: never name
+> `.task/` paths, spec/roadmap/task slugs, or `§` numbers in code, comments, commits, or PR
+> text. Implement the Plan above (or the Description if none) with the tools in
+> `.task/config/config.md` → Code Navigation / Code Editing. Run `/verify` end-to-end and
+> `/code-review`, applying fixes ONLY within **Touches** (report the rest); with no `## Plan`,
+> scope fixes to what you changed. Commit per `.task/config/config.md` → Commit Format. If
+> `Roadmap:` + `Source item:` are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
 ```
 
 **Promote:** edit the existing `.task/task/<slug>.md` in place — insert the new `## Plan` block (and `## Tests`, if added) between `## Description`'s content and the existing `## Execution` block (a `to-task`-written file has no `## Tests`, so `## Plan` (+ new `## Tests`) is always inserted directly before `## Execution`). Do not touch the header, the `---` separator, `## Description`, or `## Execution` itself.
@@ -215,10 +204,8 @@ Report the path to the written `task.md`, the mode used (fresh / promote / revis
 
 ## Forbidden
 
-- Stamp an `Implement-Model:` field, or emit `## Verification` / `## Risks` sections — none of that exists in v3's `task.md` format.
 - Overwrite or paraphrase-away an existing `## Description` in promote or revise mode — only `## Plan` (and, narrowly, `## Tests`) are in scope for those modes.
 - Pick a new slug / target path in promote or revise mode — the existing file resolved in Step 1 is reused as-is.
-- Scan the codebase beyond what Step 3 needs to name real `Touches` paths — this is planning depth, not a full implementation read.
 - Modify the source roadmap file or any referenced `.task/spec/<slug>.md` — all are read-only from here; checkbox auto-marking is the executing session's (or, for a roadmap run, the driver's) job, and specs are authored only by `to-spec`.
 - Invent or resolve an active-task pointer — none exists in v3; the target file is resolved per Step 1 every run.
 - Leave `## Plan` present with zero `### Step N:` blocks, or `## Tests` present with zero `### Test N:` blocks — both fail `validate.sh`.

@@ -208,7 +208,7 @@ Depth of capture is the skill you pick, not a flag: `to-task` for a quick "what 
 The pipeline is built on a small set of invariants; the full contract lives in [`docs/contract.md`](docs/contract.md).
 
 - **Artifacts.** `.task/` is flat — one file per task under `.task/task/<slug>.md`, one file per initiative under `.task/roadmap/<slug>.md`, one file per spec under `.task/spec/<slug>.md`. No workspace subfolders, no log, no archive, no active-task pointer — the artifact's path is the only handle there is. Full producer/consumer table: [docs/contract.md](docs/contract.md).
-- **No hook gate.** `hooks/hooks.json` ships empty (`{"hooks": {}}`). Enforcement is by convention: `validate.sh` is available as an optional self-check, never wired to a PreToolUse matcher.
+- **No hook gate.** There is no `hooks/hooks.json` — the plugin ships no hook at all. Enforcement is by convention: `validate.sh` is available as an optional self-check, never wired to a PreToolUse matcher.
 - **Parallel worktrees.** All worktrees of a repo share one `.task/` automatically — its location is recorded in `git config task.root` on first setup, so nested, sibling, and bare-repo worktrees resolve it with zero setup (no symlink, no join step). This is what lets `/task:roadmap-to-workflow` fan items out to isolated worktrees that still share one `.task/`.
 
 ## Contributing

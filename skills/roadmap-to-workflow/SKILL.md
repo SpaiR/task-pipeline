@@ -1,6 +1,6 @@
 ---
 name: roadmap-to-workflow
-description: 'Fan an approved `.task/roadmap/<slug>.md` out to a dynamic Workflow — one isolated worktree per unchecked item, dependency-ordered waves, per-item model control. A thin wrapper: this skill authors and invokes the Workflow tool, it does not hand-loop items itself.'
+description: 'Fan an approved `.task/roadmap/<slug>.md` out to a dynamic Workflow — one isolated worktree per item, dependency-ordered waves.'
 disable-model-invocation: true
 user-invocable: true
 ---
