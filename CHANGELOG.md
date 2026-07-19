@@ -4,6 +4,13 @@ All notable changes to this project are documented here. Format — [Keep a Chan
 
 This file is maintained in **English** — see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-policy).
 
+## [3.1.1] — 2026-07-19
+
+Bugfix release. Non-breaking — no artifact-shape or layout changes.
+
+### Fixed
+- **Confirmation prints the draft first** — the model was routing all confirmation output through the `AskUserQuestion` call and skipping the draft, so users confirmed content they never saw. Convention (b) is hardened at both docs of record ([`CLAUDE.md`](CLAUDE.md), [`docs/contract.md`](docs/contract.md)) and at every capture-skill confirmation site (`grill`, `to-task`, `to-plan`, `to-roadmap`, `to-spec`) to mandate printing the full draft as visible message text first, then posing the question in the same reply; the question box and option `preview` never render the draft.
+
 ## [3.1.0] — 2026-07-19
 
 Adds a pre-capture interrogation skill and tightens the capture flow. Non-breaking — no artifact-shape or layout changes.
