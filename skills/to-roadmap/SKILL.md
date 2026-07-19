@@ -62,7 +62,7 @@ captured; confirm nothing dropped.}
 erodes trust. Omit the heading otherwise.}
 ```
 
-Then, in the same reply, pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline** — the chips don't display the inventory, so the printed block above is what the user confirms:
+Then, in the same reply, pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline**. **Gate on the call:** emit `AskUserQuestion` only after the full inventory sits printed above it in this same reply — having discussed the decisions earlier in chat does not count as printing them. The inventory is this turn's deliverable, not a between-tools status note to keep brief; the chips display none of it:
 
 - **Accept** → if open forks remain, resolve them first (a focused round as in Step 2C); then proceed to Step 3 (draft).
 - **Edit** → follow-up: the user adds/corrects a decision or moves it between locked/open, then proceed as Accept.
@@ -102,7 +102,7 @@ Always propose **2–3 decomposition options** with different phase boundaries (
 - **Behavioral decisions** — observable properties the user locked in (including small details). These land in an item's `### Outcomes` / `### Acceptance criteria`.
 - **Technical anchors** — load-bearing technical decisions (a protocol, a cross-cutting data shape, a "we picked X over Y because…" whose reasoning wouldn't survive re-derivation). These belong in a standalone spec, never in item bodies — route at draft time (Step 3).
 
-Before drafting, reprint the full list (behavioral + anchors) **as message text** and pose an `AskUserQuestion` (**Accept** / **Edit** / **Decline**) in the same reply to confirm — the cold-start twin of Step 2H's inventory.
+Before drafting, reprint the full list (behavioral + anchors) **as message text** and pose an `AskUserQuestion` (**Accept** / **Edit** / **Decline**) in the same reply to confirm — the cold-start twin of Step 2H's inventory. **Gate on the call:** emit `AskUserQuestion` only after the full list sits printed above it in this same reply — the rounds just played do not count as printing it; the chips render none of it.
 
 Topics the user explicitly said to skip stay skipped — do not raise them again.
 

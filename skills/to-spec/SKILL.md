@@ -61,7 +61,7 @@ confirm nothing dropped or misstated.}
 {Only if part of the discussion is out of context. Omit otherwise.}
 ```
 
-Then, in the same reply, pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline** — the chips don't display the inventory, so the printed block above is what the user confirms:
+Then, in the same reply, pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline**. **Gate on the call:** emit `AskUserQuestion` only after the full inventory sits printed above it in this same reply — having discussed the decisions earlier in chat does not count as printing them. The inventory is this turn's deliverable, not a between-tools status note to keep brief; the chips display none of it:
 
 - **Accept** → if open forks remain, resolve them first; then proceed to Step 3 (draft).
 - **Edit** → follow-up: the user adds/corrects a decision or its reasoning, or moves it between locked/open, then proceed as Accept.
@@ -88,7 +88,7 @@ For a decision area with no prior discussion, work each fork with the user befor
 {One focused question on the most load-bearing fork.}
 ```
 
-Offer ≥2 options per fork (or justify why only one is viable). Iterate (`Round N`) until decisions are settled, then reprint the full list **as message text** and pose an `AskUserQuestion` (**Accept** / **Edit** / **Decline**) in the same reply to confirm — the chips don't render the list.
+Offer ≥2 options per fork (or justify why only one is viable). Iterate (`Round N`) until decisions are settled, then reprint the full list **as message text** and pose an `AskUserQuestion` (**Accept** / **Edit** / **Decline**) in the same reply to confirm. **Gate on the call:** emit `AskUserQuestion` only after the full list sits printed above it in this same reply — the rounds just played do not count as printing it; the chips render none of it.
 
 Topics the user explicitly said to skip stay skipped.
 
