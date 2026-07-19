@@ -53,7 +53,7 @@ Fold the answer into the ledger as a final decision line (the mitigation, or the
 
 ### Step 6: Confirm the ledger
 
-Print the full ledger once:
+Print the full ledger **as message text in your reply** — the whole block, once, before any tool call:
 
 ```
 ## Decision ledger
@@ -62,10 +62,10 @@ Print the full ledger once:
 2. {…}
 ```
 
-Then pose one `AskUserQuestion` (convention (b)) with chips **Accept** / **Edit** / **Decline**:
+Then, **in the same message**, pose one `AskUserQuestion` (convention (b)) with chips **Accept** / **Edit** / **Decline**. The question does not display the ledger — the printed block above is all the user sees, so it must always be there:
 
 - **Accept** → proceed to Step 7 (routing).
-- **Edit** → focused follow-up on what to add, correct, or drop; re-print the ledger; repeat until accepted.
+- **Edit** → focused follow-up on what to add, correct, or drop; re-print the full ledger as message text; repeat until accepted.
 - **Decline** → stop with `nothing captured. → Next: re-run /task:grill when you want to re-open the decision`. (Correcting a ledger line is **Edit**; a Decline ends the grill.)
 
 ### Step 7: Route to the right capture skill

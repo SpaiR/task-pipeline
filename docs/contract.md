@@ -279,7 +279,7 @@ No pointer, no self-heal, no "which task is active" resolution anywhere.
 All three are cheap and architecture-independent. Human-facing dialog only — parser-stable strings and artifact content are untouched.
 
 - **(a) Next-step footer.** Every user-facing output ends with `→ Next: <runnable command>`, or `→ Done.` when the flow is complete. Footers are flag-free; the handoff footer above is the canonical form for the `to-*` skills.
-- **(b) Confirmation grammar.** Every content-confirmation is posed via `AskUserQuestion` with **Accept** / **Edit** / **Decline** chips. Accept proceeds as drafted; Edit triggers a focused follow-up for what to change, then re-shows the content and repeats until accepted; Decline writes nothing and stops with that call site's stop message.
+- **(b) Confirmation grammar.** Every content-confirmation **first prints the full draft/ledger as visible Markdown message text** (a fenced block in the reply), then poses `AskUserQuestion` with **Accept** / **Edit** / **Decline** chips in the same message. The `AskUserQuestion` box does **not** render the draft — never rely on it or on an option's `preview` (which is for short comparisons and truncates); skipping the printed text asks the user to accept content they cannot see. Accept proceeds as drafted; Edit triggers a focused follow-up for what to change, then **re-prints the content as message text** and repeats until accepted; Decline writes nothing and stops with that call site's stop message.
 - **(c) Path forks.** Every 2–4 option path fork that can't be inferred is presented via `AskUserQuestion` chips.
 
 ### Frontmatter

@@ -41,7 +41,7 @@ On the fence, prefer harvest — a false positive costs one extra confirmation; 
 
 #### Step 2H: Harvest — Decision Inventory
 
-Comb the prior conversation and output (chat-only, never written to a file; heading skeleton English, prose in config language):
+Comb the prior conversation and print, as message text in your reply (chat-only, never written to a file; heading skeleton English, prose in config language):
 
 ```
 ## Spec — Decision Inventory
@@ -61,7 +61,7 @@ confirm nothing dropped or misstated.}
 {Only if part of the discussion is out of context. Omit otherwise.}
 ```
 
-Then pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline**:
+Then, in the same reply, pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline** — the chips don't display the inventory, so the printed block above is what the user confirms:
 
 - **Accept** → if open forks remain, resolve them first; then proceed to Step 3 (draft).
 - **Edit** → follow-up: the user adds/corrects a decision or its reasoning, or moves it between locked/open, then proceed as Accept.
@@ -88,7 +88,7 @@ For a decision area with no prior discussion, work each fork with the user befor
 {One focused question on the most load-bearing fork.}
 ```
 
-Offer ≥2 options per fork (or justify why only one is viable). Iterate (`Round N`) until decisions are settled, then reprint the full list and pose an `AskUserQuestion` (**Accept** / **Edit** / **Decline**) to confirm.
+Offer ≥2 options per fork (or justify why only one is viable). Iterate (`Round N`) until decisions are settled, then reprint the full list **as message text** and pose an `AskUserQuestion` (**Accept** / **Edit** / **Decline**) in the same reply to confirm — the chips don't render the list.
 
 Topics the user explicitly said to skip stay skipped.
 
