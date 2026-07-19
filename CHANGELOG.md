@@ -4,6 +4,13 @@ All notable changes to this project are documented here. Format — [Keep a Chan
 
 This file is maintained in **English** — see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-policy).
 
+## [3.1.2] — 2026-07-19
+
+Bugfix release. Non-breaking — no artifact-shape or layout changes.
+
+### Fixed
+- **Confirmation gate hardened further** — v3.1.1's "print the draft as message text first" wording did not change model behavior: a post-release transcript showed the turn going straight from bash checks to `AskUserQuestion` with no text block, so the draft was never actually printed. Every confirmation site (`grill`, `to-task`, `to-plan`, `to-roadmap`, `to-spec`) now carries an explicit gate — never emit `AskUserQuestion` until the full draft sits printed above it in the same reply; prior chat discussion does not count. Mirrored in both docs of record ([`CLAUDE.md`](CLAUDE.md), [`docs/contract.md`](docs/contract.md)).
+
 ## [3.1.1] — 2026-07-19
 
 Bugfix release. Non-breaking — no artifact-shape or layout changes.
