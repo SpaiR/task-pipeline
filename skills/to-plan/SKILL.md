@@ -152,7 +152,7 @@ Print the content as message text (convention (b) throughout) — what to print 
 - **Promote** — show only the new `## Plan` (+ `## Tests` if newly added); state plainly that the existing Description is untouched.
 - **Revise** — show the new `## Plan` next to a one-line note of what changed from the old one; state plainly that Description and any pre-existing Tests are untouched unless the chat explicitly asked to change them too.
 
-Then, in the same reply, pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline**. The question box does **not** render the `task.md` — print it in full above (never lean on an option's `preview`, which truncates), or the user is accepting a plan they cannot see:
+Then, in the same reply, pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline**. **Gate on the call:** emit `AskUserQuestion` only after the full content above sits printed in this same reply — a status line is not the draft, and having discussed the plan earlier in chat does not count as printing it; print it verbatim now, even if it feels redundant. The draft is this turn's deliverable, not a between-tools status note to keep brief. The question box does **not** render the `task.md` and an option's `preview` truncates — the printed text is the only thing the user sees:
 
 - **Accept** → proceed to Step 8 as drafted.
 - **Edit** → follow-up asks what to change, apply it, re-print the content as message text, repeat until accepted.

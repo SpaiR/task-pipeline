@@ -62,7 +62,7 @@ Print the full ledger **as message text in your reply** — the whole block, onc
 2. {…}
 ```
 
-Then, **in the same message**, pose one `AskUserQuestion` (convention (b)) with chips **Accept** / **Edit** / **Decline**. The question does not display the ledger — the printed block above is all the user sees, so it must always be there:
+Then, **in the same message**, pose one `AskUserQuestion` (convention (b)) with chips **Accept** / **Edit** / **Decline**. **Gate on the call:** emit `AskUserQuestion` only after the full ledger sits printed above it in this same reply — a status line is not the ledger, and having discussed the decisions earlier in chat does not count as printing it. The ledger is this turn's deliverable, not a between-tools status note to keep brief; the question box displays none of it:
 
 - **Accept** → proceed to Step 7 (routing).
 - **Edit** → focused follow-up on what to add, correct, or drop; re-print the full ledger as message text; repeat until accepted.
