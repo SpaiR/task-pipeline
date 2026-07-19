@@ -146,16 +146,16 @@ Run through this checklist against the draft; fix inline before Step 7, don't pr
 
 ## Step 7: Present for confirmation
 
-Content shown depends on mode (convention (b) throughout):
+Print the content as message text (convention (b) throughout) — what to print depends on mode:
 
 - **Fresh capture** — show the full drafted `task.md` (header + Description + Plan + Tests + Execution).
 - **Promote** — show only the new `## Plan` (+ `## Tests` if newly added); state plainly that the existing Description is untouched.
 - **Revise** — show the new `## Plan` next to a one-line note of what changed from the old one; state plainly that Description and any pre-existing Tests are untouched unless the chat explicitly asked to change them too.
 
-Then pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline**:
+Then, in the same reply, pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline**. The question box does **not** render the `task.md` — print it in full above (never lean on an option's `preview`, which truncates), or the user is accepting a plan they cannot see:
 
 - **Accept** → proceed to Step 8 as drafted.
-- **Edit** → follow-up asks what to change, apply it, re-show, repeat until accepted.
+- **Edit** → follow-up asks what to change, apply it, re-print the content as message text, repeat until accepted.
 - **Decline** → write nothing, stop with "`task.md` not written. → Next: re-run `/task:to-plan` when you want to capture it" (promote/revise: "no changes made to `task.md`. → Next: re-run `/task:to-plan` when you want to revisit the plan").
 
 ## Step 8: Write

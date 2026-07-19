@@ -41,7 +41,7 @@ On the fence, prefer harvest — a false positive costs one extra confirmation; 
 
 #### Step 2H: Harvest — Decision Inventory
 
-Comb the prior conversation and output (chat-only, never written to a file; heading skeleton English, prose in config language):
+Comb the prior conversation and print, as message text in your reply (chat-only, never written to a file; heading skeleton English, prose in config language):
 
 ```
 ## Roadmap — Decision Inventory
@@ -62,7 +62,7 @@ captured; confirm nothing dropped.}
 erodes trust. Omit the heading otherwise.}
 ```
 
-Then pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline**:
+Then, in the same reply, pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline** — the chips don't display the inventory, so the printed block above is what the user confirms:
 
 - **Accept** → if open forks remain, resolve them first (a focused round as in Step 2C); then proceed to Step 3 (draft).
 - **Edit** → follow-up: the user adds/corrects a decision or moves it between locked/open, then proceed as Accept.
@@ -102,7 +102,7 @@ Always propose **2–3 decomposition options** with different phase boundaries (
 - **Behavioral decisions** — observable properties the user locked in (including small details). These land in an item's `### Outcomes` / `### Acceptance criteria`.
 - **Technical anchors** — load-bearing technical decisions (a protocol, a cross-cutting data shape, a "we picked X over Y because…" whose reasoning wouldn't survive re-derivation). These belong in a standalone spec, never in item bodies — route at draft time (Step 3).
 
-Before drafting, reprint the full list (behavioral + anchors) and pose an `AskUserQuestion` (**Accept** / **Edit** / **Decline**) to confirm — the cold-start twin of Step 2H's inventory.
+Before drafting, reprint the full list (behavioral + anchors) **as message text** and pose an `AskUserQuestion` (**Accept** / **Edit** / **Decline**) in the same reply to confirm — the cold-start twin of Step 2H's inventory.
 
 Topics the user explicitly said to skip stay skipped — do not raise them again.
 
