@@ -4,6 +4,8 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 ![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-8A2BE2)
 
+**Docs & guides → [spair.github.io/task-pipeline](https://spair.github.io/task-pipeline/)**
+
 If you've ever tried to cram Claude into one big "do everything in this ticket" session, you know how it ends: the model starts writing code before it understands the task, "fixes" one bug and breaks three others, and reports "done" while half the acceptance criteria are still stubs. And the plan you talked through in chat? Gone the moment you `/clear`.
 
 `task-pipeline` keeps the discussion and the doing apart. Discuss the task freely in chat; when you're ready, one command freezes that discussion into a Markdown file under `.task/`. Any session — this one, or a fresh one tomorrow — implements that file the same way: work the plan, run `/verify`, run `/code-review`, commit.
@@ -48,7 +50,7 @@ That session follows the artifact's own `## Execution` block: implement the plan
 The first capture in a fresh project also writes `.task/config/config.md` inline (detect language + test policy, one confirmation) — there's no separate setup command to run first. Prefer a lighter touch? `/task:to-task` skips the Plan — good for a quick capture you'll flesh out with `/task:to-plan` later, or hand straight to implementation when the fix is obvious.
 
 > [!TIP]
-> More scenarios — roadmap-driven initiatives, `/task:roadmap-to-workflow`, and returning to a task later — live in **[docs/usage.md](docs/usage.md)**.
+> More scenarios — roadmap-driven initiatives, `/task:roadmap-to-workflow`, and returning to a task later — live in the **[guide on the docs site](https://spair.github.io/task-pipeline/guide/roadmaps)**.
 
 ## Why
 

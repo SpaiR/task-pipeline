@@ -40,7 +40,7 @@ Full artifact shapes, producer/consumer table, and bash-layer contract: [docs/co
 - Treat each `SKILL.md` as a prompt contract — output templates, section headers, step numbering are load-bearing.
 - Changing the `task.md` template/separator coordinates `validate/validate.sh` and the `to-task`/`to-plan` template.
 - Prefer Markdown + **bold** over XML.
-- Every skill change updates `README.md` and `docs/contract.md` in the same commit.
+- Every skill change updates `README.md` and `docs/contract.md` in the same commit; when it changes user-facing behavior, also update the matching `website/` guide/reference page (the docs site — `docs(website): …`, scope `website`). The site is the single owner of user-facing usage/troubleshooting prose; `docs/usage.md` and `docs/troubleshooting.md` are now thin pointers to it.
 - **Never** update `CHANGELOG.md` autonomously. Edit it only when the user explicitly requests it.
 - **Never change `.claude-plugin/plugin.json`'s `version` without explicit user confirmation.** Same rule for cutting `## [Unreleased]` into a numbered release.
 
@@ -50,7 +50,7 @@ Source of truth: [`CONTRIBUTING.md`](CONTRIBUTING.md). Summary:
 
 - Header: `<type>(<scope>): <short summary>` — under 72 chars, imperative, lowercase first letter, no trailing period.
 - Types: `feat | fix | refactor | perf | docs | test | chore | revert`. **Do not invent types.**
-- Scopes (optional but strongly preferred): skill names (`grill`, `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`, `validate`), or cross-cutting keys (`skills`, `lib`, `hooks`, `plugin`, `github`, `readme`, `claudemd`, `changelog`, `contributing`, `contract`). **Do not invent scopes.**
+- Scopes (optional but strongly preferred): skill names (`grill`, `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`, `validate`), or cross-cutting keys (`skills`, `lib`, `hooks`, `plugin`, `github`, `readme`, `claudemd`, `changelog`, `contributing`, `contract`, `website`). **Do not invent scopes.**
 - Body: mandatory for all non-trivial commits; explain **why**, not what; 2–5 bullet list, imperative tense.
 - Footer: `BREAKING CHANGE:` when header carries `!`; `Fixes #N` / `Closes #N` for issues/PRs.
 - AI attribution: every Claude-assisted commit must carry `Co-Authored-By: Claude <noreply@anthropic.com>` as the last footer line.
