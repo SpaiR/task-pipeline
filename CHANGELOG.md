@@ -4,6 +4,16 @@ All notable changes to this project are documented here. Format — [Keep a Chan
 
 This file is maintained in **English** — see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-policy).
 
+## [3.2.0] — 2026-07-20
+
+Replaces the confirm-before-write gate with write-then-digest. Non-breaking — no artifact-shape changes.
+
+### Changed
+- **Write-then-digest replaces confirm-before-write** — convention (b)'s print-draft → Accept/Edit/Decline gate was the pipeline's most error-prone step (three prior patch releases only papered over it) and re-reviewed content the chat discussion had already settled. Every capture skill now writes its artifact immediately, runs `validate.sh` on the written file, then prints a structural digest (path, title, sections, captured decisions/pins, validate result) inviting edits against the file. `grill` drops its ledger confirmation and prints the ledger as the digest after the pre-mortem. Chips survive only where the question isn't distilled content: config Step 0 setup and the slug-collision overwrite guard. Synced across [`CLAUDE.md`](CLAUDE.md), [`docs/contract.md`](docs/contract.md), and `self-invariants-auditor`.
+
+### Fixed
+- **`to-roadmap` / `to-spec` no longer hard-stop on unrelated artifact errors** — Step 0 treated any non-zero `validate.sh` exit as "config malformed → stop", but exit 1 means one or more *existing* artifacts failed validation; `validate.sh` never inspects `config.md` content. A pre-existing broken, unrelated file could block a fresh capture. Both now hard-stop only on a missing `config.md` (exit 2), matching `to-task` and `roadmap-to-workflow`; exit-1 artifact errors surface but don't block.
+
 ## [3.1.2] — 2026-07-19
 
 Bugfix release. Non-breaking — no artifact-shape or layout changes.
