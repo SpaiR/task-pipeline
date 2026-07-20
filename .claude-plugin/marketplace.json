@@ -1,6 +1,6 @@
 {
   "name": "task-pipeline",
-  "description": "Chat-first task workflow as a Claude Code plugin (capture in chat, then implement the artifact directly).",
+  "description": "Chat-first task workflow for Claude Code: grill the plan, capture it at the depth you pick, then implement the artifact in any session.",
   "owner": {
     "name": "Ilya Prymshyts (SpaiR)",
     "email": "klimbetoo@gmail.com"
@@ -9,7 +9,7 @@
     {
       "name": "task",
       "source": "./",
-      "description": "Capture a chat discussion into a fixed-format Markdown task artifact, then implement it directly.",
+      "description": "Grill the plan, capture the discussion at the depth you pick (to-task / to-plan / to-roadmap / to-spec) into a fixed-format Markdown artifact, then implement it in any session.",
       "homepage": "https://github.com/SpaiR/task-pipeline",
       "repository": "https://github.com/SpaiR/task-pipeline",
       "license": "MIT",

@@ -19,6 +19,11 @@
 # self-improve ratchet baseline (runtime metrics, per-clone)
 .claude/.improve-baseline.json
 
+# Docs site (VitePress) build artifacts and deps
+website/node_modules/
+website/.vitepress/dist/
+website/.vitepress/cache/
+
 # Editor
 .idea/
 .vscode/

@@ -37,12 +37,14 @@ docs/
   contract.md                    the authoritative artifact contract — flat .task/ layout,
                                    AI_DIR resolution, task.md + roadmap formats, producer/
                                    consumer table, bash-layer inventory, interaction conventions
-  usage.md                       extended usage scenarios (roadmap, roadmap-to-workflow,
-                                   mixing hand-picked items with autopilot, resuming a task)
-  troubleshooting.md              first-run problems and roadmap/worktree edge cases
+  usage.md                       pointer to the docs site (user-facing usage moved to website/)
+  troubleshooting.md              pointer to the docs site (user-facing guide moved to website/)
+website/                         VitePress docs site (landing + guide + reference), deployed
+                                   to GitHub Pages by .github/workflows/docs.yml; source of
+                                   truth for user-facing usage/guide prose
 CONTRIBUTING.md                  commit format, release procedure, this layout
 CHANGELOG.md                     public release log (English)
-README.md                        user-facing documentation
+README.md                        GitHub landing page (links to the docs site)
 ```
 
 There is no `agents/` directory in v3 — `grill` / `to-task` / `to-plan` / `to-roadmap` / `to-spec` / `roadmap-to-workflow` are the only six skills (`validate` is a bash-only utility, not a skill), and `roadmap-to-workflow` reaches for the platform's own `agent()` / `parallel()` Workflow primitives rather than named subagents shipped by this plugin.
@@ -178,6 +180,7 @@ Must be one of the following:
 * **`hooks`** — `hooks/hooks.json`.
 * **`plugin`** — `.claude-plugin/plugin.json` and install-path concerns.
 * **`github`** — files under `.github/` (PR/issue templates, any repo automation).
+* **`website`** — the VitePress docs site under `website/` (landing, guide, reference pages, theme, config).
 * **`readme` / `claudemd` / `changelog` / `contributing` / `contract`** — single-doc edits (use `docs:` as the type for these; `contract` = `docs/contract.md`).
 
 #### Summary

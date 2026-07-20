@@ -4,16 +4,22 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 ![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-8A2BE2)
 
-If you've ever tried to cram Claude into one big "do everything in this ticket" session, you know how it ends: the model starts writing code before it understands the task, "fixes" one bug and breaks three others, and reports "done" while half the acceptance criteria are still stubs. And the plan you talked through in chat? Gone the moment you `/clear`.
+**Docs & guides → [spair.github.io/task-pipeline](https://spair.github.io/task-pipeline/)**
 
-`task-pipeline` keeps the discussion and the doing apart. Discuss the task freely in chat; when you're ready, one command freezes that discussion into a Markdown file under `.task/`. Any session — this one, or a fresh one tomorrow — implements that file the same way: work the plan, run `/verify`, run `/code-review`, commit.
+> A plan file is only as good as the argument that produced it.
 
-No push, no trace in your repo — delete `.task/` and it's like it was never there. [Here's exactly what it will and won't touch](#why-you-can-trust-this).
+```text
+You:    "Let's cache the API responses in Redis."
+Claude: "Great idea! I'll start implementing."
+```
 
-It's for tasks longer than one session — a two-file, twenty-minute fix doesn't need this.
+That second line is where projects quietly go wrong: the model agrees and starts building before the plan was ever argued. `task-pipeline` keeps the discussion and the doing apart, and sizes the paperwork to the task. Talk it through in chat; when you're ready, one command freezes that discussion into a single Markdown file under `.task/` at the depth you pick — `to-task` for the what and why, `to-plan` to add a stepwise plan, `to-roadmap` for a multi-task initiative, `to-spec` to pin the load-bearing decisions. Then any session — this one, or a fresh one tomorrow — implements that file the same way: work the plan, run `/verify`, run `/code-review`, commit.
+
+And when "talk it through" needs teeth, `/task:grill` interrogates the plan first (optional): one question at a time, its recommendations allowed to disagree with you, closing on a pre-mortem — so what gets frozen is what survived the questioning, not the first idea that sounded good. It's for tasks longer than one session; a two-file, twenty-minute fix doesn't need any of this, and leaves no trace either way — [here's exactly what it will and won't touch](#why-you-can-trust-this).
 
 ```text
 discuss in chat
+  → grill it (optional — interrogate the plan first)
   → capture to a file
   → any session implements it
 ```
@@ -25,7 +31,20 @@ discuss in chat
 /plugin install task@task-pipeline
 ```
 
-Talk a task through in chat — say, an HTTP retry system with backoff and a dead-letter queue — then capture it:
+Talk a task through in chat — say, an HTTP retry system with backoff and a dead-letter queue.
+
+Optional first move: grill the plan before you freeze it. It writes nothing and needs no setup, so it works as the very first command in a fresh project — the config confirmation only appears later, at capture:
+
+```text
+/task:grill
+#   → one question at a time, each with a recommended answer:
+#     "Retry the 429s too, or only 5xx and timeouts?"  [recommended: 429s too]
+#   → pushes back when the reasoning is thin; recommendations may disagree with you
+#   → closes with a pre-mortem, prints a decision ledger, and routes you to the
+#     right capture skill — never runs it for you, and touches nothing under .task/
+```
+
+Then capture the discussion at the depth you want:
 
 ```text
 /task:to-plan
@@ -48,25 +67,25 @@ That session follows the artifact's own `## Execution` block: implement the plan
 The first capture in a fresh project also writes `.task/config/config.md` inline (detect language + test policy, one confirmation) — there's no separate setup command to run first. Prefer a lighter touch? `/task:to-task` skips the Plan — good for a quick capture you'll flesh out with `/task:to-plan` later, or hand straight to implementation when the fix is obvious.
 
 > [!TIP]
-> More scenarios — roadmap-driven initiatives, `/task:roadmap-to-workflow`, and returning to a task later — live in **[docs/usage.md](docs/usage.md)**.
+> More scenarios — roadmap-driven initiatives, `/task:roadmap-to-workflow`, and returning to a task later — live in the **[guide on the docs site](https://spair.github.io/task-pipeline/guide/roadmaps)**.
 
 ## Why
 
-`task-pipeline` doesn't fight the one-big-session failure with more machinery — it leans on what Claude Code already ships (dynamic Workflows, `/verify`, `/code-review`) and adds just enough structure around them: one artifact per task (`.task/task/<slug>.md`) that carries the discussion's "what, why, and how," and a fixed `## Execution` block that hands the rest to the platform. The plan lives in that file, not in chat — so it survives the `/clear` that would otherwise erase it.
+`task-pipeline` doesn't fight the one-big-session failure with more machinery — it argues with the plan first, then sizes the record to the task. It leans on what Claude Code already ships (dynamic Workflows, `/verify`, `/code-review`) and adds just enough structure around them: one artifact per task (`.task/task/<slug>.md`) carrying the discussion's "what, why, and how" in your language, plus a fixed `## Execution` block (English, like every parser-stable string) that hands the rest to the platform.
 
 Concretely, you get:
 
-- **The plan survives `/clear`, compaction, and tomorrow's fresh session.** The artifact's path (`.task/task/<slug>.md`) is the handle. Pick it up in this session or a brand-new one — there's no active-task state to lose or heal.
-- **Zero ceremony while you think.** Think out loud, explore approaches, change your mind — all in normal conversation. Only when you're ready do you fix it into `.task/task/<slug>.md` with `to-task` or `to-plan`.
+- **Depth is a skill you pick, not a flag.** A two-file fix and a month-long migration don't deserve the same ceremony — reach for `to-task`, `to-plan`, `to-roadmap`, or `to-spec` and the file carries exactly that much structure. There is no `--plan` or `--deep` switch anywhere.
+- **The plan gets grilled before it gets frozen.** `/task:grill` keeps a decision-plus-rationale ledger, makes recommendations that are allowed to disagree with you, and closes with a pre-mortem — so no "great idea!" rubber-stamp makes it into the file.
 - **Nothing new to learn on the execution side.** There is no `build`/`ship` step to run — any session told `implement .task/task/<slug>.md` reads the artifact and follows its own `## Execution` block through to a commit.
-- **Verification and review are written into every artifact, not left to the model's mood.** Verification is `/verify`, review is `/code-review` — no hand-rolled audit loop.
-- **Your language for content, English only where parsers need it.** The Description is written in your language; everything parser-stable (headers, commit trailers, the `## Execution` block) stays English, per the policy in `config.md`.
+- **Invisible to your repo.** `.task/` is git-excluded, never shows in `git status`, and `rm -rf .task` leaves the repo exactly as before — [the trust section below](#why-you-can-trust-this) spells out precisely what it will and won't touch.
+- **And yes, the discussion survives `/clear`, compaction, and tomorrow's fresh session** — table stakes, but worth saying. The artifact's path is the only handle; there's no active-task state to lose or heal.
 
 ## Why you can trust this
 
 It runs bash, edits files, and writes commits — so here is exactly what it will and won't touch:
 
-- **Nothing is committed until the implementing session does so, per `## Execution`.** Until then every change is just working-tree edits; back them out with plain `git restore` / `git checkout`.
+- **Nothing is committed until the implementing session does so, per `## Execution`.** Until then every change is just working-tree edits; back them out with plain `git restore` / `git checkout`. One opt-in exception: `/task:roadmap-to-workflow` (autopilot) commits each roadmap item as it lands — it still never pushes.
 - **Commits stage only task-related files, and never push.** Nothing leaves your machine.
 - **No hidden orchestration.** There are no subagents in this plugin's capture skills; `/task:roadmap-to-workflow` is a plain Workflow this skill itself authors, which you can inspect before it runs.
 - **The pipeline leaves no trace in the repo.** `.task/` is excluded via `.git/info/exclude` (not `.gitignore`), so it never shows up in `git status`; delete it with `rm -rf .task` and the repo is exactly as before.
@@ -74,7 +93,7 @@ It runs bash, edits files, and writes commits — so here is exactly what it wil
 ## Requirements
 
 - [Claude Code](https://docs.claude.com/en/docs/claude-code) — this ships as a Claude Code plugin.
-- `/verify` and `/code-review` available in your Claude Code install (both ship with Claude Code) — every task's `## Execution` block invokes them directly.
+- `/verify` and `/code-review` — every task's `## Execution` block calls both before commit. Type `/` in your session to confirm they're available.
 
 ## Installation
 
@@ -125,55 +144,11 @@ Each capture produces exactly one `.task/task/<slug>.md`, where `<slug>` is both
 
 ## Comparison with alternatives
 
-Three references: default Claude Code (plan mode + TodoWrite), [obra/superpowers](https://github.com/obra/superpowers), [Fission-AI/OpenSpec](https://github.com/Fission-AI/OpenSpec).
+Most spec-driven tools answer "the model codes before it understands" with volume — more templates, more artifacts, the same ceremony for a rename and a rewrite. task-pipeline answers it with interrogation and proportion instead: a `grill` step that argues with the plan before anything is written, and capture depth chosen per task (`to-task` / `to-plan` / `to-roadmap` / `to-spec`, never a flag).
 
-The two contrasts that matter most — where the plan lives, and when a task is too small to bother — are surfaced up top (the `/clear`-durable file, and "a two-file, twenty-minute fix doesn't need this"). The full breakdown is in the collapsed blocks below.
+Underneath, the plan contract is fixed and validator-checked (`### Step N` — Goal / Touches / Logic), you author it in chat and it serializes to disk — rails that keep a session on the plan you already worked out, not a generator that invents one from a prompt. Load-bearing decisions pin into attachable per-decision specs, roadmaps fan out into a plan per item with auto-ticked checkboxes, and the whole surface stays small: flat Markdown under `.task/`, no MCP server, no API keys, no task database, with `/verify` / `/code-review` / Workflows delegated to the platform. It is explicitly not for a two-file, twenty-minute fix.
 
-<details>
-<summary><strong>vs default Claude Code</strong></summary>
-
-| | Default Claude Code | task-pipeline |
-|---|---|---|
-| **Where the plan lives** | Text in chat; lost on `/clear` | `## Plan` inside `.task/task/<slug>.md`; editable by hand, readable by a colleague |
-| **Plan-step contract** | Arbitrary text | `### Step N` with three layers: `Goal` / `Touches` / opt. `Logic` |
-| **Result review** | Only whatever the model decides | The artifact's `## Execution` block runs `/verify` (does it work end-to-end?) and `/code-review` (is it clean?) before commit |
-| **Interrupt / resume** | Lost on `/clear` | The task file is on disk; pick it up in any session with `implement .task/task/<slug>.md` |
-| **Multi-task initiatives** | None | `/task:to-roadmap` → `/task:to-plan`/`/task:to-task` per item (or autopilot `/task:roadmap-to-workflow`) |
-| **Record of what shipped** | None | git history of `.task/task/<slug>.md` and the diff it produced |
-
-**Use default Claude Code** if the task is one or two files and twenty minutes. **Use task-pipeline** if the task is longer than one session, needs a plan you can hand-edit, or should leave a record.
-
-</details>
-
-<details>
-<summary><strong>vs superpowers</strong></summary>
-
-| | task-pipeline | superpowers |
-|---|---|---|
-| Initiation | By hand: `/task:…` | Auto-triggers by context |
-| Form | Linear capture → hand off to any session | A library of situational skills |
-| Project config | `config.md` (stack, commits, language) | Minimal |
-| Result review | `/verify` + `/code-review` | Iron Law TDD |
-| Artifact languages | Any, via `config.md` | English by default |
-| Platforms | Claude Code only | Claude Code, Codex, Cursor, Gemini CLI, Copilot CLI |
-
-**Use task-pipeline** if you want a controlled capture-then-implement process, non-English languages, and no hand-rolled audit machinery.
-
-</details>
-
-<details>
-<summary><strong>vs OpenSpec</strong></summary>
-
-| | task-pipeline | OpenSpec |
-|---|---|---|
-| Paradigm | Per-task capture, chat-first | Spec-driven (living `specs/` + deltas) |
-| Storage | `.task/` locally, not in the repo | `openspec/` committed to the repo |
-| Team visibility | Invisible (a personal tool) | Part of the repository |
-| Language | Multilingual via `config.md` | English |
-
-**Use task-pipeline** if you want a personal tool with no trace in the repo. **Use OpenSpec** if you work in a team where the spec is the source of truth.
-
-</details>
+Full head-to-head tables against default Claude Code, superpowers, OpenSpec, spec-kit, and Task Master live on the site: **[Comparison with alternatives](https://spair.github.io/task-pipeline/guide/comparison)**.
 
 ## Configuration & policy
 
@@ -201,7 +176,7 @@ in a fresh session:                fans unchecked items out to
   → /verify → /code-review → commit
 ```
 
-`/task:grill` is the optional pre-capture step: point it at a plan or decision and it interrogates one question at a time, keeps a decision-plus-rationale ledger, ends with a pre-mortem, and routes you to the right capture skill — writing nothing itself. Grill *before* you capture, so the artifact serializes a decision that has already been pressure-tested.
+`/task:grill` is the optional pre-capture step: point it at a plan or decision and it interrogates one question at a time, keeps a decision-plus-rationale ledger, ends with a pre-mortem, and routes you to the right capture skill — writing nothing itself. Grill *before* you capture, so the artifact serializes a decision that has already been pressure-tested. It descends from Matt Pocock's [grill-me](https://github.com/mattpocock/skills) — the interrogate-before-you-build idea — and adds a decision ledger, recommendations that are allowed to disagree with you, a closing pre-mortem, and the part grill-me leaves open: somewhere to put the answers.
 
 Depth of capture is the skill you pick, not a flag: `to-task` for a quick "what and why", `to-plan` when you already know the approach, `to-roadmap` for a multi-task initiative. `to-spec` is orthogonal — it pins load-bearing technical decisions into `.task/spec/<slug>.md`, which tasks and roadmaps reference via a `Spec:` header and the implementing session honors as a fixed anchor. There is no execution skill — capture ends with a copy-pasteable path, and any session (the same one, a fresh one, or one spawned by `roadmap-to-workflow`) executes the artifact directly.
 
