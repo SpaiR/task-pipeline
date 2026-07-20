@@ -85,7 +85,7 @@ Concretely, you get:
 
 It runs bash, edits files, and writes commits — so here is exactly what it will and won't touch:
 
-- **Nothing is committed until the implementing session does so, per `## Execution`.** Until then every change is just working-tree edits; back them out with plain `git restore` / `git checkout`.
+- **Nothing is committed until the implementing session does so, per `## Execution`.** Until then every change is just working-tree edits; back them out with plain `git restore` / `git checkout`. One opt-in exception: `/task:roadmap-to-workflow` (autopilot) commits each roadmap item as it lands — it still never pushes.
 - **Commits stage only task-related files, and never push.** Nothing leaves your machine.
 - **No hidden orchestration.** There are no subagents in this plugin's capture skills; `/task:roadmap-to-workflow` is a plain Workflow this skill itself authors, which you can inspect before it runs.
 - **The pipeline leaves no trace in the repo.** `.task/` is excluded via `.git/info/exclude` (not `.gitignore`), so it never shows up in `git status`; delete it with `rm -rf .task` and the repo is exactly as before.
@@ -93,7 +93,7 @@ It runs bash, edits files, and writes commits — so here is exactly what it wil
 ## Requirements
 
 - [Claude Code](https://docs.claude.com/en/docs/claude-code) — this ships as a Claude Code plugin.
-- `/verify` and `/code-review` available in your Claude Code install (both ship with Claude Code) — every task's `## Execution` block invokes them directly.
+- `/verify` and `/code-review` — every task's `## Execution` block calls both before commit. Type `/` in your session to confirm they're available.
 
 ## Installation
 
