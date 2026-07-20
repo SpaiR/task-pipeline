@@ -10,9 +10,9 @@
 - **Roadmap traceability.** A roadmap fans out into a generated plan per item, the driver ticks each item's checkbox as it lands, and the git history of the artifacts shows what was done.
 - **A small surface.** No orchestration engine, no subagents in the capture skills, no hooks, no MCP server, no API keys, no task database — all state is flat Markdown under `.task/`, and the heavy lifting is delegated to Claude Code's own `/verify`, `/code-review`, and Workflows. The consequences: everything is auditable as plain text, there is nothing extra to maintain, and there is zero lock-in.
 
-Two honest limits frame all of it: the plan lives in a `/clear`-durable file rather than in chat, and a two-file, twenty-minute fix does not need any of this.
+Two honest limits frame all of it. It runs on **Claude Code only** — leave Claude Code and the artifacts are just Markdown you'd read by hand. And **nothing is enforced**: `validate.sh` only reports, and `implement <path>` is a plain instruction a session can deviate from — you stay in the loop by design, not by a gate. (A two-file, twenty-minute fix also doesn't need any of this.)
 
-The sections below compare against five references — default Claude Code (plan mode + TodoWrite), [obra/superpowers](https://github.com/obra/superpowers), [Fission-AI/OpenSpec](https://github.com/Fission-AI/OpenSpec), [github/spec-kit](https://github.com/github/spec-kit), and [claude-task-master](https://github.com/eyaltoledano/claude-task-master) — on one shared axis set: where the plan lives, who authors the plan, plan format, result review, moving parts & infrastructure, trace in the repo, and multi-task initiatives. Each ends with an honest "Use X if".
+The sections below compare against five references — default Claude Code (plan mode + TodoWrite), [obra/superpowers](https://github.com/obra/superpowers), [Fission-AI/OpenSpec](https://github.com/Fission-AI/OpenSpec), [github/spec-kit](https://github.com/github/spec-kit), and [claude-task-master](https://github.com/eyaltoledano/claude-task-master) — on one shared axis set: where the plan lives, who authors the plan, plan format, result review, moving parts & infrastructure, trace in the repo, and multi-task initiatives. Each ends with an honest "Use X if". The other tools' details are as of July 2026 and from their own docs — check them if a difference is load-bearing for you. (task-pipeline's own multilingual claim has one caveat: only your artifact prose is translated; the format's fixed strings — section headers, commit trailers, the Execution block — stay English.)
 
 ## vs default Claude Code
 
@@ -51,7 +51,7 @@ The sections below compare against five references — default Claude Code (plan
 | **Spec granularity** | Pinned per-decision `.task/spec/<slug>.md` files, cited via `Spec:` | A living whole-system spec |
 | **Moving parts** | Flat Markdown under `.task/`, git-excluded | An `openspec/` directory committed to the repo |
 | **Trace in the repo** | Invisible — a personal tool, no repo trace | Part of the repository, visible to the team |
-| **Language** | Multilingual via `config.md` | English |
+| **Language** | Multilingual via `config.md` | English by default |
 
 **Use task-pipeline** if you want a personal tool with no trace in the repo and specs pinned per decision. **Use OpenSpec** if you work in a team where a whole-system spec committed to the repo is the source of truth.
 

@@ -3,20 +3,20 @@ layout: home
 
 hero:
   name: task-pipeline
-  text: A plan file is only as good as the argument that produced it.
-  tagline: Get the plan grilled first (optional), freeze the chat into one Markdown file at the depth you pick, and let any session implement it — work the plan, /verify, /code-review, commit.
+  text: Freeze a Claude Code chat into one Markdown plan file any session can implement.
+  tagline: Talk the task through, optionally grill the plan, then capture it at the depth you pick — task, plan, roadmap, or spec. Any later session reads the file and runs it. A free Claude Code plugin — no server, no hooks, no MCP.
   image:
     src: /logo.svg
     alt: task-pipeline
   actions:
     - theme: brand
-      text: Get started
-      link: /guide/getting-started
+      text: See it work in 5 min
+      link: /guide/first-win
     - theme: alt
       text: What is this?
       link: /guide/what-is-task-pipeline
     - theme: alt
-      text: View on GitHub
+      text: Star on GitHub
       link: https://github.com/SpaiR/task-pipeline
 
 features:
@@ -28,17 +28,21 @@ features:
     details: A two-file fix and a month-long migration don't deserve the same paperwork. Capture is the skill you reach for — to-task, to-plan, to-roadmap, to-spec — never a template you're made to fill.
   - icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>'
     title: Any session can run it
-    details: Tell any session `implement &lt;path&gt;` and it reads the file, works the plan, runs /verify and /code-review, and commits. It's just a chat instruction — you already know how.
+    details: Tell any session `implement &lt;path&gt;` and it reads the file, works the plan, and commits — running your project's own checks first. It's just a chat instruction — you already know how.
   - icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg>'
     title: Roadmaps for real initiatives
     details: Capture a multi-task initiative once, then run it hands-off — dependency-ordered waves, each item planned and implemented in its own session.
-  - icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>'
-    title: Verify and review, every time
-    details: Each task file bakes in /verify (does it work end-to-end?) and /code-review (is it clean?) before commit — not left to the model's mood.
+  - icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>'
+    title: Leaves no trace in your repo
+    details: The pipeline's files live under `.task/`, git-excluded. Delete the folder and your repo is exactly as it was — no config committed, nothing pushed, zero lock-in.
   - icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>'
     title: The plan survives /clear
-    details: Table stakes, but worth saying — the file's path is the handle. Pick a task up in this session or a brand-new one tomorrow; there's no active-task state to lose.
+    details: The file's path is the handle. Pick a task up in this session or a brand-new one tomorrow — there's no active-task state to lose.
 ---
+
+<div class="tp-proof">MIT-licensed · built by <a href="https://github.com/SpaiR">SpaiR</a> · a Claude Code plugin</div>
+
+## A plan file is only as good as the argument that produced it
 
 <div class="tp-terminal">
   <div class="tp-terminal__bar">
@@ -116,13 +120,13 @@ return a typed `RetriesExhausted` result the caller can branch on.
 
 ## Small on purpose
 
-task-pipeline is **not** an orchestration engine. No subagents, no hooks, no execution loop of its own — just one file per task and Claude Code's own `/verify` and `/code-review` doing the checking. Where the neighbors sell breadth (dozens of skills, a full SDLC in a box), this one sells the opposite: the least structure that still makes a plan outlive the session it was written in.
+task-pipeline is **not** an orchestration engine. No subagents, no hooks, no execution loop of its own — just one file per task, and your project's own checks running before commit. Where the neighbors sell breadth (dozens of skills, a full SDLC in a box), this one sells the opposite: the least structure that still makes a plan outlive the session it was written in.
 
 ## Is it for you?
 
 `task-pipeline` is for tasks longer than one session — work that needs a plan you can hand-edit, or that should leave a record. **A two-file, twenty-minute fix doesn't need this**; default Claude Code (plan mode + TodoWrite) is the better tool there.
 
-Reach for it when the plan deserves an argument and a record: when the decision has real forks worth interrogating first, when a colleague (or tomorrow-you) should be able to read what was decided and why, or when the work spans several tasks — and yes, when it should outlast a `/clear`. Descriptions are written in your language; only the format's fixed strings (section headers, commit trailers, the Execution block) stay English. The [comparison page](/guide/comparison) lays out where it fits against default Claude Code, superpowers, and OpenSpec.
+Reach for it when the plan deserves an argument and a record: when the decision has real forks worth interrogating first, when a colleague (or tomorrow-you) should be able to read what was decided and why, or when the work spans several tasks — and yes, when it should outlast a `/clear`. Descriptions are written in your language; only the format's fixed strings (section headers, commit trailers, the Execution block) stay English. The [comparison page](/guide/comparison) lays out where it fits against five references — default Claude Code, superpowers, OpenSpec, spec-kit, and claude-task-master.
 
 ## Install in two commands
 
@@ -132,3 +136,5 @@ Reach for it when the plan deserves an argument and a record: when the decision 
 ```
 
 That's the whole setup. The first capture in a new project writes `.task/config/config.md` for you — there's no separate bootstrap step. See [Getting started](/guide/getting-started) for the first run end to end.
+
+If this is the shape of tool you've wanted, [star it on GitHub](https://github.com/SpaiR/task-pipeline) — it's how you'll find it again.

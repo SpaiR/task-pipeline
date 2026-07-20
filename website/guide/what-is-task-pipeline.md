@@ -24,9 +24,9 @@ implement .task/task/http-retry-backoff.md
 
 Four beats: discuss, grill (optional), capture, implement. The plan you talked through — and argued, if you grilled it — is now a file on disk, not chat scrollback, which is exactly why the last step works just as well in a brand-new session tomorrow.
 
-## The idea: serialize the context, don't orchestrate it
+## The idea: pin the chat to a file, don't orchestrate it
 
-What you just watched has a name. `task-pipeline` is **not** an orchestration engine — it's a **context-serialization protocol**: a way to take the "what, why, and how" that lives in a chat and pin it into a fixed-format file that outlives the conversation.
+What you just watched has a name. `task-pipeline` doesn't drive your work — it takes the "what, why, and how" that lives in a chat and pins it into a fixed-format file that outlives the conversation. It's **not** an orchestration engine; the precise term is a **context-serialization protocol**.
 
 That distinction is why it stays small, and it's the opposite bet from the breadth-first tools nearby: rather than dozens of skills or a full SDLC, it leans on what Claude Code already ships (dynamic Workflows, `/verify`, `/code-review`) and adds just enough structure around them:
 
@@ -61,4 +61,4 @@ It's for tasks **longer than one session** — work that needs a plan you can ha
 
 The [comparison page](/guide/comparison) walks through exactly where it fits against the alternatives.
 
-→ Next: [Getting started](/guide/getting-started) — install it and run the first capture end to end.
+→ Next: [Your first win in 5 minutes](/guide/first-win) — the whole loop end to end, before you even install.

@@ -19,6 +19,14 @@ First-run problems, then the edge cases of a solo, hook-free, pointer-free pipel
 
 Then reopen the `/` menu. If it was already installed, make sure it isn't disabled (`/plugin`).
 
+### /verify or /code-review not found {#verify-or-code-review-not-found}
+
+**Symptom** — a task's `## Execution` step calls `/verify` or `/code-review`, but typing `/` doesn't list them.
+
+**Cause** — these are Claude Code's own commands, not part of task-pipeline. An older or trimmed install may not expose them.
+
+**Fix** — update Claude Code, or check `/` for its equivalents. Nothing here is gated: the Execution block still runs everything else, and you can run your project's own build/test/review checks by hand before committing. task-pipeline uses these features as your install exposes them — there's no version to pin.
+
 ### "config.md not found"
 
 **Symptom** — a skill stops with `.task/config/config.md not found`.

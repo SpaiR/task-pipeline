@@ -80,7 +80,7 @@ The `## Execution` block is stamped verbatim on every task — it's the standing
 
 ## 5. Implement it
 
-Hand the path to any session — this one, or a fresh one after a `/clear`:
+Hand the path to any session — this one, or a fresh one after a `/clear`. `implement` is an ordinary chat message, **not** a slash command — type it as you'd type any instruction:
 
 ```text
 implement .task/task/quiet-flag.md
@@ -99,4 +99,4 @@ feat(cli): add --quiet flag to silence normal output
 
 One file of code, one commit, and a `.task/quiet-flag.md` you can delete or keep as the record. That's the loop. Everything else in these docs is the same loop at larger sizes — plans, roadmaps, specs, autopilot.
 
-→ Next: [Core concepts](/guide/core-concepts) — the handful of ideas that make the rest predictable.
+→ Next: [Getting started](/guide/getting-started) — install it and run the first capture in your own project.

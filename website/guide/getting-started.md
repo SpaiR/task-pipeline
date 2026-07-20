@@ -3,7 +3,7 @@
 ## Requirements
 
 - [Claude Code](https://docs.claude.com/en/docs/claude-code) — `task-pipeline` ships as a Claude Code plugin.
-- `/verify` and `/code-review` available in your install (both ship with Claude Code) — every task's `## Execution` block invokes them directly.
+- `/verify` and `/code-review` — the task's `## Execution` block calls both before commit. Type `/` in your session to confirm they're available; if not, see [Troubleshooting](/guide/troubleshooting#verify-or-code-review-not-found).
 - Dynamic Workflows — only [`/task:roadmap-to-workflow`](/guide/autopilot) needs them, to fan a roadmap's items out to parallel sessions. Everything else works without. There's no pinned version to match: task-pipeline uses these features as your Claude Code install exposes them.
 
 ## Install
@@ -58,7 +58,7 @@ On a fresh project this will:
 
 ## Implement it
 
-Hand the file to any session — this one, or a fresh one tomorrow:
+Hand the file to any session — this one, or a fresh one tomorrow. `implement` is an ordinary chat message, **not** a slash command — type it as you'd type any instruction:
 
 ```text
 implement .task/task/http-retry-backoff.md

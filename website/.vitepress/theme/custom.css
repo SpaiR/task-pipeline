@@ -40,6 +40,15 @@
   color: var(--vp-c-brand-1);
 }
 
+/* Compact trust line under the hero (index.md). */
+.tp-proof {
+  text-align: center;
+  margin-top: 2.5rem;
+  font-size: 14px;
+  color: var(--vp-c-text-2);
+}
+.tp-proof a { font-weight: 600; }
+
 /**
  * A tiny terminal mock used on the landing page (index.md). Pure CSS, no framework —
  * so it survives a static build with nothing to hydrate.
@@ -92,5 +101,5 @@
 
 .tp-terminal__body .tp-sp { height: 0.9em; }
 .tp-terminal__body .tp-prompt { color: var(--vp-c-brand-1); font-weight: 600; }
-.tp-terminal__body .tp-comment { color: var(--vp-c-text-3); }
+.tp-terminal__body .tp-comment { color: var(--vp-c-text-2); }
 .tp-terminal__body .tp-out { color: var(--vp-c-text-2); }

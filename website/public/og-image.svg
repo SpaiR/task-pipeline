@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="task-pipeline — a plan file is only as good as the argument that produced it">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="task-pipeline — freeze a Claude Code chat into one Markdown plan file any session can implement">
   <defs>
     <linearGradient id="og-mark" x1="0" y1="0" x2="96" y2="96" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#8A2BE2"/>
@@ -22,12 +22,13 @@
     <path d="M28 50 L43 65 L70 34" fill="none" stroke="url(#og-mark)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 
-  <text x="232" y="192" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="72" font-weight="700" fill="url(#og-word)">task-pipeline</text>
+  <text x="232" y="180" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="72" font-weight="700" fill="url(#og-word)">task-pipeline</text>
 
-  <text x="122" y="300" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="66" font-weight="800" fill="#ffffff">A plan file is only as good as</text>
-  <text x="122" y="380" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="66" font-weight="800" fill="#ffffff">the <tspan fill="#c084fc">argument</tspan> that produced it.</text>
+  <text x="122" y="292" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="58" font-weight="800" fill="#ffffff">Freeze a Claude Code chat</text>
+  <text x="122" y="362" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="58" font-weight="800" fill="#ffffff">into one Markdown plan file</text>
+  <text x="122" y="432" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="58" font-weight="800" fill="#ffffff">any session can <tspan fill="#c084fc">implement</tspan>.</text>
 
-  <text x="122" y="470" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="34" font-weight="400" fill="#b8b4c8">Grill the plan, capture at the depth you pick, implement anywhere.</text>
+  <text x="122" y="512" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="31" font-weight="400" fill="#b8b4c8">A plan file is only as good as the argument that produced it.</text>
 
-  <text x="122" y="560" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="32" font-weight="500" fill="#8f8aa3">A chat-first task pipeline for Claude Code</text>
+  <text x="122" y="575" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="28" font-weight="500" fill="#8f8aa3">A chat-first task pipeline for Claude Code</text>
 </svg>

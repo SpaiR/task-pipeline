@@ -1,10 +1,12 @@
 # Why you can trust this
 
-`task-pipeline` runs bash, edits files, and writes commits. So here is exactly what it will and won't touch.
+`task-pipeline` runs bash, edits files, and writes commits. So here is exactly what it will and won't touch. It's MIT-licensed and built by [SpaiR](https://github.com/SpaiR).
 
 ## Nothing is committed until you say so
 
 Nothing is committed until an implementing session runs, per the `## Execution` block. Until then, every change the pipeline made is just working-tree edits — back them out with plain `git restore` / `git checkout`. The capture skills themselves only write Markdown under `.task/`.
+
+One exception, and it's opt-in: [`roadmap-to-workflow`](/guide/autopilot) (autopilot) commits each roadmap item as it lands — that's the point of running an approved roadmap hands-off. It still never pushes.
 
 ## Commits stage only task-related files, and never push
 
