@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: task-pipeline
-  text: Your plan survives /clear. Nothing else does.
-  tagline: Talk the task through in chat. One command freezes it into a file. Any session — this one, or a fresh one tomorrow — picks that file up and runs it, with nothing to re-explain.
+  text: A plan file is only as good as the argument that produced it.
+  tagline: Get the plan grilled first (optional), freeze the chat into one Markdown file at the depth you pick, and let any session implement it — work the plan, /verify, /code-review, commit.
   image:
     src: /logo.svg
     alt: task-pipeline
@@ -20,12 +20,12 @@ hero:
       link: https://github.com/SpaiR/task-pipeline
 
 features:
-  - icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>'
-    title: The plan survives /clear
-    details: The file's path is the handle. Pick a task up in this session or a brand-new one tomorrow — there's no active-task state to lose.
-  - icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'
-    title: Zero ceremony while you think
-    details: Think out loud, explore approaches, change your mind — all in normal conversation. Only when you're ready do you fix it into a file.
+  - icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>'
+    title: The plan gets grilled first
+    details: An optional grill step interrogates the plan one question at a time — and its recommendations are allowed to disagree with you — closing on a pre-mortem before anything is frozen.
+  - icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg>'
+    title: You pick the depth, not a flag
+    details: A two-file fix and a month-long migration don't deserve the same paperwork. Capture is the skill you reach for — to-task, to-plan, to-roadmap, to-spec — never a template you're made to fill.
   - icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>'
     title: Any session can run it
     details: Tell any session `implement &lt;path&gt;` and it reads the file, works the plan, runs /verify and /code-review, and commits. It's just a chat instruction — you already know how.
@@ -35,9 +35,9 @@ features:
   - icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>'
     title: Verify and review, every time
     details: Each task file bakes in /verify (does it work end-to-end?) and /code-review (is it clean?) before commit — not left to the model's mood.
-  - icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>'
-    title: Invisible to your repo
-    details: .task/ is excluded via .git/info/exclude, never .gitignore. It never shows in git status; delete it with rm -rf .task and the repo is exactly as before.
+  - icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>'
+    title: The plan survives /clear
+    details: Table stakes, but worth saying — the file's path is the handle. Pick a task up in this session or a brand-new one tomorrow; there's no active-task state to lose.
 ---
 
 <div class="tp-terminal">
@@ -50,12 +50,17 @@ features:
   <div class="tp-terminal__body">
     <div class="tp-comment"># 1. talk the task through in chat — an HTTP retry system with backoff…</div>
     <div class="tp-sp"></div>
-    <div class="tp-comment"># 2. freeze the discussion into a file</div>
+    <div class="tp-comment"># 2. grill the plan first (optional) — one question at a time</div>
+    <div class="tp-prompt">/task:grill</div>
+    <div class="tp-out">  → Retry the 429s too, or only 5xx and timeouts?  [recommended: 429s too]</div>
+    <div class="tp-out">    decision ledger → route to /task:to-plan</div>
+    <div class="tp-sp"></div>
+    <div class="tp-comment"># 3. freeze the discussion into a file</div>
     <div class="tp-prompt">/task:to-plan</div>
     <div class="tp-out">  → wrote .task/task/http-retry-backoff.md</div>
     <div class="tp-out">    ## Description + ## Plan (Goal / Touches / Logic steps)</div>
     <div class="tp-sp"></div>
-    <div class="tp-comment"># 3. hand the file to any session — this one, or a fresh one tomorrow</div>
+    <div class="tp-comment"># 4. hand the file to any session — this one, or a fresh one tomorrow</div>
     <div class="tp-prompt">implement .task/task/http-retry-backoff.md</div>
     <div class="tp-out">  → follows the file's ## Execution block — the steps that</div>
     <div class="tp-out">    tell any session what to do next:</div>
@@ -117,7 +122,7 @@ task-pipeline is **not** an orchestration engine. No subagents, no hooks, no exe
 
 `task-pipeline` is for tasks longer than one session — work that needs a plan you can hand-edit, or that should leave a record. **A two-file, twenty-minute fix doesn't need this**; default Claude Code (plan mode + TodoWrite) is the better tool there.
 
-Reach for it when the plan is worth keeping: when you want it to survive `/clear`, when a colleague (or tomorrow-you) should be able to read it, or when the work spans several tasks. Descriptions are written in your language; only the format's fixed strings (section headers, commit trailers, the Execution block) stay English. The [comparison page](/guide/comparison) lays out where it fits against default Claude Code, superpowers, and OpenSpec.
+Reach for it when the plan deserves an argument and a record: when the decision has real forks worth interrogating first, when a colleague (or tomorrow-you) should be able to read what was decided and why, or when the work spans several tasks — and yes, when it should outlast a `/clear`. Descriptions are written in your language; only the format's fixed strings (section headers, commit trailers, the Execution block) stay English. The [comparison page](/guide/comparison) lays out where it fits against default Claude Code, superpowers, and OpenSpec.
 
 ## Install in two commands
 

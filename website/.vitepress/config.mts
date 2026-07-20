@@ -5,7 +5,7 @@ const gh = 'https://github.com/SpaiR/task-pipeline'
 // Absolute URL for the social card — link unfurlers can't resolve a relative path.
 const ogImage = 'https://spair.github.io/task-pipeline/og-image.png'
 const description =
-  'Discuss in chat, capture to a file, implement in any session — a chat-first task pipeline for Claude Code.'
+  'Grill the plan, capture it at the depth you pick, then implement in any session — a chat-first task pipeline for Claude Code.'
 
 export default defineConfig({
   title: 'task-pipeline',

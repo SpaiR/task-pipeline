@@ -1,6 +1,6 @@
 # What is task-pipeline?
 
-If you've ever tried to cram Claude into one big "do everything in this ticket" session, you know how it ends: the model starts writing code before it understands the task, "fixes" one bug and breaks three others, and reports "done" while half the acceptance criteria are still stubs. And the plan you talked through in chat? Gone the moment you `/clear`.
+You float an approach in chat — "let's cache the API responses in Redis" — and Claude answers "Great idea! I'll start implementing," before the plan was ever argued, before anyone asked the one question that would have changed it. That's the failure this fixes: the model agrees and starts coding before it understands, and the ceremony around it never fits the work — a two-line fix and a month-long migration get shoved through the same process, or through none at all. The thinking you did in chat is never pinned down; it's just scrollback.
 
 `task-pipeline` keeps **the discussion and the doing apart.** Here's the whole loop, start to finish:
 
@@ -8,16 +8,21 @@ If you've ever tried to cram Claude into one big "do everything in this ticket" 
 # 1. talk it through in chat — no ceremony, change your mind freely
 you: add HTTP retry with backoff to the payments client
 
-# 2. when you're ready, one command freezes that discussion into a file
+# 2. grill the plan first (optional) — one question at a time, writes nothing
+/task:grill
+  → Retry the 429s too, or only 5xx and timeouts?  [recommended: 429s too]
+    decision ledger → route to /task:to-plan
+
+# 3. when you're ready, one command freezes that discussion into a file
 /task:to-plan
   → wrote .task/task/http-retry-backoff.md   (## Description + ## Plan)
 
-# 3. hand the file to any session — this one, or a fresh one next week
+# 4. hand the file to any session — this one, or a fresh one next week
 implement .task/task/http-retry-backoff.md
   → work the plan · /verify · /code-review · commit
 ```
 
-Three beats: discuss, capture, implement. The plan you talked through is now a file on disk, not chat scrollback — which is exactly why step 3 works just as well in a brand-new session tomorrow.
+Four beats: discuss, grill (optional), capture, implement. The plan you talked through — and argued, if you grilled it — is now a file on disk, not chat scrollback, which is exactly why the last step works just as well in a brand-new session tomorrow.
 
 ## The idea: serialize the context, don't orchestrate it
 
@@ -28,7 +33,7 @@ That distinction is why it stays small, and it's the opposite bet from the bread
 - **one file per task** — `.task/task/<slug>.md`, carrying the discussion's decisions;
 - **a stamped `## Execution` block** inside that file, which hands the rest back to the platform.
 
-The plan lives in the file, not in chat — so it survives the `/clear`, the compaction, and the fresh session tomorrow that would otherwise erase it.
+What gets pinned is an *argued* decision, serialized at the depth you chose — the skill you pick decides how much structure the file carries, from a bare "what and why" to a stepwise plan. (And yes, the file then outlives the `/clear`, the compaction, and tomorrow's fresh session that would otherwise erase it — table stakes, not the point.)
 
 ## The shape of the pipeline
 

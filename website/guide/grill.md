@@ -8,6 +8,10 @@ It writes **nothing**. Its whole output is a hardened discussion plus a decision
 
 A capture skill freezes a discussion into a file. If the discussion was fuzzy, the file is fuzzy. `grill` is where you pressure-test the thinking *before* it's frozen — so `to-plan` / `to-spec` / `to-task` / `to-roadmap` serialize something that's already been examined.
 
+## Where it comes from
+
+`grill` descends from Matt Pocock's [grill-me](https://github.com/mattpocock/skills) — the interrogate-before-you-build idea that made the case interrogation belongs before code. This one adds a decision ledger, recommendations that are allowed to disagree with you rather than rubber-stamp, a closing pre-mortem, and routing into capture — the part grill-me leaves open: somewhere to put the answers.
+
 ## How it works
 
 ```text

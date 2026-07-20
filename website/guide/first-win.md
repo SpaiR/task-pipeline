@@ -26,6 +26,10 @@ you:  no config file, just the flag
 
 You've explored it, changed your mind once, landed on the shape. That discussion is the part that normally dies on `/clear`.
 
+::: tip Optional: grill it first
+When a plan has real forks — this flag's default, that error's fallback — run [`/task:grill`](/guide/grill) before you capture. It interrogates the plan one question at a time, keeps a decision ledger, and ends with a pre-mortem, then routes you to the right capture skill. It writes nothing and needs no config, so it works even as your very first command. Our `--quiet` flag is small enough to skip it; reach for it when the decision has more at stake.
+:::
+
 ## 3. Capture it (one command)
 
 ```text
