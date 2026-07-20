@@ -36,3 +36,9 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" [ all | task <slug> | r
 - A missing `config.md` exits 2 — the one precondition failure that stops a run.
 
 Because it's advisory, nothing forces you to run it. Its whole purpose is to catch a hand-edit that drifted from the format. See [Troubleshooting](/guide/troubleshooting#validate-fail) for reading the output.
+
+## Does not
+
+- Run automatically — no hook or skill invokes it; you call it by hand.
+- Fix or rewrite files — it reports, never edits.
+- Gate committing — a FAIL blocks nothing; the implementing session commits regardless.

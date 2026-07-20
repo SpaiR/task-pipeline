@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="task-pipeline">
+  <title>task-pipeline</title>
+  <defs>
+    <linearGradient id="tp-mark" x1="16" y1="16" x2="112" y2="112" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8A2BE2"/>
+      <stop offset="1" stop-color="#c084fc"/>
+    </linearGradient>
+  </defs>
+  <!-- the "task captured to a file" motif: a checkbox with its check -->
+  <rect x="16" y="16" width="96" height="96" rx="26" fill="none" stroke="url(#tp-mark)" stroke-width="12"/>
+  <path d="M41 65 L58 82 L89 45" fill="none" stroke="url(#tp-mark)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

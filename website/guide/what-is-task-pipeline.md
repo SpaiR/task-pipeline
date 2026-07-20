@@ -2,26 +2,31 @@
 
 If you've ever tried to cram Claude into one big "do everything in this ticket" session, you know how it ends: the model starts writing code before it understands the task, "fixes" one bug and breaks three others, and reports "done" while half the acceptance criteria are still stubs. And the plan you talked through in chat? Gone the moment you `/clear`.
 
-`task-pipeline` keeps **the discussion and the doing apart.**
-
-- Discuss the task freely in chat — think out loud, explore approaches, change your mind.
-- When you're ready, one command freezes that discussion into a Markdown file under `.task/`.
-- Any session — this one, or a fresh one tomorrow — implements that file the same way: work the plan, run `/verify`, run `/code-review`, commit.
+`task-pipeline` keeps **the discussion and the doing apart.** Here's the whole loop, start to finish:
 
 ```text
-discuss in chat
-  → capture to a file
-  → any session implements it
+# 1. talk it through in chat — no ceremony, change your mind freely
+you: add HTTP retry with backoff to the payments client
+
+# 2. when you're ready, one command freezes that discussion into a file
+/task:to-plan
+  → wrote .task/task/http-retry-backoff.md   (## Description + ## Plan)
+
+# 3. hand the file to any session — this one, or a fresh one next week
+implement .task/task/http-retry-backoff.md
+  → work the plan · /verify · /code-review · commit
 ```
+
+Three beats: discuss, capture, implement. The plan you talked through is now a file on disk, not chat scrollback — which is exactly why step 3 works just as well in a brand-new session tomorrow.
 
 ## The idea: serialize the context, don't orchestrate it
 
-`task-pipeline` is **not** an orchestration engine. It's a **context-serialization protocol**: a way to take the "what, why, and how" that lives in a chat and pin it into a fixed-format file that outlives the conversation.
+What you just watched has a name. `task-pipeline` is **not** an orchestration engine — it's a **context-serialization protocol**: a way to take the "what, why, and how" that lives in a chat and pin it into a fixed-format file that outlives the conversation.
 
-That distinction is why it's small. It doesn't try to replace Claude Code's execution loop — it leans on what Claude Code already ships (dynamic Workflows, `/verify`, `/code-review`) and adds just enough structure around them:
+That distinction is why it stays small, and it's the opposite bet from the breadth-first tools nearby: rather than dozens of skills or a full SDLC, it leans on what Claude Code already ships (dynamic Workflows, `/verify`, `/code-review`) and adds just enough structure around them:
 
-- **one artifact per task** — `.task/task/<slug>.md`, carrying the discussion's decisions;
-- **a stamped `## Execution` block** inside that artifact, which hands the rest back to the platform.
+- **one file per task** — `.task/task/<slug>.md`, carrying the discussion's decisions;
+- **a stamped `## Execution` block** inside that file, which hands the rest back to the platform.
 
 The plan lives in the file, not in chat — so it survives the `/clear`, the compaction, and the fresh session tomorrow that would otherwise erase it.
 

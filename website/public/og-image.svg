@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="task-pipeline — your plan survives /clear">
+  <defs>
+    <linearGradient id="og-mark" x1="0" y1="0" x2="96" y2="96" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8A2BE2"/>
+      <stop offset="1" stop-color="#c084fc"/>
+    </linearGradient>
+    <linearGradient id="og-word" x1="96" y1="0" x2="900" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#c9a4ff"/>
+      <stop offset="1" stop-color="#ffffff"/>
+    </linearGradient>
+    <radialGradient id="og-glow" cx="50%" cy="18%" r="80%">
+      <stop offset="0" stop-color="#2a1b45"/>
+      <stop offset="1" stop-color="#161622"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#og-glow)"/>
+
+  <!-- logo mark: checkbox with its check -->
+  <g transform="translate(120 120)">
+    <rect x="8" y="8" width="80" height="80" rx="22" fill="none" stroke="url(#og-mark)" stroke-width="10"/>
+    <path d="M28 50 L43 65 L70 34" fill="none" stroke="url(#og-mark)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <text x="232" y="192" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="72" font-weight="700" fill="url(#og-word)">task-pipeline</text>
+
+  <text x="122" y="330" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="86" font-weight="800" fill="#ffffff">Your plan survives <tspan fill="#c084fc">/clear</tspan>.</text>
+
+  <text x="122" y="410" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="37" font-weight="400" fill="#b8b4c8">Discuss in chat. Capture to a file. Implement in any session.</text>
+
+  <text x="122" y="560" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="32" font-weight="500" fill="#8f8aa3">A chat-first task pipeline for Claude Code</text>
+</svg>

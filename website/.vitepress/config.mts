@@ -2,10 +2,14 @@ import { defineConfig } from 'vitepress'
 
 const gh = 'https://github.com/SpaiR/task-pipeline'
 
+// Absolute URL for the social card — link unfurlers can't resolve a relative path.
+const ogImage = 'https://spair.github.io/task-pipeline/og-image.png'
+const description =
+  'Discuss in chat, capture to a file, implement in any session — a chat-first task pipeline for Claude Code.'
+
 export default defineConfig({
   title: 'task-pipeline',
-  description:
-    'Discuss in chat, capture to a file, implement in any session — a chat-first task pipeline for Claude Code.',
+  description,
   lang: 'en-US',
 
   // Project Pages are served under /<repo>/ — keep this in sync with the repo name.
@@ -14,28 +18,38 @@ export default defineConfig({
   cleanUrls: true,
   lastUpdated: true,
 
+  // changelog.md includes the repo's CHANGELOG.md verbatim; its repo-relative
+  // links (CLAUDE.md, CONTRIBUTING.md, docs/contract.md) resolve on GitHub, not
+  // on the site. No site page lives at these paths, so ignoring them is safe.
+  ignoreDeadLinks: [/\/CONTRIBUTING$/, /\/CLAUDE$/, /\/docs\/contract$/],
+
   head: [
+    // Head links are emitted verbatim (no base prefixing) — spell out the base.
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/task-pipeline/favicon.svg' }],
+    ['link', { rel: 'icon', type: 'image/png', href: '/task-pipeline/favicon.png' }],
     ['meta', { name: 'theme-color', content: '#8A2BE2' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:title', content: 'task-pipeline' }],
-    [
-      'meta',
-      {
-        property: 'og:description',
-        content:
-          'Discuss in chat, capture to a file, implement in any session — a chat-first task pipeline for Claude Code.',
-      },
-    ],
+    ['meta', { property: 'og:description', content: description }],
+    ['meta', { property: 'og:image', content: ogImage }],
+    ['meta', { property: 'og:image:width', content: '1200' }],
+    ['meta', { property: 'og:image:height', content: '630' }],
+    ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+    ['meta', { name: 'twitter:title', content: 'task-pipeline' }],
+    ['meta', { name: 'twitter:description', content: description }],
+    ['meta', { name: 'twitter:image', content: ogImage }],
   ],
 
   themeConfig: {
+    logo: '/logo.svg',
+
     nav: [
       { text: 'Guide', link: '/guide/what-is-task-pipeline', activeMatch: '/guide/' },
       { text: 'Reference', link: '/reference/commands', activeMatch: '/reference/' },
       {
         text: 'v3.2.0',
         items: [
-          { text: 'Changelog', link: `${gh}/blob/main/CHANGELOG.md` },
+          { text: 'Changelog', link: '/changelog' },
           { text: 'Contributing', link: `${gh}/blob/main/CONTRIBUTING.md` },
         ],
       },
@@ -48,6 +62,7 @@ export default defineConfig({
           items: [
             { text: 'What is task-pipeline?', link: '/guide/what-is-task-pipeline' },
             { text: 'Getting started', link: '/guide/getting-started' },
+            { text: 'First win in 5 minutes', link: '/guide/first-win' },
             { text: 'Core concepts', link: '/guide/core-concepts' },
           ],
         },
@@ -67,6 +82,7 @@ export default defineConfig({
           items: [
             { text: 'Why you can trust this', link: '/guide/trust' },
             { text: 'Comparison with alternatives', link: '/guide/comparison' },
+            { text: 'FAQ', link: '/guide/faq' },
             { text: 'Troubleshooting', link: '/guide/troubleshooting' },
           ],
         },

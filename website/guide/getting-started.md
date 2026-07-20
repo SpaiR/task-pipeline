@@ -4,6 +4,7 @@
 
 - [Claude Code](https://docs.claude.com/en/docs/claude-code) — `task-pipeline` ships as a Claude Code plugin.
 - `/verify` and `/code-review` available in your install (both ship with Claude Code) — every task's `## Execution` block invokes them directly.
+- Dynamic Workflows — only [`/task:roadmap-to-workflow`](/guide/autopilot) needs them, to fan a roadmap's items out to parallel sessions. Everything else works without. There's no pinned version to match: task-pipeline uses these features as your Claude Code install exposes them.
 
 ## Install
 

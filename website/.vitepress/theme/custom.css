@@ -23,6 +23,34 @@
   --vp-c-brand-1: #b57bf0;
   --vp-c-brand-2: #a855f0;
   --vp-c-brand-3: #9b46e8;
+
+  /* The light gradient starts at #8A2BE2, which is dark-on-dark here — lift both
+     stops so the hero wordmark clears AA (large text) against --vp-c-bg. */
+  --vp-home-hero-name-background: linear-gradient(120deg, #b57bf0 30%, #e9d5ff);
+}
+
+/**
+ * Badge row under the hero (index.md). Centered, wraps on narrow screens.
+ * shields.io images load at runtime — a static docs site, no CSP to fight.
+ */
+.tp-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.tp-badges a {
+  display: inline-flex;
+  text-decoration: none;
+}
+
+.tp-badges img {
+  height: 20px;
+  display: block;
 }
 
 /**

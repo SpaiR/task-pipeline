@@ -28,7 +28,7 @@ Two contrasts matter most: **where the plan lives**, and **when a task is too sm
 | Artifact languages | Any, via `config.md` | English by default |
 | Platforms | Claude Code only | Claude Code, Codex, Cursor, Gemini CLI, Copilot CLI |
 
-**Use task-pipeline** if you want a controlled capture-then-implement process, non-English languages, and no hand-rolled audit machinery.
+**Use task-pipeline** if you want a controlled capture-then-implement process, non-English languages, and reviews that run on Claude Code's own gates (`/verify` + `/code-review`) rather than superpowers' Iron Law TDD.
 
 ## vs OpenSpec
 
