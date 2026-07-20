@@ -18,7 +18,7 @@ Fix a **multi-task initiative** (phases, dependencies, or more than a couple of 
 Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`.
 
 - **`config.md not found`** → `/task:to-roadmap` is intake-capable: run the inline setup gate exactly as `skills/to-task/SKILL.md` Step 0 does (detect stack → one `AskUserQuestion` confirmation, Accept / Edit / Decline chips → write `config.md` + `git config --local task.root` + exclude `.task`), then re-run `validate.sh all`. If config is now present → continue. If the user declined setup → report "`config.md` not written. → Next: run `/task:to-roadmap` again when ready" and **stop**.
-- **Any other non-zero exit** (config present but malformed) → **stop**, report the validator output.
+- **Exit 1** (one or more *existing* artifacts fail validation) → surface the validator output, but **do not block**: those errors are pre-existing files, not the roadmap you're about to write (mirrors `to-task` Step 0 and `roadmap-to-workflow`, and `validate.sh` is advisory, never config-malformed — it doesn't inspect `config.md` content). Only a missing `config.md` (exit 2, handled above) hard-stops.
 
 ### Preconditions
 
@@ -37,7 +37,7 @@ Issue these independent reads and listings as one parallel batch — none depend
 - **Harvest** — the conversation, *before* this call, already settled concrete decisions about **this same initiative** (multiple exchanges, small details included). Tells: "build a roadmap from what we discussed", or `$ARGUMENTS` reads as a handle for prior discussion rather than a fresh idea. → Go to Step 2H.
 - **Cold start** — a rough one-to-few-line description with no prior initiative-specific discussion. → Go to Step 2C.
 
-On the fence, prefer harvest — a false positive costs one extra confirmation; a false negative silently drops details.
+On the fence, prefer harvest — a false positive costs one extra recap the user skims; a false negative silently drops details.
 
 #### Step 2H: Harvest — Decision Inventory
 
@@ -62,11 +62,7 @@ captured; confirm nothing dropped.}
 erodes trust. Omit the heading otherwise.}
 ```
 
-Then, in the same reply, pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline**. **Gate on the call:** emit `AskUserQuestion` only after the full inventory sits printed above it in this same reply — having discussed the decisions earlier in chat does not count as printing them. The inventory is this turn's deliverable, not a between-tools status note to keep brief; the chips display none of it:
-
-- **Accept** → if open forks remain, resolve them first (a focused round as in Step 2C); then proceed to Step 3 (draft).
-- **Edit** → follow-up: the user adds/corrects a decision or moves it between locked/open, then proceed as Accept.
-- **Decline** → you misread the discussion; ask the user to restate it, rebuild the inventory.
+This inventory is a **recap** of decisions the user already reached in the discussion: print it, no confirmation chip. Then proceed — if open forks remain, resolve them first (a focused round as in Step 2C), then go to Step 3 (draft). If the recap misreads or drops something, the user says so in chat — correct it and reprint before drafting.
 
 #### Step 2C: Cold start — brainstorm round
 
@@ -102,7 +98,7 @@ Always propose **2–3 decomposition options** with different phase boundaries (
 - **Behavioral decisions** — observable properties the user locked in (including small details). These land in an item's `### Outcomes` / `### Acceptance criteria`.
 - **Technical anchors** — load-bearing technical decisions (a protocol, a cross-cutting data shape, a "we picked X over Y because…" whose reasoning wouldn't survive re-derivation). These belong in a standalone spec, never in item bodies — route at draft time (Step 3).
 
-Before drafting, reprint the full list (behavioral + anchors) **as message text** and pose an `AskUserQuestion` (**Accept** / **Edit** / **Decline**) in the same reply to confirm — the cold-start twin of Step 2H's inventory. **Gate on the call:** emit `AskUserQuestion` only after the full list sits printed above it in this same reply — the rounds just played do not count as printing it; the chips render none of it.
+Before drafting, reprint the full list (behavioral + anchors) **as message text** — the cold-start twin of Step 2H's inventory, a recap of the decisions the user reached across the rounds: print it, no confirmation chip. If a line is wrong, the user corrects it in chat before drafting.
 
 Topics the user explicitly said to skip stay skipped — do not raise them again.
 
@@ -140,6 +136,7 @@ Write the file directly — no in-chat preview, no confirmation prompt.
 2. **Slug collision (soft).** Create `.task/roadmap/` if missing. If `.task/roadmap/<slug>.md` already exists → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). Never silently overwrite.
 3. Write `.task/roadmap/<slug>.md` with the full content, including any `Spec: <spec-slug>` header lines for specs referenced in Step 3.
 4. Modify no file other than `.task/roadmap/<slug>.md` (spec authorship is `to-spec`'s job — see Forbidden).
+5. Validate the written file: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" roadmap <slug>` — surface any WARN/ERROR in the Step 6 digest; only a config-precondition failure (exit 2) hard-stops.
 
 ### Step 5: Light self-check (report-only)
 
@@ -151,11 +148,22 @@ After Save, skim the just-saved file (not the in-chat draft) against three lense
 
 Report a compact findings summary — a count per lens plus the obvious issues, a few lines. **Never rewrite the saved file** — anything found here is surfaced for the user to fix by hand or discuss further in chat; there is no inline auto-apply and no `--refine` mode to escalate to.
 
-### Step 6: Output
+### Step 6: Output — digest
 
-- Print the path to the created file, and list any `Spec:`-referenced specs (plus any decision flagged for a `/task:to-spec` follow-up).
-- One-line summary: "*N* tasks across *M* phases. Recommended order: 1 → 2 → 4 → 3 → 5 …".
+Print the structural digest of what was written (convention (b)) as message text — enough for the user to judge at a glance whether to open the file:
+
+```
+Wrote `.task/roadmap/<slug>.md`
+{Title}
+Items: {N} tasks across {M} phases — recommended order: 1 → 2 → 4 → 3 → 5 …
+- 1. {item title}
+- 2. {…}
+Specs referenced: {slug, …}   (or "none"; plus any decision flagged for a `/task:to-spec` follow-up)
+validate: {OK — 0 errors, N warning(s) | the FAIL lines}
+```
+
 - Print the Step 5 findings summary (or "clean / minor only").
+- The file is already written — to change anything, just say so.
 - End with the canonical next-step footer: `→ Next: \`/task:roadmap-to-workflow\`` (loop the whole roadmap) or `\`/task:to-task <slug>#1\`` (pick up the first item by hand — same for any other item number). Flag-free.
 
 ## Forbidden
@@ -164,7 +172,7 @@ Report a compact findings summary — a count per lens plus the obvious issues, 
 - Planning implementation details (file lists with line numbers, function signatures, code blocks > 5 lines) — that is `/task:to-plan`'s job when the item is picked up.
 - Modifying any file other than `.task/roadmap/<slug>.md` — specs live at `.task/spec/<slug>.md` and are authored only by `to-spec`, never written or edited here.
 - Auto-checking / auto-unchecking item checkboxes — that is the `roadmap-to-workflow` **driver**'s exclusive job, never this skill's and never a per-item agent's.
-- A single-direction monologue in a decomposition round — offer ≥ 2 options or explicitly justify why only one is viable. (The Decision Inventory and the cold-start sign-off are confirmation rounds, not decomposition rounds — exempt.)
+- A single-direction monologue in a decomposition round — offer ≥ 2 options or explicitly justify why only one is viable. (The Decision Inventory and the cold-start recap are chat-only recaps, not decomposition rounds — exempt.)
 - Generic risks ("watch out for bugs") — risks must be specific to the initiative and project.
 - More than one initiative per file — split and pick one for this run.
 - Persisting topics the user asked to skip; placeholders anywhere.

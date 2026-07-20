@@ -18,7 +18,7 @@ Fix **load-bearing technical decisions** — a protocol, a cross-cutting data sh
 Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`.
 
 - **`config.md not found`** → `/task:to-spec` is intake-capable: run the inline setup gate exactly as `skills/to-task/SKILL.md` Step 0 does (detect stack → one `AskUserQuestion` confirmation, Accept / Edit / Decline chips → write `config.md` + `git config --local task.root` + exclude `.task`), then re-run `validate.sh all`. If config is now present → continue. If the user declined setup → report "`config.md` not written. → Next: run `/task:to-spec` again when ready" and **stop**.
-- **Any other non-zero exit** (config present but malformed) → **stop**, report the validator output.
+- **Exit 1** (one or more *existing* artifacts fail validation) → surface the validator output, but **do not block**: those errors are pre-existing files, not the spec you're about to write (mirrors `to-task` Step 0 and `roadmap-to-workflow`, and `validate.sh` is advisory, never config-malformed — it doesn't inspect `config.md` content). Only a missing `config.md` (exit 2, handled above) hard-stops.
 
 ### Preconditions
 
@@ -37,7 +37,7 @@ Read `.task/config/config.md` (Language, conventions), `CLAUDE.md` if present, a
 - **Harvest** — the conversation, *before* this call, already settled concrete technical decisions. Tells: "write a spec from what we settled", or `$ARGUMENTS` reads as a handle for prior discussion. → Go to Step 2H.
 - **Cold start** — a rough decision area with no prior discussion. → Go to Step 2C.
 
-On the fence, prefer harvest — a false positive costs one extra confirmation; a false negative silently drops reasoning.
+On the fence, prefer harvest — a false positive costs one extra recap the user skims; a false negative silently drops reasoning.
 
 #### Step 2H: Harvest — Decision Inventory
 
@@ -61,11 +61,7 @@ confirm nothing dropped or misstated.}
 {Only if part of the discussion is out of context. Omit otherwise.}
 ```
 
-Then, in the same reply, pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline**. **Gate on the call:** emit `AskUserQuestion` only after the full inventory sits printed above it in this same reply — having discussed the decisions earlier in chat does not count as printing them. The inventory is this turn's deliverable, not a between-tools status note to keep brief; the chips display none of it:
-
-- **Accept** → if open forks remain, resolve them first; then proceed to Step 3 (draft).
-- **Edit** → follow-up: the user adds/corrects a decision or its reasoning, or moves it between locked/open, then proceed as Accept.
-- **Decline** → you misread the discussion; ask the user to restate it, rebuild the inventory.
+This inventory is a **recap** of decisions (with their reasoning) the user already reached in the discussion: print it, no confirmation chip. Then proceed — if open forks remain, resolve them first, then go to Step 3 (draft). If the recap misreads, drops, or misstates a decision or its rationale, the user says so in chat — correct it and reprint before drafting.
 
 #### Step 2C: Cold start — decide the forks
 
@@ -88,7 +84,7 @@ For a decision area with no prior discussion, work each fork with the user befor
 {One focused question on the most load-bearing fork.}
 ```
 
-Offer ≥2 options per fork (or justify why only one is viable). Iterate (`Round N`) until decisions are settled, then reprint the full list **as message text** and pose an `AskUserQuestion` (**Accept** / **Edit** / **Decline**) in the same reply to confirm. **Gate on the call:** emit `AskUserQuestion` only after the full list sits printed above it in this same reply — the rounds just played do not count as printing it; the chips render none of it.
+Offer ≥2 options per fork (or justify why only one is viable). Iterate (`Round N`) until decisions are settled, then reprint the full list **as message text** — a recap: print it, no confirmation chip. If a decision or its rationale is wrong, the user corrects it in chat before drafting.
 
 Topics the user explicitly said to skip stay skipped.
 
@@ -109,18 +105,28 @@ Keep one decision per section. Before saving, a quick self-check, fixed inline:
 
 ### Step 4: Save
 
-Write the file directly — no in-chat preview, no confirmation prompt (the Decision Inventory in Step 2 already confirmed the content).
+Write the file directly — no in-chat preview, no confirmation prompt; the chat discussion (recapped in Step 2) was the review, and Step 5's digest lets the user judge whether to open the file.
 
 1. Slug: kebab-case from the decision-area topic, ≤ 50 chars (e.g. `event-envelope`, `auth-token-model`). Its own identity — independent of any roadmap.
 2. **Slug collision (soft).** Create `.task/spec/` if missing. If `.task/spec/<slug>.md` already exists → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). Never silently overwrite.
 3. Write `.task/spec/<slug>.md` with the full content.
 4. Do not modify any other file — wiring a `Spec:` header into a task or roadmap is the job of `to-task` / `to-plan` / `to-roadmap` when they reference this spec.
+5. Validate the written file: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" spec <slug>` — surface any WARN/ERROR in the Step 5 digest; only a config-precondition failure (exit 2) hard-stops.
 
-### Step 5: Output
+### Step 5: Output — digest
 
-- Print the path to the created file.
-- One-line summary: "*N* decisions pinned."
-- End with the canonical next-step footer (convention (a), flag-free): `→ Next: \`/task:to-plan\` a task that relies on this spec — or add a \`Spec: <slug>\` header to an existing roadmap or task.`
+Print the structural digest of what was written (convention (b)) as message text. A spec is read by the executing session as a **fixed anchor**, so list **every** pin in full — this is the user's one glance to catch a misstated decision:
+
+```
+Wrote `.task/spec/<slug>.md`
+# Spec: {Title}
+Pins:
+- 1. {decision, one line}
+- 2. {…}
+validate: {OK — 0 errors, N warning(s) | the FAIL lines}
+```
+
+The file is already written — to change any pin, just say so. Then close with the handoff footer (convention (a), flag-free): `→ Next: \`/task:to-plan\` a task that relies on this spec — or add a \`Spec: <slug>\` header to an existing roadmap or task.`
 
 ## Forbidden
 

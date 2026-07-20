@@ -44,16 +44,16 @@ Maintain a ledger internally — one line per answered question, in the form `{t
 
 ### Step 5: Pre-mortem finale
 
-Once the branches are resolved, ask **one** kill-shot question via `AskUserQuestion` before the final confirmation — pick whichever bites harder:
+Once the branches are resolved, ask **one** kill-shot question via `AskUserQuestion` before printing the ledger — pick whichever bites harder:
 
 - "Fast-forward: this shipped and failed. What was the cause?" — options being the most plausible failure modes you see, recommended chip = the one you judge most likely.
 - "What would make this whole thing unnecessary?" — options being the simpler alternatives or the do-nothing case.
 
 Fold the answer into the ledger as a final decision line (the mitigation, or the confirmed reason to proceed anyway).
 
-### Step 6: Confirm the ledger
+### Step 6: Print the ledger
 
-Print the full ledger **as message text in your reply** — the whole block, once, before any tool call:
+Once the pre-mortem answer is folded in, process the whole set of answers together and print the full ledger **as message text in your reply** — the whole block, once (convention (b)):
 
 ```
 ## Decision ledger
@@ -62,11 +62,9 @@ Print the full ledger **as message text in your reply** — the whole block, onc
 2. {…}
 ```
 
-Then, **in the same message**, pose one `AskUserQuestion` (convention (b)) with chips **Accept** / **Edit** / **Decline**. **Gate on the call:** emit `AskUserQuestion` only after the full ledger sits printed above it in this same reply — a status line is not the ledger, and having discussed the decisions earlier in chat does not count as printing it. The ledger is this turn's deliverable, not a between-tools status note to keep brief; the question box displays none of it:
+The ledger **is** the grill's output — print it, then go straight to Step 7 routing, no confirmation chip: every line restates a decision the user already made through the questions above.
 
-- **Accept** → proceed to Step 7 (routing).
-- **Edit** → focused follow-up on what to add, correct, or drop; re-print the full ledger as message text; repeat until accepted.
-- **Decline** → stop with `nothing captured. → Next: re-run /task:grill when you want to re-open the decision`. (Correcting a ledger line is **Edit**; a Decline ends the grill.)
+grill writes nothing, so there is no file to guard and no "declined" state — an abandoned grill is simply one the user doesn't route onward. If the user wants a line changed, they say so in chat: correct it and reprint the ledger.
 
 ### Step 7: Route to the right capture skill
 

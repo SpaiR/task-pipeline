@@ -36,8 +36,8 @@ The artifact path is the handle. Resolve a target reference, in order:
 Once a target reference is resolved (1–3), branch on whether the file exists:
 
 - **Target file does not exist yet** → **fresh capture** at that path. If it came from a roadmap reference, continue at Step 2a; otherwise treat the resolved slug/title as a starting point and continue at Step 2b.
-- **Target file exists, no `## Plan` heading present** → **promote mode.** This is the flag-free way to turn a `to-task` capture into a plan: skip Step 2 entirely — header and `## Description` already exist and are untouched. Go straight to Step 3 using the existing Description as context, then in Step 8 **insert** `## Plan` (and `## Tests`) rather than create.
-- **Target file exists, `## Plan` already present** → **revise mode.** `to-plan` was already run on this file. Skip Step 2, go straight to Step 3 using the existing Description (and the current chat) as context, then in Step 8 **replace** the existing `## Plan` (and `## Tests` only if the user's edit touches it) rather than create or blindly append a duplicate section.
+- **Target file exists, no `## Plan` heading present** → **promote mode.** This is the flag-free way to turn a `to-task` capture into a plan: skip Step 2 entirely — header and `## Description` already exist and are untouched. Go straight to Step 3 using the existing Description as context, then in Step 7 **insert** `## Plan` (and `## Tests`) rather than create.
+- **Target file exists, `## Plan` already present** → **revise mode.** `to-plan` was already run on this file. Skip Step 2, go straight to Step 3 using the existing Description (and the current chat) as context, then in Step 7 **replace** the existing `## Plan` (and `## Tests` only if the user's edit touches it) rather than create or blindly append a duplicate section.
 
 No target at all (case 4): if one or more `.task/roadmap/*.md` files have an unchecked (`- [ ]`) item **and** there is no chat discussion to draft from, present an `AskUserQuestion` fork (convention (c)): "How do you want to start this task?" — **Draft from this chat** / **Open from a roadmap**. The latter opens a second `AskUserQuestion` listing the roadmap slugs, then proceeds as Step 2a with the chosen slug. If there **is** chat discussion to draft from, proceed as Step 2b. If there is neither a chat discussion nor any unchecked roadmap item to draw on (nothing to capture), **stop** and ask the user what to capture rather than drafting from nothing.
 
@@ -50,15 +50,15 @@ Only for fresh capture (skip entirely for promote/revise — see Step 1).
 1. Resolve `<slug>` to `.task/roadmap/<slug>.md`; if ambiguous or missing — stop and ask.
 2. Pick `<N>`: if given, use it. Otherwise collect open items (`- [ ]` checkbox headings); if none — stop: "all items in `<slug>` are closed; pick one explicitly with `<slug>#<N>`, or draft from chat instead." More than one open item → ask via `AskUserQuestion` (chip per `#<N> — <title>`, first/lowest default); exactly one → auto-pick it.
 3. Read the item's `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria` block. `### Context` becomes the Description's "why"; the rest folds into the "what". `### Acceptance criteria` entries are good candidates to carry into `## Tests` (Step 4) verbatim as test intents when tests are required.
-4. Note the specs this item relies on: any `### Spec references → <spec-slug> §N` in the item body, plus the roadmap's own `Spec: <slug>` header lines. Read each `.task/spec/<spec-slug>.md` now — carry them into Step 3 as pinned anchors (see Step 3's note), and hold the distinct `<spec-slug>`s for the `Spec:` headers in Step 8's write.
+4. Note the specs this item relies on: any `### Spec references → <spec-slug> §N` in the item body, plus the roadmap's own `Spec: <slug>` header lines. Read each `.task/spec/<spec-slug>.md` now — carry them into Step 3 as pinned anchors (see Step 3's note), and hold the distinct `<spec-slug>`s for the `Spec:` headers in Step 7's write.
 5. Derive the slug: kebab-case of the item title (2–4 words). If it collides with an existing, unrelated `.task/task/<slug>.md`, disambiguate with a short qualifier (e.g. append a second distinguishing word) rather than overwriting.
-6. Hold, for Step 8's write, the header lines in the shape Step 8 writes — `# {Item title}` plus `Roadmap:` / `Source item:` and a `Spec:` line per cited spec — and the drafted `## Description` body (why from Context, what from Goal/Outcomes/Invariants/Acceptance criteria). Continue to Step 3 — do not write the file yet; the full task.md (Description + Plan + Tests) is presented once, together, in Step 7.
+6. Hold, for Step 7's write, the header lines in the shape Step 7 writes — `# {Item title}` plus `Roadmap:` / `Source item:` and a `Spec:` line per cited spec — and the drafted `## Description` body (why from Context, what from Goal/Outcomes/Invariants/Acceptance criteria). Continue to Step 3 — do not write the file yet; the full task.md (Description + Plan + Tests) is assembled and written once, together, in Step 7.
 
 ### Step 2b: Chat-draft
 
 1. **Slug.** Generate a short kebab-case slug (2–4 words) from the chat's essence, in English regardless of `config.md` → Language (the slug is a filename, a parser-stable string). If it collides with an existing, unrelated task file, disambiguate rather than overwriting.
 2. **Distil the chat.** Read back over the discussion in this conversation (not the codebase yet) and draft `## Description` — the why + what, in the user's own framing. Use `### Problem` / `### Outcome` / `### Scope` / `### Constraints` sub-headers where the discussion gives signal for them; omit a sub-header rather than inventing content. Do not fabricate anything not actually discussed.
-3. Hold the header line `# {Short task title}` (no `Roadmap:` / `Source item:` lines in this mode) and the drafted Description for Step 8. If the discussion clearly relies on a spec in `.task/spec/`, hold a `Spec: <slug>` header line for each relevant one too (never invent a reference; never author the spec — that is `to-spec`'s job). Continue to Step 3.
+3. Hold the header line `# {Short task title}` (no `Roadmap:` / `Source item:` lines in this mode) and the drafted Description for Step 7's write. If the discussion clearly relies on a spec in `.task/spec/`, hold a `Spec: <slug>` header line for each relevant one too (never invent a reference; never author the spec — that is `to-spec`'s job). Continue to Step 3.
 
 ## Step 3: Analyze the codebase
 
@@ -131,9 +131,9 @@ Each `## Plan` step that satisfies a test references it by number in its `Goal` 
 
 **Dropped on purpose:** no `Implement-Model:` stamp (model hints live only on roadmap items as `**Model:**`), no `## Verification`, no `## Risks` — the `task.md` format ends at Execution.
 
-## Step 6: Self-check before presenting
+## Step 6: Self-check before writing
 
-Run through this checklist against the draft; fix inline before Step 7, don't present something you already know is broken:
+Run through this checklist against the draft; fix inline before the write (Step 7), don't write something you already know is broken:
 
 - [ ] Does `## Description` state the why, not just the what? (Fresh capture only — promote/revise inherit it as-is.)
 - [ ] Does every `### Step N:` have a non-empty `**Touches:**` with at least one real path?
@@ -144,21 +144,9 @@ Run through this checklist against the draft; fix inline before Step 7, don't pr
 - [ ] No placeholders (`TBD`, `TODO`, `???`) anywhere outside an explicitly-marked `Logic` pseudocode block?
 - [ ] Steps ordered so nothing depends on a not-yet-established fact?
 
-## Step 7: Present for confirmation
+## Step 7: Write
 
-Print the content as message text (convention (b) throughout) — what to print depends on mode:
-
-- **Fresh capture** — show the full drafted `task.md` (header + Description + Plan + Tests + Execution).
-- **Promote** — show only the new `## Plan` (+ `## Tests` if newly added); state plainly that the existing Description is untouched.
-- **Revise** — show the new `## Plan` next to a one-line note of what changed from the old one; state plainly that Description and any pre-existing Tests are untouched unless the chat explicitly asked to change them too.
-
-Then, in the same reply, pose an `AskUserQuestion` with chips **Accept** / **Edit** / **Decline**. **Gate on the call:** emit `AskUserQuestion` only after the full content above sits printed in this same reply — a status line is not the draft, and having discussed the plan earlier in chat does not count as printing it; print it verbatim now, even if it feels redundant. The draft is this turn's deliverable, not a between-tools status note to keep brief. The question box does **not** render the `task.md` and an option's `preview` truncates — the printed text is the only thing the user sees:
-
-- **Accept** → proceed to Step 8 as drafted.
-- **Edit** → follow-up asks what to change, apply it, re-print the content as message text, repeat until accepted.
-- **Decline** → write nothing, stop with "`task.md` not written. → Next: re-run `/task:to-plan` when you want to capture it" (promote/revise: "no changes made to `task.md`. → Next: re-run `/task:to-plan` when you want to revisit the plan").
-
-## Step 8: Write
+Write the file directly — no in-chat draft, no confirmation prompt. The chat discussion (and, in promote/revise, the existing Description) was the review; the written file is the deliverable, and Step 8's digest lets the user judge whether to open it.
 
 **Fresh capture:**
 ```bash
@@ -194,11 +182,25 @@ Spec: {spec-slug}          (one line per relevant spec; omit if none)
 
 **Promote:** edit the existing `.task/task/<slug>.md` in place — insert the new `## Plan` block (and `## Tests`, if added) between `## Description`'s content and the existing `## Execution` block (a `to-task`-written file has no `## Tests`, so `## Plan` (+ new `## Tests`) is always inserted directly before `## Execution`). Do not touch the header, the `---` separator, `## Description`, or `## Execution` itself.
 
-**Revise:** edit the existing `.task/task/<slug>.md` in place — replace the whole prior `## Plan` block with the new one (same position, still before `## Execution`). Replace `## Tests` only if Step 7's edit touched it; otherwise leave it exactly as it was. Leave `## Execution` untouched (re-stamp it only in the defensive case it's missing).
+**Revise:** edit the existing `.task/task/<slug>.md` in place — replace the whole prior `## Plan` block with the new one (same position, still before `## Execution`). Replace `## Tests` only if the current chat's edit touched it; otherwise leave it exactly as it was. Leave `## Execution` untouched (re-stamp it only in the defensive case it's missing).
 
-## Step 9: Output
+Then validate the written file: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" task <slug>` — surface any WARN/ERROR in Step 8's digest; only a config-precondition failure (exit 2) hard-stops.
 
-Report the path to the written `task.md`, the mode used (fresh / promote / revise), and a 1–2 line summary of `## Plan` (step count, whether `## Tests` is present). Close with the v3 handoff footer (convention (a), flag-free):
+## Step 8: Output — digest
+
+Print the structural digest of what was written (convention (b)) as message text — enough for the user to judge at a glance whether to open the file, without re-reading a full draft. Tailor it to the mode:
+
+```
+Wrote `.task/task/<slug>.md`  ({fresh | promote | revise})
+# {Title}
+Sections: Description, Plan ({N} steps)[, Tests ({N})], Execution
+Plan:
+- Step 1: {short title}
+- Step 2: {…}
+validate: {OK — 0 errors, N warning(s) | the FAIL lines}
+```
+
+For **promote** / **revise**, note plainly what stayed untouched (Description, and pre-existing Tests unless the edit touched them). The file is already written — to change anything, just say so. Then close with the handoff footer (convention (a), flag-free):
 
 `→ Next: implement it now, or in a fresh session run: \`implement .task/task/<slug>.md\``
 
