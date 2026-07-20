@@ -19,7 +19,7 @@ Check whether `.task/config/config.md` exists — resolve the pipeline root via 
 - **Absent → inline setup.** Run it inline, do not defer to another command:
   1. Determine the pipeline root `ROOT` (main worktree root; `pwd` for a non-git dir; for a bare repo the default is a best-effort guess — surface it in the proposal below so the user can redirect it).
   2. Analyze the project: read `CLAUDE.md` if present, detect language/stack, build/test commands, a project commit-format doc (check in order `CONTRIBUTING.md`, `docs/CONTRIBUTING.md`, `.github/CONTRIBUTING.md`), detected language policy (repo's dominant natural language from `git log -10 --oneline` + `CLAUDE.md`/`README.md` prose — default to "follow `task.md` Description" for English/mixed repos), and detected testing-policy mode (`always` if a TDD convention is documented, `on-demand` otherwise — never silently detect `never`).
-  3. Print the detected config as message text, then pose ONE `AskUserQuestion` confirmation (convention (b)) in the same reply — the chips don't display it, so the call is gated on that line being printed above it:
+  3. Print the detected config as message text, then pose ONE `AskUserQuestion` confirmation in the same reply — the chips don't display it, so the call is gated on that line being printed above it. (This is the config-setup carve-out named in convention (b): it confirms *auto-detected* environment that was never discussed, so unlike a content capture it does ask before writing.):
      ```
      Detected — Language: <policy>; Testing policy: <mode>.
      ```
@@ -49,10 +49,9 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
 
 1. Resolve `<slug>` to `.task/roadmap/<slug>.md`; if ambiguous or missing — stop and ask.
 2. Pick `<N>`: if given, use it. Otherwise collect open items (`- [ ]` checkbox headings); if none — stop: "all items in `<slug>` are closed; pick one explicitly with `<slug>#<N>`, or draft from chat instead." If more than one open item, ask via `AskUserQuestion` (chip per `#<N> — <title>`, first/lowest default); if exactly one, auto-pick it.
-3. Read the item's `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria` block. `### Context` becomes the Description's "why"; the rest folds into the "what". Also note any `### Spec references → <spec-slug> §N` the item carries, and the roadmap's own `Spec: <slug>` header lines — collect the distinct `<spec-slug>`s to stamp as `Spec:` headers on the task (step 6).
+3. Read the item's `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria` block. `### Context` becomes the Description's "why"; the rest folds into the "what". Also note any `### Spec references → <spec-slug> §N` the item carries, and the roadmap's own `Spec: <slug>` header lines — collect the distinct `<spec-slug>`s to stamp as `Spec:` headers on the task (step 5).
 4. Derive `<item-slug>` — kebab-case English from the item's own title (not the roadmap's). No task-id, no `derive-task-id` helper: the item gets its own `<item-slug>.md`, independent of the roadmap's slug.
-5. Print the drafted Description body as message text, then pose an `AskUserQuestion` (Accept / Edit / Decline — same mechanism as chat-draft mode's Step 2.3) in the same reply, before writing anything. **Gate on the call:** emit `AskUserQuestion` only after the full body sits printed above it in this same reply — the roadmap item existing on disk does not count as the user having seen the derived Description; print it verbatim. On **Decline**, write nothing and stop with "`task.md` not written. → Next: re-run `/task:to-task` when you want to capture it" (same closing line as chat-draft mode).
-6. **On accept**, write `.task/task/<item-slug>.md` (creating `.task/task/` if needed):
+5. Write `.task/task/<item-slug>.md` directly (creating `.task/task/` if needed) — no in-chat draft, no confirmation prompt; the roadmap item is the settled source:
 
    ```markdown
    # {Item title}
@@ -74,7 +73,8 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
    > scope fixes to what you changed. Commit per `.task/config/config.md` → Commit Format. If
    > `Roadmap:` + `Source item:` are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
    ```
-7. Continue to Step 3 (footer), using `<item-slug>` as `<slug>` there.
+6. Validate the written file: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" task <item-slug>` — surface any WARN/ERROR in Step 3's digest; only a config-precondition failure (exit 2) hard-stops.
+7. Continue to Step 3 (digest + footer), using `<item-slug>` as `<slug>` there.
 
 ### Step 2: Chat-draft mode
 
@@ -83,11 +83,7 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
    - `## Description` — the why + what, in the user's own framing. Use `### Problem` / `### Outcome` / `### Scope` / `### Constraints` sub-headers where the discussion gives signal for them; omit a sub-header rather than inventing content. Do not fabricate anything not actually discussed.
    - **No `## Plan` and no `## Tests`** — both are `to-plan`'s job; run `to-plan` later to add them (Tests when Testing Policy warrants).
    - **Specs (optional).** If `.task/spec/` holds a spec the discussion clearly relies on, add a `Spec: <slug>` header line for each (ASCII, above `---`) so the executing session reads it as a fixed anchor. Only reference specs actually relevant — never invent one, and never write the spec file here (that is `to-spec`'s job).
-3. **Print the full draft as message text**, then — in the same reply — pose an `AskUserQuestion` (convention (b)) with chips **Accept** / **Edit** / **Decline**. **Gate on the call:** emit `AskUserQuestion` only after the full draft sits printed above it in this same reply — a status line is not the draft, and having discussed the content earlier in chat does not count as printing it; print it verbatim now, even if it feels redundant. The draft is this turn's deliverable, not a between-tools status note to keep brief; the question box displays none of it:
-   - **Accept** → write the file as drafted.
-   - **Edit** → follow-up asks what to change, apply it, re-print the draft as message text, repeat until accepted.
-   - **Decline** → do not write anything; stop with "`task.md` not written. → Next: re-run `/task:to-task` when you want to capture it".
-4. **On accept**, write `.task/task/<slug>.md` (creating `.task/task/` if needed, no `Roadmap:` / `Source item:` lines in this mode; include a `Spec:` line per relevant spec, or none):
+3. **Write `.task/task/<slug>.md` directly** (creating `.task/task/` if needed) — no in-chat draft, no confirmation prompt. The chat discussion was the review; the written file is the deliverable, and the Step 3 digest lets the user judge whether to open it. (The Step 2.1 slug-collision guard still runs before this write.) No `Roadmap:` / `Source item:` lines in this mode; include a `Spec:` line per relevant spec, or none:
 
    ```markdown
    # {Short task title}
@@ -101,10 +97,23 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
    {the canonical `## Execution` block, stamped verbatim — byte-for-byte identical
     to the blockquote in Step 1a's template above; do not paraphrase it}
    ```
+4. Validate the written file: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" task <slug>` — surface any WARN/ERROR in Step 3's digest.
 
-## Step 3: Output
+## Step 3: Output — digest
 
-Report the written `task.md` path and a 1–2 line Description summary. Close with the handoff footer (convention (a), flag-free) — name the path explicitly:
+Print the structural digest of what was written (convention (b)) as message text — enough for the user to judge at a glance whether to open the file, without re-reading a full draft:
+
+```
+Wrote `.task/task/<slug>.md`
+# {Title}
+Sections: Description, Execution
+Captured:
+- {the why, one line}
+- {the what / scope, one line}
+validate: {OK — 0 errors, N warning(s) | the FAIL lines}
+```
+
+The file is already written — to change anything, just say so. Then close with the handoff footer (convention (a), flag-free), naming the path explicitly:
 
 `→ Next: implement it now, deepen it into a plan with \`/task:to-plan\`, or in a fresh session run: \`implement .task/task/<slug>.md\``
 
