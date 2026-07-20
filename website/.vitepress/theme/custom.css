@@ -30,27 +30,14 @@
 }
 
 /**
- * Badge row under the hero (index.md). Centered, wraps on narrow screens.
- * shields.io images load at runtime — a static docs site, no CSP to fight.
+ * Feature-card icons (index.md frontmatter). Inline Lucide-style SVGs, embedded
+ * at build time. Colored with the brand accent, which is already theme-aware, so
+ * light/dark are covered by the tokens above.
  */
-.tp-badges {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  max-width: 720px;
-  margin: 0 auto;
-}
-
-.tp-badges a {
-  display: inline-flex;
-  text-decoration: none;
-}
-
-.tp-badges img {
-  height: 20px;
-  display: block;
+.VPFeature .icon svg {
+  width: 24px;
+  height: 24px;
+  color: var(--vp-c-brand-1);
 }
 
 /**
