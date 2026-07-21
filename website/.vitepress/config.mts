@@ -5,7 +5,7 @@ const gh = 'https://github.com/SpaiR/task-pipeline'
 // Absolute URL for the social card — link unfurlers can't resolve a relative path.
 const ogImage = 'https://spair.github.io/task-pipeline/og-image.png'
 const description =
-  'Grill the plan, capture it at the depth you pick, then implement in any session — a chat-first task pipeline for Claude Code.'
+  'A Claude Code plugin that freezes a chat into a Markdown plan file any session can implement. Grill the plan, pick the capture depth — task, plan, roadmap, or spec.'
 
 export default defineConfig({
   title: 'task-pipeline',
@@ -18,6 +18,8 @@ export default defineConfig({
   cleanUrls: true,
   lastUpdated: true,
 
+  sitemap: { hostname: 'https://spair.github.io/task-pipeline/' },
+
   // changelog.md includes the repo's CHANGELOG.md verbatim; its repo-relative
   // links (CLAUDE.md, CONTRIBUTING.md, docs/contract.md) resolve on GitHub, not
   // on the site. No site page lives at these paths, so ignoring them is safe.
@@ -29,15 +31,17 @@ export default defineConfig({
     ['link', { rel: 'icon', type: 'image/png', href: '/task-pipeline/favicon.png' }],
     ['meta', { name: 'theme-color', content: '#8A2BE2' }],
     ['meta', { property: 'og:type', content: 'website' }],
-    ['meta', { property: 'og:title', content: 'task-pipeline' }],
+    ['meta', { property: 'og:title', content: 'Freeze a Claude Code chat into a plan file any session can implement' }],
     ['meta', { property: 'og:description', content: description }],
+    ['meta', { property: 'og:url', content: 'https://spair.github.io/task-pipeline/' }],
     ['meta', { property: 'og:image', content: ogImage }],
     ['meta', { property: 'og:image:width', content: '1200' }],
     ['meta', { property: 'og:image:height', content: '630' }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
-    ['meta', { name: 'twitter:title', content: 'task-pipeline' }],
+    ['meta', { name: 'twitter:title', content: 'Freeze a Claude Code chat into a plan file any session can implement' }],
     ['meta', { name: 'twitter:description', content: description }],
     ['meta', { name: 'twitter:image', content: ogImage }],
+    ['link', { rel: 'canonical', href: 'https://spair.github.io/task-pipeline/' }],
   ],
 
   themeConfig: {
