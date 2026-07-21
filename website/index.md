@@ -41,7 +41,7 @@ features:
     details: Capture a multi-task initiative once, then run it hands-off — dependency-ordered waves, each item planned and implemented in its own session.
 ---
 
-<div class="tp-proof">v3.2.0 · actively maintained · MIT-licensed · built by <a href="https://github.com/SpaiR">SpaiR</a> · a Claude Code plugin</div>
+<div class="tp-proof">MIT-licensed · built by <a href="https://github.com/SpaiR">SpaiR</a> · a Claude Code plugin</div>
 
 ## A plan file is only as good as the argument that produced it
 
