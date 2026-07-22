@@ -12,7 +12,7 @@
 
 Two honest limits frame all of it. It runs on **Claude Code only** — leave Claude Code and the artifacts are just Markdown you'd read by hand. And **nothing is enforced**: `validate.sh` only reports, and `implement <path>` is a plain instruction a session can deviate from — you stay in the loop by design, not by a gate. (A two-file, twenty-minute fix also doesn't need any of this.)
 
-The sections below compare against five references — default Claude Code (plan mode + TodoWrite), [obra/superpowers](https://github.com/obra/superpowers), [Fission-AI/OpenSpec](https://github.com/Fission-AI/OpenSpec), [github/spec-kit](https://github.com/github/spec-kit), and [claude-task-master](https://github.com/eyaltoledano/claude-task-master) — on one shared axis set: where the plan lives, who authors the plan, plan format, result review, moving parts & infrastructure, trace in the repo, and multi-task initiatives. Each ends with an honest "Use X if". The other tools' details are as of July 2026 and from their own docs — check them if a difference is load-bearing for you. (task-pipeline's own multilingual claim has one caveat: only your artifact prose is translated; the format's fixed strings — section headers, commit trailers, the Execution block — stay English.)
+The sections below compare against six references — default Claude Code (plan mode + TodoWrite), [obra/superpowers](https://github.com/obra/superpowers), [Matt Pocock's skills](https://github.com/mattpocock/skills), [Fission-AI/OpenSpec](https://github.com/Fission-AI/OpenSpec), [github/spec-kit](https://github.com/github/spec-kit), and [claude-task-master](https://github.com/eyaltoledano/claude-task-master) — on one shared axis set: where the plan lives, who authors the plan, plan format, result review, moving parts & infrastructure, trace in the repo, and multi-task initiatives. Each ends with an honest "Use X if". The other tools' details are as of July 2026 and from their own docs — check them if a difference is load-bearing for you. (task-pipeline's own multilingual claim has one caveat: only your artifact prose is translated; the format's fixed strings — section headers, commit trailers, the Execution block — stay English.)
 
 ## vs default Claude Code
 
@@ -41,6 +41,22 @@ The sections below compare against five references — default Claude Code (plan
 | **Artifact languages** | Any, via `config.md` | English by default |
 
 **Use task-pipeline** if you want a controlled capture-then-implement process, non-English artifacts, and reviews that run on Claude Code's own gates. **Use superpowers** if you want skills that fire automatically, a strict test-first workflow, and one library that follows you across many coding agents.
+
+## vs Matt Pocock's skills
+
+task-pipeline's `grill` is openly inspired by Matt Pocock's grilling skill, and his set — `grill` → `to-spec` → `to-tickets` → `implement` → `code-review` — is the closest workflow-shape neighbor here, so it sits next to superpowers. Where the two diverge is scope and platform, not the "argue the plan, then capture it" instinct they share.
+
+| | task-pipeline | Matt Pocock's skills |
+|---|---|---|
+| **Who authors the plan** | You in chat; the capture skill serializes what you decided | You in chat via the grill loop; `to-spec` synthesizes the discussion (task-pipeline's `grill` is credited to this skill) |
+| **Plan format** | Templated `### Step N` with `Goal` / `Touches` / optional `Logic`, checked by `validate.sh` on write | A prose spec plus "tracer-bullet" tickets that declare their blocking edges |
+| **Result review** | `## Execution` block runs `/verify` + `/code-review`; no execute skill — any plain session implements the artifact | `implement` builds with TDD at agreed seams, then a two-axis `code-review` (coding standards + spec compliance) |
+| **Scope** | Capture only; the routine around a task (filing tickets, pulling work from a tracker) is left to project-level skills | Covers that routine too — `to-tickets` files the work and the chain reads from your tracker |
+| **Moving parts** | Flat Markdown under `.task/`, git-excluded | Specs and tickets go to GitHub, Linear, or local files, chosen at setup |
+| **Platforms** | Claude Code only | Cross-agent — "work with any model"; installs into Codex and other Agent-Skills harnesses, plus a Claude Code plugin |
+| **Multi-task initiatives** | `to-roadmap` → a plan per item, or opt-in unattended autopilot (`roadmap-to-workflow` fans a roadmap out to dynamic workflows) | An interactive chain; `wayfinder` plans a big chunk of work resolved one ticket at a time — no unattended runner |
+
+**Use task-pipeline** if you want capture-only, templated-and-validated artifacts that any plain Claude Code session can implement, with tracker routine left to your own project skills. **Use Matt's skills** if you want one composable set that spans the whole loop — grill through tickets to review — travels across many coding agents, and files its output straight into GitHub or Linear.
 
 ## vs OpenSpec
 
