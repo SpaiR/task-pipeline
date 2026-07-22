@@ -136,6 +136,6 @@ task-pipeline is **not** an orchestration engine. No subagents, no hooks, no exe
 
 `task-pipeline` is for tasks longer than one session — work that needs a plan you can hand-edit, or that should leave a record. **A two-file, twenty-minute fix doesn't need this**; default Claude Code (plan mode + TodoWrite) is the better tool there.
 
-Reach for it when the plan deserves an argument and a record: real forks to interrogate, decisions a colleague — or tomorrow-you — will reread, work that spans several tasks. And when it should outlast a `/clear`. Descriptions are written in your language; only the format's fixed strings (section headers, commit trailers, the Execution block) stay English. The [comparison page](/guide/comparison) lays out where it fits against five references — default Claude Code, superpowers, OpenSpec, spec-kit, and claude-task-master.
+Reach for it when the plan deserves an argument and a record: real forks to interrogate, decisions a colleague — or tomorrow-you — will reread, work that spans several tasks. And when it should outlast a `/clear`. Descriptions are written in your language; only the format's fixed strings (section headers, commit trailers, the Execution block) stay English. The [comparison page](/guide/comparison) lays out where it fits against six references — default Claude Code, superpowers, Matt Pocock's skills, OpenSpec, spec-kit, and claude-task-master.
 
 If this is the shape of tool you've wanted, [star it on GitHub](https://github.com/SpaiR/task-pipeline) — it's how you'll find it again.

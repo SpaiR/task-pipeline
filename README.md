@@ -148,7 +148,7 @@ Most spec-driven tools answer "the model codes before it understands" with volum
 
 Underneath, the plan contract is fixed and validator-checked (`### Step N` — Goal / Touches / Logic), you author it in chat and it serializes to disk — rails that keep a session on the plan you already worked out, not a generator that invents one from a prompt. Load-bearing decisions pin into attachable per-decision specs, roadmaps fan out into a plan per item with auto-ticked checkboxes, and the whole surface stays small: flat Markdown under `.task/`, no MCP server, no API keys, no task database, with `/verify` / `/code-review` / Workflows delegated to the platform. It is explicitly not for a two-file, twenty-minute fix.
 
-Full head-to-head tables against default Claude Code, superpowers, OpenSpec, spec-kit, and Task Master live on the site: **[Comparison with alternatives](https://spair.github.io/task-pipeline/guide/comparison)**.
+Full head-to-head tables against default Claude Code, superpowers, Matt Pocock's skills, OpenSpec, spec-kit, and Task Master live on the site: **[Comparison with alternatives](https://spair.github.io/task-pipeline/guide/comparison)**.
 
 ## Configuration & policy
 
