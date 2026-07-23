@@ -15,7 +15,7 @@ Launched with no argument, it asks which roadmap and how much to cover.
 ## What it does
 
 1. **Sorts items into dependency waves.** It reads each unchecked item's `**Dependencies:**` and topologically sorts them: items with no unmet dependency land in the same wave.
-2. **Runs each wave in parallel.** Items within a wave run at the same time, each in its own **isolated git worktree**, all sharing the one `.task/` (via `git config task.root`). A barrier separates waves — a later wave never starts before every item it depends on has landed.
+2. **Plans a wave in parallel, then implements it one at a time.** Within a wave, every item is *planned* at once (each plan agent only writes its own `.task/task/<item-slug>.md`, so there's no collision), then the items are *implemented* strictly one at a time in the shared working tree. A barrier separates waves — a later wave never starts before every item it depends on has landed, and each implement sees its already-landed wave-mates' commits.
 3. **Plans then implements, per item.** The default per-item shape is **opus-plans / sonnet-implements**: a first agent runs `to-plan` for the item (writing `.task/task/<item-slug>.md`), a second implements + `/verify` + `/code-review` + commits. If the item has a `**Model:**` hint, the implement agent uses it.
 4. **Ticks the checkbox — from the driver.** After an item's agent returns OK, the **driver** ticks that item's checkbox, never the per-item agent. That's deliberate: parallel wave-mates would otherwise race on the roadmap file.
 

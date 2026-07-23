@@ -55,7 +55,7 @@ What is **gone from v2**: `.task/workspace/`, `.task/log/`, any `<task-id>/` sub
 
 v3 shrinks the resolver to a **pure `.task/`-root finder**. It exports **`AI_DIR`** = the discovered `.task` directory, first hit wins:
 
-1. `git config --local task.root` — the anchor recorded by the inline Step 0 setup. Repo-common, so **every worktree resolves the same `.task/` with zero setup** — no symlink, no join step. This is what lets the worktrees spawned by `roadmap-to-workflow` share one `.task/`.
+1. `git config --local task.root` — the anchor recorded by the inline Step 0 setup. Repo-common, so **every worktree resolves the same `.task/` with zero setup** — no symlink, no join step. This is what lets user-created parallel worktrees of a repo share one `.task/`.
 2. Upward walk from `$PWD` for a `.task/config/config.md` ancestor — pre-anchor fallback.
 3. `dirname(git-common-dir)/.task` — main-worktree root / sibling worktrees / bare repos.
 4. `$CLAUDE_PROJECT_DIR/.task` when set, else the relative `./.task` — so a call from outside a project still fails cleanly on the config gate.
@@ -269,7 +269,7 @@ No pointer, no self-heal, no "which task is active" resolution anywhere.
 
 ## Marker inventory
 
-- **Keep:** `git config task.root` and `.git/info/exclude` (pattern `.task`). Both are zero-cost and needed so the parallel worktrees spawned by `roadmap-to-workflow` share one `.task/`.
+- **Keep:** `git config task.root` and `.git/info/exclude` (pattern `.task`). Both are zero-cost and needed so user-created parallel worktrees of a repo share one `.task/`.
 - **Drop:** the active-task pointer (`task-current`) and `TASK_ID_OVERRIDE`.
 
 ---
@@ -289,7 +289,7 @@ Every skill carries `disable-model-invocation: true` and `user-invocable: true`.
 ### `roadmap-to-workflow` execution shape (driver contract)
 
 - **Per-item default is OPUS-PLANS / SONNET-IMPLEMENTS:** a first `agent()` runs `to-plan` for the item on `{ model: 'opus' }` (writes `.task/task/<item-slug>.md`); a second `agent()` implements + verifies + reviews + commits on `{ model: item.model ?? 'sonnet' }`. Context passes via the on-disk task file — no chat transfer.
-- **Dependency-ordered waves:** items in a wave run via `parallel()` with `{ isolation: 'worktree' }`; a barrier separates waves. A dependency **cycle** among scoped items (no wave can be formed) is a hard stop, reported for the user to break — never run an item before its dependency lands.
+- **Dependency-ordered waves:** within a wave, plan agents run in `parallel()` (they write only their own task files) and then implement agents run **strictly one at a time** in the shared working tree; a barrier separates waves. A dependency **cycle** among scoped items (no wave can be formed) is a hard stop, reported for the user to break — never run an item before its dependency lands.
 - **Driver auto-marks:** after an item's agent returns OK, the driver ticks that item's checkbox in the roadmap file (never the per-item agent — avoids parallel writes racing).
 - **Stop-on-FAIL;** parser-stable digest last line `OK|FAIL #N <slug> <summary>`.
 - **Graceful fallback:** if the Workflow tool is unavailable, run items one at a time via `to-plan` + a plain implement session, manually. Being a skill whose instructions invoke Workflow is itself the sanctioned opt-in.

@@ -9,7 +9,7 @@ Six user-invocable skills, plus one internal utility. Depth of capture is the sk
 | [`/task:to-plan`](/reference/to-plan) | Fixes the chat (or a roadmap item) into `.task/task/<slug>.md` with Description **+** Plan (and Tests when policy calls for it). The deepest one-task capture. |
 | [`/task:to-roadmap`](/reference/to-roadmap) | Fixes a multi-task initiative into `.task/roadmap/<slug>.md` — a phase-grouped backlog of ready-to-pick-up items. |
 | [`/task:to-spec`](/reference/to-spec) | Fixes load-bearing technical decisions into a standalone `.task/spec/<slug>.md`, cited by tasks/roadmaps via a `Spec:` header. |
-| [`/task:roadmap-to-workflow`](/reference/roadmap-to-workflow) | Autopilot over an approved roadmap: authors and invokes a dynamic Workflow that runs unchecked items in dependency-ordered, parallel, isolated waves. |
+| [`/task:roadmap-to-workflow`](/reference/roadmap-to-workflow) | Autopilot over an approved roadmap: authors and invokes a dynamic Workflow that runs unchecked items in dependency-ordered waves — parallel planning, serialized implementation. |
 | [`validate`](/reference/validate) *(utility)* | Optional format checker for `.task/` artifacts. Not a slash command, not a gate. |
 
 ## The next-step footer
