@@ -1,11 +1,11 @@
 ---
 name: roadmap-to-workflow
-description: 'Fan an approved `.task/roadmap/<slug>.md` out to a dynamic Workflow — one isolated worktree per item, dependency-ordered waves.'
+description: 'Fan an approved `.task/roadmap/<slug>.md` out to a dynamic Workflow — parallel planning, serialized implementation, dependency-ordered waves.'
 disable-model-invocation: true
 user-invocable: true
 ---
 
-Drive an approved roadmap through parallel, isolated sessions. This skill collects the roadmap's unchecked items, sorts them into dependency-ordered **waves**, then authors and invokes a **dynamic Workflow** (the Workflow tool) that runs each wave's items in parallel worktrees, ticking off the roadmap as items land. It does **not** hand-roll that fan-out itself. If the Workflow tool isn't available, it falls back to running items serially by hand, in the same dependency order (Step 2).
+Drive an approved roadmap through a dynamic Workflow. This skill collects the roadmap's unchecked items, sorts them into dependency-ordered **waves**, then authors and invokes a **dynamic Workflow** (the Workflow tool) that, within each wave, plans all items in parallel and then implements them one at a time in the shared working tree, ticking off the roadmap as items land. It does **not** hand-roll that fan-out itself. If the Workflow tool isn't available, it falls back to running items serially by hand, in the same dependency order (Step 2).
 
 **Per-item model control.** Each roadmap item may carry a `**Model:**` hint (`haiku | sonnet | opus`); the Workflow passes it to that item's implement agent as `opts.model`.
 
@@ -97,7 +97,7 @@ The result is a `waves: Item[][]` structure — bake it into the Workflow script
 
 ## Step 2: Author and invoke the Workflow
 
-Author a dynamic Workflow from the computed waves and invoke it via the **Workflow tool**. Items **within** a wave run in **parallel**, each in its own isolated worktree (`parallel({ isolation: 'worktree' })`); a **barrier** separates waves so a later wave never starts before every dependency it needs has landed.
+Author a dynamic Workflow from the computed waves and invoke it via the **Workflow tool**. Within each wave, **plan agents run in parallel** (`parallel()`) — safe because each writes only its own `.task/task/<item-slug>.md`, never the working tree — and then **implement agents run strictly one at a time** in the shared working tree, so wave-mates never collide on it. A **barrier** separates waves so a later wave never starts before every dependency it needs has landed; each implement therefore sees its already-landed wave-mates' commits, and `/verify` runs against the integrated state.
 
 ### Per-item shape — OPUS PLANS, SONNET IMPLEMENTS (the default)
 
@@ -106,18 +106,21 @@ Each item runs as **two agents**, not one. Context passes between them **via the
 ```javascript
 const slug  = "<roadmap-slug>";
 const PLUGIN_ROOT = "<absolute value of $CLAUDE_PLUGIN_ROOT>";   // bake the LITERAL path
-// the JS sandbox can't expand env vars, and a relative "skills/…" path won't exist in
-// the item's isolated worktree — Read needs the absolute plugin path (echo it in Step 0).
+// the JS sandbox can't expand env vars, and a relative "skills/…" path is resolved
+// against the agent's cwd, not this repo — Read needs the absolute plugin path
+// (echo it in Step 0).
 const waves = [                                   // from Step 1 — dependency order
   [ { n: 1, title: "…", model: "sonnet" }, { n: 2, title: "…", model: "haiku" } ],
   [ { n: 3, title: "…", model: "opus"   } ],
   // …
 ];
 
-async function runItem(n, title, model, w) {
-  // 1) PLAN on a strong model — writes .task/task/<item-slug>.md (see prompt below).
-  //    Opus is the planner floor (the default shape); scale reasoning effort down for
-  //    lightweight items so a tiny `haiku` item doesn't pay a full deep-reasoning pass.
+// PLAN on a strong model — writes .task/task/<item-slug>.md (see prompt below).
+// Safe to run in parallel across a wave: a plan agent writes only its own task
+// file, never the working tree. Opus is the planner floor (the default shape);
+// scale reasoning effort down for lightweight items so a tiny `haiku` item
+// doesn't pay a full deep-reasoning pass. Returns the digest line.
+async function runPlan(n, title, model, w) {
   const plan = await agent(
     `Read ${PLUGIN_ROOT}/skills/to-plan/SKILL.md and run it NON-INTERACTIVELY for roadmap item
      ${slug}#${n} ("${title}"). Draft .task/task/<item-slug>.md (Description +
@@ -134,13 +137,14 @@ async function runItem(n, title, model, w) {
     { model: "opus", effort: model === "haiku" ? "low" : "medium",
       phase: `Wave ${w} · Item #${n}` }
   );
-  const planStatus = plan.trim().split("\n").filter(Boolean).pop();
-  if (planStatus.startsWith("FAIL")) return planStatus;
+  return plan.trim().split("\n").filter(Boolean).pop();
+}
 
-  const itemSlug = planStatus.split(" ")[2];   // <item-slug>, echoed by the plan agent
-
-  // 2) IMPLEMENT + VERIFY + REVIEW + COMMIT on the item's own model, reading the
-  //    task file fresh from disk (no chat carries over from the plan agent).
+// IMPLEMENT + VERIFY + REVIEW + COMMIT on the item's own model, reading the task
+// file fresh from disk (no chat carries over from the plan agent). Run one at a
+// time within a wave — this is the sole mutator of the shared working tree, so
+// each implement sees its already-landed wave-mates' commits. Returns the digest.
+async function runImplement(n, itemSlug, model, w) {
   const r = await agent(
     `Implement .task/task/${itemSlug}.md. Follow its ## Execution block
      exactly: implement the ## Plan (or ## Description if no Plan), run
@@ -158,25 +162,33 @@ async function runItem(n, title, model, w) {
 }
 
 for (const [w, items] of waves.entries()) {
-  // Wave items are independent by construction (Step 1) — run in parallel, each in its
-  // own worktree, so they never collide on the working tree.
-  const results = await parallel(
-    items.map(({ n, title, model }) => () => runItem(n, title, model, w + 1)),
-    { isolation: "worktree" }
+  // 1) PLAN the whole wave in parallel — plan agents only write .task/, never the
+  //    working tree, so there is no collision. A single plan FAIL stops the run
+  //    before any implement of this wave starts (plans are cheap to rerun).
+  const plans = await parallel(
+    items.map(({ n, title, model }) => () => runPlan(n, title, model, w + 1))
   );
+  for (const [i, status] of plans.entries()) {
+    console.log(status);                                  // per-item plan digest
+    if (status.startsWith("FAIL"))
+      return `roadmap-to-workflow stopped in wave ${w + 1} (planning), item #${items[i].n}: ${status}`;
+  }
 
-  for (const [i, status] of results.entries()) {
-    const { n } = items[i];
+  // 2) IMPLEMENT the wave STRICTLY ONE AT A TIME — the shared tree has a single
+  //    writer, so wave-mates never collide and each implement builds on the last.
+  for (const [i, { n, model }] of items.entries()) {
+    const itemSlug = plans[i].split(" ")[2];   // <item-slug>, echoed by the plan agent
+    const status = await runImplement(n, itemSlug, model, w + 1);
     console.log(status);                                  // per-item digest, printed as it lands
     if (status.startsWith("FAIL"))
       return `roadmap-to-workflow stopped in wave ${w + 1}, item #${n}: ${status}`;
 
-    // AUTO-MARK is the DRIVER's job, done here — one write at a time, never
-    // inside the (possibly parallel) per-item agents, so wave-mates never
-    // race on the roadmap file. There is NO markRoadmapItemDone() helper —
-    // flip item N's checkbox with an anchored, macOS-portable awk rewrite (no
-    // GNU-only `sed -i`, no roadmap.sh helper). Match ONLY `^### - \[ \] N\. `
-    // so a `> ` blockquote line or a substring number is never touched:
+    // AUTO-MARK is the DRIVER's job, done here right after the implement returns
+    // OK — never inside the per-item agents, so parallel plan agents never race
+    // on the roadmap file. There is NO markRoadmapItemDone() helper — flip item
+    // N's checkbox with an anchored, macOS-portable awk rewrite (no GNU-only
+    // `sed -i`, no roadmap.sh helper). Match ONLY `^### - \[ \] N\. ` so a `> `
+    // blockquote line or a substring number is never touched:
     //
     //   awk -v n="${n}" '
     //     $0 ~ ("^### - \\[ \\] " n "\\. ") { sub(/\[ \]/, "[x]") } { print }
@@ -201,7 +213,7 @@ return "roadmap-to-workflow: all items shipped.";
 ## Forbidden
 
 - Running setup / bootstrap on a missing `config.md` — this skill hard-stops and redirects; only `to-task` / `to-plan` / `to-roadmap` are intake-capable.
-- Looping the items yourself in this session's main thread instead of authoring a Workflow — the Workflow tool is what gives per-item isolation, per-item model control, and safe parallelism; a hand-rolled loop reintroduces the accumulation and collision problems this skill exists to remove. (The one-at-a-time manual fallback is only for when the Workflow tool is unavailable.)
+- Looping the items yourself in this session's main thread instead of authoring a Workflow — the Workflow tool is what gives each item fresh per-item context, per-item model control, parallel planning, and driver-side auto-mark; a hand-rolled loop reintroduces the accumulation problems this skill exists to remove. (The one-at-a-time manual fallback is only for when the Workflow tool is unavailable.)
 - Running items whose dependencies are still unchecked, or placing an item in an earlier wave than its `Dependencies` allow.
 - Auto-marking roadmap checkboxes from inside a per-item agent — that is the driver's job, strictly after the agent returns `OK`, to avoid parallel writers racing on the roadmap file.
-- Modifying project code yourself, or touching any file other than the roadmap (for scope reading) and, via the driver step, the roadmap's checkboxes — all implementation happens inside the per-item agents' own worktrees.
+- Modifying project code yourself, or touching any file other than the roadmap (for scope reading) and, via the driver step, the roadmap's checkboxes — all implementation happens inside the per-item implement agents, run one at a time in the shared working tree.

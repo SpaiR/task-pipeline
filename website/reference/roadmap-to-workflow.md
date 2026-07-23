@@ -1,6 +1,6 @@
 # roadmap-to-workflow
 
-The one launcher. Fans an approved `.task/roadmap/<slug>.md` out to a dynamic Workflow — one isolated worktree per item, dependency-ordered waves, ticking off the roadmap as items land.
+The one launcher. Fans an approved `.task/roadmap/<slug>.md` out to a dynamic Workflow — parallel planning, serialized implementation, dependency-ordered waves, ticking off the roadmap as items land.
 
 See the [autopilot guide](/guide/autopilot) for the full walkthrough.
 
@@ -17,7 +17,7 @@ See the [autopilot guide](/guide/autopilot) for the full walkthrough.
 1. **Scope** — asks (via chips) how much to run: all remaining items, just the next dependency-wave, or a picked range like `1,3-5,8`.
 2. **Waves** — topologically sorts the unchecked items on `**Dependencies:**` into waves. A dependency cycle among scoped items is a hard stop.
 3. **Per item, two agents** — the default shape is **opus-plans / sonnet-implements**: a first agent runs `to-plan` for the item; a second implements + `/verify` + `/code-review` + commits, using the item's `**Model:**` hint if present. Context passes via the on-disk task file, not chat.
-4. **Parallel + isolated** — items in a wave run at once, each in its own git worktree, all sharing the one `.task/`. A barrier separates waves.
+4. **Parallel plans, serialized implements** — within a wave, all items are planned in parallel (plan agents only write their own task files), then implemented strictly one at a time in the shared working tree. A barrier separates waves, so each implement sees its already-landed wave-mates' commits.
 5. **Driver auto-marks** — after an item's agent returns OK, the **driver** ticks its checkbox — never the per-item agent, so parallel wave-mates never race on the roadmap file.
 
 ## Config
@@ -52,4 +52,4 @@ If the Workflow tool isn't available, it falls back to running items one at a ti
 - Loop items in the main session instead of authoring a Workflow (except the documented serial fallback).
 - Run an item whose dependencies are still unchecked.
 - Auto-mark a checkbox from inside a per-item agent — strictly the driver's job.
-- Modify project code itself — all implementation happens inside the per-item agents' worktrees.
+- Modify project code itself — all implementation happens inside the per-item implement agents, run one at a time in the shared working tree.
