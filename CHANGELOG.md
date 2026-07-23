@@ -4,6 +4,16 @@ All notable changes to this project are documented here. Format — [Keep a Chan
 
 This file is maintained in **English** — see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-policy).
 
+## [3.2.1] — 2026-07-23
+
+Patch release. Non-breaking — no artifact-shape changes.
+
+### Fixed
+- **`roadmap-to-workflow` wave concurrency** — the script template passed `{ isolation: "worktree" }` to `parallel()`, which the Workflow tool silently ignores, so every wave actually ran all agents concurrently in one shared tree, and true per-item worktrees have no reconciliation step anyway. Waves now plan all items in parallel (each plan agent writes only its own task file, never the tree) then implement them strictly one at a time, the sole mutator of the shared tree — a plan FAIL stops before any implement, an implement FAIL stops as before. Each implement now sees its wave-mates' already-landed commits and `/verify` runs against the integrated state.
+
+### Docs
+- **VitePress documentation site** — added a searchable guide/reference site under `website/`, deployed to GitHub Pages: getting-started and core-concepts pages, per-skill workflow guides (grill, single task, roadmaps, autopilot, specs), a comparison against similar tools (superpowers, OpenSpec, spec-kit, Task Master, Matt Pocock's skills), and a full command reference. `docs/usage.md` and `docs/troubleshooting.md` are now thin pointers to the site, which is the single owner of user-facing usage prose.
+
 ## [3.2.0] — 2026-07-20
 
 Replaces the confirm-before-write gate with write-then-digest. Non-breaking — no artifact-shape changes.
