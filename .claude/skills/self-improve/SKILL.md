@@ -61,7 +61,7 @@ In one parallel batch, run:
 - Read every `skills/*/SKILL.md` (one batched call).
 - Read every bash helper `skills/_lib/*.sh` plus `skills/validate/validate.sh` (one batched call).
 
-There is **no repo-level `agents/` directory** and **no `docs/spec/`** in v3 — do not attempt to read them. If `$ARGUMENTS` names a single skill (e.g. `to-plan`), still load the full `CLAUDE.md` + `README.md` + `docs/contract.md` (lenses cross-reference), but you may narrow the SKILL.md reads to that skill plus any skill it explicitly produces/consumes for.
+The repo-level `agents/` directory holds **exactly one** file, `agents/code-reviewer.md` (the `task:code-reviewer` review pass) — read it alongside the skills. There is **no `docs/spec/`** in v3 — do not attempt to read it. If `$ARGUMENTS` names a single skill (e.g. `to-plan`), still load the full `CLAUDE.md` + `README.md` + `docs/contract.md` (lenses cross-reference), but you may narrow the SKILL.md reads to that skill plus any skill it explicitly produces/consumes for.
 
 ### Step 2: Run four agents in parallel
 

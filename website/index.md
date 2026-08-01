@@ -69,7 +69,7 @@ features:
     <div class="tp-prompt">implement .task/task/http-retry-backoff.md</div>
     <div class="tp-out">  → follows the file's ## Execution block — the steps that</div>
     <div class="tp-out">    tell any session what to do next:</div>
-    <div class="tp-out">    implement · /verify · /code-review · commit</div>
+    <div class="tp-out">    implement · commit · task:code-reviewer reviews, fixes, amends</div>
   </div>
 </div>
 
@@ -112,10 +112,12 @@ return a typed `RetriesExhausted` result the caller can branch on.
 > decisions as fixed. `.task/` is pipeline-internal and invisible to the repo: never name
 > `.task/` paths, spec/roadmap/task slugs, or `§` numbers in code, comments, commits, or PR
 > text. Implement the Plan above (or the Description if none) with the tools in
-> `.task/config/config.md` → Code Navigation / Code Editing. Run `/verify` end-to-end and
-> `/code-review`, applying fixes ONLY within **Touches** (report the rest); with no `## Plan`,
-> scope fixes to what you changed. Commit per `.task/config/config.md` → Commit Format. If
-> `Roadmap:` + `Source item:` are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
+> `.task/config/config.md` → Code Navigation / Code Editing, then commit per
+> `.task/config/config.md` → Commit Format. Then spawn the `task:code-reviewer` agent on this
+> file: it proves each finding, fixes confirmed defects within **Touches** plus regressions
+> this diff introduced outside them, runs Build and Tests, and amends the commit; with no
+> `## Plan`, scope fixes to what you changed. If `Roadmap:` + `Source item:` are present,
+> tick item #N's checkbox in `.task/roadmap/<slug>.md` once the review returns OK.
 ```
 :::
 
@@ -130,7 +132,7 @@ That's the whole setup. The first capture in a new project writes `.task/config/
 
 ## Small on purpose
 
-task-pipeline is **not** an orchestration engine. No subagents, no hooks, no execution loop of its own — just one file per task, and your project's own checks running before commit. The neighbors sell breadth — dozens of skills, a full SDLC in a box. This one sells the opposite: the least structure that still makes a plan outlive its session.
+task-pipeline is **not** an orchestration engine. No hooks, no execution loop of its own, and exactly one subagent — the review pass, whose entire prompt is a Markdown file you can read — plus one file per task and your project's own checks running against the diff. The neighbors sell breadth — dozens of skills, a full SDLC in a box. This one sells the opposite: the least structure that still makes a plan outlive its session.
 
 ## Is it for you?
 

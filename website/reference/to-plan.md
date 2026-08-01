@@ -36,7 +36,7 @@ See the [single-task guide](/guide/single-task) for how promote/revise work in p
 **Logic:** {optional — pseudocode, only when the how is non-obvious}
 ```
 
-`Touches` lists real full paths — and also scopes which `/code-review` fixes the executing session applies. `Logic` appears only where Goal + Touches leave genuine ambiguity.
+`Touches` lists real full paths — and also scopes which review fixes get applied: `task:code-reviewer` fixes confirmed defects inside these files, plus a regression the same diff caused outside them, and reports everything else instead of widening the change. `Logic` appears only where Goal + Touches leave genuine ambiguity.
 
 ## Tests
 

@@ -174,10 +174,12 @@ Spec: {spec-slug}          (one line per relevant spec; omit if none)
 > decisions as fixed. `.task/` is pipeline-internal and invisible to the repo: never name
 > `.task/` paths, spec/roadmap/task slugs, or `§` numbers in code, comments, commits, or PR
 > text. Implement the Plan above (or the Description if none) with the tools in
-> `.task/config/config.md` → Code Navigation / Code Editing. Run `/verify` end-to-end and
-> `/code-review`, applying fixes ONLY within **Touches** (report the rest); with no `## Plan`,
-> scope fixes to what you changed. Commit per `.task/config/config.md` → Commit Format. If
-> `Roadmap:` + `Source item:` are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
+> `.task/config/config.md` → Code Navigation / Code Editing, then commit per
+> `.task/config/config.md` → Commit Format. Then spawn the `task:code-reviewer` agent on this
+> file: it proves each finding, fixes confirmed defects within **Touches** plus regressions
+> this diff introduced outside them, runs Build and Tests, and amends the commit; with no
+> `## Plan`, scope fixes to what you changed. If `Roadmap:` + `Source item:` are present,
+> tick item #N's checkbox in `.task/roadmap/<slug>.md` once the review returns OK.
 ```
 
 **Promote:** edit the existing `.task/task/<slug>.md` in place — insert the new `## Plan` block (and `## Tests`, if added) between `## Description`'s content and the existing `## Execution` block (a `to-task`-written file has no `## Tests`, so `## Plan` (+ new `## Tests`) is always inserted directly before `## Execution`). Do not touch the header, the `---` separator, `## Description`, or `## Execution` itself.

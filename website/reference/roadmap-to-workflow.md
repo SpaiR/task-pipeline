@@ -16,9 +16,9 @@ See the [autopilot guide](/guide/autopilot) for the full walkthrough.
 
 1. **Scope** — asks (via chips) how much to run: all remaining items, just the next dependency-wave, or a picked range like `1,3-5,8`.
 2. **Waves** — topologically sorts the unchecked items on `**Dependencies:**` into waves. A dependency cycle among scoped items is a hard stop.
-3. **Per item, two agents** — the default shape is **opus-plans / sonnet-implements**: a first agent runs `to-plan` for the item; a second implements + `/verify` + `/code-review` + commits, using the item's `**Model:**` hint if present. Context passes via the on-disk task file, not chat.
-4. **Parallel plans, serialized implements** — within a wave, all items are planned in parallel (plan agents only write their own task files), then implemented strictly one at a time in the shared working tree. A barrier separates waves, so each implement sees its already-landed wave-mates' commits.
-5. **Driver auto-marks** — after an item's agent returns OK, the **driver** ticks its checkbox — never the per-item agent, so parallel wave-mates never race on the roadmap file.
+3. **Per item, three agents** — the default shape is **opus-plans / sonnet-implements / reviewer-reviews**: a first agent runs `to-plan` for the item; a second implements and commits, using the item's `**Model:**` hint if present; a third is `task:code-reviewer`, which reviews that commit, proves each finding, fixes the confirmed ones inside the plan's `Touches`, runs `config.md` → Build and Tests, and amends. Context passes via the on-disk task file, not chat. The reviewer pins its own model, so the item's `**Model:**` hint never downgrades the review.
+4. **Parallel plans, serialized implement-then-review** — within a wave, all items are planned in parallel (plan agents only write their own task files), then each item is implemented and reviewed strictly one at a time in the shared working tree, both inside the same serial loop. A barrier separates waves, so each implement sees its already-landed wave-mates' reviewed commits.
+5. **Driver auto-marks** — after an item's *review* returns OK, the **driver** ticks its checkbox — never the per-item agent, so parallel wave-mates never race on the roadmap file.
 
 ## Config
 
@@ -26,11 +26,13 @@ See the [autopilot guide](/guide/autopilot) for the full walkthrough.
 
 ## Output
 
-One digest line per item as each wave lands; stop-on-FAIL:
+One digest line per stage as each wave lands; stop-on-FAIL (an implement *or* a review `FAIL` stops the run):
 
 ```text
-OK #1 migrate-auth-endpoints implemented, verified, reviewed, committed
-OK #2 update-client-sdk implemented, verified, reviewed, committed
+OK #1 migrate-auth-endpoints implemented, committed
+OK #1 migrate-auth-endpoints reviewed — 2 fixes, tests green, commit amended
+OK #2 update-client-sdk implemented, committed
+OK #2 update-client-sdk reviewed — 0 findings, tests green
 → Done. Roadmap complete — `.task/roadmap/api-v2-migration.md` fully checked.
 ```
 
