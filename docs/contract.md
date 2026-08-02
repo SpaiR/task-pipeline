@@ -58,6 +58,8 @@ The resolver is a **pure `.task/`-root finder**. It exports **`AI_DIR`** = the d
 3. `dirname(git-common-dir)/.task` — main-worktree root / sibling worktrees / bare repos.
 4. `$CLAUDE_PROJECT_DIR/.task` when that path already holds a `config/config.md` (evidence, not merely the variable being set), else the relative `./.task` — so a call from outside a project still fails cleanly on the config gate.
 
+**Producers write under the resolved `$AI_DIR`, never a cwd-relative `.task/`.** Each capture skill resolves it in its Step 0, and `validate.sh` resolves it independently in its own subprocess — so a cwd-relative write from a subdirectory or a linked worktree splits the root: the artifact lands in a second `.task/` the validator never looks at. `.task/<kind>/<slug>.md` in this document and in the skills is shorthand for `$AI_DIR/<kind>/<slug>.md`.
+
 ---
 
 ## `task.md` format (`.task/task/<slug>.md`)
@@ -152,7 +154,7 @@ Field labels and blockquote sub-headings (`### Context` / `### Goal` / `### Outc
 Load-bearing item fields for `roadmap-to-workflow`:
 
 - **Checkbox state** — the item heading's checkbox is a **5-state** class, `[ x~>-]`. `[ ]` is unchecked (eligible to run); `[x]` / `[~]` / `[>]` / `[-]` all count as **already-marked / not-eligible** — for progress counting (`roadmap.sh:roadmap_progress_counts`), the driver's auto-mark, and wave dependency-satisfaction. Do **not** narrow it to `[ x]` only: `roadmap.sh`, `validate.sh`, and the wave sorter all key on the full class.
-- **`**Dependencies:**`** — `—` (none) or a comma-separated list of item numbers. The driver **topologically sorts** items into dependency-ordered **waves**: items in the same wave have no unmet dependency and run in parallel; a barrier separates waves.
+- **`**Dependencies:**`** — `—` (none) or a comma-separated list of item numbers. `—` is the form `to-roadmap` emits; the driver's parser also tolerates `-`, `none`, and `n/a` as "no dependency", since roadmaps are hand-edited. Anything else is read as a dependency on an item number, so an unrecognised word becomes a phantom dependency and a hard stop. The driver **topologically sorts** items into dependency-ordered **waves**: items in the same wave have no unmet dependency and run in parallel; a barrier separates waves.
 - **`**Model:**`** — optional per-item hint (`haiku` / `sonnet` / `opus`). The driver passes it as `opts.model` to the per-item implement agent. It is **not** validated — a missing or off-list value simply means no hint (defaults apply).
 
 ### Roadmap `Spec:` headers

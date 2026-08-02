@@ -35,7 +35,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
 
 ### Roadmap
 
-If `$ARGUMENTS` gives a positional `<roadmap-slug>`/path, resolve it and skip the picker. Otherwise list the available roadmaps with progress (uses the kept `roadmap.sh` helpers):
+If `$ARGUMENTS` gives a positional `<roadmap-slug>`/path, resolve it and skip the picker. Otherwise list the available roadmaps with progress (uses the `roadmap.sh` helpers):
 
 ```bash
 source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # re-source: each bash block is a fresh shell, AI_DIR does not carry over from Step 0
@@ -53,7 +53,7 @@ done
 - **Exactly one** → use it (still refuse if it's fully complete, `done == total > 0`).
 - **More than one** → `AskUserQuestion` (convention (c)), one chip per roadmap labelled `<slug>  (<done>/<total>)`; sort partial roadmaps first, complete ones last with a `(complete)` suffix, and refuse to proceed on a complete pick.
 
-Read the roadmap's `Spec: <slug>` header lines, if any — collect the referenced `.task/spec/<slug>.md` paths and pass them to every item's plan agent (Step 2) as fixed technical-decision anchors.
+Read the roadmap's `Spec: <slug>` header lines, if any — resolve each to an **absolute** `$AI_DIR/spec/<slug>.md` path and echo the list. These paths are baked into the Workflow script's `SPEC_PATHS` literal (Step 2) and interpolated into every item's plan-agent prompt as fixed technical-decision anchors; the JS sandbox cannot expand `$AI_DIR`, so the absolute values must be literals.
 
 ### Item scope
 
@@ -84,7 +84,7 @@ awk '
     }
     next
   }
-  /^\*\*Dependencies:\*\*/ && pend { deps=$0; sub(/^\*\*Dependencies:\*\* */,"",deps); gsub(/[ \t]/,"",deps); if (deps=="—"||deps=="-") deps="" }
+  /^\*\*Dependencies:\*\*/ && pend { deps=$0; sub(/^\*\*Dependencies:\*\* */,"",deps); gsub(/[ \t]/,"",deps); if (deps=="—"||deps=="-"||tolower(deps)=="none"||tolower(deps)=="n/a") deps="" }
   /^\*\*Model:\*\*/       && pend { model=$0; sub(/^\*\*Model:\*\* */,"",model); gsub(/[ \t]/,"",model); if (model!="haiku" && model!="sonnet" && model!="opus") model="" }
   END { flush() }
 ' "$ROADMAP"
@@ -94,8 +94,8 @@ Filter that list to the Step 0 scope. Then **topologically sort into waves**, co
 
 - Wave 1 = every filtered item whose `Dependencies` are empty, or whose dependencies are all *already checked* (`[x]`/`[~]`/`[>]`/`[-]`) in the roadmap file — i.e. nothing left in this run blocks it.
 - Wave 2 = every remaining filtered item whose dependencies are all satisfied by Wave 1 (already-checked items, or items landing in Wave 1).
-- Continue until every filtered item is placed. A dependency on an item **outside** the filtered/scoped set that is still unchecked is a hard stop — surface it and ask the user to widen the scope or drop the item.
-- If a round places **no** new item while items remain unplaced, the scoped items form a dependency **cycle** (e.g. #1 depends on #2 and #2 on #1). Hard stop — report the cycle and ask the user to break it; never guess an order that would run an item before its dependency lands. (Roadmaps are user-edited and `to-roadmap`'s cyclic-deps check is report-only, so a cycle can reach this skill.)
+- Continue until every filtered item is placed. A dependency on an item **outside** the filtered/scoped set that is still unchecked is a hard stop — surface which item depends on which, and ask the user to widen the scope or drop the item: "→ Next: rerun `/task:roadmap-to-workflow <slug>` with a scope that includes #N".
+- If a round places **no** new item while items remain unplaced, the scoped items form a dependency **cycle** (e.g. #1 depends on #2 and #2 on #1). Hard stop — report the cycle and ask the user to break it; never guess an order that would run an item before its dependency lands: "→ Next: edit `.task/roadmap/<slug>.md` to break the cycle, then rerun `/task:roadmap-to-workflow <slug>`". (Roadmaps are user-edited and `to-roadmap`'s cyclic-deps check is report-only, so a cycle can reach this skill.)
 
 The result is a `waves: Item[][]` structure — bake it into the Workflow script's literal in Step 2.
 
@@ -113,6 +113,8 @@ const PLUGIN_ROOT = "<absolute value of $CLAUDE_PLUGIN_ROOT>";   // bake the LIT
 // the JS sandbox can't expand env vars, and a relative "skills/…" path is resolved
 // against the agent's cwd, not this repo — Read needs the absolute plugin path
 // (echo it in Step 0).
+const SPEC_PATHS = [];                            // from Step 0 — absolute $AI_DIR/spec/<slug>.md
+// paths for the roadmap's own `Spec:` headers, baked as literals ([] when it has none)
 const waves = [                                   // from Step 1 — dependency order
   [ { n: 1, title: "…", model: "sonnet" }, { n: 2, title: "…", model: "haiku" } ],
   [ { n: 3, title: "…", model: "opus"   } ],
@@ -131,9 +133,9 @@ async function runPlan(n, title, model, w) {
      ## Plan, + ## Tests if the config Testing Policy calls for it), stamping
      the header with "Roadmap: ${slug}" and "Source item: #${n}", plus a
      "Spec: <spec-slug>" line for each spec the item cites (via its
-     "### Spec references → <spec-slug> §N" entries or the roadmap's own
-     "Spec:" headers). Read each referenced .task/spec/<spec-slug>.md first as
-     a fixed technical anchor. Auto-accept every confirmation; make constructive
+     "### Spec references → <spec-slug> §N" entries) plus every roadmap-level
+     spec listed here: ${SPEC_PATHS.join(", ") || "(none)"}. Read each of those
+     spec files first as a fixed technical anchor. Auto-accept every confirmation; make constructive
      assumptions; never block on a prompt. Do NOT implement or commit.
      Suppress to-plan's "→ Next:" handoff footer (its Step 8 driver-mode
      carve-out) so the digest line below is genuinely last.

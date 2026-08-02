@@ -67,7 +67,7 @@ An item backlog. Each item:
 > ### Acceptance criteria
 ```
 
-The checkbox is the progress marker; `**Dependencies:**` drives the wave ordering in [`roadmap-to-workflow`](/reference/roadmap-to-workflow).
+The checkbox is the progress marker; `**Dependencies:**` drives the wave ordering in [`roadmap-to-workflow`](/reference/roadmap-to-workflow). Write `—` (or `-` / `none` / `n/a`) when an item has none — any other word is read as an item number and stops the run.
 
 ## spec.md
 
