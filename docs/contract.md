@@ -243,7 +243,7 @@ Keeps the `config.md` precondition and English parser-stable strings. **No hook 
 | Script | Role |
 |--------|------|
 | `roadmap.sh` | artifact-path + roadmap parsing helpers: `resolve_artifact_path` (called by `roadmap-to-workflow` and `validate.sh`) and `roadmap_progress_counts` (called by `roadmap-to-workflow` only). The driver's per-item checkbox flip is inline `awk`, **not** a helper here. |
-| `templates/conventional-commits.md` | commit-format fallback for the executing session |
+| `templates/conventional-commits.md` | commit-format fallback: the intake Step 0 setup points `config.md` → Commit Format at it when the project declares no convention of its own (no commit-format doc, nothing usable in `git log`) |
 
 ### Removed in v3 (already deleted)
 

@@ -21,7 +21,7 @@ This is the one place a capture asks before writing — it's confirming *auto-de
 |---|---|
 | **Language** | By default the Description is in your language; everything parser-stable (headers, the `## Execution` block, commit trailers) stays English. |
 | **Testing Policy → Mode** | `always` / `on-demand` *(default)* / `never`. In `on-demand`, `## Tests` is written only if the Description explicitly asks for it ("needs tests", "with tests", "cover with tests"). |
-| **Commit Format** | Either a pointer to your existing `CONTRIBUTING.md`, or rules derived from `git log`. |
+| **Commit Format** | A pointer to your existing `CONTRIBUTING.md`; failing that, rules derived from `git log`; failing that, a pointer to the plugin's bundled Conventional Commits template. |
 | **Build and Tests** | The command(s) `task:code-reviewer` runs end to end before it amends the commit. A red run fails the item; when nothing is declared, the reviewer reports the skip in words rather than implying a green run. |
 | **Code Navigation / Code Editing** | Tool priority — which MCP tools or built-ins the executing session prefers. |
 | **Project Conventions** | Short pointers into your `CLAUDE.md` where it already documents a section. |
