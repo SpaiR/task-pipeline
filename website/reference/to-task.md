@@ -60,4 +60,4 @@ validate: OK — 0 errors, 0 warnings
 - Write a `## Plan` or `## Tests` section — both are [`to-plan`](/reference/to-plan)'s contract.
 - Scan the codebase beyond `CLAUDE.md` + top-level manifests — it captures discussion, not implementation.
 - Author a spec file — referencing one via a `Spec:` header is fine; writing it is [`to-spec`](/reference/to-spec)'s job.
-- Silently overwrite an existing task file — it surfaces the collision and lets you choose.
+- Silently overwrite an existing task file — it surfaces the collision and lets you choose. It first reads what the existing file holds and tells you (`Description, Plan (4 steps), Tests (2)`); when there is a `## Plan` in it, the recommended option is to deepen the file with `/task:to-plan` instead, since `.task/` is git-excluded and an overwritten Plan is gone for good.

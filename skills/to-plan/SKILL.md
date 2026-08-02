@@ -28,7 +28,7 @@ Use `${CLAUDE_PLUGIN_ROOT}` — a bare `skills/…` path resolves against the us
 
 **Once `config.md` exists, every artifact path in this skill is under that resolved `$AI_DIR`, never the cwd** (the inline setup below is the one exception — it runs before a root exists) — `.task/task/<slug>.md` below is shorthand for `$AI_DIR/task/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves `$AI_DIR` itself) never sees.
 
-- **Absent → inline setup.** Run the inline setup gate exactly as [`skills/to-task/SKILL.md`](../to-task/SKILL.md) Step 0 does (detect stack → ONE `AskUserQuestion` confirmation with **Accept** / **Edit** / **Decline** chips → write `config.md` + `git config --local task.root "$ROOT"` + exclude `.task`). `to-task`'s Step 0 is the single source of truth for the sub-steps; do not defer to a separate setup command. Two `to-plan`-specific notes: create `<ROOT>/.task/task/` alongside `config.md`, and on **Decline** report "`config.md` not written. → Next: run `/task:to-plan` again when ready" and **stop**. On success, continue to the validate call below with the original `$ARGUMENTS` unchanged.
+- **Absent → inline setup.** Run the inline setup gate exactly as [`skills/to-task/SKILL.md`](../to-task/SKILL.md) Step 0 does (detect stack → ONE `AskUserQuestion` confirmation with **Accept** / **Edit** / **Decline** chips → write `config.md` + `git config --local task.root "$ROOT"` + exclude `.task`). `to-task`'s Step 0 is the single source of truth for the sub-steps; do not defer to a separate setup command. Two `to-plan`-specific notes: create `<ROOT>/.task/task/` alongside `config.md`, and on **Decline** report "`config.md` not written — nothing was created. If the detected language or testing policy looked wrong, re-run and pick **Edit** to change them before the write. → Next: `/task:to-plan`" and **stop**. On success, continue to the validate call below with the original `$ARGUMENTS` unchanged.
 - **Present → skip silently**, proceed to validate.
 
 Then run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all` as a self-check — there is no gate, so report any findings and continue rather than blocking. Only a config-precondition failure (exit 2) should stop the flow.
@@ -37,8 +37,10 @@ Then run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all` as a sel
 
 The artifact path is the handle. Resolve a target reference, in order:
 
-1. **Explicit slug or path in `$ARGUMENTS`** matching `.task/task/<slug>.md` (existing or not) → that path is the target.
-2. **Roadmap reference in `$ARGUMENTS`** (`<roadmap-slug>` or `<roadmap-slug>#<N>`, matching an existing `.task/roadmap/<slug>.md`) → resolve the item (Step 2a's item-picking logic) and derive its target path `.task/task/<item-slug>.md` from the item title.
+1. **Explicit path, or a slug with evidence** — an explicit path (contains `/`, or ends in `.md`), **or** a bare slug for which `.task/task/<slug>.md` **already exists** → that path is the target. A bare slug alone is *not* enough: "matches `.task/task/<slug>.md`, existing or not" would be satisfied vacuously by any token and would swallow case 2.
+2. **Roadmap reference in `$ARGUMENTS`** (`<roadmap-slug>` or `<roadmap-slug>#<N>`, matching an existing `.task/roadmap/<slug>.md`) → resolve the item (Step 2a's item-picking logic) and derive its target path `.task/task/<item-slug>.md` from the item title. **A bare slug that matches no task file but does match a roadmap file lands here, not in case 1.** If it somehow matches both an existing task file and a roadmap, case 1 wins — the concrete task file is the more specific target.
+
+   **Is the existing file this item's, or someone else's?** When the derived `.task/task/<item-slug>.md` already exists, do not assume it belongs to this item. Read its header: if its `Roadmap:` and `Source item: #N` match this roadmap slug and this item number, it **is** the same item → continue to the promote/revise branch below. If it carries different `Roadmap:` headers, or none at all, it is an unrelated task that merely kebab-cases the same → disambiguate the slug per Step 2a.5 instead, and never enter revise mode on it.
 3. **No positional reference, but the chat is clearly continuing or refining a task this session already captured** (a `to-task`/`to-plan` run earlier in this conversation, or the user names an existing task by title/slug) → that file is the target. If more than one file could plausibly match, ask via `AskUserQuestion` (convention (c)) rather than guessing.
 4. **Nothing resolves** → no target; go to Step 2 for a fresh capture with no prior reference.
 
@@ -48,7 +50,7 @@ Once a target reference is resolved (1–3), branch on whether the file exists:
 - **Target file exists, no `## Plan` heading present** → **promote mode.** This is the flag-free way to turn a `to-task` capture into a plan: skip Step 2 entirely — header and `## Description` already exist and are untouched. Go straight to Step 3 using the existing Description as context, then in Step 7 **insert** `## Plan` (and `## Tests`) rather than create.
 - **Target file exists, `## Plan` already present** → **revise mode.** `to-plan` was already run on this file. Skip Step 2, go straight to Step 3 using the existing Description (and the current chat) as context, then in Step 7 **replace** the existing `## Plan` (and `## Tests` only if the user's edit touches it) rather than create or blindly append a duplicate section.
 
-No target at all (case 4): if one or more `.task/roadmap/*.md` files have an unchecked (`- [ ]`) item **and** there is no chat discussion to draft from, present an `AskUserQuestion` fork (convention (c)): "How do you want to start this task?" — **Draft from this chat** / **Open from a roadmap**. The latter opens a second `AskUserQuestion` listing the roadmap slugs, then proceeds as Step 2a with the chosen slug. If there **is** chat discussion to draft from, proceed as Step 2b. If there is neither a chat discussion nor any unchecked roadmap item to draw on (nothing to capture), **stop** and ask the user what to capture rather than drafting from nothing: "nothing to capture yet — describe the task in chat, or name it directly. → Next: `/task:to-plan <what to capture>`"
+No target at all (case 4): if one or more `.task/roadmap/*.md` files have an unchecked (`- [ ]`) item **and** there is neither chat discussion nor free-form `$ARGUMENTS` to draft from, present an `AskUserQuestion` fork (convention (c)): "How do you want to start this task?" — **Draft from this chat** / **Open from a roadmap**. The latter opens a second `AskUserQuestion` listing the roadmap slugs, then proceeds as Step 2a with the chosen slug. If there **is** chat discussion **or** free-form `$ARGUMENTS` to draft from (either alone is enough — a user who described the task on the command line has already said what to capture), proceed as Step 2b. Only when there is no chat discussion, no free-form `$ARGUMENTS`, and no unchecked roadmap item to draw on, **stop** and ask the user what to capture rather than drafting from nothing: "nothing to capture yet — describe the task in chat, or name it directly. → Next: `/task:to-plan <what to capture>`"
 
 ## Step 2: Fresh capture — Title and Description
 
@@ -57,7 +59,7 @@ Only for fresh capture (skip entirely for promote/revise — see Step 1).
 ### Step 2a: From-roadmap
 
 1. Resolve `<slug>` to `.task/roadmap/<slug>.md`; if ambiguous or missing — stop and ask.
-2. Pick `<N>`: if given, use it. Otherwise collect open items (`- [ ]` checkbox headings); if none — stop: "all items in `<slug>` are closed; pick one explicitly with `<slug>#<N>`, or draft from chat instead. → Next: `/task:to-plan <slug>#<N>`" More than one open item → ask via `AskUserQuestion` (chip per `#<N> — <title>`, first/lowest default); exactly one → auto-pick it.
+2. Pick `<N>`: if given, use it. Otherwise collect open items (`- [ ]` checkbox headings); if none — stop with "Every item in `<slug>` is already checked off." and a **runnable** footer: substitute a real item number from the file, never a literal `<N>` — `→ Next: \`/task:to-plan <slug>#3\` to redo a specific item (numbers as in the roadmap), or describe new work in chat and run \`/task:to-plan\`.` More than one open item → ask via `AskUserQuestion` (chip per `#<N> — <title>`, first/lowest default); exactly one → auto-pick it.
 3. Read the item's `**Ready description:**` blockquote — its sub-headings are quoted (`> ### Context` / `> ### Goal` / `> ### Outcomes` / `> ### Invariants` / `> ### Acceptance criteria`); strip the `> ` prefix as you read. (`validate.sh` makes both the label and the blockquote a hard ERROR, so a bare unquoted `### Context` means the roadmap is malformed, not that the shape is optional.) `### Context` becomes the Description's "why"; the rest folds into the "what". `### Acceptance criteria` entries are good candidates to carry into `## Tests` (Step 4) verbatim as test intents when tests are required.
 4. Note the specs this item relies on: any `### Spec references → <spec-slug> §N` in the item body, plus the roadmap's own `Spec: <slug>` header lines. Read each `.task/spec/<spec-slug>.md` now — carry them into Step 3 as pinned anchors (see Step 3's note), and hold the distinct `<spec-slug>`s for the `Spec:` headers in Step 7's write.
 5. Derive the slug: kebab-case of the item title (2–4 words). If it collides with an existing, unrelated `.task/task/<slug>.md`, disambiguate with a short qualifier (e.g. append a second distinguishing word) rather than overwriting.
@@ -159,9 +161,12 @@ Write the file directly — no in-chat draft, no confirmation prompt. The chat d
 
 **Fresh capture:**
 ```bash
+source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # each Bash call is a FRESH shell — AI_DIR does not carry over from Step 0
+: "${AI_DIR:?AI_DIR unresolved — re-run Step 0 before writing}"
 mkdir -p "$AI_DIR/task"
 # write $AI_DIR/task/<slug>.md — header + Description + Plan (+ Tests) + Execution
 ```
+The re-source is mandatory, not decorative: sourcing `resolve-ws.sh` is idempotent (`find_ai_dir` no-ops once `AI_DIR` is set), and without it an unset `$AI_DIR` turns this into `mkdir -p /task` — the hazard Step 0 already names. `roadmap-to-workflow` re-sources in every bash block for the same reason.
 Header + body, in order:
 ```markdown
 # {Title}
@@ -191,7 +196,13 @@ Spec: {spec-slug}          (one line per relevant spec; omit if none)
 > tick item #N's checkbox in `.task/roadmap/<slug>.md` once the review returns OK.
 ```
 
+**Two notations in one template — do not mix them up.** `{braces}` in the header and body lines are placeholders you substitute (`{Title}`, `{slug}`, `{N}`, `{drafted steps}`). The `## Execution` blockquote is **stamped verbatim**: its `<slug>`, `#N` and `.task/…` strings stay literal, exactly as written. Do **not** substitute this task's slug or roadmap item number into it — the header lines above already carry them, the block must stay byte-identical across every artifact, and `validate.sh` checks only that `## Execution` is *present*, so a paraphrased block ships unflagged.
+
 **Promote:** edit the existing `.task/task/<slug>.md` in place — insert the new `## Plan` block (and `## Tests`, if added) between `## Description`'s content and the existing `## Execution` block (a `to-task`-written file has no `## Tests`, so `## Plan` (+ new `## Tests`) is always inserted directly before `## Execution`). Do not touch the header, the `---` separator, `## Description`, or `## Execution` itself.
+
+Two defensive cases, since Step 1 accepts a hand-written or hand-edited path as the target:
+- **No `## Execution` block to anchor on** (hand-written file) → append `## Plan` (and `## Tests`) at end of file, then stamp the canonical `## Execution` block after them, exactly as a fresh capture does. Same fallback revise mode already declares below — do not guess an insert position instead.
+- **No `## Description`** → the file is not a task artifact this skill can promote. **Stop and ask** rather than inventing one: "`.task/task/<slug>.md` has no `## Description` — say whether to treat it as a fresh capture at that path (overwriting it) or point me at a different file."
 
 **Revise:** edit the existing `.task/task/<slug>.md` in place — replace the whole prior `## Plan` block with the new one (same position, still before `## Execution`). Replace `## Tests` only if the current chat's edit touched it; otherwise leave it exactly as it was. Leave `## Execution` untouched (re-stamp it only in the defensive case it's missing).
 
@@ -209,6 +220,12 @@ Plan:
 - Step 1: {short title}
 - Step 2: {…}
 validate: {OK — 0 errors, N warning(s) | the FAIL lines}
+```
+
+When the validate result is **not** clean (any WARN or FAIL), append one more line so the user can re-check after editing the file by hand — `validate` is not a slash command, so the invocation is worth spelling out. Omit it entirely on a clean result:
+
+```
+re-check after editing: bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" task <slug>
 ```
 
 For **promote** / **revise**, note plainly what stayed untouched (Description, and pre-existing Tests unless the edit touched them). The file is already written — to change anything, just say so. Then close with the handoff footer (convention (a), flag-free):
