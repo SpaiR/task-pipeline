@@ -7,7 +7,7 @@
 #   validate.sh spec <slug>     — validate .task/spec/<slug>.md
 #   validate.sh all             — every task + roadmap + spec file
 #
-# v3 is flat: <slug> is both the filename and the identity — there is no
+# The layout is flat: <slug> is both the filename and the identity — there is no
 # task-id, no workspace, no active-task pointer. This is an OPTIONAL
 # self-check; no hook calls it. A task/roadmap `Spec: <slug>` header that
 # doesn't resolve to a .task/spec/<slug>.md is reported as a WARN (dangling

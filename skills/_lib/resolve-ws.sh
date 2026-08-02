@@ -3,7 +3,7 @@
 #
 # Sourced (NOT exec'd) by callers. Runs `find_ai_dir` at source time and
 # exports `AI_DIR` — the discovered `.task` directory. Pure root finder: no
-# active-task pointer, no per-task workspace, no TASK_ID_OVERRIDE. In v3 the
+# active-task pointer, no per-task workspace, no TASK_ID_OVERRIDE. The
 # artifact path (`.task/task/<slug>.md`) is the handle — there is no "which
 # task is active" resolution anywhere.
 #

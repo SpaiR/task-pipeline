@@ -46,7 +46,7 @@ Why + what, distilled from the chat.
 - **Line 1** is a plain `# <Title>` — no bracketed task-id.
 - `Roadmap:` / `Source item:` / `Spec:` headers sit above the `---`, ASCII.
 - `## Description` is mandatory; `## Plan` and `## Tests` are optional.
-- `## Execution` is stamped boilerplate — the mechanism that replaces a `build`/`ship` step.
+- `## Execution` is stamped boilerplate — the mechanism that carries implement → commit → review.
 
 ## roadmap.md
 
@@ -67,7 +67,7 @@ An item backlog. Each item:
 > ### Acceptance criteria
 ```
 
-The checkbox is the progress marker; `**Dependencies:**` drives the wave ordering in [`roadmap-to-workflow`](/reference/roadmap-to-workflow).
+The checkbox is the progress marker; `**Dependencies:**` drives the wave ordering in [`roadmap-to-workflow`](/reference/roadmap-to-workflow). Write `—` (or `-` / `none` / `n/a`) when an item has none — any other word is read as an item number and stops the run.
 
 ## spec.md
 

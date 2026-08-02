@@ -128,7 +128,7 @@ return a typed `RetriesExhausted` result the caller can branch on.
 /plugin install task@task-pipeline
 ```
 
-That's the whole setup. The first capture in a new project writes `.task/config/config.md` for you — there's no separate bootstrap step. See [Getting started](/guide/getting-started) for the first run end to end.
+That's the whole setup. The first capture in a new project writes `.task/config/config.md` for you — there's no separate setup step. See [Getting started](/guide/getting-started) for the first run end to end.
 
 ## Small on purpose
 

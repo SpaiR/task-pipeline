@@ -18,7 +18,7 @@ Improve **this repository** (the task-pipeline skills repo itself) — not by fi
 
 **Boundary rule (hard):** if a lens finds an actual violation of a declared rule (an invariant, a producer↔consumer mismatch, README↔code drift), that is audit's job, not improve's. The agent must set `defer: self-audit` on it and **not** propose a fix. `/self-improve` never edits under the banner of a rule violation — it only makes not-yet-broken things better.
 
-This is a **meta-skill**. It operates on the repo's own files (`skills/*/SKILL.md`, `skills/_lib/*.sh`, `skills/validate/validate.sh`, `CLAUDE.md`, `README.md`, `docs/contract.md`), not on `.task/*` artifacts. The pipeline it improves is the v3 chat-first protocol (six user skills — `grill`, `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow` — plus the internal `validate`); there is no `design`/`build`/`ship`/`auto-roadmap` pipeline, and the repo-level `agents/` directory holds exactly one file, `agents/code-reviewer.md`. It can be invoked at any time.
+This is a **meta-skill**. It operates on the repo's own files (`skills/*/SKILL.md`, `skills/_lib/*.sh`, `skills/validate/validate.sh`, `CLAUDE.md`, `README.md`, `docs/contract.md`), not on `.task/*` artifacts. The pipeline it improves is the chat-first capture protocol (six user skills — `grill`, `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow` — plus the bash-only `validate`); the repo-level `agents/` directory holds exactly one file, `agents/code-reviewer.md`. It can be invoked at any time.
 
 **Input:**
 - Optional scope hint: $ARGUMENTS (e.g. a single skill name to focus on; default: full repo).
@@ -61,7 +61,7 @@ In one parallel batch, run:
 - Read every `skills/*/SKILL.md` (one batched call).
 - Read every bash helper `skills/_lib/*.sh` plus `skills/validate/validate.sh` (one batched call).
 
-The repo-level `agents/` directory holds **exactly one** file, `agents/code-reviewer.md` (the `task:code-reviewer` review pass) — read it alongside the skills. There is **no `docs/spec/`** in v3 — do not attempt to read it. If `$ARGUMENTS` names a single skill (e.g. `to-plan`), still load the full `CLAUDE.md` + `README.md` + `docs/contract.md` (lenses cross-reference), but you may narrow the SKILL.md reads to that skill plus any skill it explicitly produces/consumes for.
+The repo-level `agents/` directory holds **exactly one** file, `agents/code-reviewer.md` (the `task:code-reviewer` review pass) — read it alongside the skills. There is **no `docs/spec/`** — do not attempt to read it. If `$ARGUMENTS` names a single skill (e.g. `to-plan`), still load the full `CLAUDE.md` + `README.md` + `docs/contract.md` (lenses cross-reference), but you may narrow the SKILL.md reads to that skill plus any skill it explicitly produces/consumes for.
 
 ### Step 2: Run four agents in parallel
 
@@ -196,6 +196,6 @@ Then **write** the new baseline to `.claude/.improve-baseline.json` (the only sa
 - This skill is **local** (`.claude/skills/self-improve/` + `.claude/agents/self-*-improver.md`). It is not installed globally and not bundled into the public skill set. To remove: delete those paths (and the gitignored `.claude/.improve-baseline.json`).
 - The ratchet baseline `.claude/.improve-baseline.json` is the **sole** on-disk artifact this skill writes (gitignored, per-clone). The skill must not modify `.gitignore` at runtime — the baseline entry is added once at bootstrap.
 - Findings about `docs/contract.md` itself **are** in scope — it is part of the prompt contract.
-- Findings about `.task/` are **out of scope** (working artifacts; git history is their record — no archive in v3).
+- Findings about `.task/` are **out of scope** (working artifacts; git history is their record — no archive).
 - This skill must not modify `.task/` or the project's `.gitignore`.
 - Sibling skill: [`/self-audit`](../self-audit/SKILL.md) — run it for rule-violation fixes; `/self-improve` defers all violations to it.

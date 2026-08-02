@@ -14,7 +14,16 @@ Distil the chat discussion so far (or a roadmap item) into `.task/task/<slug>.md
 
 ## Step 0: Setup gate
 
-Check whether `.task/config/config.md` exists — resolve the pipeline root via `skills/_lib/resolve-ws.sh` (source it; it exports `AI_DIR`, walking `task.root` → ancestor `config.md` → git-common-dir → `.task`).
+Resolve the pipeline root, then check whether its `config/config.md` exists:
+
+```bash
+source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # sourcing runs find_ai_dir → sets AI_DIR
+[[ -f "$AI_DIR/config/config.md" ]] || echo "config.md not found"
+```
+
+The helper walks `task.root` git config → ancestor `config.md` → `dirname(git-common-dir)/.task` → `$CLAUDE_PROJECT_DIR/.task` when that path already holds a `config/config.md` → `./.task`. Use `${CLAUDE_PLUGIN_ROOT}` — a bare `skills/…` path resolves against the user's project cwd, where it does not exist.
+
+**Once `config.md` exists, every artifact path in this skill is under that resolved `$AI_DIR`, never the cwd** — `.task/task/<slug>.md` below is shorthand for `$AI_DIR/task/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves `$AI_DIR` itself) never sees. The inline setup below is the one exception: it runs *before* a root exists, writes to `<ROOT>/.task`, and records `git config task.root "$ROOT"` — which is exactly what `$AI_DIR` resolves to on every later run.
 
 - **Absent → inline setup.** Run it inline, do not defer to another command:
   1. Determine the pipeline root `ROOT` (main worktree root; `pwd` for a non-git dir; for a bare repo the default is a best-effort guess — surface it in the proposal below so the user can redirect it).
@@ -43,15 +52,15 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
 1. **Positional roadmap reference** (`<slug>` or `<slug>#<N>`, matching an existing `.task/roadmap/<slug>.md`) → **from-roadmap mode**, Step 1a below.
 2. **No positional roadmap reference, and one or more `.task/roadmap/*.md` files have an unchecked (`- [ ]`) item, and there is no chat discussion to draft from** → present an `AskUserQuestion` fork (convention (c)): "How do you want to start this task?" — **Draft from this chat** / **Open from a roadmap**. The latter opens a second `AskUserQuestion` listing the roadmap slugs, then proceeds as from-roadmap mode with the chosen slug.
 3. **There is chat discussion to draft from** (with or without extra free-form `$ARGUMENTS` context) → **chat-draft mode**, Step 2 below.
-4. **Nothing to draft from** (no chat discussion, no unchecked roadmap item, and empty `$ARGUMENTS`) → **stop** and ask the user what to capture rather than drafting a Description from nothing.
+4. **Nothing to draft from** (no chat discussion, no unchecked roadmap item, and empty `$ARGUMENTS`) → **stop** and ask the user what to capture rather than drafting a Description from nothing: "nothing to capture yet — describe the task in chat, or name it directly. → Next: `/task:to-task <what to capture>`"
 
 ### Step 1a: From-roadmap mode
 
 1. Resolve `<slug>` to `.task/roadmap/<slug>.md`; if ambiguous or missing — stop and ask.
 2. Pick `<N>`: if given, use it. Otherwise collect open items (`- [ ]` checkbox headings); if none — stop: "all items in `<slug>` are closed; pick one explicitly with `<slug>#<N>`, or draft from chat instead. → Next: `/task:to-task <slug>#<N>`" If more than one open item, ask via `AskUserQuestion` (chip per `#<N> — <title>`, first/lowest default); if exactly one, auto-pick it.
-3. Read the item's `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria` block. `### Context` becomes the Description's "why"; the rest folds into the "what". Also note any `### Spec references → <spec-slug> §N` the item carries, and the roadmap's own `Spec: <slug>` header lines — collect the distinct `<spec-slug>`s to stamp as `Spec:` headers on the task (step 5).
+3. Read the item's `**Ready description:**` blockquote — its sub-headings are quoted (`> ### Context` / `> ### Goal` / `> ### Outcomes` / `> ### Invariants` / `> ### Acceptance criteria`); strip the `> ` prefix as you read. (`validate.sh` makes both the label and the blockquote a hard ERROR, so a bare unquoted `### Context` means the roadmap is malformed, not that the shape is optional.) `### Context` becomes the Description's "why"; the rest folds into the "what". Also note any `### Spec references → <spec-slug> §N` the item carries, and the roadmap's own `Spec: <slug>` header lines — collect the distinct `<spec-slug>`s to stamp as `Spec:` headers on the task (step 5).
 4. Derive `<item-slug>` — kebab-case English from the item's own title (not the roadmap's). No task-id, no `derive-task-id` helper: the item gets its own `<item-slug>.md`, independent of the roadmap's slug.
-5. Write `.task/task/<item-slug>.md` directly (creating `.task/task/` if needed) — no in-chat draft, no confirmation prompt; the roadmap item is the settled source:
+5. Write `$AI_DIR/task/<item-slug>.md` directly (creating `$AI_DIR/task/` if needed) — no in-chat draft, no confirmation prompt; the roadmap item is the settled source:
 
    ```markdown
    # {Item title}
@@ -82,10 +91,10 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
 
 1. **Slug.** Derive a kebab-case English slug (2–5 words) from the chat's essence / the drafted title. This is both the filename and the task's identity — no task-id, no bracket. If `.task/task/<slug>.md` already exists, surface it before writing: pose an `AskUserQuestion` (Accept overwrite / Edit → propose a different slug / Decline → stop without writing).
 2. **Distil the chat.** Read back over the discussion in this conversation (not the codebase) and write:
-   - `## Description` — the why + what, in the user's own framing. Use `### Problem` / `### Outcome` / `### Scope` / `### Constraints` sub-headers where the discussion gives signal for them; omit a sub-header rather than inventing content. Do not fabricate anything not actually discussed.
+   - `## Description` — the why + what, in the user's own framing, written per `config.md` → Language (the section labels themselves stay English). Use `### Problem` / `### Outcome` / `### Scope` / `### Constraints` sub-headers where the discussion gives signal for them; omit a sub-header rather than inventing content. Do not fabricate anything not actually discussed.
    - **No `## Plan` and no `## Tests`** — both are `to-plan`'s job; run `to-plan` later to add them (Tests when Testing Policy warrants).
    - **Specs (optional).** If `.task/spec/` holds a spec the discussion clearly relies on, add a `Spec: <slug>` header line for each (ASCII, above `---`) so the executing session reads it as a fixed anchor. Only reference specs actually relevant — never invent one, and never write the spec file here (that is `to-spec`'s job).
-3. **Write `.task/task/<slug>.md` directly** (creating `.task/task/` if needed) — no in-chat draft, no confirmation prompt. The chat discussion was the review; the written file is the deliverable, and the Step 3 digest lets the user judge whether to open it. (The Step 2.1 slug-collision guard still runs before this write.) No `Roadmap:` / `Source item:` lines in this mode; include a `Spec:` line per relevant spec, or none:
+3. **Write `$AI_DIR/task/<slug>.md` directly** (creating `$AI_DIR/task/` if needed) — no in-chat draft, no confirmation prompt. The chat discussion was the review; the written file is the deliverable, and the Step 3 digest lets the user judge whether to open it. (The Step 2.1 slug-collision guard still runs before this write.) No `Roadmap:` / `Source item:` lines in this mode; include a `Spec:` line per relevant spec, or none:
 
    ```markdown
    # {Short task title}
@@ -125,7 +134,7 @@ The file is already written — to change anything, just say so. Then close with
 - Write a `## Tests` section — also `to-plan`'s contract; `to-task` captures the Description only.
 - Scan the codebase beyond `CLAUDE.md` + top-level manifests — this skill captures discussion, it doesn't investigate implementation.
 - Modify the source roadmap file in from-roadmap mode — auto-marking `- [x]` happens inside the executing session (or the `roadmap-to-workflow` driver), never here.
-- Invent, read, or write any active-task pointer — v3 has none; the artifact path is the only handle.
-- Bracket the title with a task-id (`# [TASK-ID] Title`) — v3's title line is plain `# <Title>`; the slug lives only in the filename.
+- Invent, read, or write any active-task pointer — the artifact path is the only handle.
+- Bracket the title with a task-id (`# [TASK-ID] Title`) — the title line is plain `# <Title>`; the slug lives only in the filename.
 - Silently overwrite an existing `.task/task/<slug>.md` — surface the collision and let the user choose.
 - Write or edit a `.task/spec/<slug>.md` file — referencing a spec via a `Spec:` header is fine, but authoring specs is `to-spec`'s job.

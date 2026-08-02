@@ -15,7 +15,14 @@ Fix **load-bearing technical decisions** — a protocol, a cross-cutting data sh
 
 ### Step 0: Config gate
 
-Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`.
+Resolve the pipeline root first, then validate:
+
+```bash
+source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # exports AI_DIR
+bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
+```
+
+**Every artifact path in this skill is under that resolved `$AI_DIR`, never the cwd** — `.task/spec/<slug>.md` below is shorthand for `$AI_DIR/spec/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves `$AI_DIR` itself) never sees.
 
 - **`config.md not found`** → `/task:to-spec` is intake-capable: run the inline setup gate exactly as `skills/to-task/SKILL.md` Step 0 does (detect stack → one `AskUserQuestion` confirmation, Accept / Edit / Decline chips → write `config.md` + `git config --local task.root` + exclude `.task`), then re-run `validate.sh all`. If config is now present → continue. If the user declined setup → report "`config.md` not written. → Next: run `/task:to-spec` again when ready" and **stop**.
 - **Exit 1** (one or more *existing* artifacts fail validation) → surface the validator output, but **do not block**: those errors are pre-existing files, not the spec you're about to write (mirrors `to-task` Step 0 and `roadmap-to-workflow`, and `validate.sh` is advisory, never config-malformed — it doesn't inspect `config.md` content). Only a missing `config.md` (exit 2, handled above) hard-stops.
@@ -107,8 +114,8 @@ Keep one decision per section. Before saving, a quick self-check, fixed inline:
 Write the file directly — no in-chat preview, no confirmation prompt; the chat discussion (recapped in Step 2) was the review, and Step 5's digest lets the user judge whether to open the file.
 
 1. Slug: kebab-case from the decision-area topic, ≤ 50 chars (e.g. `event-envelope`, `auth-token-model`). Its own identity — independent of any roadmap.
-2. **Slug collision (soft).** Create `.task/spec/` if missing. If `.task/spec/<slug>.md` already exists → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). Never silently overwrite.
-3. Write `.task/spec/<slug>.md` with the full content.
+2. **Slug collision (soft).** Create `$AI_DIR/spec/` if missing. If `$AI_DIR/spec/<slug>.md` already exists → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). Never silently overwrite.
+3. Write `$AI_DIR/spec/<slug>.md` with the full content.
 4. Do not modify any other file — wiring a `Spec:` header into a task or roadmap is the job of `to-task` / `to-plan` / `to-roadmap` when they reference this spec.
 5. Validate the written file: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" spec <slug>` — surface any WARN/ERROR in the Step 5 digest; only a config-precondition failure (exit 2) hard-stops.
 

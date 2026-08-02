@@ -15,7 +15,14 @@ Fix a **multi-task initiative** (phases, dependencies, or more than a couple of 
 
 ### Step 0: Config gate
 
-Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`.
+Resolve the pipeline root first, then validate:
+
+```bash
+source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # exports AI_DIR
+bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
+```
+
+**Every artifact path in this skill is under that resolved `$AI_DIR`, never the cwd** — `.task/roadmap/<slug>.md` below is shorthand for `$AI_DIR/roadmap/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves `$AI_DIR` itself) never sees.
 
 - **`config.md not found`** → `/task:to-roadmap` is intake-capable: run the inline setup gate exactly as `skills/to-task/SKILL.md` Step 0 does (detect stack → one `AskUserQuestion` confirmation, Accept / Edit / Decline chips → write `config.md` + `git config --local task.root` + exclude `.task`), then re-run `validate.sh all`. If config is now present → continue. If the user declined setup → report "`config.md` not written. → Next: run `/task:to-roadmap` again when ready" and **stop**.
 - **Exit 1** (one or more *existing* artifacts fail validation) → surface the validator output, but **do not block**: those errors are pre-existing files, not the roadmap you're about to write (mirrors `to-task` Step 0 and `roadmap-to-workflow`, and `validate.sh` is advisory, never config-malformed — it doesn't inspect `config.md` content). Only a missing `config.md` (exit 2, handled above) hard-stops.
@@ -104,7 +111,7 @@ Topics the user explicitly said to skip stay skipped — do not raise them again
 
 ### Step 3: Draft the file
 
-Once the decision list is confirmed, draft the full roadmap per [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd): title + intro, `## Prerequisites`, `## Phase summary` table, one `## Phase X` section per phase with `### - [ ] N. <title>` items (`**Dependencies:**`, optional `**Model:**`, `**Ready description:**` blockquote with `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria`), `## Out of scope`, `## Backlinks`. Item numbers `N` run continuously across the whole file — never restart the numbering per phase.
+Once the decision list is confirmed, draft the full roadmap per [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd): title + intro, `## Prerequisites`, `## Phase summary` table, one `## Phase X` section per phase with `### - [ ] N. <title>` items (`**Dependencies:**` — emit an em dash `—` when the item has none, otherwise a comma-separated list of item numbers; `roadmap-to-workflow`'s wave sorter also tolerates `-` / `none` / `n/a` on hand-edited files, but reads any other word as a dependency on a missing item and hard-stops — optional `**Model:**`, `**Ready description:**` blockquote with `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria`), `## Out of scope`, `## Backlinks`. Item numbers `N` run continuously across the whole file — never restart the numbering per phase.
 
 **Route every confirmed decision to a home:**
 
@@ -134,9 +141,9 @@ Before saving, self-check and fix inline (drafting hygiene, distinct from Step 5
 Write the file directly — no in-chat preview, no confirmation prompt.
 
 1. Slug: kebab-case from the initiative title, ≤ 50 chars (e.g. `add-auth-flow`, `migrate-to-vite`).
-2. **Slug collision (soft).** Create `.task/roadmap/` if missing. If `.task/roadmap/<slug>.md` already exists → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). Never silently overwrite.
-3. Write `.task/roadmap/<slug>.md` with the full content, including any `Spec: <spec-slug>` header lines for specs referenced in Step 3.
-4. Modify no file other than `.task/roadmap/<slug>.md` (spec authorship is `to-spec`'s job — see Forbidden).
+2. **Slug collision (soft).** Create `$AI_DIR/roadmap/` if missing. If `$AI_DIR/roadmap/<slug>.md` already exists → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). Never silently overwrite.
+3. Write `$AI_DIR/roadmap/<slug>.md` with the full content, including any `Spec: <spec-slug>` header lines for specs referenced in Step 3.
+4. Modify no file other than `$AI_DIR/roadmap/<slug>.md` (spec authorship is `to-spec`'s job — see Forbidden).
 5. Validate the written file: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" roadmap <slug>` — surface any WARN/ERROR in the Step 6 digest; only a config-precondition failure (exit 2) hard-stops.
 
 ### Step 5: Light self-check (report-only)
@@ -172,9 +179,9 @@ validate: {OK — 0 errors, N warning(s) | the FAIL lines}
 - Naming project-specific files, modules, functions, types, or constants in `### Outcomes` / `### Goal` / `### Invariants` — normative names from spec/CLAUDE.md are the only exception.
 - Planning implementation details (file lists with line numbers, function signatures, code blocks > 5 lines) — that is `/task:to-plan`'s job when the item is picked up.
 - Modifying any file other than `.task/roadmap/<slug>.md` — specs live at `.task/spec/<slug>.md` and are authored only by `to-spec`, never written or edited here.
-- Auto-checking / auto-unchecking item checkboxes — that is the `roadmap-to-workflow` **driver**'s exclusive job, never this skill's and never a per-item agent's.
+- Auto-checking / auto-unchecking item checkboxes — ticking `- [x]` happens inside the executing session (or, in a roadmap run, the `roadmap-to-workflow` **driver**), never here and never inside a per-item agent.
 - A single-direction monologue in a decomposition round — offer ≥ 2 options or explicitly justify why only one is viable. (The Decision Inventory and the cold-start recap are chat-only recaps, not decomposition rounds — exempt.)
 - Generic risks ("watch out for bugs") — risks must be specific to the initiative and project.
 - More than one initiative per file — split and pick one for this run.
 - Persisting topics the user asked to skip; placeholders anywhere.
-- Writing a `.refine.md` sidecar, a `.spec.md` sidecar, or a `.lock` file — none exists in v3.
+- Writing a `.refine.md` sidecar, a `.spec.md` sidecar, or a `.lock` file — none of those exists in the pipeline.

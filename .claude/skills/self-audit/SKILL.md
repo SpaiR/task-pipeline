@@ -1,13 +1,13 @@
 ---
 name: self-audit
-description: Self-audit this skills repo against CLAUDE.md invariants, the v3 artifact contract, and README/CLAUDE.md/docs sync via three parallel read-only subagents. Local meta-skill — independent of the /task:* pipeline.
+description: Self-audit this skills repo against CLAUDE.md invariants, the artifact contract, and README/CLAUDE.md/docs sync via three parallel read-only subagents. Local meta-skill — independent of the /task:* pipeline.
 disable-model-invocation: true
 user-invocable: true
 ---
 
 Audit **this repository** (the task-pipeline skills repo itself) for drift between skills, the artifact contract, and the user-facing docs. Three lenses run in parallel as named subagents: **Invariants**, **Contract**, **Docs-sync**.
 
-This is a **meta-skill**. It operates on the repo's own files (`skills/*/SKILL.md`, `skills/_lib/*.sh`, `skills/validate/validate.sh`, `CLAUDE.md`, `README.md`, `docs/contract.md`), not on `.task/*` artifacts. The pipeline it audits is the v3 chat-first protocol — `grill` in chat, then `to-task` / `to-plan` / `to-roadmap` / `to-spec` fix the discussion into a `.task/` artifact that a plain session (or `roadmap-to-workflow`) executes directly, handing the diff to `task:code-reviewer`. There is no `design` / `build` / `ship` / `auto-roadmap` pipeline any more; the repo-level `agents/` directory holds exactly one file, `agents/code-reviewer.md`. The skill can be invoked at any time.
+This is a **meta-skill**. It operates on the repo's own files (`skills/*/SKILL.md`, `skills/_lib/*.sh`, `skills/validate/validate.sh`, `CLAUDE.md`, `README.md`, `docs/contract.md`), not on `.task/*` artifacts. The pipeline it audits is the chat-first capture protocol — `grill` in chat, then `to-task` / `to-plan` / `to-roadmap` / `to-spec` fix the discussion into a `.task/` artifact that a plain session (or `roadmap-to-workflow`) executes directly, handing the diff to `task:code-reviewer`. The repo-level `agents/` directory holds exactly one file, `agents/code-reviewer.md`. The skill can be invoked at any time.
 
 **Input:** Optional scope hint: $ARGUMENTS (e.g. a single skill name to focus on; default: full repo).
 
@@ -40,7 +40,7 @@ In one parallel batch, run:
 - Read every `skills/*/SKILL.md` (one batched call).
 - Read every bash helper `skills/_lib/*.sh` plus `skills/validate/validate.sh` (one batched call).
 
-The repo-level `agents/` directory holds **exactly one** file, `agents/code-reviewer.md` (the `task:code-reviewer` review pass) — read it alongside the skills. There is **no `docs/spec/`** in v3 — do not attempt to read it. If `$ARGUMENTS` names a single skill (e.g. `to-plan`), still load the full `CLAUDE.md` + `README.md` + `docs/contract.md` (lenses cross-reference), but you may narrow the SKILL.md reads to that skill plus any skill it explicitly produces/consumes for.
+The repo-level `agents/` directory holds **exactly one** file, `agents/code-reviewer.md` (the `task:code-reviewer` review pass) — read it alongside the skills. There is **no `docs/spec/`** — do not attempt to read it. If `$ARGUMENTS` names a single skill (e.g. `to-plan`), still load the full `CLAUDE.md` + `README.md` + `docs/contract.md` (lenses cross-reference), but you may narrow the SKILL.md reads to that skill plus any skill it explicitly produces/consumes for.
 
 ### Step 2: Run three agents in parallel
 
@@ -163,5 +163,5 @@ Then **write** the new baseline to `.claude/.audit-baseline.json` (the only sanc
 
 - This skill is **local** (`.claude/skills/self-audit/` + `.claude/agents/self-*-auditor.md`). It is not installed globally and not bundled into the public skill set. To remove: delete those two paths (and the gitignored `.claude/.audit-baseline.json`).
 - The ratchet baseline `.claude/.audit-baseline.json` is the **sole** on-disk artifact this skill writes (gitignored, per-clone). The skill must not modify `.gitignore` at runtime — the baseline entry is added once at bootstrap.
-- Findings about `.task/` are **out of scope** (working artifacts; git history is their record — there is no archive in v3).
+- Findings about `.task/` are **out of scope** (working artifacts; git history is their record — there is no archive).
 - This skill must not modify `.task/` or the project's `.gitignore`.

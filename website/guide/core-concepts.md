@@ -22,11 +22,11 @@ This is why the plan survives `/clear`, compaction, and tomorrow's fresh session
 
 ## 4. Execution is a block, not a skill
 
-There is no `build` or `ship` command to learn. Every artifact carries a `## Execution` block — a few lines of stamped, English boilerplate — and any ordinary session told to implement the file simply follows it:
+Execution isn't a command you learn. Every artifact carries a `## Execution` block — a few lines of stamped, English boilerplate — and any ordinary session told to implement the file simply follows it:
 
 > Implement the Plan (or the Description if none). Commit per `config.md` → Commit Format. Then spawn the `task:code-reviewer` agent on this file: it proves each finding, fixes confirmed defects within **Touches**, runs Build and Tests, and amends the commit. If it's a roadmap item, tick its checkbox once the review returns OK.
 
-The mechanism that used to be two separate skills is now text inside the file. That's the whole execution side.
+The mechanism lives in the file, not in a command. That's the whole execution side.
 
 ## 5. config.md holds project policy
 
