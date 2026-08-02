@@ -104,7 +104,7 @@ Topics the user explicitly said to skip stay skipped — do not raise them again
 
 ### Step 3: Draft the file
 
-Once the decision list is confirmed, draft the full roadmap per [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd): title + intro, `## Prerequisites`, `## Phase summary` table, one `## Phase X` section per phase with `### - [ ] N. <title>` items (`**Dependencies:**`, optional `**Model:**`, `**Ready description:**` blockquote with `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria`), `## Out of scope`, `## Backlinks`.
+Once the decision list is confirmed, draft the full roadmap per [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd): title + intro, `## Prerequisites`, `## Phase summary` table, one `## Phase X` section per phase with `### - [ ] N. <title>` items (`**Dependencies:**`, optional `**Model:**`, `**Ready description:**` blockquote with `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria`), `## Out of scope`, `## Backlinks`. Item numbers `N` run continuously across the whole file — never restart the numbering per phase.
 
 **Route every confirmed decision to a home:**
 
@@ -126,7 +126,8 @@ Before saving, self-check and fix inline (drafting hygiene, distinct from Step 5
 3. No placeholders (`TBD`, `TODO`, `???`, `fill in`).
 4. Every `**Dependencies:**` cites a task number that exists in this file.
 5. Every item heading produces a unique kebab-case slug.
-6. Every confirmed decision (Step 2) resolved to a concrete home — `### Outcomes`/`### Acceptance criteria`, `## Out of scope`, a spec `### Spec references → <spec-slug> §N` citation (or a decision flagged for a `/task:to-spec` follow-up) — or was explicitly dropped with a stated reason.
+6. Item numbers are unique across the whole file (numbering does not restart per phase) — a duplicate `N` is a `validate.sh` error, and the `roadmap-to-workflow` driver's auto-mark keys on the number, so two items sharing one would be ticked together.
+7. Every confirmed decision (Step 2) resolved to a concrete home — `### Outcomes`/`### Acceptance criteria`, `## Out of scope`, a spec `### Spec references → <spec-slug> §N` citation (or a decision flagged for a `/task:to-spec` follow-up) — or was explicitly dropped with a stated reason.
 
 ### Step 4: Save
 

@@ -230,8 +230,8 @@ Keeps the `config.md` precondition and English parser-stable strings. **No hook 
   - each `Spec: <slug>` header resolves to an existing `.task/spec/<slug>.md` — a miss is a **`WARN`** (dangling reference), not an error (`validate.sh` is advisory, not a gate).
 - **`roadmap <slug>`** — validate `.task/roadmap/<slug>.md`:
   - ≥1 item heading matching `^### - \[[ x~>-]\] N\. <title>` — the checkbox prefix is **required** (an item with a bare `### N.` heading and no checkbox is an error, since the driver's auto-mark and item selection both rely on it);
-  - item numbers are unique, since the driver's auto-mark keys on the number;
-  - each item block carries the sub-headings `### Context`, `### Goal`, `### Outcomes`, `### Acceptance criteria` inside its `**Ready description:**` blockquote (matched as `> ### <name>`); `### Invariants` is **optional** and not required;
+  - item numbers are unique, since the driver's auto-mark keys on the number — numbering runs continuously across the whole file and never restarts per phase;
+  - each item block carries the `**Ready description:**` label (required — `to-plan` and the executing session key on it to find the item body) and, inside its blockquote, the sub-headings `### Context`, `### Goal`, `### Outcomes`, `### Acceptance criteria` (matched as `> ### <name>`); `### Invariants` is **optional** and not required;
   - dangling `Spec:` headers `WARN` as for `task`.
 - **`spec <slug>`** — validate `.task/spec/<slug>.md`: line 1 matches `^# .+`; ≥1 `## N.` numbered decision section. (No `---` separator check — a spec has no parser-stable header block above a body, so there is nothing to separate.)
 - **`all`** — validate every `.task/task/*.md`, every `.task/roadmap/*.md`, plus every `.task/spec/*.md`.

@@ -214,6 +214,7 @@ validate_roadmap() {
   done < <(awk -v label="$label" '
     function flush_block() {
       if (in_block == 0) return
+      if (!has_ready)    print "ERROR " label ": Task " task_no " missing '\''**Ready description:**'\'' label"
       if (!has_context)  print "ERROR " label ": Task " task_no " missing '\''### Context'\'' sub-heading"
       if (!has_goal)     print "ERROR " label ": Task " task_no " missing '\''### Goal'\'' sub-heading"
       if (!has_outcomes) print "ERROR " label ": Task " task_no " missing '\''### Outcomes'\'' sub-heading"
@@ -257,6 +258,10 @@ validate_roadmap() {
 
     {
       if (in_block) {
+        # The `**Ready description:**` label is required: `to-plan` and the
+        # executing session look for it to find the item body, so an item that
+        # carries the sub-headings without it is not pickable. flush_block()
+        # errors when this stays 0.
         if ($0 ~ /\*\*Ready description:\*\*/) has_ready = 1
         # Sub-headings MUST be inside the `**Ready description:**` blockquote
         # (`> ### Goal`, etc.) — to-plan / the executing session strip `> `
