@@ -30,14 +30,14 @@ Then reopen the `/` menu. If it was already installed, make sure it isn't disabl
 If you'd rather not run it at all, nothing is gated: the commit stands as it is, and you can run your project's build and tests plus your own review by hand. What you must not do is assume the review happened — a missing reviewer means no defect was proven and no fix was applied.
 
 ::: tip Why there's no fallback
-Earlier versions called Claude Code's `/verify` and `/code-review`. Those are marked `disable-model-invocation`, which means a subagent — and a session that was merely *told* `implement …` rather than typing the command itself — cannot run them, and the failure is silent: an unlisted command is skipped, not refused, so the run still reported success. A named agent that fails loudly is the trade this replaced it with.
+Claude Code's own `/verify` and `/code-review` are marked `disable-model-invocation`, which means a subagent — and a session that was merely *told* `implement …` rather than typing the command itself — cannot run them, and the failure is silent: an unlisted command is skipped, not refused, so the run would still report success. The pipeline names its own agent instead, so a missing reviewer fails loudly.
 :::
 
 ### "config.md not found"
 
 **Symptom** — a skill stops with `.task/config/config.md not found`.
 
-**Cause** — `/task:roadmap-to-workflow` and `validate` require `config.md`, and it hasn't been written in this project yet. The four capture skills (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) write it inline on first use instead of stopping, and `/task:grill` needs no config at all. There is no separate `bootstrap` command — setup is folded inline into those four capture skills.
+**Cause** — `/task:roadmap-to-workflow` and `validate` require `config.md`, and it hasn't been written in this project yet. The four capture skills (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) write it inline on first use instead of stopping, and `/task:grill` needs no config at all. There is no separate setup command — setup is folded inline into those four capture skills.
 
 **Fix** — run any of `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, or `/task:to-spec`. Each detects language and test policy, asks for one confirmation, writes `config.md`, records `git config task.root`, and continues into the capture. `/task:roadmap-to-workflow` is *not* setup-capable by design — if you hit this there, run a capture skill first, then retry.
 

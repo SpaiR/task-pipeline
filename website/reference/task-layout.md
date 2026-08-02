@@ -46,7 +46,7 @@ Why + what, distilled from the chat.
 - **Line 1** is a plain `# <Title>` — no bracketed task-id.
 - `Roadmap:` / `Source item:` / `Spec:` headers sit above the `---`, ASCII.
 - `## Description` is mandatory; `## Plan` and `## Tests` are optional.
-- `## Execution` is stamped boilerplate — the mechanism that replaces a `build`/`ship` step.
+- `## Execution` is stamped boilerplate — the mechanism that carries implement → commit → review.
 
 ## roadmap.md
 

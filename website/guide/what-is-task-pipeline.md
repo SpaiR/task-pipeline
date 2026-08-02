@@ -52,7 +52,7 @@ implement session   roadmap-to-workflow   ← the launcher fans items out to ses
 A few things to notice, because they're the load-bearing design choices:
 
 - **Depth of capture is the skill you pick, not a flag.** [`to-task`](/reference/to-task) records just the "what and why". [`to-plan`](/reference/to-plan) adds a step-by-step Plan. [`to-roadmap`](/reference/to-roadmap) captures a whole multi-task initiative. There is no `--plan` or `--deep` switch anywhere.
-- **There is no execution skill.** You don't run a `build` or `ship` command. Every artifact carries its own `## Execution` block, and any ordinary session told `implement .task/task/<slug>.md` follows it.
+- **There is no execution skill.** Every artifact carries its own `## Execution` block, and any ordinary session told `implement .task/task/<slug>.md` follows it.
 - **[`grill`](/reference/grill) sits before capture.** It interrogates a plan one question at a time and hands off to the right capture skill — it writes nothing itself.
 - **[`to-spec`](/reference/to-spec) is orthogonal.** It pins load-bearing technical decisions into their own file, which tasks and roadmaps point at with a `Spec:` header.
 

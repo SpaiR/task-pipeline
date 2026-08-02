@@ -11,7 +11,7 @@ We'll add a `--quiet` flag to a CLI — small, real, one file of code.
 /plugin install task@task-pipeline
 ```
 
-That's the whole setup. There's no bootstrap step — the first capture writes `.task/config/config.md` for you.
+That's the whole setup — nothing to configure by hand: the first capture writes `.task/config/config.md` for you.
 
 ## 2. Talk it through (1 minute)
 
