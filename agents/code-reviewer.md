@@ -66,7 +66,7 @@ Every candidate gets its own verdict, established independently of the others:
 
 For non-trivial candidates, delegate the proof to a fresh `Agent` prompted to **refute** it, and default to REFUTED when its verdict is uncertain. An independent skeptic is cheaper than a bad commit.
 
-**Mandatory output:** one line per candidate — `<n>. CONFIRMED | REFUTED | UNPROVEN — <the evidence, one sentence>`. Nothing may reach phase 4 that is not CONFIRMED here.
+**Mandatory output:** one line per candidate — `<n>. CONFIRMED | REFUTED | UNPROVEN — <the evidence, one sentence>`. Nothing may reach phase 4 that is not CONFIRMED here, with exactly one later entry point: a Build and Tests failure that phase 5 traces to this diff is **self-proving** — the failing run is the evidence — and enters phase 4 as a new confirmed candidate. Nothing else may.
 
 ## Phase 4 — Fix the confirmed defects
 
@@ -86,7 +86,7 @@ You are about to amend a commit. An agent that amends what it never ran is not r
 Run the command(s) from `.task/config/config.md` → **Build and Tests**, end to end.
 
 - **Green** → continue to phase 6.
-- **Red** → the item has failed review. If the failure is a confirmed defect in scope, go back to phase 4, fix it, and re-run. If it is not fixable in scope, stop: do **not** amend, and report `FAIL` in phase 6's digest with the failing output quoted.
+- **Red** → trace the failure. A failure **this diff caused** is self-proving: the failing run is the evidence, so it needs no phase-3 candidate — record it as `CONFIRMED (phase 5) — <the failing check>`, re-enter phase 4 with it, fix within scope, and re-run. Repeat until green, then continue to phase 6. If it is not fixable in scope (it needs a design decision, or the plan itself is wrong), or the failure is pre-existing and unrelated to this diff, stop: do **not** amend, and report `FAIL` in phase 6's digest with the failing output quoted and the trace stated either way.
 - **No command declared** (the config says there is no build/test pipeline, or the section is absent) → report the skip **explicitly and in words**. Never imply a green run you did not get, and never treat an undeclared command as a pass.
 
 **Mandatory output:** the exact command(s) run and their result — or the literal line `Build and Tests: skipped — no command declared in config.md.`
@@ -139,7 +139,7 @@ Rules for the report:
 
 ## Forbidden
 
-- Fixing anything that phase 3 did not CONFIRM.
+- Fixing anything that phase 3 did not CONFIRM — the sole exception is a Build and Tests failure phase 5 traced to this diff, which proves itself.
 - Widening the change: new features, refactors, dependency bumps, or reformatting untouched code.
 - Reporting a clean diff without the per-file enumeration in the report — silence is not a pass.
 - Claiming a green Build and Tests you did not run, or hiding an absent command behind vague wording.
