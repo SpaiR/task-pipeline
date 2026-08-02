@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
 # validate.sh — Validate the format of task-pipeline artifacts.
 #
-# Usage:
-#   validate.sh task <slug>     — validate .task/task/<slug>.md
-#   validate.sh roadmap <slug>  — validate a roadmap file
-#   validate.sh spec <slug>     — validate .task/spec/<slug>.md
-#   validate.sh all             — every task + roadmap + spec file
+# Usage: see the `--help` heredoc at the bottom of this file — the one copy
+# users actually see, and the only place the subcommand list is maintained.
 #
 # The layout is flat: <slug> is both the filename and the identity — there is no
 # task-id, no workspace, no active-task pointer. This is an OPTIONAL
