@@ -56,7 +56,12 @@ require_config() {
   # is idempotent (no-op once AI_DIR is set).
   find_ai_dir
   if [[ ! -f "$AI_DIR/config/config.md" ]]; then
-    echo "ERROR precondition: $AI_DIR/config/config.md not found." >&2
+    # Keep the literal substring `config.md not found` — to-roadmap, to-spec and
+    # roadmap-to-workflow all branch on it. Everything after it is for the human
+    # who ran this script by hand, which is the only way to reach this line.
+    echo "ERROR precondition: config.md not found at $AI_DIR/config/config.md" >&2
+    echo "  The project isn't set up yet. Run /task:to-task, /task:to-plan, /task:to-roadmap" >&2
+    echo "  or /task:to-spec once — those four write config.md inline on first use." >&2
     exit 2
   fi
 }
