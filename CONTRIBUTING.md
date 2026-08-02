@@ -25,7 +25,7 @@ skills/                          SKILL.md per skill + shared bash helpers
   grill/                         SKILL.md — pre-capture interrogation; writes nothing,
                                    no config gate, touches nothing under .task/
   to-task/                       SKILL.md — Description only, no Plan; folds in the
-                                   inline config setup (former `bootstrap`) on a fresh project
+                                   inline config setup on a fresh project
   to-plan/                       SKILL.md — Description + `## Plan` (Goal/Touches/Logic);
                                    promotes/revises a to-task-only file in place
   to-roadmap/                    SKILL.md — multi-task initiative → .task/roadmap/<slug>.md

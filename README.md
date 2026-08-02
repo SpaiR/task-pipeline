@@ -78,7 +78,7 @@ Concretely, you get:
 
 - **Depth is a skill you pick, not a flag.** A two-file fix and a month-long migration don't deserve the same ceremony — reach for `to-task`, `to-plan`, `to-roadmap`, or `to-spec` and the file carries exactly that much structure. There is no `--plan` or `--deep` switch anywhere.
 - **The plan gets grilled before it gets frozen.** `/task:grill` keeps a decision-plus-rationale ledger, makes recommendations that are allowed to disagree with you, and closes with a pre-mortem — so no "great idea!" rubber-stamp makes it into the file.
-- **Nothing new to learn on the execution side.** There is no `build`/`ship` step to run — any session told `implement .task/task/<slug>.md` reads the artifact and follows its own `## Execution` block through to a commit.
+- **Nothing new to learn on the execution side.** There is no extra command to run — any session told `implement .task/task/<slug>.md` reads the artifact and follows its own `## Execution` block through to a commit.
 - **Invisible to your repo.** `.task/` is git-excluded, never shows in `git status`, and `rm -rf .task` leaves the repo exactly as before — [the trust section below](#why-you-can-trust-this) spells out precisely what it will and won't touch.
 - **And yes, the discussion survives `/clear`, compaction, and tomorrow's fresh session** — table stakes, but worth saying. The artifact's path is the only handle; there's no active-task state to lose or heal.
 
