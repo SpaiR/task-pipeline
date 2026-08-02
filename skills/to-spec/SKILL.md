@@ -24,12 +24,12 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
 
 **Every artifact path in this skill is under that resolved `$AI_DIR`, never the cwd** — `.task/spec/<slug>.md` below is shorthand for `$AI_DIR/spec/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves `$AI_DIR` itself) never sees.
 
-- **`config.md not found`** → `/task:to-spec` is intake-capable: run the inline setup gate exactly as `skills/to-task/SKILL.md` Step 0 does (detect stack → one `AskUserQuestion` confirmation, Accept / Edit / Decline chips → write `config.md` + `git config --local task.root` + exclude `.task`), then re-run `validate.sh all`. If config is now present → continue. If the user declined setup → report "`config.md` not written. → Next: run `/task:to-spec` again when ready" and **stop**.
+- **`config.md not found`** → `/task:to-spec` is intake-capable: run the inline setup gate exactly as `skills/to-task/SKILL.md` Step 0 does (detect stack → one `AskUserQuestion` confirmation, Accept / Edit / Decline chips → write `config.md` + `git config --local task.root` + exclude `.task`), then re-run `validate.sh all`. If config is now present → continue. If the user declined setup → report "`config.md` not written — nothing was created. If the detected language or testing policy looked wrong, re-run and pick **Edit** to change them before the write. → Next: `/task:to-spec`" and **stop**.
 - **Exit 1** (one or more *existing* artifacts fail validation) → surface the validator output, but **do not block**: those errors are pre-existing files, not the spec you're about to write (mirrors `to-task` Step 0 and `roadmap-to-workflow`, and `validate.sh` is advisory, never config-malformed — it doesn't inspect `config.md` content). Only a missing `config.md` (exit 2, handled above) hard-stops.
 
 ### Preconditions
 
-- **No real decision to pin.** If the discussion settled no load-bearing technical decision — only behavioral outcomes, or details local to one task → **stop and suggest** `/task:to-task` or `/task:to-plan` instead, closing with the canonical footer: `→ Next: \`/task:to-plan\``.
+- **No real decision to pin.** If the discussion settled no load-bearing technical decision — only behavioral outcomes, or details local to one task → **stop and suggest** `/task:to-task` or `/task:to-plan` instead. Say plainly that nothing was written, and carry **both** options in the footer with the reason: "Nothing here is a cross-task technical anchor — these are outcomes local to one task. Nothing was written. `→ Next: \`/task:to-plan\` to capture it with a plan, or \`/task:to-task\` for the what-and-why only.`"
 
 (The slug-collision check runs at save time, once the slug is derived — see Step 4.)
 
@@ -96,7 +96,7 @@ Topics the user explicitly said to skip stay skipped.
 
 ### Step 3: Draft the spec
 
-Once the decision list is confirmed, draft per [docs/contract.md § Spec file format](../../docs/contract.md#spec-file-format-taskspecslugmd): a `# Spec: <Title>` line, a blockquote purpose header, then one numbered `## N. <title>` section per decision:
+Once you have **printed** the Step 2H inventory (or the Step 2C recap) — no user reply is required and none is awaited; a correction, if the user makes one, arrives as chat and you reprint before drafting — draft per [docs/contract.md § Spec file format](../../docs/contract.md#spec-file-format-taskspecslugmd): a `# Spec: <Title>` line, a blockquote purpose header, then one numbered `## N. <title>` section per decision:
 
 - **Decision:** what was chosen — concrete, technical, specific (naming real symbols/protocols/shapes is expected here, unlike a roadmap item).
 - **Rationale:** the reasoning that must survive, so a later plan or executing session doesn't re-litigate it.
@@ -132,7 +132,9 @@ Pins:
 validate: {OK — 0 errors, N warning(s) | the FAIL lines}
 ```
 
-The file is already written — to change any pin, just say so. Then close with the handoff footer (convention (a), flag-free): `→ Next: \`/task:to-plan\` a task that relies on this spec — or add a \`Spec: <slug>\` header to an existing roadmap or task.`
+When the validate result is **not** clean (any WARN or FAIL), append `re-check after editing: bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" spec <slug>` — `validate` is not a slash command, so the invocation is worth spelling out. Omit it on a clean result.
+
+The file is already written — to change any pin, just say so. Then close with the handoff footer (convention (a), flag-free), leading with the path it just wrote and keeping the command itself pasteable: `→ Next: \`/task:to-plan\` for a task that leans on \`.task/spec/<slug>.md\` — or add the line \`Spec: <slug>\` above the \`---\` of an existing task or roadmap to attach it.`
 
 ## Forbidden
 

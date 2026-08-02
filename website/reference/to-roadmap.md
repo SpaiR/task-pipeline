@@ -54,7 +54,8 @@ Items: 5 tasks across 2 phases — recommended order: 1 → 2 → 4 → 3 → 5
 Specs referenced: event-envelope
 validate: OK — 0 errors, 0 warnings
 
-→ Next: `/task:roadmap-to-workflow` or `/task:to-task api-v2-migration#1`
+→ Next: `/task:roadmap-to-workflow api-v2-migration` (run the whole roadmap) or
+  `/task:to-task api-v2-migration#1` (pick up the first item by hand — any item number works)
 ```
 
 ## Does not
