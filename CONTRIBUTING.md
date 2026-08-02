@@ -22,6 +22,8 @@ skills/                          SKILL.md per skill + shared bash helpers
                                    resolve-ws.sh (pure .task/-root finder, exports AI_DIR),
                                    roadmap.sh (roadmap parsing / checkbox auto-mark helpers);
                                    templates/conventional-commits.md (commit-format fallback)
+  grill/                         SKILL.md — pre-capture interrogation; writes nothing,
+                                   no config gate, touches nothing under .task/
   to-task/                       SKILL.md — Description only, no Plan; folds in the
                                    inline config setup (former `bootstrap`) on a fresh project
   to-plan/                       SKILL.md — Description + `## Plan` (Goal/Touches/Logic);
