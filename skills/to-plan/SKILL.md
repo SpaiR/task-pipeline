@@ -48,7 +48,7 @@ Only for fresh capture (skip entirely for promote/revise — see Step 1).
 ### Step 2a: From-roadmap
 
 1. Resolve `<slug>` to `.task/roadmap/<slug>.md`; if ambiguous or missing — stop and ask.
-2. Pick `<N>`: if given, use it. Otherwise collect open items (`- [ ]` checkbox headings); if none — stop: "all items in `<slug>` are closed; pick one explicitly with `<slug>#<N>`, or draft from chat instead." More than one open item → ask via `AskUserQuestion` (chip per `#<N> — <title>`, first/lowest default); exactly one → auto-pick it.
+2. Pick `<N>`: if given, use it. Otherwise collect open items (`- [ ]` checkbox headings); if none — stop: "all items in `<slug>` are closed; pick one explicitly with `<slug>#<N>`, or draft from chat instead. → Next: `/task:to-plan <slug>#<N>`" More than one open item → ask via `AskUserQuestion` (chip per `#<N> — <title>`, first/lowest default); exactly one → auto-pick it.
 3. Read the item's `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria` block. `### Context` becomes the Description's "why"; the rest folds into the "what". `### Acceptance criteria` entries are good candidates to carry into `## Tests` (Step 4) verbatim as test intents when tests are required.
 4. Note the specs this item relies on: any `### Spec references → <spec-slug> §N` in the item body, plus the roadmap's own `Spec: <slug>` header lines. Read each `.task/spec/<spec-slug>.md` now — carry them into Step 3 as pinned anchors (see Step 3's note), and hold the distinct `<spec-slug>`s for the `Spec:` headers in Step 7's write.
 5. Derive the slug: kebab-case of the item title (2–4 words). If it collides with an existing, unrelated `.task/task/<slug>.md`, disambiguate with a short qualifier (e.g. append a second distinguishing word) rather than overwriting.
@@ -72,7 +72,7 @@ Use the Description (fresh capture) or the existing `## Description` (promote/re
 4. Find existing patterns in neighboring code for reuse.
 5. Assess impact on adjacent modules/components.
 
-Reads *within* a tier are independent — issue them as one parallel batch, not one round-trip at a time.
+Reads at the same step are independent — issue them as one parallel batch, not one round-trip at a time.
 
 **Pinned technical decisions.** If the task carries (or, on fresh capture, will carry) any `Spec: <slug>` header, read each `.task/spec/<slug>.md` and treat its decisions as a fixed anchor — `## Plan` must honor them, not re-derive a different technical choice. No `Spec:` header at all → no anchors, proceed on the Description alone.
 

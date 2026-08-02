@@ -48,7 +48,7 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
 ### Step 1a: From-roadmap mode
 
 1. Resolve `<slug>` to `.task/roadmap/<slug>.md`; if ambiguous or missing — stop and ask.
-2. Pick `<N>`: if given, use it. Otherwise collect open items (`- [ ]` checkbox headings); if none — stop: "all items in `<slug>` are closed; pick one explicitly with `<slug>#<N>`, or draft from chat instead." If more than one open item, ask via `AskUserQuestion` (chip per `#<N> — <title>`, first/lowest default); if exactly one, auto-pick it.
+2. Pick `<N>`: if given, use it. Otherwise collect open items (`- [ ]` checkbox headings); if none — stop: "all items in `<slug>` are closed; pick one explicitly with `<slug>#<N>`, or draft from chat instead. → Next: `/task:to-task <slug>#<N>`" If more than one open item, ask via `AskUserQuestion` (chip per `#<N> — <title>`, first/lowest default); if exactly one, auto-pick it.
 3. Read the item's `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria` block. `### Context` becomes the Description's "why"; the rest folds into the "what". Also note any `### Spec references → <spec-slug> §N` the item carries, and the roadmap's own `Spec: <slug>` header lines — collect the distinct `<spec-slug>`s to stamp as `Spec:` headers on the task (step 5).
 4. Derive `<item-slug>` — kebab-case English from the item's own title (not the roadmap's). No task-id, no `derive-task-id` helper: the item gets its own `<item-slug>.md`, independent of the roadmap's slug.
 5. Write `.task/task/<item-slug>.md` directly (creating `.task/task/` if needed) — no in-chat draft, no confirmation prompt; the roadmap item is the settled source:
@@ -123,7 +123,7 @@ The file is already written — to change anything, just say so. Then close with
 
 - Write a `## Plan` section — that's `to-plan`'s contract.
 - Write a `## Tests` section — also `to-plan`'s contract; `to-task` captures the Description only.
-- Scan the codebase beyond `CLAUDE.md` + top-level manifests (Tier C-equivalent) — this skill captures discussion, it doesn't investigate implementation.
+- Scan the codebase beyond `CLAUDE.md` + top-level manifests — this skill captures discussion, it doesn't investigate implementation.
 - Modify the source roadmap file in from-roadmap mode — auto-marking `- [x]` happens inside the executing session (or the `roadmap-to-workflow` driver), never here.
 - Invent, read, or write any active-task pointer — v3 has none; the artifact path is the only handle.
 - Bracket the title with a task-id (`# [TASK-ID] Title`) — v3's title line is plain `# <Title>`; the slug lives only in the filename.
