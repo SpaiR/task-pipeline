@@ -13,7 +13,7 @@ You are a **read-only** auditor for the task-pipeline skills repository itself. 
 - Each finding must be **actionable** and **grounded in a specific file:line** of a skill or helper — not in style preferences.
 - Your input includes the full text of `CLAUDE.md`. Treat the bulleted list under "Invariants — don't break these when editing skills" as the single source of truth. If an invariant has been removed or rewritten there, your findings must reflect the current text, not historical text.
 
-## What counts as an invariant violation (v3, representative, non-exhaustive)
+## What counts as an invariant violation (representative, non-exhaustive)
 
 - **Flat `.task/`.** A skill or helper that writes `.task/workspace/`, `.task/log/`, a `<task-id>/` subfolder, an archive, or any nesting other than `.task/config/config.md`, `.task/task/<slug>.md`, `.task/roadmap/<slug>.md`, `.task/spec/<slug>.md`.
 - **Slug is the identity.** A skill that introduces a task-id, a `[TASK-ID]` bracket in the title, an umbrella grouping, or puts the slug in a header instead of using it as the filename. Line 1 must be a plain `# <Title>`.
@@ -22,15 +22,13 @@ You are a **read-only** auditor for the task-pipeline skills repository itself. 
 - **Pipeline is invisible.** A skill making tracked edits outside `.task/` (`CLAUDE.md`, `README.md`, source files, `.gitignore`), or relying on a marker other than `git config task.root` + the `.git/info/exclude` entry (no active-task pointer, no `TASK_ID_OVERRIDE`, no per-worktree pointer file).
 - **`resolve-ws.sh` is a pure root finder.** Any pointer read/write, `WS_DIR` / `resolve_ws` workspace resolution, or self-heal logic re-introduced into `resolve-ws.sh`, or a consumer expecting `AI_DIR` to be anything other than the discovered `.task` directory.
 - **Delegation, and the one exception.** A skill hand-rolling orchestration or commits instead of delegating to a dynamic Workflow / `config.md` → Commit Format (the `## Execution` block is the sanctioned mechanism; a skill re-implementing a build/ship/audit loop is a violation). **Review is the pipeline's own** and lives in exactly one place — `agents/code-reviewer.md`, spawned as `task:code-reviewer`; verification rides inside it via `config.md` → Build and Tests. Violations here: a *skill* re-implementing the review or verification pass instead of spawning that agent; any `## Execution` block, skill, or agent prompt instructing something to run `/verify` or `/code-review` (both are `disable-model-invocation`, so the call is silently skipped, not refused); the reviewer setting `isolation` (it must edit the same working tree) or writing anything under `.task/`.
-- **Frontmatter.** `disable-model-invocation: true` or `user-invocable: true` missing from a skill's frontmatter (exception: `validate` runs `user-invocable: false`).
+- **Frontmatter.** `disable-model-invocation: true` or `user-invocable: true` missing from a skill's frontmatter (exception: `validate` is a bash-only utility with no `SKILL.md`, so it carries no frontmatter at all).
 - **Language.** A skill claiming language rules of its own instead of deferring to `config.md` → "Language"; or translating a parser-stable English string (section labels, header keys `Roadmap:` / `Source item:`, commit trailers, the `## Execution` block, `roadmap-to-workflow` driver return strings).
 - **No user-facing flags.** A footer, description, or example introducing a `--plan` / `--from` / `--phase` / `--refine` / `--full` style flag; capture depth must be the skill name, not a flag.
 - **Interaction conventions (all three).** (a) A user-facing output not ending with `→ Next: <command or artifact path>` or `→ Done.`; (b) a capture that gates its write behind an `AskUserQuestion` chip or a chat preview instead of writing immediately, validating, and printing a structural digest — or any Accept/Edit/Decline chip used to confirm distilled content (chips survive **only** for the config Step 0 setup and the slug-collision overwrite guard, neither of which is distilled content); (c) a 2–4 option path fork not presented via `AskUserQuestion` chips.
 - **`roadmap-to-workflow` auto-mark ownership.** The roadmap checkbox flip (`- [ ]` → `- [x]`) done inside the per-item agent instead of by the driver after the item returns OK.
 
-**Removed in v3 — do NOT flag against these (they no longer exist):** phase dispatch / `phases/*.md` companions, the touches-gate, the lock protocol (`auto.lock`), the runner hierarchy (`auto-roadmap-*-runner`), `Implement-Model:`, code-navigation tool tiers (no-nav / shallow-scan / MCP-first), agent classes, `close.sh` / `commit-context.sh` / `derive-task-id.sh`, and the `/task:design → /task:build → /task:ship → /task:auto-roadmap` pipeline. If `CLAUDE.md` no longer lists an invariant, do not resurrect it.
-
-If `CLAUDE.md` lists an invariant you do not see in this list, treat the `CLAUDE.md` text as authoritative.
+`CLAUDE.md` is the only source of invariants: if it lists one you do not see in this list, treat its text as authoritative — and never flag a skill for missing machinery `CLAUDE.md` does not require.
 
 ## Severity scale
 
