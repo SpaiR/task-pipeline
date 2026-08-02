@@ -111,7 +111,7 @@ Topics the user explicitly said to skip stay skipped — do not raise them again
 
 ### Step 3: Draft the file
 
-Once the decision list is confirmed, draft the full roadmap per [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd): title + intro, `## Prerequisites`, `## Phase summary` table, one `## Phase X` section per phase with `### - [ ] N. <title>` items (`**Dependencies:**` — an em dash `—` when the item has none, otherwise a comma-separated list of item numbers; those are the only two accepted forms, since `roadmap-to-workflow`'s wave sorter reads anything else as a dependency on a missing item and hard-stops — optional `**Model:**`, `**Ready description:**` blockquote with `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria`), `## Out of scope`, `## Backlinks`. Item numbers `N` run continuously across the whole file — never restart the numbering per phase.
+Once the decision list is confirmed, draft the full roadmap per [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd): title + intro, `## Prerequisites`, `## Phase summary` table, one `## Phase X` section per phase with `### - [ ] N. <title>` items (`**Dependencies:**` — emit an em dash `—` when the item has none, otherwise a comma-separated list of item numbers; `roadmap-to-workflow`'s wave sorter also tolerates `-` / `none` / `n/a` on hand-edited files, but reads any other word as a dependency on a missing item and hard-stops — optional `**Model:**`, `**Ready description:**` blockquote with `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria`), `## Out of scope`, `## Backlinks`. Item numbers `N` run continuously across the whole file — never restart the numbering per phase.
 
 **Route every confirmed decision to a home:**
 
@@ -179,7 +179,7 @@ validate: {OK — 0 errors, N warning(s) | the FAIL lines}
 - Naming project-specific files, modules, functions, types, or constants in `### Outcomes` / `### Goal` / `### Invariants` — normative names from spec/CLAUDE.md are the only exception.
 - Planning implementation details (file lists with line numbers, function signatures, code blocks > 5 lines) — that is `/task:to-plan`'s job when the item is picked up.
 - Modifying any file other than `.task/roadmap/<slug>.md` — specs live at `.task/spec/<slug>.md` and are authored only by `to-spec`, never written or edited here.
-- Auto-checking / auto-unchecking item checkboxes — that is the `roadmap-to-workflow` **driver**'s exclusive job, never this skill's and never a per-item agent's.
+- Auto-checking / auto-unchecking item checkboxes — ticking `- [x]` happens inside the executing session (or, in a roadmap run, the `roadmap-to-workflow` **driver**), never here and never inside a per-item agent.
 - A single-direction monologue in a decomposition round — offer ≥ 2 options or explicitly justify why only one is viable. (The Decision Inventory and the cold-start recap are chat-only recaps, not decomposition rounds — exempt.)
 - Generic risks ("watch out for bugs") — risks must be specific to the initiative and project.
 - More than one initiative per file — split and pick one for this run.

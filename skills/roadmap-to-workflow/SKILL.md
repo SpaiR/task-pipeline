@@ -24,6 +24,7 @@ Drive an approved roadmap through a dynamic Workflow. This skill collects the ro
 ```bash
 echo "$CLAUDE_PLUGIN_ROOT"                                 # note this absolute path — bake it as PLUGIN_ROOT in the Step 2 script
 source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # sourcing runs find_ai_dir → sets AI_DIR
+echo "$AI_DIR"                                             # note this one too — bake it as AI_DIR in the Step 2 script
 [[ -f "$AI_DIR/config/config.md" ]] || echo "config.md not found"
 bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
 ```
@@ -31,7 +32,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
 - **`config.md not found`** (the guard above echoes it; `validate.sh all` also exits 2 with the same message) → hard-stop redirect (do **not** bootstrap here):
   > The project isn't set up yet. Capture something first with `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, or `/task:to-spec` — those four set the project up inline.
   > → Next: `/task:to-roadmap`
-- **Any other non-zero exit from `validate.sh`** → `validate.sh all` checks every artifact, so an error may sit on a task or roadmap unrelated to this run. A validation **error on the roadmap you are about to run** stops the run — report it and do not proceed. Errors on other artifacts are surfaced but do **not** block. (WARN lines never set a non-zero exit; they are informational only.)
+- **Any other non-zero exit from `validate.sh`** → `validate.sh all` checks every artifact, so an error may sit on a task or roadmap unrelated to this run. A validation **error on the roadmap you are about to run** stops the run — report it and do not proceed: "→ Next: fix the reported error in `.task/roadmap/<slug>.md`, then rerun `/task:roadmap-to-workflow <slug>`". Errors on other artifacts are surfaced but do **not** block. (WARN lines never set a non-zero exit; they are informational only.)
 
 ### Roadmap
 
@@ -52,6 +53,8 @@ done
 - **No roadmap files** → stop: "no roadmaps found — create one with `/task:to-roadmap`. → Next: `/task:to-roadmap`"
 - **Exactly one** → use it (still refuse if it's fully complete, `done == total > 0`).
 - **More than one** → `AskUserQuestion` (convention (c)), one chip per roadmap labelled `<slug>  (<done>/<total>)`; sort partial roadmaps first, complete ones last with a `(complete)` suffix, and refuse to proceed on a complete pick.
+
+Every refusal on a complete roadmap ends the same way: "`<slug>` is already fully checked — nothing left to run. → Next: `/task:to-roadmap` for a new initiative, or uncheck the items you want rerun."
 
 Read the roadmap's `Spec: <slug>` header lines, if any — resolve each to an **absolute** `$AI_DIR/spec/<slug>.md` path and echo the list. These paths are baked into the Workflow script's `SPEC_PATHS` literal (Step 2) and interpolated into every item's plan-agent prompt as fixed technical-decision anchors; the JS sandbox cannot expand `$AI_DIR`, so the absolute values must be literals.
 
@@ -113,8 +116,13 @@ const PLUGIN_ROOT = "<absolute value of $CLAUDE_PLUGIN_ROOT>";   // bake the LIT
 // the JS sandbox can't expand env vars, and a relative "skills/…" path is resolved
 // against the agent's cwd, not this repo — Read needs the absolute plugin path
 // (echo it in Step 0).
+const AI_DIR  = "<absolute value of $AI_DIR>";    // bake the LITERAL path (echo it in Step 0)
+const ROADMAP = `${AI_DIR}/roadmap/${slug}.md`;   // the file the driver's auto-mark rewrites
 const SPEC_PATHS = [];                            // from Step 0 — absolute $AI_DIR/spec/<slug>.md
 // paths for the roadmap's own `Spec:` headers, baked as literals ([] when it has none)
+const SPEC_SLUGS = SPEC_PATHS.map(p => p.split("/").pop().replace(/\.md$/, ""));
+// the `Spec:` header contract is a bare slug, never a path — stamp from SPEC_SLUGS,
+// read from SPEC_PATHS
 const waves = [                                   // from Step 1 — dependency order
   [ { n: 1, title: "…", model: "sonnet" }, { n: 2, title: "…", model: "haiku" } ],
   [ { n: 3, title: "…", model: "opus"   } ],
@@ -129,13 +137,14 @@ const waves = [                                   // from Step 1 — dependency 
 async function runPlan(n, title, model, w) {
   const plan = await agent(
     `Read ${PLUGIN_ROOT}/skills/to-plan/SKILL.md and run it NON-INTERACTIVELY for roadmap item
-     ${slug}#${n} ("${title}"). Draft .task/task/<item-slug>.md (Description +
+     ${slug}#${n} ("${title}"). Draft ${AI_DIR}/task/<item-slug>.md (Description +
      ## Plan, + ## Tests if the config Testing Policy calls for it), stamping
      the header with "Roadmap: ${slug}" and "Source item: #${n}", plus a
      "Spec: <spec-slug>" line for each spec the item cites (via its
      "### Spec references → <spec-slug> §N" entries) plus every roadmap-level
-     spec listed here: ${SPEC_PATHS.join(", ") || "(none)"}. Read each of those
-     spec files first as a fixed technical anchor. Auto-accept every confirmation; make constructive
+     spec — those slugs are: ${SPEC_SLUGS.join(", ") || "(none)"}. A "Spec:"
+     header value is the bare slug, never a path. Read the corresponding spec
+     files first as fixed technical anchors: ${SPEC_PATHS.join(", ") || "(none)"}. Auto-accept every confirmation; make constructive
      assumptions; never block on a prompt. Do NOT implement or commit.
      Suppress to-plan's "→ Next:" handoff footer (its Step 8 driver-mode
      carve-out) so the digest line below is genuinely last.
@@ -156,7 +165,7 @@ async function runPlan(n, title, model, w) {
 // driver runs the review as its own stage below. Returns the digest.
 async function runImplement(n, itemSlug, model, w) {
   const r = await agent(
-    `Implement .task/task/${itemSlug}.md. Follow its ## Execution block
+    `Implement ${AI_DIR}/task/${itemSlug}.md. Follow its ## Execution block
      exactly, with two carve-outs: implement the ## Plan (or ## Description if
      no Plan), then commit per .task/config/config.md → Commit Format — and do
      NOT spawn the task:code-reviewer agent, and do NOT tick the roadmap
@@ -179,7 +188,7 @@ async function runImplement(n, itemSlug, model, w) {
 // get a haiku review. Returns the digest.
 async function runReview(n, itemSlug, w) {
   const r = await agent(
-    `Review the implementation of .task/task/${itemSlug}.md, which was just
+    `Review the implementation of ${AI_DIR}/task/${itemSlug}.md, which was just
      implemented and committed in this working tree. Reference string for your
      digest: "#${n} ${itemSlug}". Work your phases in order and print each
      mandatory output. Do NOT tick the roadmap checkbox — the driver does that
@@ -233,9 +242,11 @@ for (const [w, items] of waves.entries()) {
     //
     //   awk -v n="${n}" '
     //     $0 ~ ("^### - \\[ \\] " n "\\. ") { sub(/\[ \]/, "[x]") } { print }
-    //   ' "$ROADMAP" > "$ROADMAP.tmp" && mv "$ROADMAP.tmp" "$ROADMAP"
+    //   ' "${ROADMAP}" > "${ROADMAP}.tmp" && mv "${ROADMAP}.tmp" "${ROADMAP}"
     //
-    // Run that against the roadmap file as the single driver-side write for N.
+    // ROADMAP is the baked absolute literal from the top of this script — there
+    // is no shell variable to inherit here, and a relative `.task/…` would
+    // resolve against the agent's cwd. This is the single driver-side write for N.
   }
   // Barrier: do not start wave w+2 until every item in wave w+1 above is marked.
 }

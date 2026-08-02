@@ -17,11 +17,18 @@ Distil the chat discussion so far (or a roadmap item) into `.task/task/<slug>.md
 
 ## Step 0: Setup gate
 
-Check whether `.task/config/config.md` exists — resolve the pipeline root via `skills/_lib/resolve-ws.sh` (source it; it exports `AI_DIR`).
+Resolve the pipeline root, then check whether its `config/config.md` exists:
 
-**Every artifact path in this skill is under that resolved `$AI_DIR`, never the cwd** — `.task/task/<slug>.md` below is shorthand for `$AI_DIR/task/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves `$AI_DIR` itself) never sees.
+```bash
+source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # sourcing runs find_ai_dir → sets AI_DIR
+[[ -f "$AI_DIR/config/config.md" ]] || echo "config.md not found"
+```
 
-- **Absent → inline setup.** Run the inline setup gate exactly as [`skills/to-task/SKILL.md`](../to-task/SKILL.md) Step 0 does (detect stack → ONE `AskUserQuestion` confirmation with **Accept** / **Edit** / **Decline** chips → write `config.md` + `git config --local task.root "$ROOT"` + exclude `.task`). `to-task`'s Step 0 is the single source of truth for the sub-steps; do not defer to a separate setup command. Two `to-plan`-specific notes: create `.task/task/` alongside `config.md`, and on **Decline** report "`config.md` not written. → Next: run `/task:to-plan` again when ready" and **stop**. On success, continue to the validate call below with the original `$ARGUMENTS` unchanged.
+Use `${CLAUDE_PLUGIN_ROOT}` — a bare `skills/…` path resolves against the user's project cwd, where it does not exist, and an unset `$AI_DIR` would send Step 7's `mkdir -p "$AI_DIR/task"` to the filesystem root.
+
+**Once `config.md` exists, every artifact path in this skill is under that resolved `$AI_DIR`, never the cwd** (the inline setup below is the one exception — it runs before a root exists) — `.task/task/<slug>.md` below is shorthand for `$AI_DIR/task/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves `$AI_DIR` itself) never sees.
+
+- **Absent → inline setup.** Run the inline setup gate exactly as [`skills/to-task/SKILL.md`](../to-task/SKILL.md) Step 0 does (detect stack → ONE `AskUserQuestion` confirmation with **Accept** / **Edit** / **Decline** chips → write `config.md` + `git config --local task.root "$ROOT"` + exclude `.task`). `to-task`'s Step 0 is the single source of truth for the sub-steps; do not defer to a separate setup command. Two `to-plan`-specific notes: create `<ROOT>/.task/task/` alongside `config.md`, and on **Decline** report "`config.md` not written. → Next: run `/task:to-plan` again when ready" and **stop**. On success, continue to the validate call below with the original `$ARGUMENTS` unchanged.
 - **Present → skip silently**, proceed to validate.
 
 Then run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all` as a self-check — there is no gate, so report any findings and continue rather than blocking. Only a config-precondition failure (exit 2) should stop the flow.

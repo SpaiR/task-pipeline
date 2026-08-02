@@ -300,7 +300,7 @@ All three are cheap and architecture-independent. Human-facing dialog only — p
 
 ### Frontmatter
 
-Every skill carries `disable-model-invocation: true` and `user-invocable: true`. (`validate` is a bash-only utility — `skills/validate/validate.sh`, no `SKILL.md` — so it carries no frontmatter.) Artifacts and user dialog follow `config.md` → Language; parser-stable strings (header keys, section labels, commit trailers, the `## Execution` block, driver return strings) stay English.
+Every skill carries `disable-model-invocation: true` and `user-invocable: true`. (`validate` is a bash-only utility — `skills/validate/validate.sh`, no `SKILL.md` — so it carries no frontmatter.) Artifacts and user dialog follow `config.md` → Language — except `grill`, which by design reads nothing under `.task/` and so mirrors the chat's own language instead; parser-stable strings (header keys, section labels, commit trailers, the `## Execution` block, driver return strings) stay English.
 
 ### `roadmap-to-workflow` execution shape (driver contract)
 

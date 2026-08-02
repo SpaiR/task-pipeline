@@ -14,9 +14,16 @@ Distil the chat discussion so far (or a roadmap item) into `.task/task/<slug>.md
 
 ## Step 0: Setup gate
 
-Check whether `.task/config/config.md` exists — resolve the pipeline root via `skills/_lib/resolve-ws.sh` (source it; it exports `AI_DIR`, walking `task.root` → ancestor `config.md` → git-common-dir → `.task`).
+Resolve the pipeline root, then check whether its `config/config.md` exists:
 
-**Every artifact path in this skill is under that resolved `$AI_DIR`, never the cwd** — `.task/task/<slug>.md` below is shorthand for `$AI_DIR/task/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves `$AI_DIR` itself) never sees.
+```bash
+source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # sourcing runs find_ai_dir → sets AI_DIR
+[[ -f "$AI_DIR/config/config.md" ]] || echo "config.md not found"
+```
+
+The helper walks `task.root` git config → ancestor `config.md` → `dirname(git-common-dir)/.task` → `$CLAUDE_PROJECT_DIR/.task` when that path already holds a `config/config.md` → `./.task`. Use `${CLAUDE_PLUGIN_ROOT}` — a bare `skills/…` path resolves against the user's project cwd, where it does not exist.
+
+**Once `config.md` exists, every artifact path in this skill is under that resolved `$AI_DIR`, never the cwd** — `.task/task/<slug>.md` below is shorthand for `$AI_DIR/task/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves `$AI_DIR` itself) never sees. The inline setup below is the one exception: it runs *before* a root exists, writes to `<ROOT>/.task`, and records `git config task.root "$ROOT"` — which is exactly what `$AI_DIR` resolves to on every later run.
 
 - **Absent → inline setup.** Run it inline, do not defer to another command:
   1. Determine the pipeline root `ROOT` (main worktree root; `pwd` for a non-git dir; for a bare repo the default is a best-effort guess — surface it in the proposal below so the user can redirect it).
