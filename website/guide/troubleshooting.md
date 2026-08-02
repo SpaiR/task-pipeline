@@ -37,7 +37,7 @@ Earlier versions called Claude Code's `/verify` and `/code-review`. Those are ma
 
 **Symptom** — a skill stops with `.task/config/config.md not found`.
 
-**Cause** — every skill except `to-task` / `to-plan` / `to-roadmap` / `to-spec` requires `config.md`, and it hasn't been written in this project yet. There is no separate `bootstrap` command — setup is folded inline into those four capture skills.
+**Cause** — `/task:roadmap-to-workflow` and `validate` require `config.md`, and it hasn't been written in this project yet. The four capture skills (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) write it inline on first use instead of stopping, and `/task:grill` needs no config at all. There is no separate `bootstrap` command — setup is folded inline into those four capture skills.
 
 **Fix** — run any of `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, or `/task:to-spec`. Each detects language and test policy, asks for one confirmation, writes `config.md`, records `git config task.root`, and continues into the capture. `/task:roadmap-to-workflow` is *not* setup-capable by design — if you hit this there, run a capture skill first, then retry.
 
