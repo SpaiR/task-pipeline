@@ -19,7 +19,7 @@ you: add HTTP retry with backoff to the payments client
 
 # 4. hand the file to any session — this one, or a fresh one next week
 implement .task/task/http-retry-backoff.md
-  → work the plan · /verify · /code-review · commit
+  → work the plan · commit · task:code-reviewer reviews, fixes, amends
 ```
 
 Four beats: discuss, grill (optional), capture, implement. The plan you talked through — and argued, if you grilled it — is now a file on disk, not chat scrollback, which is exactly why the last step works just as well in a brand-new session tomorrow.
@@ -28,10 +28,11 @@ Four beats: discuss, grill (optional), capture, implement. The plan you talked t
 
 What you just watched has a name. `task-pipeline` doesn't drive your work — it takes the "what, why, and how" that lives in a chat and pins it into a fixed-format file that outlives the conversation. It's **not** an orchestration engine; the precise term is a **context-serialization protocol**.
 
-That distinction is why it stays small, and it's the opposite bet from the breadth-first tools nearby: rather than dozens of skills or a full SDLC, it leans on what Claude Code already ships (dynamic Workflows, `/verify`, `/code-review`) and adds just enough structure around them:
+That distinction is why it stays small, and it's the opposite bet from the breadth-first tools nearby: rather than dozens of skills or a full SDLC, it leans on what Claude Code already ships (dynamic Workflows, your project's own build and test commands) and adds just enough structure around them:
 
 - **one file per task** — `.task/task/<slug>.md`, carrying the discussion's decisions;
-- **a stamped `## Execution` block** inside that file, which hands the rest back to the platform.
+- **a stamped `## Execution` block** inside that file, which carries the run from implementation through commit to the review pass;
+- **one agent** — `task:code-reviewer`, which reviews that commit, proves what it flags, fixes the confirmed defects inside the plan's **Touches**, and amends.
 
 What gets pinned is an *argued* decision, serialized at the depth you chose — the skill you pick decides how much structure the file carries, from a bare "what and why" to a stepwise plan. (And yes, the file then outlives the `/clear`, the compaction, and tomorrow's fresh session that would otherwise erase it — table stakes, not the point.)
 

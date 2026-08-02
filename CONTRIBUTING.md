@@ -32,6 +32,12 @@ skills/                          SKILL.md per skill + shared bash helpers
   roadmap-to-workflow/           SKILL.md — the one launcher; authors + invokes a dynamic
                                    Workflow over a roadmap's unchecked items
   validate/                      validate.sh — optional self-check; bash-only utility, no SKILL.md
+agents/                          the plugin's subagent definitions (auto-loaded by the
+                                   plugin loader; agent type = `task:<name>`)
+  code-reviewer.md               task:code-reviewer — the post-implementation review pass:
+                                   prove each finding, fix the confirmed ones within the
+                                   plan's Touches, run config.md → Build and Tests, amend
+                                   the implementation's commit
 CLAUDE.md                        invariants + maintainer guidance
 docs/
   contract.md                    the authoritative artifact contract — flat .task/ layout,
@@ -47,7 +53,7 @@ CHANGELOG.md                     public release log (English)
 README.md                        GitHub landing page (links to the docs site)
 ```
 
-There is no `agents/` directory in v3 — `grill` / `to-task` / `to-plan` / `to-roadmap` / `to-spec` / `roadmap-to-workflow` are the only six skills (`validate` is a bash-only utility, not a skill), and `roadmap-to-workflow` reaches for the platform's own `agent()` / `parallel()` Workflow primitives rather than named subagents shipped by this plugin.
+`grill` / `to-task` / `to-plan` / `to-roadmap` / `to-spec` / `roadmap-to-workflow` are the only six skills (`validate` is a bash-only utility, not a skill), and `agents/` holds exactly one file: `code-reviewer.md`, resolved as the agent type **`task:code-reviewer`**. It exists because the platform's `/verify` and `/code-review` are marked `disable-model-invocation` — a subagent, and a session that was merely *told* `implement …`, cannot run either, and the failure is silent (an unlisted command is skipped, not refused), so the pipeline had to own its review step rather than rent it. Both execution paths spawn that one agent: a plain session per the artifact's `## Execution` block, and `roadmap-to-workflow`'s driver as its own stage in the per-item serial loop. Orchestration itself is still not hand-rolled — `roadmap-to-workflow` reaches for the platform's own `agent()` / `parallel()` Workflow primitives.
 
 ## All Code Changes Happen Through Pull Requests
 
@@ -150,7 +156,7 @@ The `footer` is optional. The [Commit Message Footer](#commit-message-footer) fo
   │       │             │
   │       │             └─⫸ Summary in imperative, present tense. Not capitalized. No period at the end.
   │       │
-  │       └─⫸ Commit Scope: skill name | skills | lib | hooks | plugin | github | readme | claudemd | contract | changelog | contributing
+  │       └─⫸ Commit Scope: skill name | skills | agents | lib | hooks | plugin | github | readme | claudemd | contract | changelog | contributing
   │
   └─⫸ Commit Type: feat | fix | refactor | perf | docs | test | chore | revert
 ```
@@ -176,6 +182,7 @@ Must be one of the following:
 
 * **A skill name** (no `task:` prefix): `grill`, `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`, `validate`.
 * **`skills`** — cross-cutting change that touches several skills at once.
+* **`agents`** — the plugin's subagent definitions under `agents/` (currently only `code-reviewer.md`).
 * **`lib`** — the shared bash helpers under `skills/_lib/` (`resolve-ws.sh`, `roadmap.sh`) and `skills/validate/validate.sh`, plus their templates.
 * **`hooks`** — `hooks/hooks.json`.
 * **`plugin`** — `.claude-plugin/plugin.json` and install-path concerns.
@@ -262,7 +269,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/): `Added` / `Chang
 
 ## Contributing with AI Agents
 
-This repository **is** a tool for working with AI coding agents, so dogfooding is encouraged: it is fine — preferred, even — to use the pipeline itself when contributing here — discuss the change in chat, fix it with `/task:to-task` or `/task:to-plan` into `.task/task/<slug>.md`, then tell any session `implement .task/task/<slug>.md` (which runs `/verify` + `/code-review` and commits per this file's Commit Format). AI coding agents (Claude Code, Copilot, Cursor, Codex, Gemini, etc.) are welcome to assist with contributions of any kind.
+This repository **is** a tool for working with AI coding agents, so dogfooding is encouraged: it is fine — preferred, even — to use the pipeline itself when contributing here — discuss the change in chat, fix it with `/task:to-task` or `/task:to-plan` into `.task/task/<slug>.md`, then tell any session `implement .task/task/<slug>.md` (which commits per this file's Commit Format, then hands the diff to `task:code-reviewer`). AI coding agents (Claude Code, Copilot, Cursor, Codex, Gemini, etc.) are welcome to assist with contributions of any kind.
 
 Two extra rules apply on top of the regular contribution flow:
 

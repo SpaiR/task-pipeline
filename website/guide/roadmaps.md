@@ -31,9 +31,10 @@ If a load-bearing technical decision surfaces during the discussion, capture it 
 #   `implement .task/task/migrate-auth-endpoints.md`
 
 implement .task/task/migrate-auth-endpoints.md
-# → follows ## Execution: implement → /verify → /code-review → commit
+# → follows ## Execution: implement → commit → task:code-reviewer reviews,
+#   fixes what it proves, runs your build and tests, amends the commit
 # → because Roadmap: / Source item: are present, the executing session also
-#   ticks item #1's checkbox in the roadmap file
+#   ticks item #1's checkbox in the roadmap file once the review comes back OK
 ```
 
 The `Roadmap:` and `Source item:` headers on the task file are what let the executing session tick the right checkbox automatically. Then repeat for the next item — no state to remember between them:

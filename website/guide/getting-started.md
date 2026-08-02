@@ -3,7 +3,7 @@
 ## Requirements
 
 - [Claude Code](https://docs.claude.com/en/docs/claude-code) — `task-pipeline` ships as a Claude Code plugin.
-- `/verify` and `/code-review` — the task's `## Execution` block calls both before commit. Type `/` in your session to confirm they're available; if not, see [Troubleshooting](/guide/troubleshooting#verify-or-code-review-not-found).
+- A build/test command worth running — the review pass runs whatever your project declares in `config.md` → Build and Tests. It's optional: with nothing declared, the reviewer reports the skip in words rather than implying a green run. No platform slash command is required; review is the plugin's own `task:code-reviewer` agent, so it only needs the plugin enabled — if it doesn't resolve, see [Troubleshooting](/guide/troubleshooting#code-reviewer-agent-not-found).
 - Dynamic Workflows — only [`/task:roadmap-to-workflow`](/guide/autopilot) needs them, to fan a roadmap's items out to parallel sessions. Everything else works without. There's no pinned version to match: task-pipeline uses these features as your Claude Code install exposes them.
 
 ## Install
@@ -67,9 +67,8 @@ implement .task/task/http-retry-backoff.md
 That session follows the artifact's own `## Execution` block:
 
 - implement per the `## Plan` (or the `## Description` if there's no plan);
-- run `/verify` — does it actually work end-to-end?
-- run `/code-review` — is it clean? — applying fixes only within the files named in **Touches**;
-- commit per `config.md` → Commit Format.
+- commit per `config.md` → Commit Format;
+- spawn `task:code-reviewer` on that diff — it proves each defect it suspects before touching anything, fixes the confirmed ones within the files named in **Touches**, reports the rest, runs `config.md` → Build and Tests, and amends the commit.
 
 Nothing is committed until this step runs. Until then, every change is just working-tree edits.
 

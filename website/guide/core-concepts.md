@@ -24,7 +24,7 @@ This is why the plan survives `/clear`, compaction, and tomorrow's fresh session
 
 There is no `build` or `ship` command to learn. Every artifact carries a `## Execution` block — a few lines of stamped, English boilerplate — and any ordinary session told to implement the file simply follows it:
 
-> Implement the Plan (or the Description if none). Run `/verify` end-to-end and `/code-review`, applying fixes only within **Touches**. Commit per `config.md` → Commit Format. If it's a roadmap item, tick its checkbox.
+> Implement the Plan (or the Description if none). Commit per `config.md` → Commit Format. Then spawn the `task:code-reviewer` agent on this file: it proves each finding, fixes confirmed defects within **Touches**, runs Build and Tests, and amends the commit. If it's a roadmap item, tick its checkbox once the review returns OK.
 
 The mechanism that used to be two separate skills is now text inside the file. That's the whole execution side.
 

@@ -125,9 +125,10 @@ validate_task() {
   fi
 
   # `## Execution` boilerplate must be present — the executing session reads it
-  # to run /verify, /code-review, commit, and auto-mark the roadmap item. Its
-  # text is stamped verbatim by the to-* skills, so check presence only, not
-  # the exact wording.
+  # to implement, commit, spawn the `task:code-reviewer` agent (which proves its
+  # findings, fixes within Touches, runs Build and Tests, and amends the commit),
+  # and auto-mark the roadmap item. Its text is stamped verbatim by the to-*
+  # skills, so check presence only, not the exact wording.
   if ! grep -qE '^## Execution[[:space:]]*$' "$file"; then
     err "$label" "missing '## Execution' section heading — the executing session has no instructions without it"
   fi

@@ -2,7 +2,7 @@
 
 Single source of truth for how the chat-first task pipeline stores state and how skills hand work to each other. Maintainer-facing.
 
-v3 is **not** an orchestration engine — it is a **context-serialization protocol**. The user discusses a task freely in chat, then runs **one short skill** that distils the discussion into a fixed-format Markdown artifact under `.task/`. A fresh or isolated Claude Code session then **executes that artifact directly** — there is no execution skill. Orchestration, verification, review, and commits are delegated to the platform (`/verify`, `/code-review`, dynamic Workflows).
+v3 is **not** an orchestration engine — it is a **context-serialization protocol**. The user discusses a task freely in chat, then runs **one short skill** that distils the discussion into a fixed-format Markdown artifact under `.task/`. A fresh or isolated Claude Code session then **executes that artifact directly** — there is no execution skill. Orchestration and commits stay delegated to the platform (dynamic Workflows, `config.md` → Commit Format); **review is owned by the plugin**, as the `task:code-reviewer` agent (`agents/code-reviewer.md`), which also carries verification via `config.md` → Build and Tests.
 
 Enforcement is traded for **convention** (this is a solo tool): there is **no hook gate**, and `validate.sh` is an optional self-check, never a blocking gate. Depth of capture is the **skill name**, never a flag.
 
@@ -24,7 +24,7 @@ implement session   roadmap-to-workflow   ← the launcher fans items out to ses
 - `to-spec` — capture load-bearing technical decisions → `.task/spec/<slug>.md`; referenced by tasks/roadmaps via `Spec:` headers, and read by the executing session as a fixed anchor.
 - `roadmap-to-workflow` — the one launcher. Authors + invokes a dynamic Workflow that runs the roadmap's unchecked items.
 
-**Execution is not a skill.** An ordinary session told `implement .task/task/<slug>.md` reads the artifact and follows its `## Execution` block (implement → `/verify` → `/code-review` → commit). There is **no `build` skill and no `ship` skill** in v3 — both are deleted; their behavior is the stamped `## Execution` boilerplate plus the platform skills.
+**Execution is not a skill.** An ordinary session told `implement .task/task/<slug>.md` reads the artifact and follows its `## Execution` block (implement → commit → `task:code-reviewer` reviews, fixes and amends). There is **no `build` skill and no `ship` skill** in v3 — both are deleted; their behavior is the stamped `## Execution` boilerplate plus the one agent the plugin ships.
 
 There are **no user-facing flags** anywhere — footers, descriptions, and examples are flag-free.
 
@@ -94,10 +94,12 @@ Why + what, distilled from the chat.
 > decisions as fixed. `.task/` is pipeline-internal and invisible to the repo: never name
 > `.task/` paths, spec/roadmap/task slugs, or `§` numbers in code, comments, commits, or PR
 > text. Implement the Plan above (or the Description if none) with the tools in
-> `.task/config/config.md` → Code Navigation / Code Editing. Run `/verify` end-to-end and
-> `/code-review`, applying fixes ONLY within **Touches** (report the rest); with no `## Plan`,
-> scope fixes to what you changed. Commit per `.task/config/config.md` → Commit Format. If
-> `Roadmap:` + `Source item:` are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
+> `.task/config/config.md` → Code Navigation / Code Editing, then commit per
+> `.task/config/config.md` → Commit Format. Then spawn the `task:code-reviewer` agent on this
+> file: it proves each finding, fixes confirmed defects within **Touches** plus regressions
+> this diff introduced outside them, runs Build and Tests, and amends the commit; with no
+> `## Plan`, scope fixes to what you changed. If `Roadmap:` + `Source item:` are present,
+> tick item #N's checkbox in `.task/roadmap/<slug>.md` once the review returns OK.
 ```
 
 Rules:
@@ -192,11 +194,11 @@ Section labels (`## N.`, `**Decision:**` / `**Rationale:**` / `**Constrains:**`)
 |----------|-------------|-------------|
 | *(none — chat only)* | `grill` — an in-chat decision ledger, never a file | the `to-*` capture skill the user runs next |
 | `.task/config/config.md` | intake skills' inline Step 0 setup (folded-in `bootstrap`) | every skill + every executing session — Language, Testing Policy, Commit Format, tool priority |
-| `.task/task/<slug>.md` | `to-task` (header + `## Description` + `## Execution`); `to-plan` (same + `## Plan`, optional `## Tests`) | **the executing session** (reads `## Description`, `## Plan` if present, follows `## Execution`, reads `Spec:` for anchors and `Roadmap:` + `Source item:` for auto-mark); `roadmap-to-workflow` per-item implement agent |
+| `.task/task/<slug>.md` | `to-task` (header + `## Description` + `## Execution`); `to-plan` (same + `## Plan`, optional `## Tests`) | **the executing session** (reads `## Description`, `## Plan` if present, follows `## Execution`, reads `Spec:` for anchors and `Roadmap:` + `Source item:` for auto-mark); `roadmap-to-workflow` per-item implement agent; **`task:code-reviewer`** (reads `Touches` as fix scope + `Spec:` as fixed anchors — read-only) |
 | `.task/roadmap/<slug>.md` | `to-roadmap` (initial); user-edited; `roadmap-to-workflow` **driver** flips `- [ ]` → `- [x]` after an item's agent returns OK | `roadmap-to-workflow` driver (loops unchecked items, reads `**Dependencies:**` + `**Model:**` + `Spec:`); `to-plan` / `to-task` (when picking up an item) |
 | `.task/spec/<slug>.md` | `to-spec` or user | **the executing session** (via a task's `Spec:` header) + `to-plan` (technical-decision anchor) + `roadmap-to-workflow` per-item plan agent |
 
-The executing session writes no separate pipeline artifacts — its implementation lands in the working tree, and `/verify` / `/code-review` run against the live diff. Auto-mark inside a single-task execution is done by the executing session itself (per the `## Execution` block); auto-mark during a roadmap run is done by the **driver**, not the per-item agent, so parallel item agents never race on the roadmap file.
+The executing session writes no separate pipeline artifacts — its implementation lands in the working tree, then in the commit, and `task:code-reviewer` reviews that diff. Auto-mark inside a single-task execution is done by the executing session itself (per the `## Execution` block, after the review returns OK); auto-mark during a roadmap run is done by the **driver**, not the per-item agent, so parallel item agents never race on the roadmap file.
 
 ### Config-gate categories
 
@@ -249,6 +251,27 @@ The v2 helpers are gone from `skills/_lib/` — `close.sh`, `commit-context.sh`,
 
 ---
 
+## Agent layer (`agents/`)
+
+The plugin ships **exactly one** agent: `agents/code-reviewer.md`, resolved as the agent type **`task:code-reviewer`** (plugin `agents/` directories are auto-loaded; the type is `[plugin, ...subdirs, name].join(":")`). It is the pipeline's own review pass — the platform's `/verify` and `/code-review` commands are marked `disable-model-invocation`, so neither a subagent nor a session that was told `implement …` can run them, and the failure is silent (an unlisted command is skipped, not refused).
+
+It is invoked identically from both execution paths, always given the task artifact's path plus a reference string to echo in its digest:
+
+- a plain session following a task's `## Execution` block spawns it with the `Agent` tool (depth 0 → 1);
+- `roadmap-to-workflow`'s driver spawns it as its own stage in the per-item serial loop (depth 1 → 2).
+
+Contract:
+
+- **Find → verify → fix.** Candidates are collected from the diff, each proved or refuted independently, and only CONFIRMED defects are edited. An unproven candidate is dropped, never fixed — inside a roadmap autopilot an unverified "fix" becomes a commit nobody reviewed.
+- **Fix scope = `Touches` + regressions this diff introduced outside them.** `Touches` is authored before the code exists, so it is a scope hint, not an exact list; everything else confirmed goes to the report.
+- **Verification rides inside the review.** The agent runs `config.md` → Build and Tests end to end, fails the item on a red run, and reports an undeclared command as an explicit skip. `/verify` is gone as a step, not as a check.
+- **Implement commits, the reviewer amends.** The implementation commits as before; the reviewer stages its fixes and `git commit --amend`s, keeping the message per `config.md` → Commit Format. History stays one item = one commit. If the implementation was never committed, the reviewer leaves its fixes uncommitted rather than rewriting an unrelated commit.
+- **Explicit phases with a mandatory output each** (intake → diff → find → prove → fix → Build and Tests → amend). `0 findings` is a declared state, and a report that does not enumerate what was checked per `Touches` file is a failed review, not a passed one.
+- **Parser-stable digest last line:** `OK|FAIL <reference string> <summary>` — the same shape the roadmap driver already parses for its implement stage.
+- It writes **nothing** under `.task/`: the artifact, roadmap, specs and config are read-only to it, and ticking a roadmap checkbox stays the caller's job.
+
+Plugin agents ignore `permissionMode`, `hooks` and `mcpServers`; `model`, `effort`, `tools`, `disallowedTools`, `skills`, `maxTurns` and `isolation` are honored. `isolation` is deliberately **absent** — the reviewer must see and edit the same working tree the implementation used. `model` / `effort` are pinned in the frontmatter so a `haiku` roadmap item does not get a `haiku` review.
+
 ## Hook
 
 There is **no hook**. `hooks/hooks.json` is deleted — an absent file and an empty `{"hooks": {}}` are equivalent to the plugin loader. Enforcement is convention: no `PreToolUse` gate (`build` / `ship` no longer exist to gate), and `validate.sh` is opt-in.
@@ -288,8 +311,8 @@ Every skill carries `disable-model-invocation: true` and `user-invocable: true`.
 
 ### `roadmap-to-workflow` execution shape (driver contract)
 
-- **Per-item default is OPUS-PLANS / SONNET-IMPLEMENTS:** a first `agent()` runs `to-plan` for the item on `{ model: 'opus' }` (writes `.task/task/<item-slug>.md`); a second `agent()` implements + verifies + reviews + commits on `{ model: item.model ?? 'sonnet' }`. Context passes via the on-disk task file — no chat transfer.
-- **Dependency-ordered waves:** within a wave, plan agents run in `parallel()` (they write only their own task files) and then implement agents run **strictly one at a time** in the shared working tree; a barrier separates waves. A dependency **cycle** among scoped items (no wave can be formed) is a hard stop, reported for the user to break — never run an item before its dependency lands.
-- **Driver auto-marks:** after an item's agent returns OK, the driver ticks that item's checkbox in the roadmap file (never the per-item agent — avoids parallel writes racing).
+- **Per-item default is OPUS-PLANS / SONNET-IMPLEMENTS / REVIEWER-REVIEWS:** a first `agent()` runs `to-plan` for the item on `{ model: 'opus' }` (writes `.task/task/<item-slug>.md`); a second `agent()` implements + commits on `{ model: item.model ?? 'sonnet' }`; a third spawns `task:code-reviewer` (`agentType`), which reviews that commit, fixes what it proves, runs Build and Tests, and amends. Context passes via the on-disk task file — no chat transfer.
+- **Dependency-ordered waves:** within a wave, plan agents run in `parallel()` (they write only their own task files) and then implement **and review** run **strictly one at a time** per item, inside the same serial loop — the shared working tree keeps exactly one writer, and item N never starts implementing while item N−1 is still under review. A barrier separates waves. A dependency **cycle** among scoped items (no wave can be formed) is a hard stop, reported for the user to break — never run an item before its dependency lands.
+- **Driver auto-marks:** after an item's review returns OK, the driver ticks that item's checkbox in the roadmap file (never the per-item agent — avoids parallel writes racing).
 - **Stop-on-FAIL;** parser-stable digest last line `OK|FAIL #N <slug> <summary>`.
 - **Graceful fallback:** if the Workflow tool is unavailable, run items one at a time via `to-plan` + a plain implement session, manually. Being a skill whose instructions invoke Workflow is itself the sanctioned opt-in.

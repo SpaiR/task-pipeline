@@ -70,10 +70,12 @@ dropped but `error` still writes to stderr.
 > decisions as fixed. `.task/` is pipeline-internal and invisible to the repo: never name
 > `.task/` paths, spec/roadmap/task slugs, or `§` numbers in code, comments, commits, or PR
 > text. Implement the Plan above (or the Description if none) with the tools in
-> `.task/config/config.md` → Code Navigation / Code Editing. Run `/verify` end-to-end and
-> `/code-review`, applying fixes ONLY within **Touches** (report the rest); with no `## Plan`,
-> scope fixes to what you changed. Commit per `.task/config/config.md` → Commit Format. If
-> `Roadmap:` + `Source item:` are present, tick item #N's checkbox in `.task/roadmap/<slug>.md`.
+> `.task/config/config.md` → Code Navigation / Code Editing, then commit per
+> `.task/config/config.md` → Commit Format. Then spawn the `task:code-reviewer` agent on this
+> file: it proves each finding, fixes confirmed defects within **Touches** plus regressions
+> this diff introduced outside them, runs Build and Tests, and amends the commit; with no
+> `## Plan`, scope fixes to what you changed. If `Roadmap:` + `Source item:` are present,
+> tick item #N's checkbox in `.task/roadmap/<slug>.md` once the review returns OK.
 ```
 
 The `## Execution` block is stamped verbatim on every task — it's the standing instruction any session follows, so you never re-explain the process.
@@ -86,7 +88,7 @@ Hand the path to any session — this one, or a fresh one after a `/clear`. `imp
 implement .task/task/quiet-flag.md
 ```
 
-That session works the plan, runs `/verify` (does it actually work?) and `/code-review` (is it clean?), applies review fixes only within the files under **Touches**, and commits. Nothing was committed before this step — until now it was all working-tree edits.
+That session works the plan and commits — then spawns `task:code-reviewer` on the diff. The reviewer reads the commit, proves each defect it suspects before touching anything, fixes the confirmed ones within the files under **Touches**, runs your build and tests, and amends that same commit. Nothing was committed before this step — until now it was all working-tree edits.
 
 ## 6. What the commit looks like
 

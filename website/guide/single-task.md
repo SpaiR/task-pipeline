@@ -26,7 +26,7 @@ Both produce one file per task, and both stamp the same `## Execution` block. De
 
 implement .task/task/http-retry-backoff.md
 # → follows the ## Execution block:
-#   implement per the Plan → /verify → /code-review → commit
+#   implement per the Plan → commit → task:code-reviewer reviews, fixes, amends
 ```
 
 Each `## Plan` step has three layers:

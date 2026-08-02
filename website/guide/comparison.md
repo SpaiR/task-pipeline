@@ -8,7 +8,7 @@
 - **Rails, not a generator.** You work out the plan in chat and stay its author; the capture skill serializes that decision to disk and keeps the implementing session on it. It does not invent a plan from a one-line prompt. Autopilot exists (`roadmap-to-workflow` fans a roadmap out to sessions) but it is an explicit opt-in over a roadmap you already approved.
 - **Attachable per-decision specs.** After a chat discussion you can pin one or several load-bearing decisions into `.task/spec/<slug>.md` and cite them from any task, plan, or roadmap via a `Spec:` header; the implementing session reads them as fixed anchors.
 - **Roadmap traceability.** A roadmap fans out into a generated plan per item, the driver ticks each item's checkbox as it lands, and the git history of the artifacts shows what was done.
-- **A small surface.** No orchestration engine, no subagents in the capture skills, no hooks, no MCP server, no API keys, no task database — all state is flat Markdown under `.task/`, and the heavy lifting is delegated to Claude Code's own `/verify`, `/code-review`, and Workflows. The consequences: everything is auditable as plain text, there is nothing extra to maintain, and there is zero lock-in.
+- **A small surface.** No orchestration engine, no hooks, no MCP server, no API keys, no task database, and exactly one subagent — the review pass, `task:code-reviewer`, whose whole prompt is a readable Markdown file. All state is flat Markdown under `.task/`; orchestration is delegated to Claude Code's own Workflows and verification to whatever build/test command your project already declares. The consequences: everything is auditable as plain text, there is nothing extra to maintain, and there is zero lock-in.
 
 Two honest limits frame all of it. It runs on **Claude Code only** — leave Claude Code and the artifacts are just Markdown you'd read by hand. And **nothing is enforced**: `validate.sh` only reports, and `implement <path>` is a plain instruction a session can deviate from — you stay in the loop by design, not by a gate. (A two-file, twenty-minute fix also doesn't need any of this.)
 
@@ -21,7 +21,7 @@ The sections below compare against six references — default Claude Code (plan 
 | **Where the plan lives** | Text in chat; lost on `/clear` | `## Plan` inside `.task/task/<slug>.md`; hand-editable, `/clear`-durable |
 | **Who authors the plan** | You draft it in plan mode, but it evaporates with the context | You author it in chat; the skill only serializes what you decided |
 | **Plan format** | Arbitrary text / TodoWrite items | `### Step N` with `Goal` / `Touches` / optional `Logic`, checked by `validate.sh` on write |
-| **Result review** | Whatever the model decides to do | The `## Execution` block runs `/verify` (works end-to-end?) and `/code-review` (clean?) before commit |
+| **Result review** | Whatever the model decides to do | The `## Execution` block hands the commit to `task:code-reviewer`: prove each finding → fix the confirmed ones inside `Touches` → run the project's build and tests → amend |
 | **Moving parts** | None beyond the chat | Flat Markdown under `.task/`; nothing else added |
 | **Trace in the repo** | None | Normal code commits; the plan artifacts stay local and git-excluded |
 | **Multi-task initiatives** | None | `to-roadmap` → a plan per item, or opt-in autopilot `roadmap-to-workflow` |
@@ -35,12 +35,12 @@ The sections below compare against six references — default Claude Code (plan 
 | **Who authors the plan** | You, by hand; a `/task:…` skill serializes it | Auto-triggered by context; a skills library steers the agent |
 | **Form** | Linear capture → any session implements | A library of situational skills |
 | **Project config** | `config.md` (stack, commits, language) | Minimal |
-| **Result review** | `/verify` + `/code-review`, Claude Code's own gates | Test-first TDD (red/green/refactor) plus a between-task code-review skill |
+| **Result review** | One `task:code-reviewer` agent: prove-before-fix, fixes scoped to `Touches`, your build and tests, then amend | Test-first TDD (red/green/refactor) plus a between-task code-review skill |
 | **Moving parts** | Flat Markdown under `.task/`; Claude Code only | Skills library installed across many agents |
 | **Platforms** | Claude Code only | Claude Code, Antigravity, Codex App, Codex CLI, Cursor, Factory Droid, GitHub Copilot CLI, Kimi Code, OpenCode, Pi |
 | **Artifact languages** | Any, via `config.md` | English by default |
 
-**Use task-pipeline** if you want a controlled capture-then-implement process, non-English artifacts, and reviews that run on Claude Code's own gates. **Use superpowers** if you want skills that fire automatically, a strict test-first workflow, and one library that follows you across many coding agents.
+**Use task-pipeline** if you want a controlled capture-then-implement process, non-English artifacts, and a review pass that has to prove a defect before it edits anything. **Use superpowers** if you want skills that fire automatically, a strict test-first workflow, and one library that follows you across many coding agents.
 
 ## vs Matt Pocock's skills
 
@@ -50,7 +50,7 @@ task-pipeline's `grill` is openly inspired by Matt Pocock's grilling skill, and 
 |---|---|---|
 | **Who authors the plan** | You in chat; the capture skill serializes what you decided | You in chat via the grill loop; `to-spec` synthesizes the discussion (task-pipeline's `grill` is credited to this skill) |
 | **Plan format** | Templated `### Step N` with `Goal` / `Touches` / optional `Logic`, checked by `validate.sh` on write | A prose spec plus "tracer-bullet" tickets that declare their blocking edges |
-| **Result review** | `## Execution` block runs `/verify` + `/code-review`; no execute skill — any plain session implements the artifact | `implement` builds with TDD at agreed seams, then a two-axis `code-review` (coding standards + spec compliance) |
+| **Result review** | `## Execution` block hands the commit to the plugin's own `task:code-reviewer`; no execute skill — any plain session implements the artifact | `implement` builds with TDD at agreed seams, then a two-axis `code-review` (coding standards + spec compliance) |
 | **Scope** | Capture only; the routine around a task (filing tickets, pulling work from a tracker) is left to project-level skills | Covers that routine too — `to-tickets` files the work and the chain reads from your tracker |
 | **Moving parts** | Flat Markdown under `.task/`, git-excluded | Specs and tickets go to GitHub, Linear, or local files, chosen at setup |
 | **Platforms** | Claude Code only | Cross-agent — "work with any model"; installs into Codex and other Agent-Skills harnesses, plus a Claude Code plugin |
@@ -91,7 +91,7 @@ task-pipeline's `grill` is openly inspired by Matt Pocock's grilling skill, and 
 | **Who authors the plan** | You author it in chat; the skill serializes your decisions | Generated: `task-master parse-prd` turns a PRD into tasks |
 | **Where tasks live** | `## Plan` in flat Markdown under `.task/` | Its own `.taskmaster/` task store |
 | **Moving parts & infrastructure** | No MCP server, no API keys, no task database | Runs as an MCP server (`npx task-master-ai`); needs a provider API key (Anthropic / OpenAI / Gemini / others), or the Claude Code CLI without keys |
-| **Result review** | `/verify` + `/code-review` before commit | Tracks task status; review is not its job |
+| **Result review** | `task:code-reviewer` on the commit: prove, fix inside `Touches`, run the build and tests, amend | Tracks task status; review is not its job |
 | **Editors** | Claude Code | Cursor, Windsurf, VS Code, Q Developer CLI and others, via MCP |
 
 **Use task-pipeline** if you want to serialize your own decisions into flat Markdown with no extra infrastructure. **Use Task Master** if you want tasks generated from a PRD into a managed store and an MCP-native tracker shared across several editors.

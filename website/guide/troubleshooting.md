@@ -19,13 +19,19 @@ First-run problems, then the edge cases of a solo, hook-free, pointer-free pipel
 
 Then reopen the `/` menu. If it was already installed, make sure it isn't disabled (`/plugin`).
 
-### /verify or /code-review not found {#verify-or-code-review-not-found}
+### The code-reviewer agent doesn't resolve {#code-reviewer-agent-not-found}
 
-**Symptom** — a task's `## Execution` step calls `/verify` or `/code-review`, but typing `/` doesn't list them.
+**Symptom** — the session implements and commits, then reports that the agent type `task:code-reviewer` doesn't exist (or silently stops after the commit, with no review section in its output).
 
-**Cause** — these are Claude Code's own commands, not part of task-pipeline. An older or trimmed install may not expose them.
+**Cause** — the review pass is the plugin's own agent (`agents/code-reviewer.md`), and the `## Execution` block names it directly, with no fallback. So it resolves only when the `task` plugin is installed **and enabled** in the session doing the work. The usual causes: the plugin is disabled, it was never installed in this project, the task file was written by a much older plugin version, or the agent was renamed in a local fork.
 
-**Fix** — update Claude Code, or check `/` for its equivalents. Nothing here is gated: the Execution block still runs everything else, and you can run your project's own build/test/review checks by hand before committing. task-pipeline uses these features as your install exposes them — there's no version to pin.
+**Fix** — check `/plugin` and enable `task`; reinstall via the marketplace if it isn't listed. Then re-run `implement .task/task/<slug>.md` — the implementation is already committed, so the reviewer will simply review that commit and amend it.
+
+If you'd rather not run it at all, nothing is gated: the commit stands as it is, and you can run your project's build and tests plus your own review by hand. What you must not do is assume the review happened — a missing reviewer means no defect was proven and no fix was applied.
+
+::: tip Why there's no fallback
+Earlier versions called Claude Code's `/verify` and `/code-review`. Those are marked `disable-model-invocation`, which means a subagent — and a session that was merely *told* `implement …` rather than typing the command itself — cannot run them, and the failure is silent: an unlisted command is skipped, not refused, so the run still reported success. A named agent that fails loudly is the trade this replaced it with.
+:::
 
 ### "config.md not found"
 

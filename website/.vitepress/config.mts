@@ -21,9 +21,10 @@ export default defineConfig({
   sitemap: { hostname: 'https://spair.github.io/task-pipeline/' },
 
   // changelog.md includes the repo's CHANGELOG.md verbatim; its repo-relative
-  // links (CLAUDE.md, CONTRIBUTING.md, docs/contract.md) resolve on GitHub, not
-  // on the site. No site page lives at these paths, so ignoring them is safe.
-  ignoreDeadLinks: [/\/CONTRIBUTING$/, /\/CLAUDE$/, /\/docs\/contract$/],
+  // links (CLAUDE.md, CONTRIBUTING.md, docs/contract.md, agents/*.md) resolve on
+  // GitHub, not on the site. No site page lives at these paths, so ignoring them
+  // is safe.
+  ignoreDeadLinks: [/\/CONTRIBUTING$/, /\/CLAUDE$/, /\/docs\/contract$/, /\/agents\//],
 
   head: [
     // Head links are emitted verbatim (no base prefixing) — spell out the base.
