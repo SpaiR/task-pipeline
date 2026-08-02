@@ -83,6 +83,8 @@ Claude Code's own `/verify` and `/code-review` are marked `disable-model-invocat
 
 **Cause** — worktrees resolve the shared `.task/` through `git config --local task.root` (fallbacks: an upward walk, then `dirname(git-common-dir)`). The anchor can be missing (repo set up by an older version) or wrong.
 
+A **moved or copied repo** is the common way it goes wrong: `task.root` is an absolute path stored in `.git/config`, so it travels with the directory and then points at where the repo used to live. The resolver only trusts the anchor when that path actually holds a `config/config.md`, so a stale one is ignored and the upward walk finds the real `.task/` that moved with the repo — but the anchor stays stale until a capture skill rewrites it.
+
 **Fix** — run any capture skill from the stuck worktree; its inline setup records `task.root` and every worktree then resolves the same `.task/`. To point it at an existing `.task/` yourself: `git config --local task.root /abs/path/containing/dot-task` (the directory that *contains* `.task`, not `.task` itself).
 
 ## Finding your own state

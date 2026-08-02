@@ -53,7 +53,7 @@ There are **no user-facing flags** anywhere — footers, descriptions, and examp
 
 The resolver is a **pure `.task/`-root finder**. It exports **`AI_DIR`** = the discovered `.task` directory, first hit wins:
 
-1. `git config --local task.root` — the anchor recorded by the inline Step 0 setup. Repo-common, so **every worktree resolves the same `.task/` with zero setup** — no symlink, no join step. This is what lets user-created parallel worktrees of a repo share one `.task/`.
+1. `git config --local task.root` — the anchor recorded by the inline Step 0 setup, **claimed only on evidence**: accepted when `<root>/.task/config/config.md` exists, ignored otherwise. The anchor is an absolute path living in `.git/config`, which travels with the repo when it is moved or copied; a stale one would resolve to an `AI_DIR` with no config, the gate would call the project unconfigured, and intake setup would regenerate `config.md` over the real one that moved with the repo. A stale anchor therefore falls through to step 2. Repo-common, so **every worktree resolves the same `.task/` with zero setup** — no symlink, no join step. This is what lets user-created parallel worktrees of a repo share one `.task/`.
 2. Upward walk from `$PWD` for a `.task/config/config.md` ancestor — pre-anchor fallback.
 3. `dirname(git-common-dir)/.task` — main-worktree root / sibling worktrees / bare repos.
 4. `$CLAUDE_PROJECT_DIR/.task` when that path already holds a `config/config.md` (evidence, not merely the variable being set), else the relative `./.task` — so a call from outside a project still fails cleanly on the config gate.
