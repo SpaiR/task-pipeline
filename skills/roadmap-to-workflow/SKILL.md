@@ -15,7 +15,7 @@ Drive an approved roadmap through a dynamic Workflow. This skill collects the ro
 
 **Input:** `$ARGUMENTS` — optional. A single positional `<roadmap-slug>` (or path) to skip the roadmap picker. No flags — item scope is chosen interactively (Step 0).
 
-**Format contract:** [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd) is the single source of truth for item grammar (`### - [ ] N.`, `**Dependencies:**`, `**Model:**`); [docs/contract.md § task.md format](../../docs/contract.md#taskmd-format) for the artifact each item's plan agent writes.
+**Format contract:** [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd) is the single source of truth for item grammar (`### - [ ] N.`, `**Dependencies:**`, `**Model:**`); [docs/contract.md § task.md format](../../docs/contract.md#taskmd-format-tasktaskslugmd) for the artifact each item's plan agent writes.
 
 ## Step 0: Config gate, pick roadmap, pick scope
 
@@ -29,7 +29,8 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
 ```
 
 - **`config.md not found`** (the guard above echoes it; `validate.sh all` also exits 2 with the same message) → hard-stop redirect (do **not** bootstrap here):
-  > The project isn't set up yet. Capture something first with `/task:to-task`, `/task:to-plan`, or `/task:to-roadmap` — those set the project up inline.
+  > The project isn't set up yet. Capture something first with `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, or `/task:to-spec` — those four set the project up inline.
+  > → Next: `/task:to-roadmap`
 - **Any other non-zero exit from `validate.sh`** → `validate.sh all` checks every artifact, so an error may sit on a task or roadmap unrelated to this run. A validation **error on the roadmap you are about to run** stops the run — report it and do not proceed. Errors on other artifacts are surfaced but do **not** block. (WARN lines never set a non-zero exit; they are informational only.)
 
 ### Roadmap
@@ -37,6 +38,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
 If `$ARGUMENTS` gives a positional `<roadmap-slug>`/path, resolve it and skip the picker. Otherwise list the available roadmaps with progress (uses the kept `roadmap.sh` helpers):
 
 ```bash
+source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # re-source: each bash block is a fresh shell, AI_DIR does not carry over from Step 0
 source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap.sh"      # resolve_artifact_path, roadmap_progress_counts
 shopt -s nullglob
 for f in "$AI_DIR"/roadmap/*.md; do
@@ -47,7 +49,7 @@ for f in "$AI_DIR"/roadmap/*.md; do
 done
 ```
 
-- **No roadmap files** → stop: "no roadmaps found — create one with `/task:to-roadmap`."
+- **No roadmap files** → stop: "no roadmaps found — create one with `/task:to-roadmap`. → Next: `/task:to-roadmap`"
 - **Exactly one** → use it (still refuse if it's fully complete, `done == total > 0`).
 - **More than one** → `AskUserQuestion` (convention (c)), one chip per roadmap labelled `<slug>  (<done>/<total>)`; sort partial roadmaps first, complete ones last with a `(complete)` suffix, and refuse to proceed on a complete pick.
 
@@ -61,14 +63,16 @@ No flags — always ask interactively unless there's nothing to ask. When the ch
 - **Only next wave** — just the first dependency-wave of unchecked items (see Step 1).
 - **Pick range** — collect a range via the `AskUserQuestion` free-text ("Other") option, e.g. `1,3-5,8`; validate each number exists and is unchecked.
 
-One unchecked item → skip the question, run it. Zero unchecked → stop: "all items in `<slug>` are already done — pick another roadmap, or capture new work with `/task:to-roadmap`."
+One unchecked item → skip the question, run it. Zero unchecked → stop: "all items in `<slug>` are already done — pick another roadmap, or capture new work with `/task:to-roadmap`. → Done."
 
 ## Step 1: Collect items and sort into dependency waves
 
 Read the resolved roadmap. For each unchecked (`### - [ ] N.`) item in the chosen scope, capture `N`, title, `**Dependencies:**`, and `**Model:**` (default `sonnet` when absent or off-list). This prints one `N<TAB>deps<TAB>model<TAB>title` line per unchecked item:
 
 ```bash
-ROADMAP=$(resolve_artifact_path roadmap "<slug-or-path>")   # roadmap.sh, sourced in Step 0
+source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"    # fresh shell again — re-source both helpers
+source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap.sh"
+ROADMAP=$(resolve_artifact_path roadmap "<slug-or-path>")
 awk '
   function flush() { if (pend) { print n "\t" deps "\t" (model==""?"sonnet":model) "\t" title; pend=0 } }
   /^### - \[[ x~>-]\] [0-9]+\. / {
@@ -131,6 +135,8 @@ async function runPlan(n, title, model, w) {
      "Spec:" headers). Read each referenced .task/spec/<spec-slug>.md first as
      a fixed technical anchor. Auto-accept every confirmation; make constructive
      assumptions; never block on a prompt. Do NOT implement or commit.
+     Suppress to-plan's "→ Next:" handoff footer (its Step 8 driver-mode
+     carve-out) so the digest line below is genuinely last.
      Last non-empty line MUST be exactly:
        OK #${n} <item-slug> planned      (on success)
        FAIL #${n} <item-slug> <what failed>   (on failure)`,
@@ -245,7 +251,7 @@ return "roadmap-to-workflow: all items shipped.";
 
 ## Forbidden
 
-- Running setup / bootstrap on a missing `config.md` — this skill hard-stops and redirects; only `to-task` / `to-plan` / `to-roadmap` are intake-capable.
+- Running setup / bootstrap on a missing `config.md` — this skill hard-stops and redirects; only `to-task` / `to-plan` / `to-roadmap` / `to-spec` are intake-capable.
 - Looping the items yourself in this session's main thread instead of authoring a Workflow — the Workflow tool is what gives each item fresh per-item context, per-item model control, parallel planning, and driver-side auto-mark; a hand-rolled loop reintroduces the accumulation problems this skill exists to remove. (The one-at-a-time manual fallback is only for when the Workflow tool is unavailable.)
 - Running items whose dependencies are still unchecked, or placing an item in an earlier wave than its `Dependencies` allow.
 - Auto-marking roadmap checkboxes from inside a per-item agent — that is the driver's job, strictly after the item's **review** returns `OK`, to avoid parallel writers racing on the roadmap file.

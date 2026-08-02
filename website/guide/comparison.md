@@ -77,7 +77,7 @@ task-pipeline's `grill` is openly inspired by Matt Pocock's grilling skill, and 
 |---|---|---|
 | **Paradigm** | Chat-first capture; no forms, no fixed phase sequence | Form-first, spec-driven ceremony |
 | **Who authors the plan** | You in chat; the skill serializes it | Driven through a command sequence you fill in and refine |
-| **Workflow** | One short capture skill (`to-task` / `to-plan` / `to-roadmap`) | `/speckit.constitution` → `/speckit.specify` → `/speckit.plan` → `/speckit.tasks` → `/speckit.implement` |
+| **Workflow** | One short capture skill (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) | `/speckit.constitution` → `/speckit.specify` → `/speckit.plan` → `/speckit.tasks` → `/speckit.implement` |
 | **Moving parts** | Flat Markdown under `.task/`; nothing to install | A `specify` CLI (installed via `uv`) plus per-agent integrations |
 | **Trace in the repo** | Invisible — git-excluded | A `.specify/` artifact tree committed to the repo |
 | **Platforms** | Claude Code only | 30+ AI coding agents, cross-agent |

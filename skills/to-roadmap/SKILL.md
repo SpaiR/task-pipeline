@@ -22,7 +22,7 @@ Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`.
 
 ### Preconditions
 
-- **Too small for a roadmap.** If the initiative has no obvious phases, no inter-task dependencies, and fewer than ~3 atomic steps → **stop and suggest** `/task:to-task` or `/task:to-plan` instead.
+- **Too small for a roadmap.** If the initiative has no obvious phases, no inter-task dependencies, and fewer than ~3 atomic steps → **stop and suggest** `/task:to-task` or `/task:to-plan` instead, closing with the canonical footer: `→ Next: \`/task:to-plan\``.
 
 (The slug-collision check runs at save time, once the slug is derived — see Step 4.)
 
@@ -47,7 +47,7 @@ Comb the prior conversation and print, as message text in your reply (chat-only,
 ## Roadmap — Decision Inventory
 
 {Building this roadmap from our discussion — here is every decision I
-captured; confirm nothing dropped.}
+captured. Say so if a line is wrong.}
 
 ### Decisions locked so far
 1. {one locked decision at full specificity — small details included
@@ -91,7 +91,7 @@ This inventory is a **recap** of decisions the user already reached in the discu
 {One focused question on the most load-bearing fork.}
 ```
 
-Always propose **2–3 decomposition options** with different phase boundaries (behavioral milestones — observable state changes — not technical layers like "substrate" vs "UI"). Iterate with the user (`Round N`, same structure, narrowed to the fork in focus). Typical depth 3–6 rounds; past 6, say the initiative is too big and suggest splitting. Stop when the user signals "write it" / "that's enough", or a new round would only restate prior conclusions.
+Always propose **2–3 decomposition options** with different phase boundaries (behavioral milestones — observable state changes — not technical layers like "substrate" vs "UI"). Iterate with the user (`Round N`, same structure, narrowed to the fork in focus). A round is **content dialogue, not a path fork** — print it as message text and close with the open question; convention (c)'s chips are for choosing a path through the skill, and would flatten the pros/cons the round exists to show. Typical depth 3–6 rounds; past 6, say the initiative is too big and suggest splitting. Stop when the user signals "write it" / "that's enough", or a new round would only restate prior conclusions.
 
 **Track decisions as you go, not in your head.** Two kinds surface:
 
@@ -104,7 +104,7 @@ Topics the user explicitly said to skip stay skipped — do not raise them again
 
 ### Step 3: Draft the file
 
-Once the decision list is confirmed, draft the full roadmap per [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd): title + intro, `## Prerequisites`, `## Phase summary` table, one `## Phase X` section per phase with `### - [ ] N. <title>` items (`**Dependencies:**`, optional `**Model:**`, `**Ready description:**` blockquote with `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria`), `## Out of scope`, `## Backlinks`.
+Once the decision list is confirmed, draft the full roadmap per [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd): title + intro, `## Prerequisites`, `## Phase summary` table, one `## Phase X` section per phase with `### - [ ] N. <title>` items (`**Dependencies:**`, optional `**Model:**`, `**Ready description:**` blockquote with `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria`), `## Out of scope`, `## Backlinks`. Item numbers `N` run continuously across the whole file — never restart the numbering per phase.
 
 **Route every confirmed decision to a home:**
 
@@ -126,7 +126,8 @@ Before saving, self-check and fix inline (drafting hygiene, distinct from Step 5
 3. No placeholders (`TBD`, `TODO`, `???`, `fill in`).
 4. Every `**Dependencies:**` cites a task number that exists in this file.
 5. Every item heading produces a unique kebab-case slug.
-6. Every confirmed decision (Step 2) resolved to a concrete home — `### Outcomes`/`### Acceptance criteria`, `## Out of scope`, a spec `### Spec references → <spec-slug> §N` citation (or a decision flagged for a `/task:to-spec` follow-up) — or was explicitly dropped with a stated reason.
+6. Item numbers are unique across the whole file (numbering does not restart per phase) — a duplicate `N` is a `validate.sh` error, and the `roadmap-to-workflow` driver's auto-mark keys on the number, so two items sharing one would be ticked together.
+7. Every confirmed decision (Step 2) resolved to a concrete home — `### Outcomes`/`### Acceptance criteria`, `## Out of scope`, a spec `### Spec references → <spec-slug> §N` citation (or a decision flagged for a `/task:to-spec` follow-up) — or was explicitly dropped with a stated reason.
 
 ### Step 4: Save
 

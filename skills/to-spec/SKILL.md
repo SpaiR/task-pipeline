@@ -22,7 +22,7 @@ Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`.
 
 ### Preconditions
 
-- **No real decision to pin.** If the discussion settled no load-bearing technical decision — only behavioral outcomes, or details local to one task → **stop and suggest** `/task:to-task` or `/task:to-plan` instead.
+- **No real decision to pin.** If the discussion settled no load-bearing technical decision — only behavioral outcomes, or details local to one task → **stop and suggest** `/task:to-task` or `/task:to-plan` instead, closing with the canonical footer: `→ Next: \`/task:to-plan\``.
 
 (The slug-collision check runs at save time, once the slug is derived — see Step 4.)
 
@@ -46,9 +46,8 @@ Comb the prior conversation and print, as message text in your reply (chat-only,
 ```
 ## Spec — Decision Inventory
 
-{Writing this spec from our discussion. Before I save the file, here is
-every technical decision I captured with its load-bearing reasoning —
-confirm nothing dropped or misstated.}
+{Writing this spec from our discussion — here is every technical decision
+I captured with its load-bearing reasoning. Say so if a line is wrong.}
 
 ### Decisions locked so far
 1. {decision at full specificity} — because {the load-bearing reason}
@@ -84,7 +83,7 @@ For a decision area with no prior discussion, work each fork with the user befor
 {One focused question on the most load-bearing fork.}
 ```
 
-Offer ≥2 options per fork (or justify why only one is viable). Iterate (`Round N`) until decisions are settled, then reprint the full list **as message text** — a recap: print it, no confirmation chip. If a decision or its rationale is wrong, the user corrects it in chat before drafting.
+Offer ≥2 options per fork (or justify why only one is viable). A round is **content dialogue, not a path fork** — print it as message text and close with the open question; convention (c)'s chips are for choosing a path through the skill, and would flatten the pros/cons the round exists to show. Iterate (`Round N`) until decisions are settled, then reprint the full list **as message text** — a recap: print it, no confirmation chip. If a decision or its rationale is wrong, the user corrects it in chat before drafting.
 
 Topics the user explicitly said to skip stay skipped.
 
