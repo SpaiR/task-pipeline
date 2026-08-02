@@ -177,4 +177,4 @@ validate: {OK — 0 errors, N warning(s) | the FAIL lines}
 - Generic risks ("watch out for bugs") — risks must be specific to the initiative and project.
 - More than one initiative per file — split and pick one for this run.
 - Persisting topics the user asked to skip; placeholders anywhere.
-- Writing a `.refine.md` sidecar, a `.spec.md` sidecar, or a `.lock` file — none exists in v3.
+- Writing a `.refine.md` sidecar, a `.spec.md` sidecar, or a `.lock` file — none of those exists in the pipeline.

@@ -125,7 +125,7 @@ The file is already written — to change anything, just say so. Then close with
 - Write a `## Tests` section — also `to-plan`'s contract; `to-task` captures the Description only.
 - Scan the codebase beyond `CLAUDE.md` + top-level manifests — this skill captures discussion, it doesn't investigate implementation.
 - Modify the source roadmap file in from-roadmap mode — auto-marking `- [x]` happens inside the executing session (or the `roadmap-to-workflow` driver), never here.
-- Invent, read, or write any active-task pointer — v3 has none; the artifact path is the only handle.
-- Bracket the title with a task-id (`# [TASK-ID] Title`) — v3's title line is plain `# <Title>`; the slug lives only in the filename.
+- Invent, read, or write any active-task pointer — the artifact path is the only handle.
+- Bracket the title with a task-id (`# [TASK-ID] Title`) — the title line is plain `# <Title>`; the slug lives only in the filename.
 - Silently overwrite an existing `.task/task/<slug>.md` — surface the collision and let the user choose.
 - Write or edit a `.task/spec/<slug>.md` file — referencing a spec via a `Spec:` header is fine, but authoring specs is `to-spec`'s job.

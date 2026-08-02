@@ -22,7 +22,7 @@ Check whether `.task/config/config.md` exists — resolve the pipeline root via 
 - **Absent → inline setup.** Run the inline setup gate exactly as [`skills/to-task/SKILL.md`](../to-task/SKILL.md) Step 0 does (detect stack → ONE `AskUserQuestion` confirmation with **Accept** / **Edit** / **Decline** chips → write `config.md` + `git config --local task.root "$ROOT"` + exclude `.task`). `to-task`'s Step 0 is the single source of truth for the sub-steps; do not defer to a separate setup command. Two `to-plan`-specific notes: create `.task/task/` alongside `config.md`, and on **Decline** report "`config.md` not written. → Next: run `/task:to-plan` again when ready" and **stop**. On success, continue to the validate call below with the original `$ARGUMENTS` unchanged.
 - **Present → skip silently**, proceed to validate.
 
-Then run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all` as a self-check — v3 has no gate, so report any findings and continue rather than blocking. Only a config-precondition failure (exit 2) should stop the flow.
+Then run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all` as a self-check — there is no gate, so report any findings and continue rather than blocking. Only a config-precondition failure (exit 2) should stop the flow.
 
 ## Step 1: Resolve the target and capture mode
 
@@ -129,7 +129,7 @@ If `tests_required` (Step 4) is `true`, append:
 
 Each `## Plan` step that satisfies a test references it by number in its `Goal` (e.g. "…; satisfies Test 2"). If `tests_required` is `false`, omit `## Tests` entirely — do not emit an empty heading.
 
-**Dropped on purpose:** no `Implement-Model:` stamp (model hints live only on roadmap items as `**Model:**`), no `## Verification`, no `## Risks` — the `task.md` format ends at Execution.
+**Not part of the format:** no `Implement-Model:` stamp (model hints live only on roadmap items as `**Model:**`), no `## Verification`, no `## Risks` — the `task.md` format ends at Execution.
 
 ## Step 6: Self-check before writing
 
@@ -213,5 +213,5 @@ For **promote** / **revise**, note plainly what stayed untouched (Description, a
 - Overwrite or paraphrase-away an existing `## Description` in promote or revise mode — only `## Plan` (and, narrowly, `## Tests`) are in scope for those modes.
 - Pick a new slug / target path in promote or revise mode — the existing file resolved in Step 1 is reused as-is.
 - Modify the source roadmap file or any referenced `.task/spec/<slug>.md` — all are read-only from here; checkbox auto-marking is the executing session's (or, for a roadmap run, the driver's) job, and specs are authored only by `to-spec`.
-- Invent or resolve an active-task pointer — none exists in v3; the target file is resolved per Step 1 every run.
+- Invent or resolve an active-task pointer — the target file is resolved per Step 1 every run.
 - Leave `## Plan` present with zero `### Step N:` blocks, or `## Tests` present with zero `### Test N:` blocks — both fail `validate.sh`.
