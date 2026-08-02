@@ -206,6 +206,8 @@ For **promote** / **revise**, note plainly what stayed untouched (Description, a
 
 `→ Next: implement it now, or in a fresh session run: \`implement .task/task/<slug>.md\``
 
+**Driver mode — suppress the footer.** In a non-interactive run as `roadmap-to-workflow`'s per-item plan agent (the same run Step 4 already carves out), print the digest but **omit** the `→ Next:` line and end with the driver's parser-stable line instead — `OK #N <item-slug> planned`. The driver reads the last non-empty line and takes `<item-slug>` from it; a trailing footer would hand it a garbage slug and the next agent a non-existent task path.
+
 ## Forbidden
 
 - Overwrite or paraphrase-away an existing `## Description` in promote or revise mode — only `## Plan` (and, narrowly, `## Tests`) are in scope for those modes.

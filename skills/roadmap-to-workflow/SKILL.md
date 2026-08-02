@@ -134,6 +134,8 @@ async function runPlan(n, title, model, w) {
      "Spec:" headers). Read each referenced .task/spec/<spec-slug>.md first as
      a fixed technical anchor. Auto-accept every confirmation; make constructive
      assumptions; never block on a prompt. Do NOT implement or commit.
+     Suppress to-plan's "→ Next:" handoff footer (its Step 8 driver-mode
+     carve-out) so the digest line below is genuinely last.
      Last non-empty line MUST be exactly:
        OK #${n} <item-slug> planned      (on success)
        FAIL #${n} <item-slug> <what failed>   (on failure)`,
