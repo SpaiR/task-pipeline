@@ -20,8 +20,11 @@
 #      config, so it is shared by EVERY worktree of the repo: all worktrees
 #      resolve the same `.task/` with zero setup — no symlink, no join mode.
 #      `--local --get` scopes to the repo config so a stray global `task.root`
-#      cannot leak in. This is what lets worktrees spawned by
-#      `roadmap-to-workflow` share one `.task/`.
+#      cannot leak in. This is what lets user-created parallel worktrees of a
+#      repo share one `.task/` — no skill spawns worktrees of its own
+#      (`roadmap-to-workflow` runs its items in the shared tree, and the
+#      reviewer must see and amend that same tree, so neither sets
+#      `isolation`).
 #   2. Upward walk from $PWD for a `.task/config/config.md` ancestor — the
 #      pre-anchor fallback. Covers a main worktree, a nested worktree, or a
 #      `.task` created in a subdir, for repos bootstrapped before the anchor
@@ -29,8 +32,10 @@
 #   3. Parent of the git common dir — the main worktree root (normal / nested /
 #      sibling worktrees) or the bare repo's container (bare). Catches sibling
 #      worktrees and bare repos that the upward walk in (2) misses.
-#   4. `$CLAUDE_PROJECT_DIR/.task` when set inside a hook, else the relative
-#      `.task` — the historical default, so a call from outside any project
+#   4. `$CLAUDE_PROJECT_DIR/.task` when that path ALREADY holds a
+#      `config/config.md` — like steps 1-3, this step claims a root only on
+#      evidence, never on the variable being set alone. Otherwise the relative
+#      `.task`: the historical default, so a call from outside any project
 #      still fails cleanly on the config gate with "config.md not found".
 #
 # AI_DIR is exported as `<root>/.task` with the `.task` component appended

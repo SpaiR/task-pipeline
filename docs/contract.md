@@ -58,7 +58,7 @@ v3 shrinks the resolver to a **pure `.task/`-root finder**. It exports **`AI_DIR
 1. `git config --local task.root` — the anchor recorded by the inline Step 0 setup. Repo-common, so **every worktree resolves the same `.task/` with zero setup** — no symlink, no join step. This is what lets user-created parallel worktrees of a repo share one `.task/`.
 2. Upward walk from `$PWD` for a `.task/config/config.md` ancestor — pre-anchor fallback.
 3. `dirname(git-common-dir)/.task` — main-worktree root / sibling worktrees / bare repos.
-4. `$CLAUDE_PROJECT_DIR/.task` when set, else the relative `./.task` — so a call from outside a project still fails cleanly on the config gate.
+4. `$CLAUDE_PROJECT_DIR/.task` when that path already holds a `config/config.md` (evidence, not merely the variable being set), else the relative `./.task` — so a call from outside a project still fails cleanly on the config gate.
 
 **Removed in v3:** active-task-pointer logic (`task_current_path`, `heal_stale_pointer`), the `WS_DIR` / `resolve_ws` workspace resolution, and `TASK_ID_OVERRIDE` — no "which task is active" resolution exists anywhere; the artifact path is the handle.
 
