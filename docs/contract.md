@@ -111,7 +111,7 @@ Rules:
 - **`## Description`** is mandatory. It carries the "why + what" from the chat.
 - **`## Plan`** is optional (written only by `to-plan`). When present it uses the three-layer step contract — **Goal / Touches / Logic**. `Goal` is the observable target; `Touches` lists the files (and scopes review fixes); `Logic` is optional guidance. Each step is a `### Step N:` block.
 - **`## Tests`** is optional. When present, each `### Test N:` block states one assertion. `config.md` → Testing Policy governs whether the task warrants tests.
-- **`## Execution`** is a **standard boilerplate block stamped verbatim by every `to-*` skill.** This is the mechanism that replaces the deleted `build` / `ship` skills. The block text is the canonical text shown above (a blockquote, ~4 lines). It is agent-facing and English — do **not** translate it.
+- **`## Execution`** is a **standard boilerplate block stamped verbatim by every `to-task` / `to-plan` run.** This is the mechanism that replaces the deleted `build` / `ship` skills. The block text is the canonical text shown above (a blockquote, ~4 lines). It is agent-facing and English — do **not** translate it.
 
 ### Canonical `## Execution` block — stamp this verbatim
 
@@ -193,10 +193,10 @@ Section labels (`## N.`, `**Decision:**` / `**Rationale:**` / `**Constrains:**`)
 | Artifact | Produced by | Consumed by |
 |----------|-------------|-------------|
 | *(none — chat only)* | `grill` — an in-chat decision ledger, never a file | the `to-*` capture skill the user runs next |
-| `.task/config/config.md` | intake skills' inline Step 0 setup (folded-in `bootstrap`) | every skill + every executing session — Language, Testing Policy, Commit Format, tool priority |
-| `.task/task/<slug>.md` | `to-task` (header + `## Description` + `## Execution`); `to-plan` (same + `## Plan`, optional `## Tests`) | **the executing session** (reads `## Description`, `## Plan` if present, follows `## Execution`, reads `Spec:` for anchors and `Roadmap:` + `Source item:` for auto-mark); `roadmap-to-workflow` per-item implement agent; **`task:code-reviewer`** (reads `Touches` as fix scope + `Spec:` as fixed anchors — read-only) |
-| `.task/roadmap/<slug>.md` | `to-roadmap` (initial); user-edited; `roadmap-to-workflow` **driver** flips `- [ ]` → `- [x]` after an item's agent returns OK | `roadmap-to-workflow` driver (loops unchecked items, reads `**Dependencies:**` + `**Model:**` + `Spec:`); `to-plan` / `to-task` (when picking up an item) |
-| `.task/spec/<slug>.md` | `to-spec` or user | **the executing session** (via a task's `Spec:` header) + `to-plan` (technical-decision anchor) + `roadmap-to-workflow` per-item plan agent |
+| `.task/config/config.md` | intake skills' inline Step 0 setup (folded-in `bootstrap`) | every skill **except `grill`** + every executing session — Language, Testing Policy, Commit Format, tool priority |
+| `.task/task/<slug>.md` | `to-task` (header + `## Description` + `## Execution`); `to-plan` (same + `## Plan`, optional `## Tests`) | **the executing session** (reads `## Description`, `## Plan` if present, follows `## Execution`, reads `Spec:` for anchors and `Roadmap:` + `Source item:` for auto-mark); `roadmap-to-workflow` per-item implement agent; **`task:code-reviewer`** (reads `Touches` as fix scope + `Spec:` as fixed anchors — read-only); `validate.sh` (read-only format check) |
+| `.task/roadmap/<slug>.md` | `to-roadmap` (initial); user-edited; `roadmap-to-workflow` **driver** flips `- [ ]` → `- [x]` after an item's agent returns OK | `roadmap-to-workflow` driver (loops unchecked items, reads `**Dependencies:**` + `**Model:**` + `Spec:`); `to-plan` / `to-task` (when picking up an item); `validate.sh` (read-only format check) |
+| `.task/spec/<slug>.md` | `to-spec` or user | **the executing session** (via a task's `Spec:` header) + `to-plan` (technical-decision anchor) + `roadmap-to-workflow` per-item plan agent; `validate.sh` (read-only format check) |
 
 The executing session writes no separate pipeline artifacts — its implementation lands in the working tree, then in the commit, and `task:code-reviewer` reviews that diff. Auto-mark inside a single-task execution is done by the executing session itself (per the `## Execution` block, after the review returns OK); auto-mark during a roadmap run is done by the **driver**, not the per-item agent, so parallel item agents never race on the roadmap file.
 
