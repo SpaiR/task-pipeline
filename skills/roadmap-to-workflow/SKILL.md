@@ -32,11 +32,16 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
 - **`config.md not found`** (the guard above echoes it; `validate.sh all` also exits 2 with the same message) → hard-stop redirect (do **not** bootstrap here):
   > The project isn't set up yet. Capture something first with `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, or `/task:to-spec` — those four set the project up inline.
   > → Next: `/task:to-roadmap`
-- **Any other non-zero exit from `validate.sh`** → `validate.sh all` checks every artifact, so an error may sit on a task or roadmap unrelated to this run. A validation **error on the roadmap you are about to run** stops the run — report it and do not proceed: "→ Next: fix the reported error in `.task/roadmap/<slug>.md`, then rerun `/task:roadmap-to-workflow <slug>`". Errors on other artifacts are surfaced but do **not** block. (WARN lines never set a non-zero exit; they are informational only.)
+- **Any other non-zero exit from `validate.sh`** → `validate.sh all` checks every artifact, so an error may sit on a task or roadmap unrelated to this run. **Mind the timing:** at this point the roadmap has not been picked yet (that happens in the *Roadmap* sub-step below), so do not try to judge here which errors are "yours". Surface every reported error now, block on none of them, and **hold** the roadmap ones. Once `<slug>` is resolved below, check the held list: if an error was reported against **that** file, stop then — "→ Next: fix the reported error in `.task/roadmap/<slug>.md`, then rerun `/task:roadmap-to-workflow <slug>`". Errors on any other artifact never block. (The one case where the roadmap *is* already known at gate time is a positional `<roadmap-slug>` in `$ARGUMENTS`; there you may apply the check immediately.) WARN lines never set a non-zero exit; they are informational only.
 
 ### Roadmap
 
-If `$ARGUMENTS` gives a positional `<roadmap-slug>`/path, resolve it and skip the picker. Otherwise list the available roadmaps with progress (uses the `roadmap.sh` helpers):
+If `$ARGUMENTS` gives a positional `<roadmap-slug>`/path, resolve it with `resolve_artifact_path roadmap "<arg>"` and skip the picker — **but check the result before using it.** An empty return means no such roadmap (a typo is the common case); do **not** fall through to the item scan with an unresolved path, because an empty filename makes the Step 1 `awk` read stdin, come back with zero items, and report the roadmap as fully done. Stop instead, and list what is actually there (the picker query below already produces the list):
+
+> no roadmap `<arg>` under `$AI_DIR/roadmap/`. Available: `<slug>` (2/7), `<slug>` (0/4).
+> → Next: `/task:roadmap-to-workflow <one of those slugs>`
+
+Otherwise list the available roadmaps with progress (uses the `roadmap.sh` helpers):
 
 ```bash
 source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # re-source: each bash block is a fresh shell, AI_DIR does not carry over from Step 0
@@ -54,7 +59,7 @@ done
 - **Exactly one** → use it (still refuse if it's fully complete, `done == total > 0`).
 - **More than one** → `AskUserQuestion` (convention (c)), one chip per roadmap labelled `<slug>  (<done>/<total>)`; sort partial roadmaps first, complete ones last with a `(complete)` suffix, and refuse to proceed on a complete pick.
 
-Every refusal on a complete roadmap ends the same way: "`<slug>` is already fully checked — nothing left to run. → Next: `/task:to-roadmap` for a new initiative, or uncheck the items you want rerun."
+Every refusal on a complete roadmap ends the same way, in the wording the capture skills also use: "Every item in `<slug>` is already checked off — nothing left to run. → Next: `/task:to-roadmap` for a new initiative, or uncheck the items you want rerun."
 
 Read the roadmap's `Spec: <slug>` header lines, if any — resolve each to an **absolute** `$AI_DIR/spec/<slug>.md` path and echo the list. These paths are baked into the Workflow script's `SPEC_PATHS` literal (Step 2) and interpolated into every item's plan-agent prompt as fixed technical-decision anchors; the JS sandbox cannot expand `$AI_DIR`, so the absolute values must be literals.
 
@@ -63,10 +68,10 @@ Read the roadmap's `Spec: <slug>` header lines, if any — resolve each to an **
 No flags — always ask interactively unless there's nothing to ask. When the chosen roadmap has **more than one** unchecked item, present a single `AskUserQuestion` (convention (c)) — *"How much of `<slug>` should this run cover?"*:
 
 - **All remaining** (default) — every unchecked item.
-- **Only next wave** — just the first dependency-wave of unchecked items (see Step 1).
-- **Pick range** — collect a range via the `AskUserQuestion` free-text ("Other") option, e.g. `1,3-5,8`; validate each number exists and is unchecked.
+- **Only next wave** — just the first dependency-wave of unchecked items (see Step 1). **This one inverts Step 1's order:** compute the waves over *all* unchecked items first, then narrow the run to wave 1. Filtering before sorting would hide the dependencies that define the wave, and would trip Step 1's out-of-scope hard stop on items you yourself excluded; wave 1 computed over the full set has no unmet dependency by construction, so that stop cannot fire.
+- **Pick range** — collect a range via the `AskUserQuestion` free-text ("Other") option, e.g. `1,3-5,8`; validate each number exists and is unchecked. On a bad entry, **name the valid set** rather than just refusing — that is what turns a rejection into a second attempt that works: "#9 isn't a runnable item in `<slug>` (it's already checked / doesn't exist). Unchecked right now: #2, #3, #5, #7. → Next: rerun `/task:roadmap-to-workflow <slug>` and pick from those."
 
-One unchecked item → skip the question, run it. Zero unchecked → stop: "all items in `<slug>` are already done — pick another roadmap, or capture new work with `/task:to-roadmap`. → Done."
+One unchecked item → skip the question, run it. Zero unchecked → stop: "Every item in `<slug>` is already checked off — pick another roadmap, or capture new work with `/task:to-roadmap`. → Done."
 
 ## Step 1: Collect items and sort into dependency waves
 
@@ -76,6 +81,10 @@ Read the resolved roadmap. For each unchecked (`### - [ ] N.`) item in the chose
 source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"    # fresh shell again — re-source both helpers
 source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap.sh"
 ROADMAP=$(resolve_artifact_path roadmap "<slug-or-path>")
+# Never let an unresolved path reach awk: `awk 'prog' ""` skips the empty
+# filename and reads STDIN instead, which comes back as zero items and reads
+# exactly like a fully-completed roadmap.
+[[ -n "$ROADMAP" && -f "$ROADMAP" ]] || { echo "roadmap not found: <slug-or-path>" >&2; exit 1; }
 awk '
   function flush() { if (pend) { print n "\t" deps "\t" (model==""?"sonnet":model) "\t" title; pend=0 } }
   /^### - \[[ x~>-]\] [0-9]+\. / {
@@ -93,7 +102,7 @@ awk '
 ' "$ROADMAP"
 ```
 
-Filter that list to the Step 0 scope. Then **topologically sort into waves**, computed by you (not by bash — the item set is small and this is reasoning, not parsing):
+Filter that list to the Step 0 scope, then **topologically sort into waves**, computed by you (not by bash — the item set is small and this is reasoning, not parsing). **Exception — the "Only next wave" scope:** sort *before* filtering (sort all unchecked items, then keep wave 1), per Step 0's note on that option.
 
 - Wave 1 = every filtered item whose `Dependencies` are empty, or whose dependencies are all *already checked* (`[x]`/`[~]`/`[>]`/`[-]`) in the roadmap file — i.e. nothing left in this run blocks it.
 - Wave 2 = every remaining filtered item whose dependencies are all satisfied by Wave 1 (already-checked items, or items landing in Wave 1).
@@ -218,7 +227,15 @@ for (const [w, items] of waves.entries()) {
   //    in this one serial loop, so the shared tree has a single writer and item N
   //    never starts implementing while item N−1 is still under review.
   for (const [i, { n, model }] of items.entries()) {
-    const itemSlug = plans[i].split(" ")[2];   // <item-slug>, echoed by the plan agent
+    // The digest is LLM output — ASSERT its shape, never index into it blindly.
+    // `plans[i].split(" ")[2]` on a drifted line ("OK planned #3", a trailing
+    // sentence, a code fence) yields undefined or a stray word, and the next
+    // agent is launched against `${AI_DIR}/task/undefined.md` — after this whole
+    // wave's planning is already paid for. Fail loudly here instead.
+    const m = plans[i].match(/^OK #(\d+) (\S+) planned$/);
+    if (!m || Number(m[1]) !== n)
+      return `roadmap-to-workflow stopped in wave ${w + 1} (planning), item #${n}: unparsable plan digest: ${plans[i]}`;
+    const itemSlug = m[2];
     const status = await runImplement(n, itemSlug, model, w + 1);
     console.log(status);                                  // per-item implement digest
     if (status.startsWith("FAIL"))
@@ -238,11 +255,25 @@ for (const [w, items] of waves.entries()) {
     // on the roadmap file. There is NO markRoadmapItemDone() helper — flip item
     // N's checkbox with an anchored, macOS-portable awk rewrite (no GNU-only
     // `sed -i`, no roadmap.sh helper). Match ONLY `^### - \[ \] N\. ` so a `> `
-    // blockquote line or a substring number is never touched:
+    // blockquote line or a substring number is never touched.
+    //
+    // COUNT THE MATCH AND CHECK IT. The anchor is deliberately narrow, so a
+    // heading that drifted from the exact form (a mid-run hand edit, a
+    // renumber, a double space after the checkbox) matches nothing — and a
+    // zero-match rewrite copies the file over itself in silence. The item's
+    // commit lands, the checkbox never flips, the run still ends "all items
+    // shipped", and the NEXT run re-plans and re-implements work already in the
+    // tree. Exactly one match is the only acceptable result:
     //
     //   awk -v n="${n}" '
-    //     $0 ~ ("^### - \\[ \\] " n "\\. ") { sub(/\[ \]/, "[x]") } { print }
+    //     $0 ~ ("^### - \\[ \\] " n "\\. ") { sub(/\[ \]/, "[x]"); hits++ } { print }
+    //     END { exit (hits == 1 ? 0 : 1) }
     //   ' "${ROADMAP}" > "${ROADMAP}.tmp" && mv "${ROADMAP}.tmp" "${ROADMAP}"
+    //
+    // On a non-zero exit do NOT move the temp file into place; stop the wave
+    // with `FAIL #${n} ${itemSlug} auto-mark matched no unique '### - [ ] ${n}.'
+    // heading in ${ROADMAP}` — a silent miss is worse than a stopped run,
+    // because the commit is already in the tree.
     //
     // ROADMAP is the baked absolute literal from the top of this script — there
     // is no shell variable to inherit here, and a relative `.task/…` would
@@ -258,9 +289,15 @@ return "roadmap-to-workflow: all items shipped.";
 ## Output
 
 - Per item: the returned digest lines (`OK|FAIL #N <item-slug> <summary>`) — one from the implement stage, one from the review stage — printed as each wave lands.
+- **One run-summary line above the footer, in both outcomes.** After an unattended autopilot the operator should not have to count `OK` lines by hand to learn how much landed:
+
+  ```
+  Ran `<slug>`: <K> of <M> items landed and ticked, <R> still unchecked. Commits: <first-sha>..<last-sha>.
+  ```
+
 - End with the canonical next-step footer (convention (a), flag-free):
   - All items shipped → `→ Done. Roadmap complete — \`.task/roadmap/<slug>.md\` fully checked; review the landed commits with \`git log\`.`
-  - Stopped on a `FAIL` → surface the failing digest, then `→ Next: fix the item, then rerun \`/task:roadmap-to-workflow\` — completed items stay checked, only the unchecked remainder reruns.`
+  - Stopped on a `FAIL` → surface the failing digest, then name **where** it stopped and **what state the tree is in** — without those the operator has to scroll back through waves of digests to find out what broke and whether anything is uncommitted: `Stopped at #<N> <item-slug> in wave <W>. Its work is left in the working tree — inspect it with \`git status\` and \`git log --oneline -3\`. → Next: fix #<N> (or re-plan it with \`/task:to-plan <slug>#<N>\`), then rerun \`/task:roadmap-to-workflow <slug>\` — already-ticked items stay ticked, only the unchecked remainder reruns.`
 
 ## Forbidden
 

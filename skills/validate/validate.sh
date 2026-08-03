@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
 # validate.sh — Validate the format of task-pipeline artifacts.
 #
-# Usage:
-#   validate.sh task <slug>     — validate .task/task/<slug>.md
-#   validate.sh roadmap <slug>  — validate a roadmap file
-#   validate.sh spec <slug>     — validate .task/spec/<slug>.md
-#   validate.sh all             — every task + roadmap + spec file
+# Usage: see the `--help` heredoc at the bottom of this file — the one copy
+# users actually see, and the only place the subcommand list is maintained.
 #
 # The layout is flat: <slug> is both the filename and the identity — there is no
 # task-id, no workspace, no active-task pointer. This is an OPTIONAL
@@ -56,7 +53,12 @@ require_config() {
   # is idempotent (no-op once AI_DIR is set).
   find_ai_dir
   if [[ ! -f "$AI_DIR/config/config.md" ]]; then
-    echo "ERROR precondition: $AI_DIR/config/config.md not found." >&2
+    # Keep the literal substring `config.md not found` — to-roadmap, to-spec and
+    # roadmap-to-workflow all branch on it. Everything after it is for the human
+    # who ran this script by hand, which is the only way to reach this line.
+    echo "ERROR precondition: config.md not found at $AI_DIR/config/config.md" >&2
+    echo "  The project isn't set up yet. Run /task:to-task, /task:to-plan, /task:to-roadmap" >&2
+    echo "  or /task:to-spec once — those four write config.md inline on first use." >&2
     exit 2
   fi
 }

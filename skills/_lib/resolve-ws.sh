@@ -16,9 +16,12 @@
 #
 # Resolution order (first hit wins):
 #   1. `git config --local task.root` — the anchor recorded by the intake
-#      skills' inline Step 0 setup. Lives in the repo-local (common) git
-#      config, so it is shared by EVERY worktree of the repo: all worktrees
-#      resolve the same `.task/` with zero setup — no symlink, no join mode.
+#      skills' inline Step 0 setup, accepted only when it ALREADY holds a
+#      `config/config.md` (evidence, as in step 4: a stale anchor left by a
+#      moved or copied repo is ignored, not trusted). Lives in the repo-local
+#      (common) git config, so it is shared by EVERY worktree of the repo: all
+#      worktrees resolve the same `.task/` with zero setup — no symlink, no
+#      join mode.
 #      `--local --get` scopes to the repo config so a stray global `task.root`
 #      cannot leak in. This is what lets user-created parallel worktrees of a
 #      repo share one `.task/` — no skill spawns worktrees of its own
@@ -48,8 +51,15 @@ find_ai_dir() {
   command -v git >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1 && have_git=1
 
   # 1. Anchor recorded by the inline Step 0 setup (shared across all worktrees).
+  #    Claimed on EVIDENCE, exactly like step 4: the anchor is an absolute path
+  #    baked into `.git/config`, which travels with the repo when it is moved or
+  #    copied. A stale anchor pointing at a vanished path would resolve to an
+  #    AI_DIR with no config.md, the gate would report the project unconfigured,
+  #    and intake setup would regenerate config.md over the real one that moved
+  #    with the repo. Fall through to the ancestor walk instead.
   if [[ "$have_git" -eq 1 ]]; then
     root=$(git config --local --get task.root 2>/dev/null) || root=""
+    [[ -n "$root" && ! -f "$root/.task/config/config.md" ]] && root=""
   fi
 
   # 2. Upward walk for a config.md ancestor (pre-anchor repos).

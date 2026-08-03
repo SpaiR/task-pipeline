@@ -33,6 +33,8 @@ OK #1 migrate-auth-endpoints implemented, committed
 OK #1 migrate-auth-endpoints reviewed — 2 fixes, tests green, commit amended
 OK #2 update-client-sdk implemented, committed
 OK #2 update-client-sdk reviewed — 0 findings, tests green
+Ran `api-v2-migration`: 2 of 2 items landed and ticked, 0 still unchecked.
+  Commits: a1b2c3d..e4f5a6b.
 → Done. Roadmap complete — `.task/roadmap/api-v2-migration.md` fully checked.
 ```
 
@@ -40,8 +42,13 @@ On failure:
 
 ```text
 FAIL #3 <item-slug> <what failed>
-→ Next: fix the item, then rerun `/task:roadmap-to-workflow` — completed items
-  stay checked, only the unchecked remainder reruns.
+Ran `api-v2-migration`: 2 of 5 items landed and ticked, 3 still unchecked.
+  Commits: a1b2c3d..e4f5a6b.
+Stopped at #3 <item-slug> in wave 2. Its work is left in the working tree —
+  inspect it with `git status` and `git log --oneline -3`.
+→ Next: fix #3 (or re-plan it with `/task:to-plan api-v2-migration#3`), then rerun
+  `/task:roadmap-to-workflow api-v2-migration` — already-ticked items stay ticked,
+  only the unchecked remainder reruns.
 ```
 
 ## Fallback

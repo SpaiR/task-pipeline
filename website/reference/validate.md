@@ -33,7 +33,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" [ all | task <slug> | r
 
 - An `ERROR` marks a genuine structural problem worth fixing before you hand a file to an implementing session.
 - A `WARN` (e.g. a dangling `Spec:` reference — the pipeline's one cross-file check) never blocks anything.
-- A missing `config.md` exits 2 — the one precondition failure that stops a run.
+- A missing `config.md` exits 2 — the one precondition failure that stops a run. The message names the path it looked at and points you at the four capture skills, each of which writes `config.md` inline on first use.
 
 Because it's advisory, nothing forces you to run it. Its whole purpose is to catch a hand-edit that drifted from the format. See [Troubleshooting](/guide/troubleshooting#validate-fail) for reading the output.
 

@@ -68,12 +68,14 @@ grill writes nothing, so there is no file to guard and no "declined" state — a
 
 ### Step 7: Route to the right capture skill
 
-Diagnose what was actually grilled and close with the canonical footer (convention (a), flag-free) naming **exactly one** next skill plus a one-line reason:
+Diagnose what was actually grilled and close with the canonical footer (convention (a), flag-free) naming **exactly one** next skill plus a one-line reason. The tests below are **ordered — first match wins**; stop at the first one that holds:
 
-- **Pinned technical decisions** — the ledger is load-bearing "we chose X over Y because…" reasoning that must survive re-derivation → `→ Next: /task:to-spec — the ledger is load-bearing technical reasoning; pin it as a spec.`
-- **A single implementable task, approach settled** → `→ Next: /task:to-plan — one task with the approach nailed down; capture Description + Plan.`
-- **A single task, approach still open** → `→ Next: /task:to-task — one task worth recording now; flesh out the plan later.`
-- **An initiative that sprawled into several tasks** → `→ Next: /task:to-roadmap — this grew into a multi-task initiative; capture it as a roadmap.`
+1. **Cross-task technical anchors** — the ledger pins a protocol, a shared data shape, or a "we chose X over Y" that **more than one future task must honor identically**, and that a later session would plausibly re-derive differently → `→ Next: /task:to-spec — the ledger pins cross-task technical anchors; capture them as a spec.`
+2. **An initiative that sprawled into several tasks** → `→ Next: /task:to-roadmap — this grew into a multi-task initiative; capture it as a roadmap.`
+3. **A single implementable task, approach settled** → `→ Next: /task:to-plan — one task with the approach nailed down; capture Description + Plan.`
+4. **A single task, approach still open** → `→ Next: /task:to-task — one task worth recording now; flesh out the plan later.`
+
+**Test 1 is narrow on purpose.** Step 4 makes *every* ledger line read "{decision} — because {reason}", so the presence of reasoning is not the signal — reasoning that **binds work the ledger itself does not contain** is. One task's own internal reasoning belongs in that task's Description, not a spec: fall through to 3 or 4.
 
 Pick the one that fits; state the reason in the same language as the dialog. Do not run the capture skill yourself — the footer is the handoff.
 

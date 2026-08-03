@@ -53,7 +53,7 @@ There are **no user-facing flags** anywhere — footers, descriptions, and examp
 
 The resolver is a **pure `.task/`-root finder**. It exports **`AI_DIR`** = the discovered `.task` directory, first hit wins:
 
-1. `git config --local task.root` — the anchor recorded by the inline Step 0 setup. Repo-common, so **every worktree resolves the same `.task/` with zero setup** — no symlink, no join step. This is what lets user-created parallel worktrees of a repo share one `.task/`.
+1. `git config --local task.root` — the anchor recorded by the inline Step 0 setup, **claimed only on evidence**: accepted when `<root>/.task/config/config.md` exists, ignored otherwise. The anchor is an absolute path living in `.git/config`, which travels with the repo when it is moved or copied; a stale one would resolve to an `AI_DIR` with no config, the gate would call the project unconfigured, and intake setup would regenerate `config.md` over the real one that moved with the repo. A stale anchor therefore falls through to step 2. Repo-common, so **every worktree resolves the same `.task/` with zero setup** — no symlink, no join step. This is what lets user-created parallel worktrees of a repo share one `.task/`.
 2. Upward walk from `$PWD` for a `.task/config/config.md` ancestor — pre-anchor fallback.
 3. `dirname(git-common-dir)/.task` — main-worktree root / sibling worktrees / bare repos.
 4. `$CLAUDE_PROJECT_DIR/.task` when that path already holds a `config/config.md` (evidence, not merely the variable being set), else the relative `./.task` — so a call from outside a project still fails cleanly on the config gate.
@@ -111,11 +111,21 @@ Rules:
 - **`## Tests`** is optional. When present, each `### Test N:` block states one assertion. `config.md` → Testing Policy governs whether the task warrants tests.
 - **`## Execution`** is a **standard boilerplate block stamped verbatim by every `to-task` / `to-plan` run.** This is the mechanism that carries execution — there is no execution skill. The block text is the canonical text shown above (a blockquote, ~4 lines). It is agent-facing and English — do **not** translate it.
 
-### Canonical `## Execution` block — stamp this verbatim
+### Language split
 
-Every `to-task` / `to-plan` run stamps exactly this, unchanged, English regardless of config Language: stamp the `## Execution` blockquote shown in the format above, verbatim.
+Artifact prose (Description, Plan, Tests body) follows `config.md` → Language. Everything parser-stable stays English — the full inventory is enumerated once, in [§ Frontmatter](#frontmatter); do not restate it here.
 
-Artifact prose (Description, Plan, Tests body) follows `config.md` → Language. Structural labels (`## Description`, `## Plan`, `### Step N:`, `## Tests`, `### Test N:`, `## Execution`), header keys (`Roadmap:`, `Source item:`, `Spec:`), and the `## Execution` block text stay English — they are parser / contract strings.
+One consequence is worth spelling out at the point of use: inside the canonical `## Execution` blockquote, `<slug>`, `#N` and the `.task/…` paths are **literal boilerplate, not placeholders**. The header lines above the `---` already carry the real slug and item number. A producer that substitutes them into the block breaks the byte-identical stamp, and `validate.sh` checks only that `## Execution` is *present*, so the drift ships unflagged.
+
+### `to-plan` may target an existing file (promote / revise)
+
+`to-plan` is not create-only. When its resolved target already exists it edits in place, and which sections survive is load-bearing:
+
+- **promote** (file has no `## Plan`) — insert `## Plan` (and `## Tests`, if newly warranted) between `## Description`'s content and `## Execution`.
+- **revise** (file already has a `## Plan`) — replace the prior `## Plan` in place, same position; leave `## Tests` alone unless the current edit touched it.
+- **Both** preserve the header block, the `---` separator, `## Description` and `## Execution` verbatim. If a hand-written target carries no `## Execution` to anchor on, append the Plan at end of file and stamp the canonical block after it.
+
+Anyone changing the `task.md` section order or the `## Execution` stamp is changing promote's insert anchor — that is why it is recorded here and not only in the skill.
 
 ---
 
@@ -192,7 +202,7 @@ Section labels (`## N.`, `**Decision:**` / `**Rationale:**` / `**Constrains:**`)
 |----------|-------------|-------------|
 | *(none — chat only)* | `grill` — an in-chat decision ledger, never a file | the `to-*` capture skill the user runs next |
 | `.task/config/config.md` | intake skills' inline Step 0 setup | every skill **except `grill`** + every executing session — Language, Testing Policy, Commit Format, tool priority |
-| `.task/task/<slug>.md` | `to-task` (header + `## Description` + `## Execution`); `to-plan` (same + `## Plan`, optional `## Tests`) | **the executing session** (reads `## Description`, `## Plan` if present, follows `## Execution`, reads `Spec:` for anchors and `Roadmap:` + `Source item:` for auto-mark); `roadmap-to-workflow` per-item implement agent; **`task:code-reviewer`** (reads `Touches` as fix scope + `Spec:` as fixed anchors — read-only); `validate.sh` (read-only format check) |
+| `.task/task/<slug>.md` | `to-task` (header + `## Description` + `## Execution`); `to-plan` (same + `## Plan`, optional `## Tests`) — `to-plan` also **edits an existing file in place**, see § *promote / revise* above | **the executing session** (reads `## Description`, `## Plan` if present, follows `## Execution`, reads `Spec:` for anchors and `Roadmap:` + `Source item:` for auto-mark); `roadmap-to-workflow` per-item implement agent; **`task:code-reviewer`** (reads `Touches` as fix scope + `Spec:` as fixed anchors — read-only); `validate.sh` (read-only format check) |
 | `.task/roadmap/<slug>.md` | `to-roadmap` (initial); user-edited; `roadmap-to-workflow` **driver** flips `- [ ]` → `- [x]` after an item's agent returns OK | `roadmap-to-workflow` driver (loops unchecked items, reads `**Dependencies:**` + `**Model:**` + `Spec:`); `to-plan` / `to-task` (when picking up an item); `validate.sh` (read-only format check) |
 | `.task/spec/<slug>.md` | `to-spec` or user | **the executing session** (via a task's `Spec:` header) + `to-plan` (technical-decision anchor) + `roadmap-to-workflow` per-item plan agent; `validate.sh` (read-only format check) |
 
@@ -256,7 +266,7 @@ It is invoked identically from both execution paths, always given the task artif
 
 Contract:
 
-- **Find → verify → fix.** Candidates are collected from the diff, each proved or refuted independently, and only CONFIRMED defects are edited. An unproven candidate is dropped, never fixed — inside a roadmap autopilot an unverified "fix" becomes a commit nobody reviewed.
+- **Find → verify → fix.** Candidates are collected from the diff, each proved or refuted independently, and only CONFIRMED defects are edited. An unproven candidate is dropped, never fixed — inside a roadmap autopilot an unverified "fix" becomes a commit nobody reviewed. The **one** later entry into the fix phase is a Build and Tests failure traced to this diff: the failing run is its own proof, so it re-enters the fix phase rather than forcing a `FAIL` on a defect the reviewer can see and repair.
 - **Fix scope = `Touches` + regressions this diff introduced outside them.** `Touches` is authored before the code exists, so it is a scope hint, not an exact list; everything else confirmed goes to the report.
 - **Verification rides inside the review.** The agent runs `config.md` → Build and Tests end to end, fails the item on a red run, and reports an undeclared command as an explicit skip.
 - **Implement commits, the reviewer amends.** The implementation commits its own work; the reviewer stages its fixes and `git commit --amend`s, keeping the message per `config.md` → Commit Format. History stays one item = one commit. If the implementation was never committed, the reviewer leaves its fixes uncommitted rather than rewriting an unrelated commit.
@@ -306,6 +316,6 @@ Every skill carries `disable-model-invocation: true` and `user-invocable: true`.
 
 - **Per-item default is OPUS-PLANS / SONNET-IMPLEMENTS / REVIEWER-REVIEWS:** a first `agent()` runs `to-plan` for the item on `{ model: 'opus' }` (writes `.task/task/<item-slug>.md`); that plan agent suppresses `to-plan`'s `→ Next:` footer so its last non-empty line is the parser-stable `OK #N <item-slug> planned` the driver reads the slug from; a second `agent()` implements + commits on `{ model: item.model ?? 'sonnet' }`; a third spawns `task:code-reviewer` (`agentType`), which reviews that commit, fixes what it proves, runs Build and Tests, and amends. Context passes via the on-disk task file — no chat transfer.
 - **Dependency-ordered waves:** within a wave, plan agents run in `parallel()` (they write only their own task files) and then implement **and review** run **strictly one at a time** per item, inside the same serial loop — the shared working tree keeps exactly one writer, and item N never starts implementing while item N−1 is still under review. A barrier separates waves. A dependency **cycle** among scoped items (no wave can be formed) is a hard stop, reported for the user to break — never run an item before its dependency lands.
-- **Driver auto-marks:** after an item's review returns OK, the driver ticks that item's checkbox in the roadmap file (never the per-item agent — avoids parallel writes racing).
-- **Stop-on-FAIL;** parser-stable digest last line `OK|FAIL #N <slug> <summary>`.
+- **Driver auto-marks:** after an item's review returns OK, the driver ticks that item's checkbox in the roadmap file (never the per-item agent — avoids parallel writes racing). The flip **must verify it matched exactly one heading** and stop the wave otherwise: the anchor is narrow by design, so a drifted heading matches nothing, the rewrite silently copies the file over itself, and the run reports success while the next run redoes work already committed.
+- **Stop-on-FAIL;** parser-stable digest last line `OK|FAIL #N <slug> <summary>`. Digests are LLM output, so the driver **asserts the shape before consuming it** — in particular the plan stage's `OK #N <item-slug> planned`, whose slug is indexed out and becomes the next agent's file path. A drifted line is a hard stop, not an `undefined` path handed downstream.
 - **Graceful fallback:** if the Workflow tool is unavailable, run items one at a time via `to-plan` + a plain implement session, manually. Being a skill whose instructions invoke Workflow is itself the sanctioned opt-in.

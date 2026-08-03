@@ -24,12 +24,12 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
 
 **Every artifact path in this skill is under that resolved `$AI_DIR`, never the cwd** — `.task/roadmap/<slug>.md` below is shorthand for `$AI_DIR/roadmap/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves `$AI_DIR` itself) never sees.
 
-- **`config.md not found`** → `/task:to-roadmap` is intake-capable: run the inline setup gate exactly as `skills/to-task/SKILL.md` Step 0 does (detect stack → one `AskUserQuestion` confirmation, Accept / Edit / Decline chips → write `config.md` + `git config --local task.root` + exclude `.task`), then re-run `validate.sh all`. If config is now present → continue. If the user declined setup → report "`config.md` not written. → Next: run `/task:to-roadmap` again when ready" and **stop**.
+- **`config.md not found`** → `/task:to-roadmap` is intake-capable: run the inline setup gate exactly as `skills/to-task/SKILL.md` Step 0 does (detect stack → one `AskUserQuestion` confirmation, Accept / Edit / Decline chips → write `config.md` + `git config --local task.root` + exclude `.task`), then re-run `validate.sh all`. If config is now present → continue. If the user declined setup → report "`config.md` not written — nothing was created. If the detected language or testing policy looked wrong, re-run and pick **Edit** to change them before the write. → Next: `/task:to-roadmap`" and **stop**.
 - **Exit 1** (one or more *existing* artifacts fail validation) → surface the validator output, but **do not block**: those errors are pre-existing files, not the roadmap you're about to write (mirrors `to-task` Step 0 and `roadmap-to-workflow`, and `validate.sh` is advisory, never config-malformed — it doesn't inspect `config.md` content). Only a missing `config.md` (exit 2, handled above) hard-stops.
 
 ### Preconditions
 
-- **Too small for a roadmap.** If the initiative has no obvious phases, no inter-task dependencies, and fewer than ~3 atomic steps → **stop and suggest** `/task:to-task` or `/task:to-plan` instead, closing with the canonical footer: `→ Next: \`/task:to-plan\``.
+- **Too small for a roadmap.** If the initiative has no obvious phases, no inter-task dependencies, and fewer than ~3 atomic steps → **stop and suggest** `/task:to-task` or `/task:to-plan` instead. Say plainly that nothing was written (after several brainstorm rounds the user cannot otherwise tell whether a half-roadmap now exists), and carry **both** options in the footer with the reason: "This is one task, not an initiative — no phases, no cross-item dependencies. Nothing was written. `→ Next: \`/task:to-plan\` to capture it with a plan, or \`/task:to-task\` for the what-and-why only.`"
 
 (The slug-collision check runs at save time, once the slug is derived — see Step 4.)
 
@@ -111,7 +111,7 @@ Topics the user explicitly said to skip stay skipped — do not raise them again
 
 ### Step 3: Draft the file
 
-Once the decision list is confirmed, draft the full roadmap per [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd): title + intro, `## Prerequisites`, `## Phase summary` table, one `## Phase X` section per phase with `### - [ ] N. <title>` items (`**Dependencies:**` — emit an em dash `—` when the item has none, otherwise a comma-separated list of item numbers; `roadmap-to-workflow`'s wave sorter also tolerates `-` / `none` / `n/a` on hand-edited files, but reads any other word as a dependency on a missing item and hard-stops — optional `**Model:**`, `**Ready description:**` blockquote with `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria`), `## Out of scope`, `## Backlinks`. Item numbers `N` run continuously across the whole file — never restart the numbering per phase.
+Once you have **printed** the Step 2H inventory (or the Step 2C recap) — no user reply is required and none is awaited; a correction, if the user makes one, arrives as chat and you reprint before drafting — draft the full roadmap per [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd): title + intro, `## Prerequisites`, `## Phase summary` table, one `## Phase X` section per phase with `### - [ ] N. <title>` items (`**Dependencies:**` — emit an em dash `—` when the item has none, otherwise a comma-separated list of item numbers; `roadmap-to-workflow`'s wave sorter also tolerates `-` / `none` / `n/a` on hand-edited files, but reads any other word as a dependency on a missing item and hard-stops — optional `**Model:**`, `**Ready description:**` blockquote with `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria`), `## Out of scope`, `## Backlinks`. Item numbers `N` run continuously across the whole file — never restart the numbering per phase.
 
 **Route every confirmed decision to a home:**
 
@@ -170,9 +170,10 @@ Specs referenced: {slug, …}   (or "none"; plus any decision flagged for a `/ta
 validate: {OK — 0 errors, N warning(s) | the FAIL lines}
 ```
 
+- When the validate result is **not** clean (any WARN or FAIL), append `re-check after editing: bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" roadmap <slug>` — `validate` is not a slash command, so the invocation is worth spelling out. Omit it on a clean result.
 - Print the Step 5 findings summary (or "clean / minor only").
 - The file is already written — to change anything, just say so.
-- End with the canonical next-step footer: `→ Next: \`/task:roadmap-to-workflow\`` (loop the whole roadmap) or `\`/task:to-task <slug>#1\`` (pick up the first item by hand — same for any other item number). Flag-free.
+- End with the canonical next-step footer, naming the slug in **both** halves so either half is pasteable as-is (`roadmap-to-workflow` accepts a positional slug and skips its picker): `→ Next: \`/task:roadmap-to-workflow <slug>\` (run the whole roadmap) or \`/task:to-task <slug>#1\` (pick up the first item by hand — any item number works).` Flag-free.
 
 ## Forbidden
 
