@@ -67,8 +67,8 @@ features:
     <div class="tp-sp"></div>
     <div class="tp-comment"># 4. hand the file to any session — this one, or a fresh one tomorrow</div>
     <div class="tp-prompt">implement .task/task/http-retry-backoff.md</div>
-    <div class="tp-out">  → follows the file's ## Execution block — the steps that</div>
-    <div class="tp-out">    tell any session what to do next:</div>
+    <div class="tp-out">  → follows the file's ## Execution pointer into .task/CLAUDE.md —</div>
+    <div class="tp-out">    the steps that tell any session what to do next:</div>
     <div class="tp-out">    implement · commit · task:code-reviewer reviews, fixes, amends</div>
   </div>
 </div>
@@ -108,16 +108,7 @@ and last error, instead of surfacing as an unhandled failure.
 return a typed `RetriesExhausted` result the caller can branch on.
 
 ## Execution
-> If `Spec:` headers are present, read each `.task/spec/<slug>.md` first and honor its
-> decisions as fixed. `.task/` is pipeline-internal and invisible to the repo: never name
-> `.task/` paths, spec/roadmap/task slugs, or `§` numbers in code, comments, commits, or PR
-> text. Implement the Plan above (or the Description if none) with the tools in
-> `.task/config/config.md` → Code Navigation / Code Editing, then commit per
-> `.task/config/config.md` → Commit Format. Then spawn the `task:code-reviewer` agent on this
-> file: it proves each finding, fixes confirmed defects within **Touches** plus regressions
-> this diff introduced outside them, runs Build and Tests, and amends the commit; with no
-> `## Plan`, scope fixes to what you changed. If `Roadmap:` + `Source item:` are present,
-> tick item #N's checkbox in `.task/roadmap/<slug>.md` once the review returns OK.
+> Read `.task/CLAUDE.md` and follow its `## Executing a task` section.
 ```
 :::
 
@@ -128,7 +119,7 @@ return a typed `RetriesExhausted` result the caller can branch on.
 /plugin install task@task-pipeline
 ```
 
-That's the whole setup. The first capture in a new project writes `.task/config/config.md` for you — there's no separate setup step. See [Getting started](/guide/getting-started) for the first run end to end.
+That's the whole setup. The first capture in a new project writes `.task/CLAUDE.md` for you — there's no separate setup step. See [Getting started](/guide/getting-started) for the first run end to end.
 
 ## Small on purpose
 
@@ -138,6 +129,6 @@ task-pipeline is **not** an orchestration engine. No hooks, no execution loop of
 
 `task-pipeline` is for tasks longer than one session — work that needs a plan you can hand-edit, or that should leave a record. **A two-file, twenty-minute fix doesn't need this**; default Claude Code (plan mode + TodoWrite) is the better tool there.
 
-Reach for it when the plan deserves an argument and a record: real forks to interrogate, decisions a colleague — or tomorrow-you — will reread, work that spans several tasks. And when it should outlast a `/clear`. Descriptions are written in your language; only the format's fixed strings (section headers, commit trailers, the Execution block) stay English. The [comparison page](/guide/comparison) lays out where it fits against six references — default Claude Code, superpowers, Matt Pocock's skills, OpenSpec, spec-kit, and claude-task-master.
+Reach for it when the plan deserves an argument and a record: real forks to interrogate, decisions a colleague — or tomorrow-you — will reread, work that spans several tasks. And when it should outlast a `/clear`. Descriptions are written in your language; only the format's fixed strings (section headers, commit trailers, the Execution pointer) stay English. The [comparison page](/guide/comparison) lays out where it fits against six references — default Claude Code, superpowers, Matt Pocock's skills, OpenSpec, spec-kit, and claude-task-master.
 
 If this is the shape of tool you've wanted, [star it on GitHub](https://github.com/SpaiR/task-pipeline) — it's how you'll find it again.

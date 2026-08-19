@@ -10,7 +10,7 @@ One exception, and it's opt-in: [`roadmap-to-workflow`](/guide/autopilot) (autop
 
 ## Commits stage only task-related files, and never push
 
-The executing session stages only the files it touched and commits per your `config.md` → Commit Format. The review pass that follows amends **that** commit — keeping its message and its trailers — rather than stacking a "review fixes" commit on top, so one task stays one commit. It touches no other commit: no rebase, no reset, and it does **not** push. Nothing leaves your machine unless you push it yourself.
+The executing session stages only the files it touched and commits per your `.task/CLAUDE.md` → Commit Format. The review pass that follows amends **that** commit — keeping its message and its trailers — rather than stacking a "review fixes" commit on top, so one task stays one commit. It touches no other commit: no rebase, no reset, and it does **not** push. Nothing leaves your machine unless you push it yourself.
 
 ## No hidden orchestration
 

@@ -25,7 +25,7 @@ Both produce one file per task, and both stamp the same `## Execution` block. De
 #     `implement .task/task/http-retry-backoff.md`
 
 implement .task/task/http-retry-backoff.md
-# → follows the ## Execution block:
+# → follows the ## Execution pointer into .task/CLAUDE.md:
 #   implement per the Plan → commit → task:code-reviewer reviews, fixes, amends
 ```
 
@@ -53,7 +53,7 @@ Start light with `to-task`, then deepen later. Running `to-plan` on a file that 
 
 ## Tests
 
-Whether a task gets a `## Tests` section is governed by `config.md` → Testing Policy:
+Whether a task gets a `## Tests` section is governed by `.task/CLAUDE.md` → Testing Policy:
 
 - `always` — every `to-plan` capture includes Tests.
 - `on-demand` (default) — Tests are written only if the discussion explicitly asks ("with tests", "cover with tests").

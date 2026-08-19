@@ -14,36 +14,89 @@ Distil the chat discussion so far (or a roadmap item) into `.task/task/<slug>.md
 
 ## Step 0: Setup gate
 
-Resolve the pipeline root, then check whether its `config/config.md` exists:
+Resolve the pipeline root, then check whether its `CLAUDE.md` exists:
 
 ```bash
 source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # sourcing runs find_ai_dir → sets AI_DIR
-[[ -f "$AI_DIR/config/config.md" ]] || echo "config.md not found"
+[[ -f "$AI_DIR/CLAUDE.md" ]] || echo "CLAUDE.md not found"
 ```
 
-The helper walks `task.root` git config → ancestor `config.md` → `dirname(git-common-dir)/.task` → `$CLAUDE_PROJECT_DIR/.task` when that path already holds a `config/config.md` → `./.task`. Use `${CLAUDE_PLUGIN_ROOT}` — a bare `skills/…` path resolves against the user's project cwd, where it does not exist.
+The helper walks `task.root` git config → ancestor `.task/CLAUDE.md` → `dirname(git-common-dir)/.task` → `$CLAUDE_PROJECT_DIR/.task` when that path already holds a `CLAUDE.md` → `./.task`. Use `${CLAUDE_PLUGIN_ROOT}` — a bare `skills/…` path resolves against the user's project cwd, where it does not exist.
 
-**Once `config.md` exists, every artifact path in this skill is under that resolved `$AI_DIR`, never the cwd** — `.task/task/<slug>.md` below is shorthand for `$AI_DIR/task/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves `$AI_DIR` itself) never sees. The inline setup below is the one exception: it runs *before* a root exists, writes to `<ROOT>/.task`, and records `git config task.root "$ROOT"` — which is exactly what `$AI_DIR` resolves to on every later run.
+**Once `.task/CLAUDE.md` exists, every artifact path in this skill is under that resolved `$AI_DIR`, never the cwd** — `.task/task/<slug>.md` below is shorthand for `$AI_DIR/task/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves `$AI_DIR` itself) never sees. The inline setup below is the one exception: it runs *before* a root exists, writes to `<ROOT>/.task`, and records `git config task.root "$ROOT"` — which is exactly what `$AI_DIR` resolves to on every later run.
 
-- **Absent → inline setup.** Run it inline, do not defer to another command:
-  1. Determine the pipeline root `ROOT` (main worktree root; `pwd` for a non-git dir; for a bare repo the default is a best-effort guess — surface it in the proposal below so the user can redirect it).
+- **Absent → inline setup.** Run it inline, do not defer to another command. **No confirmation chip:** write the file, then report what it says. Detection that came out wrong is fixed by editing the file, not by re-running setup — same grammar as every capture (convention (b)).
+  1. Determine the pipeline root `ROOT` (main worktree root; `pwd` for a non-git dir; for a bare repo the default is a best-effort guess — name it in the Step 0 report so the user can move it).
   2. Analyze the project: read `CLAUDE.md` if present, detect language/stack, build/test commands, a project commit-format doc (check in order `CONTRIBUTING.md`, `docs/CONTRIBUTING.md`, `.github/CONTRIBUTING.md`), detected language policy (repo's dominant natural language from `git log -10 --oneline` + `CLAUDE.md`/`README.md` prose — default to "follow `task.md` Description" for English/mixed repos), and detected testing-policy mode (`always` if a TDD convention is documented, `on-demand` otherwise — never silently detect `never`).
-  3. Print the detected config as message text, then pose ONE `AskUserQuestion` confirmation in the same reply — the chips don't display it, so the call is gated on that line being printed above it. (This is the config-setup carve-out named in convention (b): it confirms *auto-detected* environment that was never discussed, so unlike a content capture it does ask before writing.):
-     ```
-     Detected — Language: <policy>; Testing policy: <mode>.
-     ```
-     Bare repo: add a third clause, `.task location: <ROOT>/.task`, editable the same way.
-     Chips **Accept** / **Edit** / **Decline**:
-     - **Accept** → adopt as-is.
-     - **Edit** → follow-up asks which field(s) to amend (language policy / testing-policy mode / bare-repo `.task` location), same option menus as the language/testing-policy questions below, then continue.
-     - **Decline** → do not write anything; report "`config.md` not written — nothing was created. If the detected language or testing policy looked wrong, re-run and pick **Edit** to change them before the write. → Next: `/task:to-task`" and **stop**.
-  4. Write `.task/config/config.md` using the standard template — sections: Code Navigation, Code Editing, Library Documentation, Project Conventions, Build and Tests, Commit Format, Language, Testing Policy, Directories — Do Not Search. Reference mode (a short `**Source:** \`CLAUDE.md\` → \`## <Heading>\`` pointer, ≤3 summary lines) when `CLAUDE.md` already documents a section; full mode otherwise. Commit Format: reference mode with just `**Source:** <path>` when a commit-format doc was found; otherwise derive rules from `git log`, and when `git log` yields no usable convention fall back to `**Source:** ${CLAUDE_PLUGIN_ROOT}/skills/_lib/templates/conventional-commits.md`.
-  5. Record `git config --local task.root "$ROOT"` (repo-common; shared by every worktree). Skip with a warning if not a git repo — the ancestor-`config.md` walk resolves `.task/` without the anchor.
-  6. Exclude `.task` locally: `EXCLUDE=$(git rev-parse --git-path info/exclude); mkdir -p "$(dirname "$EXCLUDE")"; touch "$EXCLUDE"; grep -qxF '.task' "$EXCLUDE" || echo '.task' >> "$EXCLUDE"`. Skip with a warning if not a git repo.
-  7. Report what was written, then continue to Step 0's validate call below with the original `$ARGUMENTS` unchanged.
-- **Present → skip silently**, proceed to validate.
+  3. Write `$AI_DIR/CLAUDE.md` (creating `$AI_DIR/` if needed) using the template below. It is a nested `CLAUDE.md`: the platform loads it into any session that reads a file under `.task/`, which is how the executing session and `task:code-reviewer` get these settings without being told to.
 
-Then run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all` — an optional self-check, not a gate: report any WARN/ERROR lines, but only hard-stop when `.task/config/config.md` is genuinely absent (Step 0 just handled that). Never block on a pre-existing artifact failing validation.
+     ```markdown
+     # task-pipeline
+
+     Rules for capturing and implementing the `.task/` artifacts. Project-wide conventions
+     stay in the repository's own `CLAUDE.md`.
+
+     ## Language
+     {language policy — how artifact prose is written. Parser-stable strings (section
+      headers, `Roadmap:` / `Source item:` / `Spec:` header keys, the `## Execution`
+      pointer, commit trailers) stay English regardless.}
+
+     ## Testing Policy
+     {always | on-demand | never} — {one line on what it means here. Under `on-demand`,
+      `to-plan` writes `## Tests` only when the Description asks for tests.}
+
+     ## Build and Tests
+     {the command(s) `task:code-reviewer` runs end to end before amending the commit,
+      or the literal line `None declared.` — the reviewer then reports the skip in words}
+
+     ## Commit Format
+     {`**Source:** <path>` when the project documents its own convention; otherwise the
+      rules derived from `git log`; otherwise `**Source:** ${CLAUDE_PLUGIN_ROOT}/skills/_lib/templates/conventional-commits.md`}
+
+     ## Code Navigation
+     {tool priority for reading code — MCP tools first when the project has them, else built-ins}
+
+     ## Code Editing
+     {tool priority for editing code}
+
+     ## Executing a task
+
+     Follow this when you are asked to implement a `.task/task/<slug>.md`:
+
+     1. If the file carries `Spec:` headers, read each `.task/spec/<slug>.md` first and
+        honor its decisions as fixed.
+     2. `.task/` is pipeline-internal and invisible to the repo: never name `.task/`
+        paths, spec/roadmap/task slugs, or `§` numbers in code, comments, commits or PR text.
+     3. Implement the `## Plan` (or the `## Description` when there is none) with the tools
+        this file declares under Code Navigation / Code Editing, if any, then commit per
+        Commit Format above.
+     4. Spawn the `task:code-reviewer` agent on that task file: it proves each finding, fixes
+        confirmed defects within **Touches** plus regressions this diff introduced outside
+        them, runs Build and Tests, and amends the commit. With no `## Plan`, scope fixes to
+        what you changed.
+     5. If the file carries `Roadmap:` + `Source item: #N`, tick item #N's checkbox in
+        `.task/roadmap/<slug>.md` once the review returns OK.
+     ```
+
+     Substitute every `{…}` with a real value — except `${CLAUDE_PLUGIN_ROOT}` inside the Commit Format option, which is not a placeholder but a shell variable: `echo` it first and write the resolved absolute path, never the literal `${CLAUDE_PLUGIN_ROOT}` (nothing expands it inside a user's `.task/CLAUDE.md`). Keep the section headings and the `## Executing a task` steps as they stand — `.task/task/<slug>.md` points at that heading by name, and the reviewer and `to-plan` look their settings up by heading.
+
+     **`## Language`, `## Testing Policy`, `## Build and Tests`, `## Commit Format` and `## Executing a task` are always written**, even when the repository's own `CLAUDE.md` covers the same ground — downstream an absent section reads as *nothing declared*, not as *look it up elsewhere* (`agents/code-reviewer.md` phase 5 turns a missing **Build and Tests** into a skipped verification run). When the project already documents one, keep the section and make its body a one-line pointer — `**Source:** \`CLAUDE.md\` → \`## <Heading>\`` — instead of restating the content. Only `## Code Navigation` / `## Code Editing` may be dropped outright, when the project offers nothing beyond the built-in tools.
+  4. Record `git config --local task.root "$ROOT"` (repo-common; shared by every worktree). Skip with a warning if not a git repo — the ancestor-`CLAUDE.md` walk resolves `.task/` without the anchor.
+  5. Exclude `.task` locally: `EXCLUDE=$(git rev-parse --git-path info/exclude); mkdir -p "$(dirname "$EXCLUDE")"; touch "$EXCLUDE"; grep -qxF '.task' "$EXCLUDE" || echo '.task' >> "$EXCLUDE"`. Skip with a warning if not a git repo.
+  6. Report as message text: the path written, each section with its value on one line, and the closing sentence that the file is the user's to edit. Then continue to Step 0's validate call below with the original `$ARGUMENTS` unchanged.
+
+     ```
+     Wrote `.task/CLAUDE.md`
+     Language: {policy}
+     Testing Policy: {mode}
+     Build and Tests: {command | None declared}
+     Commit Format: {source or "derived from git log"}
+     Loaded automatically whenever a session reads a file under `.task/`.
+     To change any of it, edit the file — setup never rewrites it.
+     ```
+- **Present → leave it alone.** The file is user-owned: never rewrite it, never re-detect its values, never "repair" a section you find missing. Only the two markers are restored silently when absent: `git config --local task.root` and the `.task` line in `.git/info/exclude`. To regenerate the file from scratch, the user deletes it and re-runs any capture.
+
+Then run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all` — an optional self-check, not a gate: report any WARN/ERROR lines, but only hard-stop when `.task/CLAUDE.md` is genuinely absent (Step 0 just handled that). Never block on a pre-existing artifact failing validation.
 
 ## Step 1: Entry
 
@@ -73,20 +126,11 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
    {Why: paraphrase of ### Context. What: paraphrase of ### Goal / ### Outcomes / ### Invariants / ### Acceptance criteria.}
 
    ## Execution
-   > If `Spec:` headers are present, read each `.task/spec/<slug>.md` first and honor its
-   > decisions as fixed. `.task/` is pipeline-internal and invisible to the repo: never name
-   > `.task/` paths, spec/roadmap/task slugs, or `§` numbers in code, comments, commits, or PR
-   > text. Implement the Plan above (or the Description if none) with the tools in
-   > `.task/config/config.md` → Code Navigation / Code Editing, then commit per
-   > `.task/config/config.md` → Commit Format. Then spawn the `task:code-reviewer` agent on this
-   > file: it proves each finding, fixes confirmed defects within **Touches** plus regressions
-   > this diff introduced outside them, runs Build and Tests, and amends the commit; with no
-   > `## Plan`, scope fixes to what you changed. If `Roadmap:` + `Source item:` are present,
-   > tick item #N's checkbox in `.task/roadmap/<slug>.md` once the review returns OK.
+   > Read `.task/CLAUDE.md` and follow its `## Executing a task` section.
    ```
 
-   **Two notations in one template — do not mix them up.** `{braces}` in the header lines are placeholders you substitute (`{Item title}`, `{slug}`, `{N}`). The `## Execution` blockquote is **stamped verbatim**: its `<slug>`, `#N` and `.task/…` strings stay literal, exactly as written. Do **not** helpfully substitute this roadmap's slug or item number into it — the header lines above already carry them, the block is agent-facing boilerplate that must stay byte-identical across every artifact, and `validate.sh` checks only that `## Execution` is *present*, so a paraphrased block ships unflagged.
-6. Validate the written file: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" task <item-slug>` — surface any WARN/ERROR in Step 3's digest; only a config-precondition failure (exit 2) hard-stops.
+   `{braces}` in the header lines are placeholders you substitute (`{Item title}`, `{slug}`, `{N}`). The `## Execution` pointer is **stamped verbatim** — one line, byte-identical in every artifact, English, never translated and never expanded back into instructions. The instructions themselves live in `.task/CLAUDE.md` → `## Executing a task`, in one copy, so editing them there reaches tasks that were written earlier. The pointer still has to be in the file: the platform loads `.task/CLAUDE.md` only for file-read tools, so a session that opens the artifact with `cat` would otherwise see no instructions at all.
+6. Validate the written file: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" task <item-slug>` — surface any WARN/ERROR in Step 3's digest; only a setup-precondition failure (exit 2) hard-stops.
 7. Continue to Step 3 (digest + footer), using `<item-slug>` as `<slug>` there.
 
 ### Step 2: Chat-draft mode
@@ -96,11 +140,12 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
    **Slug collision.** If `.task/task/<slug>.md` already exists, surface it before writing. First **read the existing file's headings** and state them as message text above the chip, so the user knows what an overwrite costs — e.g. "Existing `.task/task/<slug>.md` has: Description, Plan (4 steps), Tests (2)." Then pose an `AskUserQuestion`:
    - **The existing file has a `## Plan`** → an overwrite would destroy it, and `.task/` is git-excluded, so there is nothing to restore from. Recommend deepening instead: chips **Deepen it — `/task:to-plan`** *(Recommended)* / **Pick a different slug** / **Overwrite (loses the Plan)** / **Decline → stop without writing**.
    - **Description only** → the cheap case: chips **Accept overwrite** / **Edit → propose a different slug** / **Decline → stop without writing**.
-2. **Distil the chat.** Read back over the discussion in this conversation (not the codebase) and write:
-   - `## Description` — the why + what, in the user's own framing, written per `config.md` → Language (the section labels themselves stay English). Use `### Problem` / `### Outcome` / `### Scope` / `### Constraints` sub-headers where the discussion gives signal for them; omit a sub-header rather than inventing content. Do not fabricate anything not actually discussed.
+2. **Read `.task/CLAUDE.md`** for Language before drafting. Step 0's gate only *tests* for the file with Bash, which does not pull it into context — the platform's auto-load fires for file-read tools only, and on this path nothing else under `.task/` is opened.
+3. **Distil the chat.** Read back over the discussion in this conversation (not the codebase) and write:
+   - `## Description` — the why + what, in the user's own framing, written per `.task/CLAUDE.md` → Language (the section labels themselves stay English). Use `### Problem` / `### Outcome` / `### Scope` / `### Constraints` sub-headers where the discussion gives signal for them; omit a sub-header rather than inventing content. Do not fabricate anything not actually discussed.
    - **No `## Plan` and no `## Tests`** — both are `to-plan`'s job; run `to-plan` later to add them (Tests when Testing Policy warrants).
    - **Specs (optional).** If `.task/spec/` holds a spec the discussion clearly relies on, add a `Spec: <slug>` header line for each (ASCII, above `---`) so the executing session reads it as a fixed anchor. Only reference specs actually relevant — never invent one, and never write the spec file here (that is `to-spec`'s job).
-3. **Write `$AI_DIR/task/<slug>.md` directly** (creating `$AI_DIR/task/` if needed) — no in-chat draft, no confirmation prompt. The chat discussion was the review; the written file is the deliverable, and the Step 3 digest lets the user judge whether to open it. (The Step 2.1 slug-collision guard still runs before this write.) No `Roadmap:` / `Source item:` lines in this mode; include a `Spec:` line per relevant spec, or none:
+4. **Write `$AI_DIR/task/<slug>.md` directly** (creating `$AI_DIR/task/` if needed) — no in-chat draft, no confirmation prompt. The chat discussion was the review; the written file is the deliverable, and the Step 3 digest lets the user judge whether to open it. (The Step 2.1 slug-collision guard still runs before this write.) No `Roadmap:` / `Source item:` lines in this mode; include a `Spec:` line per relevant spec, or none:
 
    ```markdown
    # {Short task title}
@@ -111,10 +156,11 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
    {drafted body}
 
    ## Execution
-   {the canonical `## Execution` block, stamped verbatim — byte-for-byte identical
-    to the blockquote in Step 1a's template above; do not paraphrase it}
+   > Read `.task/CLAUDE.md` and follow its `## Executing a task` section.
    ```
-4. Validate the written file: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" task <slug>` — surface any WARN/ERROR in Step 3's digest.
+
+   The `## Execution` line is the same pointer as Step 1a's template — stamped byte-identical, never paraphrased.
+5. Validate the written file: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" task <slug>` — surface any WARN/ERROR in Step 3's digest.
 
 ## Step 3: Output — digest
 

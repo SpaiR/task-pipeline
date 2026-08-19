@@ -11,7 +11,7 @@ We'll add a `--quiet` flag to a CLI — small, real, one file of code.
 /plugin install task@task-pipeline
 ```
 
-That's the whole setup — nothing to configure by hand: the first capture writes `.task/config/config.md` for you.
+That's the whole setup — nothing to configure by hand: the first capture writes `.task/CLAUDE.md` for you.
 
 ## 2. Talk it through (1 minute)
 
@@ -36,7 +36,7 @@ When a plan has real forks — this flag's default, that error's fallback — ru
 /task:to-plan
 ```
 
-On a fresh project this detects your language and test policy, shows one confirmation chip, writes `config.md`, then drafts the task file and prints a short digest of what it captured. You don't pre-approve a draft — the chat was the review; the file is already written when the digest appears.
+On a fresh project this detects your language and test policy, writes `.task/CLAUDE.md`, reports what it wrote, then drafts the task file and prints a short digest of what it captured. You don't pre-approve a draft — the chat was the review; the file is already written when the digest appears.
 
 ## 4. The file that lands
 
@@ -66,19 +66,10 @@ logger as a min-level: quiet raises the floor to `error`, so info/debug are
 dropped but `error` still writes to stderr.
 
 ## Execution
-> If `Spec:` headers are present, read each `.task/spec/<slug>.md` first and honor its
-> decisions as fixed. `.task/` is pipeline-internal and invisible to the repo: never name
-> `.task/` paths, spec/roadmap/task slugs, or `§` numbers in code, comments, commits, or PR
-> text. Implement the Plan above (or the Description if none) with the tools in
-> `.task/config/config.md` → Code Navigation / Code Editing, then commit per
-> `.task/config/config.md` → Commit Format. Then spawn the `task:code-reviewer` agent on this
-> file: it proves each finding, fixes confirmed defects within **Touches** plus regressions
-> this diff introduced outside them, runs Build and Tests, and amends the commit; with no
-> `## Plan`, scope fixes to what you changed. If `Roadmap:` + `Source item:` are present,
-> tick item #N's checkbox in `.task/roadmap/<slug>.md` once the review returns OK.
+> Read `.task/CLAUDE.md` and follow its `## Executing a task` section.
 ```
 
-The `## Execution` block is stamped verbatim on every task — it's the standing instruction any session follows, so you never re-explain the process.
+That one-line `## Execution` pointer is stamped on every task. The instructions themselves live in `.task/CLAUDE.md`, in a single copy — so you never re-explain the process, and editing them there changes how *every* task is executed, including ones you captured earlier.
 
 ## 5. Implement it
 

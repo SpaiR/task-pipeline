@@ -2,7 +2,7 @@
 
 Single source of truth for how the chat-first task pipeline stores state and how skills hand work to each other. Maintainer-facing.
 
-task-pipeline is **not** an orchestration engine — it is a **context-serialization protocol**. The user discusses a task freely in chat, then runs **one short skill** that distils the discussion into a fixed-format Markdown artifact under `.task/`. A fresh or isolated Claude Code session then **executes that artifact directly** — there is no execution skill. Orchestration and commits stay delegated to the platform (dynamic Workflows, `config.md` → Commit Format); **review is owned by the plugin**, as the `task:code-reviewer` agent (`agents/code-reviewer.md`), which also carries verification via `config.md` → Build and Tests.
+task-pipeline is **not** an orchestration engine — it is a **context-serialization protocol**. The user discusses a task freely in chat, then runs **one short skill** that distils the discussion into a fixed-format Markdown artifact under `.task/`. A fresh or isolated Claude Code session then **executes that artifact directly** — there is no execution skill. Orchestration and commits stay delegated to the platform (dynamic Workflows, `.task/CLAUDE.md` → Commit Format); **review is owned by the plugin**, as the `task:code-reviewer` agent (`agents/code-reviewer.md`), which also carries verification via `.task/CLAUDE.md` → Build and Tests.
 
 Enforcement is traded for **convention** (this is a solo tool): there is **no hook gate**, and `validate.sh` is an optional self-check, never a blocking gate. Depth of capture is the **skill name**, never a flag.
 
@@ -24,7 +24,7 @@ implement session   roadmap-to-workflow   ← the launcher fans items out to ses
 - `to-spec` — capture load-bearing technical decisions → `.task/spec/<slug>.md`; referenced by tasks/roadmaps via `Spec:` headers, and read by the executing session as a fixed anchor.
 - `roadmap-to-workflow` — the one launcher. Authors + invokes a dynamic Workflow that runs the roadmap's unchecked items.
 
-**Execution is not a skill.** An ordinary session told `implement .task/task/<slug>.md` reads the artifact and follows its `## Execution` block (implement → commit → `task:code-reviewer` reviews, fixes and amends). There is **no execution skill** — the behavior is the stamped `## Execution` boilerplate plus the one agent the plugin ships.
+**Execution is not a skill.** An ordinary session told `implement .task/task/<slug>.md` reads the artifact, whose `## Execution` pointer sends it to `.task/CLAUDE.md` → `## Executing a task` (implement → commit → `task:code-reviewer` reviews, fixes and amends). There is **no execution skill** — the behavior is that one section plus the one agent the plugin ships.
 
 There are **no user-facing flags** anywhere — footers, descriptions, and examples are flag-free.
 
@@ -36,7 +36,7 @@ There are **no user-facing flags** anywhere — footers, descriptions, and examp
 
 | Path | Role |
 |------|------|
-| `.task/config/config.md` | Project settings — Language, Testing Policy, Commit Format, tool priority. Written by the intake skills' inline Step 0 setup. |
+| `.task/CLAUDE.md` | Project settings — Language, Testing Policy, Build and Tests, Commit Format, tool priority — plus `## Executing a task`, the one copy of the execution instructions. A **nested `CLAUDE.md`**: the platform loads it into any session that reads a file under `.task/`. Written once by the intake skills' inline Step 0 setup, then **user-owned** — setup never rewrites an existing one. |
 | `.task/task/<slug>.md` | **One file per task.** `<slug>` is both the filename and the identity. Written by `to-task` / `to-plan`. |
 | `.task/roadmap/<slug>.md` | One file per multi-task initiative. Item backlog with checkboxes. |
 | `.task/spec/<slug>.md` | **One file per spec.** Standalone load-bearing technical decisions, topic-derived slug. Written by `to-spec`. Cited by task/roadmap `Spec:` headers. |
@@ -53,14 +53,47 @@ There are **no user-facing flags** anywhere — footers, descriptions, and examp
 
 The resolver is a **pure `.task/`-root finder**. It exports **`AI_DIR`** = the discovered `.task` directory, first hit wins:
 
-1. `git config --local task.root` — the anchor recorded by the inline Step 0 setup, **claimed only on evidence**: accepted when `<root>/.task/config/config.md` exists, ignored otherwise. The anchor is an absolute path living in `.git/config`, which travels with the repo when it is moved or copied; a stale one would resolve to an `AI_DIR` with no config, the gate would call the project unconfigured, and intake setup would regenerate `config.md` over the real one that moved with the repo. A stale anchor therefore falls through to step 2. Repo-common, so **every worktree resolves the same `.task/` with zero setup** — no symlink, no join step. This is what lets user-created parallel worktrees of a repo share one `.task/`.
-2. Upward walk from `$PWD` for a `.task/config/config.md` ancestor — pre-anchor fallback.
+1. `git config --local task.root` — the anchor recorded by the inline Step 0 setup, **claimed only on evidence**: accepted when `<root>/.task/CLAUDE.md` exists, ignored otherwise. The anchor is an absolute path living in `.git/config`, which travels with the repo when it is moved or copied; a stale one would resolve to an `AI_DIR` with no `CLAUDE.md`, the gate would call the project unconfigured, and intake setup would write a fresh `.task/CLAUDE.md` while the real one moved with the repo. A stale anchor therefore falls through to step 2. Repo-common, so **every worktree resolves the same `.task/` with zero setup** — no symlink, no join step. This is what lets user-created parallel worktrees of a repo share one `.task/`.
+2. Upward walk from `$PWD` for a `.task/CLAUDE.md` ancestor — pre-anchor fallback.
 3. `dirname(git-common-dir)/.task` — main-worktree root / sibling worktrees / bare repos.
-4. `$CLAUDE_PROJECT_DIR/.task` when that path already holds a `config/config.md` (evidence, not merely the variable being set), else the relative `./.task` — so a call from outside a project still fails cleanly on the config gate.
+4. `$CLAUDE_PROJECT_DIR/.task` when that path already holds a `CLAUDE.md` (evidence, not merely the variable being set), else the relative `./.task` — so a call from outside a project still fails cleanly on the setup gate.
 
 **Producers write under the resolved `$AI_DIR`, never a cwd-relative `.task/`.** Each capture skill resolves it in its Step 0, and `validate.sh` resolves it independently in its own subprocess — so a cwd-relative write from a subdirectory or a linked worktree splits the root: the artifact lands in a second `.task/` the validator never looks at. `.task/<kind>/<slug>.md` in this document and in the skills is shorthand for `$AI_DIR/<kind>/<slug>.md`.
 
 ---
+
+## `.task/CLAUDE.md` format
+
+A **nested `CLAUDE.md`**, not a bespoke config format. The platform loads it into any session that reads a file under `.task/` — which is exactly the executing session, `task:code-reviewer`, and every capture skill. Two properties follow from that and are load-bearing:
+
+- **The auto-load fires only for file-read tools.** A session that opens an artifact with `cat` or `sed` never triggers it. That is why `task.md` still carries an explicit `## Execution` pointer, and why the reviewer reads the file explicitly in its phase 1.
+- **It is not re-injected after `/compact`** (a project-root `CLAUDE.md` is; a nested one is not). It reloads on the next read of a file under `.task/`.
+
+```markdown
+# task-pipeline
+
+Rules for capturing and implementing the `.task/` artifacts. Project-wide conventions
+stay in the repository's own `CLAUDE.md`.
+
+## Language
+## Testing Policy          (always | on-demand | never)
+## Build and Tests         (the command(s) `task:code-reviewer` runs, or `None declared.`)
+## Commit Format
+## Code Navigation         (optional — omit when the built-in tools are all there is)
+## Code Editing            (optional)
+
+## Executing a task
+{the numbered instructions the executing session follows: read `Spec:` anchors → keep `.task/`
+ out of code and commits → implement the Plan (or Description) → commit per Commit Format →
+ spawn `task:code-reviewer` → tick the roadmap checkbox when `Roadmap:` + `Source item:` are present}
+```
+
+Rules:
+
+- **Written once, then user-owned.** Intake setup writes it on first use, with no confirmation chip, and reports what it wrote. It is **never rewritten** afterwards — an existing file is left untouched even when a section is missing or a detected value went stale. To regenerate, the user deletes the file and re-runs any capture. Only the two markers (`git config task.root`, the `.git/info/exclude` line) are repaired silently.
+- **`## Language`, `## Testing Policy`, `## Build and Tests`, `## Commit Format` and `## Executing a task` are always present.** Consumers look them up by heading, and read an absent one as *nothing declared* rather than *look elsewhere* — a missing **Build and Tests** turns every review into a skipped verification run. When the project's own `CLAUDE.md` already documents one, the section stays and its body shrinks to a `**Source:** \`CLAUDE.md\` → \`## <Heading>\`` pointer. Only `## Code Navigation` / `## Code Editing` may be omitted outright.
+- **`## Executing a task` is the single copy of the execution instructions.** Editing it reaches artifacts written earlier — the pre-`.task/CLAUDE.md` design stamped the same text into every task file, where an edit reached nothing.
+- Section headings are parser-stable English; the prose inside follows `## Language`. `.task/CLAUDE.md` is git-excluded along with the rest of `.task/`.
 
 ## `task.md` format (`.task/task/<slug>.md`)
 
@@ -83,39 +116,30 @@ Why + what, distilled from the chat.
 
 ### Step 2: ...
 
-## Tests                 (optional; present iff config Testing Policy warrants it)
+## Tests                 (optional; present iff Testing Policy warrants it)
 ### Test 1: <what is asserted>
 ### Test 2: ...
 
 ## Execution
-> If `Spec:` headers are present, read each `.task/spec/<slug>.md` first and honor its
-> decisions as fixed. `.task/` is pipeline-internal and invisible to the repo: never name
-> `.task/` paths, spec/roadmap/task slugs, or `§` numbers in code, comments, commits, or PR
-> text. Implement the Plan above (or the Description if none) with the tools in
-> `.task/config/config.md` → Code Navigation / Code Editing, then commit per
-> `.task/config/config.md` → Commit Format. Then spawn the `task:code-reviewer` agent on this
-> file: it proves each finding, fixes confirmed defects within **Touches** plus regressions
-> this diff introduced outside them, runs Build and Tests, and amends the commit; with no
-> `## Plan`, scope fixes to what you changed. If `Roadmap:` + `Source item:` are present,
-> tick item #N's checkbox in `.task/roadmap/<slug>.md` once the review returns OK.
+> Read `.task/CLAUDE.md` and follow its `## Executing a task` section.
 ```
 
 Rules:
 
 - **Line 1** is `# <Title>` — a plain title, no bracketed task-id.
 - **`Roadmap:` / `Source item:`** are optional header lines above the `---` separator. They are load-bearing for the executing session's auto-mark step (see below). Keep them **ASCII and above `---`**.
-- **`Spec:`** is an optional, **repeatable** header line above `---`. Each `Spec: <slug>` names a `.task/spec/<slug>.md` the executing session reads as a fixed technical anchor before implementing (see the `## Execution` block). Load-bearing; keep it **ASCII and above `---`**. One task may carry several.
+- **`Spec:`** is an optional, **repeatable** header line above `---`. Each `Spec: <slug>` names a `.task/spec/<slug>.md` the executing session reads as a fixed technical anchor before implementing (see `## Executing a task`). Load-bearing; keep it **ASCII and above `---`**. One task may carry several.
 - **`---`** on its own line separates the header block from the body.
 - **`## Description`** is mandatory. It carries the "why + what" from the chat.
 - **`## Plan`** is optional (written only by `to-plan`). When present it uses the three-layer step contract — **Goal / Touches / Logic**. `Goal` is the observable target; `Touches` lists the files (and scopes review fixes); `Logic` is optional guidance. Each step is a `### Step N:` block.
-- **`## Tests`** is optional. When present, each `### Test N:` block states one assertion. `config.md` → Testing Policy governs whether the task warrants tests.
-- **`## Execution`** is a **standard boilerplate block stamped verbatim by every `to-task` / `to-plan` run.** This is the mechanism that carries execution — there is no execution skill. The block text is the canonical text shown above (a blockquote, ~4 lines). It is agent-facing and English — do **not** translate it.
+- **`## Tests`** is optional. When present, each `### Test N:` block states one assertion. `.task/CLAUDE.md` → Testing Policy governs whether the task warrants tests.
+- **`## Execution`** is a **one-line pointer stamped verbatim by every `to-task` / `to-plan` run** — the exact blockquote shown above, agent-facing English, never translated and never expanded back into instructions. The instructions themselves live once in `.task/CLAUDE.md` → `## Executing a task`, so editing them there reaches artifacts written earlier. The pointer is still load-bearing: the platform auto-loads `.task/CLAUDE.md` only for file-read tools, so a session that opens the artifact with `cat` would see no instructions without it.
 
 ### Language split
 
-Artifact prose (Description, Plan, Tests body) follows `config.md` → Language. Everything parser-stable stays English — the full inventory is enumerated once, in [§ Frontmatter](#frontmatter); do not restate it here.
+Artifact prose (Description, Plan, Tests body) follows `.task/CLAUDE.md` → Language. Everything parser-stable stays English — the full inventory is enumerated once, in [§ Frontmatter](#frontmatter); do not restate it here.
 
-One consequence is worth spelling out at the point of use: inside the canonical `## Execution` blockquote, `<slug>`, `#N` and the `.task/…` paths are **literal boilerplate, not placeholders**. The header lines above the `---` already carry the real slug and item number. A producer that substitutes them into the block breaks the byte-identical stamp, and `validate.sh` checks only that `## Execution` is *present*, so the drift ships unflagged.
+One consequence is worth spelling out at the point of use: the `## Execution` blockquote is stamped **byte-identical** in every artifact and carries no placeholders at all — nothing in it is substituted per task. `validate.sh` checks only that `## Execution` is *present*, so a paraphrase would ship unflagged.
 
 ### `to-plan` may target an existing file (promote / revise)
 
@@ -123,9 +147,9 @@ One consequence is worth spelling out at the point of use: inside the canonical 
 
 - **promote** (file has no `## Plan`) — insert `## Plan` (and `## Tests`, if newly warranted) between `## Description`'s content and `## Execution`.
 - **revise** (file already has a `## Plan`) — replace the prior `## Plan` in place, same position; leave `## Tests` alone unless the current edit touched it.
-- **Both** preserve the header block, the `---` separator, `## Description` and `## Execution` verbatim. If a hand-written target carries no `## Execution` to anchor on, append the Plan at end of file and stamp the canonical block after it.
+- **Both** preserve the header block, the `---` separator, `## Description` and `## Execution` verbatim. If a hand-written target carries no `## Execution` to anchor on, append the Plan at end of file and stamp the pointer after it.
 
-Anyone changing the `task.md` section order or the `## Execution` stamp is changing promote's insert anchor — that is why it is recorded here and not only in the skill.
+Anyone changing the `task.md` section order or the `## Execution` pointer is changing promote's insert anchor — that is why it is recorded here and not only in the skill.
 
 ---
 
@@ -159,7 +183,7 @@ Each item:
 > - Testable assertion.
 ```
 
-Field labels and blockquote sub-headings (`### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria`, `**Dependencies:**`, `**Model:**`) stay English; prose follows `config.md` → Language. The same split applies to the surrounding file structure (`## Prerequisites`, phase summary table, `## Out of scope`, `## Backlinks`).
+Field labels and blockquote sub-headings (`### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria`, `**Dependencies:**`, `**Model:**`) stay English; prose follows `.task/CLAUDE.md` → Language. The same split applies to the surrounding file structure (`## Prerequisites`, phase summary table, `## Out of scope`, `## Backlinks`).
 
 Load-bearing item fields for `roadmap-to-workflow`:
 
@@ -169,7 +193,7 @@ Load-bearing item fields for `roadmap-to-workflow`:
 
 ### Roadmap `Spec:` headers
 
-A roadmap may carry optional, **repeatable** `Spec: <slug>` header lines (above its title/intro, ASCII), each naming a `.task/spec/<slug>.md` that holds load-bearing cross-item technical decisions. Items cite specific decisions as `### Spec references → <slug> §N` (the `<slug>` qualifier is required — several specs may be reachable). When `roadmap-to-workflow` runs the roadmap, it passes these spec paths to each item's plan agent; when `to-plan`/`to-task` open an item by hand, they carry the relevant `Spec:` headers onto the task file so the executing session reads them via `## Execution`.
+A roadmap may carry optional, **repeatable** `Spec: <slug>` header lines (above its title/intro, ASCII), each naming a `.task/spec/<slug>.md` that holds load-bearing cross-item technical decisions. Items cite specific decisions as `### Spec references → <slug> §N` (the `<slug>` qualifier is required — several specs may be reachable). When `roadmap-to-workflow` runs the roadmap, it passes these spec paths to each item's plan agent; when `to-plan`/`to-task` open an item by hand, they carry the relevant `Spec:` headers onto the task file so the executing session reads them per `## Executing a task`.
 
 ---
 
@@ -192,7 +216,7 @@ Produced by `to-spec`; user-edited thereafter. A **standalone** home for load-be
 ## 2. ...
 ```
 
-Section labels (`## N.`, `**Decision:**` / `**Rationale:**` / `**Constrains:**`) and the `Spec:` header key stay English; prose follows `config.md` → Language.
+Section labels (`## N.`, `**Decision:**` / `**Rationale:**` / `**Constrains:**`) and the `Spec:` header key stay English; prose follows `.task/CLAUDE.md` → Language.
 
 ---
 
@@ -201,20 +225,20 @@ Section labels (`## N.`, `**Decision:**` / `**Rationale:**` / `**Constrains:**`)
 | Artifact | Produced by | Consumed by |
 |----------|-------------|-------------|
 | *(none — chat only)* | `grill` — an in-chat decision ledger, never a file | the `to-*` capture skill the user runs next |
-| `.task/config/config.md` | intake skills' inline Step 0 setup | every skill **except `grill`** + every executing session — Language, Testing Policy, Commit Format, tool priority |
-| `.task/task/<slug>.md` | `to-task` (header + `## Description` + `## Execution`); `to-plan` (same + `## Plan`, optional `## Tests`) — `to-plan` also **edits an existing file in place**, see § *promote / revise* above | **the executing session** (reads `## Description`, `## Plan` if present, follows `## Execution`, reads `Spec:` for anchors and `Roadmap:` + `Source item:` for auto-mark); `roadmap-to-workflow` per-item implement agent; **`task:code-reviewer`** (reads `Touches` as fix scope + `Spec:` as fixed anchors — read-only); `validate.sh` (read-only format check) |
+| `.task/CLAUDE.md` | intake skills' inline Step 0 setup (once; never rewritten afterwards) + **the user**, by hand | every skill **except `grill`** + every executing session + `task:code-reviewer` — Language, Testing Policy, Build and Tests, Commit Format, tool priority, `## Executing a task`. Reaches consumers two ways: the platform auto-loads it when a session reads a file under `.task/`, and the `## Execution` pointer names it explicitly |
+| `.task/task/<slug>.md` | `to-task` (header + `## Description` + `## Execution`); `to-plan` (same + `## Plan`, optional `## Tests`) — `to-plan` also **edits an existing file in place**, see § *promote / revise* above | **the executing session** (reads `## Description`, `## Plan` if present, follows `## Execution` to `.task/CLAUDE.md`, reads `Spec:` for anchors and `Roadmap:` + `Source item:` for auto-mark); `roadmap-to-workflow` per-item implement agent; **`task:code-reviewer`** (reads `Touches` as fix scope + `Spec:` as fixed anchors — read-only); `validate.sh` (read-only format check) |
 | `.task/roadmap/<slug>.md` | `to-roadmap` (initial); user-edited; `roadmap-to-workflow` **driver** flips `- [ ]` → `- [x]` after an item's agent returns OK | `roadmap-to-workflow` driver (loops unchecked items, reads `**Dependencies:**` + `**Model:**` + `Spec:`); `to-plan` / `to-task` (when picking up an item); `validate.sh` (read-only format check) |
 | `.task/spec/<slug>.md` | `to-spec` or user | **the executing session** (via a task's `Spec:` header) + `to-plan` (technical-decision anchor) + `roadmap-to-workflow` per-item plan agent; `validate.sh` (read-only format check) |
 
-The executing session writes no separate pipeline artifacts — its implementation lands in the working tree, then in the commit, and `task:code-reviewer` reviews that diff. Auto-mark inside a single-task execution is done by the executing session itself (per the `## Execution` block, after the review returns OK); auto-mark during a roadmap run is done by the **driver**, not the per-item agent, so parallel item agents never race on the roadmap file.
+The executing session writes no separate pipeline artifacts — its implementation lands in the working tree, then in the commit, and `task:code-reviewer` reviews that diff. Auto-mark inside a single-task execution is done by the executing session itself (per `## Executing a task`, after the review returns OK); auto-mark during a roadmap run is done by the **driver**, not the per-item agent, so parallel item agents never race on the roadmap file.
 
-### Config-gate categories
+### Setup-gate categories
 
 Three categories, not two:
 
-- **Intake skills** (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) auto-run setup inline in a fresh project — they write `config.md` on first use.
-- **Consumer skills** (`roadmap-to-workflow`, `validate`) check `config.md` and hard-stop if it is absent.
-- **`grill`** is exempt from both: it neither checks nor creates `config.md`, so it can run at the discussion stage before any config or capture exists. It never reads or writes anything under `.task/`; dialog mirrors the chat's language.
+- **Intake skills** (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) auto-run setup inline in a fresh project — they write `.task/CLAUDE.md` on first use, without a confirmation chip, and never rewrite one that already exists.
+- **Consumer skills** (`roadmap-to-workflow`, `validate`) check `.task/CLAUDE.md` and hard-stop if it is absent.
+- **`grill`** is exempt from both: it neither checks nor creates `.task/CLAUDE.md`, so it can run at the discussion stage before any setup or capture exists. It never reads or writes anything under `.task/`; dialog mirrors the chat's language.
 
 ---
 
@@ -226,7 +250,7 @@ Sourced (not exec'd). Runs `find_ai_dir` at source time and **exports `AI_DIR`**
 
 ### validate.sh (optional self-check, not a gate)
 
-Keeps the `config.md` precondition and English parser-stable strings. **No hook calls it.** Subcommands:
+Keeps the `.task/CLAUDE.md` precondition and English parser-stable strings. **No hook calls it.** Subcommands:
 
 - **`task <slug>`** — validate `.task/task/<slug>.md`:
   - line 1 matches `^# .+` (a title);
@@ -234,7 +258,7 @@ Keeps the `config.md` precondition and English parser-stable strings. **No hook 
   - `## Description` is present;
   - `## Plan` is **optional** — if present, it has ≥1 `### Step N:` block;
   - `## Tests` is **optional** — if present, it has ≥1 `### Test N:` block;
-  - `## Execution` is present (presence only — the block is stamped verbatim, so its text is not re-checked);
+  - `## Execution` is present (presence only — the pointer is stamped verbatim, so its text is not re-checked);
   - each `Spec: <slug>` header resolves to an existing `.task/spec/<slug>.md` — a miss is a **`WARN`** (dangling reference), not an error (`validate.sh` is advisory, not a gate).
 - **`roadmap <slug>`** — validate `.task/roadmap/<slug>.md`:
   - ≥1 item heading matching `^### - \[[ x~>-]\] N\. <title>` — the checkbox prefix is **required** (an item with a bare `### N.` heading and no checkbox is an error, since the driver's auto-mark and item selection both rely on it);
@@ -244,14 +268,14 @@ Keeps the `config.md` precondition and English parser-stable strings. **No hook 
 - **`spec <slug>`** — validate `.task/spec/<slug>.md`: line 1 matches `^# .+`; ≥1 `## N.` numbered decision section. (No `---` separator check — a spec has no parser-stable header block above a body, so there is nothing to separate.)
 - **`all`** — validate every `.task/task/*.md`, every `.task/roadmap/*.md`, plus every `.task/spec/*.md`.
 
-`## Execution` is stamped boilerplate; `validate.sh` checks the block is **present** (presence only, not its exact text). There is **no `Implement-Model:` check** — the per-item model hint lives on roadmap items and is not `validate.sh`'s concern. The dangling-`Spec:` check is the pipeline's only cross-file validation, and only ever a `WARN`.
+`## Execution` is a stamped pointer; `validate.sh` checks it is **present** (presence only, not its exact text). There is **no `Implement-Model:` check** — the per-item model hint lives on roadmap items and is not `validate.sh`'s concern. The dangling-`Spec:` check is the pipeline's only cross-file validation, and only ever a `WARN`.
 
 ### Helpers
 
 | Script | Role |
 |--------|------|
 | `roadmap.sh` | artifact-path + roadmap parsing helpers: `resolve_artifact_path` (called by `roadmap-to-workflow` and `validate.sh`) and `roadmap_progress_counts` (called by `roadmap-to-workflow` only). The driver's per-item checkbox flip is inline `awk`, **not** a helper here. |
-| `templates/conventional-commits.md` | commit-format fallback: the intake Step 0 setup points `config.md` → Commit Format at it when the project declares no convention of its own (no commit-format doc, nothing usable in `git log`) |
+| `templates/conventional-commits.md` | commit-format fallback: the intake Step 0 setup points `.task/CLAUDE.md` → Commit Format at it when the project declares no convention of its own (no commit-format doc, nothing usable in `git log`) |
 
 ---
 
@@ -261,15 +285,15 @@ The plugin ships **exactly one** agent: `agents/code-reviewer.md`, resolved as t
 
 It is invoked identically from both execution paths, always given the task artifact's path plus a reference string to echo in its digest:
 
-- a plain session following a task's `## Execution` block spawns it with the `Agent` tool (depth 0 → 1);
+- a plain session following `## Executing a task` spawns it with the `Agent` tool (depth 0 → 1);
 - `roadmap-to-workflow`'s driver spawns it as its own stage in the per-item serial loop (depth 1 → 2).
 
 Contract:
 
 - **Find → verify → fix.** Candidates are collected from the diff, each proved or refuted independently, and only CONFIRMED defects are edited. An unproven candidate is dropped, never fixed — inside a roadmap autopilot an unverified "fix" becomes a commit nobody reviewed. The **one** later entry into the fix phase is a Build and Tests failure traced to this diff: the failing run is its own proof, so it re-enters the fix phase rather than forcing a `FAIL` on a defect the reviewer can see and repair.
 - **Fix scope = `Touches` + regressions this diff introduced outside them.** `Touches` is authored before the code exists, so it is a scope hint, not an exact list; everything else confirmed goes to the report.
-- **Verification rides inside the review.** The agent runs `config.md` → Build and Tests end to end, fails the item on a red run, and reports an undeclared command as an explicit skip.
-- **Implement commits, the reviewer amends.** The implementation commits its own work; the reviewer stages its fixes and `git commit --amend`s, keeping the message per `config.md` → Commit Format. History stays one item = one commit. If the implementation was never committed, the reviewer leaves its fixes uncommitted rather than rewriting an unrelated commit.
+- **Verification rides inside the review.** The agent runs `.task/CLAUDE.md` → Build and Tests end to end, fails the item on a red run, and reports an undeclared command as an explicit skip.
+- **Implement commits, the reviewer amends.** The implementation commits its own work; the reviewer stages its fixes and `git commit --amend`s, keeping the message per `.task/CLAUDE.md` → Commit Format. History stays one item = one commit. If the implementation was never committed, the reviewer leaves its fixes uncommitted rather than rewriting an unrelated commit.
 - **Explicit phases with a mandatory output each** (intake → diff → find → prove → fix → Build and Tests → amend). `0 findings` is a declared state, and a report that does not enumerate what was checked per `Touches` file is a failed review, not a passed one.
 - **Parser-stable digest last line:** `OK|FAIL <reference string> <summary>` — the same shape the roadmap driver already parses for its implement stage.
 - It writes **nothing** under `.task/`: the artifact, roadmap, specs and config are read-only to it, and ticking a roadmap checkbox stays the caller's job.
@@ -305,12 +329,12 @@ The pipeline's only markers are `git config task.root` and the `.git/info/exclud
 All three are cheap and architecture-independent. Human-facing dialog only — parser-stable strings and artifact content are untouched.
 
 - **(a) Next-step footer.** Every user-facing output ends with `→ Next: <runnable command>`, or `→ Done.` when the flow is complete. Footers are flag-free; the handoff footer above is the canonical form for the `to-*` skills.
-- **(b) Capture grammar.** Every capture **writes its artifact immediately, then prints a structural digest** as visible Markdown message text — not a full draft, and never a pre-write confirmation. The chat discussion (or, for `grill`, the one-question-at-a-time interrogation) *was* the review; re-asking the user to Accept/Edit/Decline distilled content they already discussed is empty ceremony, and the print-then-confirm gate it replaced was the pipeline's most error-prone step. The digest carries: the artifact path, its title, the sections written, the load-bearing decisions/pins captured one line each (for a **spec**, *every* pin — it is read downstream as a fixed anchor, so this is the user's one glance to catch a misstatement), and the `validate.sh` result. It closes by inviting edits against the already-written file ("to change anything, just say so"), then the (a) footer. `grill` writes nothing, so its decision ledger *is* the digest. Corrections happen naturally in chat and against the file (which is git-excluded — a wrong write costs one deletion), not through a chip. **A chip survives only where the question is not about distilled content:** the config Step 0 setup (confirming *auto-detected* environment — language, test policy — that was never part of the discussion) and the slug-collision overwrite guard (a pre-write safety check on a destructive action).
+- **(b) Capture grammar.** Every capture **writes its artifact immediately, then prints a structural digest** as visible Markdown message text — not a full draft, and never a pre-write confirmation. The chat discussion (or, for `grill`, the one-question-at-a-time interrogation) *was* the review; re-asking the user to Accept/Edit/Decline distilled content they already discussed is empty ceremony, and the print-then-confirm gate it replaced was the pipeline's most error-prone step. The digest carries: the artifact path, its title, the sections written, the load-bearing decisions/pins captured one line each (for a **spec**, *every* pin — it is read downstream as a fixed anchor, so this is the user's one glance to catch a misstatement), and the `validate.sh` result. It closes by inviting edits against the already-written file ("to change anything, just say so"), then the (a) footer. `grill` writes nothing, so its decision ledger *is* the digest. Corrections happen naturally in chat and against the file (which is git-excluded — a wrong write costs one deletion), not through a chip. **Exactly one chip survives, and it is not about distilled content:** the slug-collision overwrite guard (a pre-write safety check on a destructive action). Step 0 setup does not ask either — it writes `.task/CLAUDE.md`, then reports what it wrote.
 - **(c) Path forks.** Every 2–4 option path fork that can't be inferred is presented via `AskUserQuestion` chips.
 
 ### Frontmatter
 
-Every skill carries `disable-model-invocation: true` and `user-invocable: true`. (`validate` is a bash-only utility — `skills/validate/validate.sh`, no `SKILL.md` — so it carries no frontmatter.) Artifacts and user dialog follow `config.md` → Language — except `grill`, which by design reads nothing under `.task/` and so mirrors the chat's own language instead; parser-stable strings (header keys, section labels, commit trailers, the `## Execution` block, driver return strings) stay English.
+Every skill carries `disable-model-invocation: true` and `user-invocable: true`. (`validate` is a bash-only utility — `skills/validate/validate.sh`, no `SKILL.md` — so it carries no frontmatter.) Artifacts and user dialog follow `.task/CLAUDE.md` → Language — except `grill`, which by design reads nothing under `.task/` and so mirrors the chat's own language instead; parser-stable strings (header keys, section labels, commit trailers, the `## Execution` pointer, driver return strings) stay English.
 
 ### `roadmap-to-workflow` execution shape (driver contract)
 

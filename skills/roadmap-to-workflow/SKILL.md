@@ -17,19 +17,19 @@ Drive an approved roadmap through a dynamic Workflow. This skill collects the ro
 
 **Format contract:** [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd) is the single source of truth for item grammar (`### - [ ] N.`, `**Dependencies:**`, `**Model:**`); [docs/contract.md § task.md format](../../docs/contract.md#taskmd-format-tasktaskslugmd) for the artifact each item's plan agent writes.
 
-## Step 0: Config gate, pick roadmap, pick scope
+## Step 0: Setup gate, pick roadmap, pick scope
 
-`roadmap-to-workflow` is **not** an intake skill — it never runs setup itself (a roadmap can't exist without config, so an absent config means something upstream is broken).
+`roadmap-to-workflow` is **not** an intake skill — it never runs setup itself (a roadmap can't exist without `.task/CLAUDE.md`, so an absent one means something upstream is broken).
 
 ```bash
 echo "$CLAUDE_PLUGIN_ROOT"                                 # note this absolute path — bake it as PLUGIN_ROOT in the Step 2 script
 source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # sourcing runs find_ai_dir → sets AI_DIR
 echo "$AI_DIR"                                             # note this one too — bake it as AI_DIR in the Step 2 script
-[[ -f "$AI_DIR/config/config.md" ]] || echo "config.md not found"
+[[ -f "$AI_DIR/CLAUDE.md" ]] || echo "CLAUDE.md not found"
 bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
 ```
 
-- **`config.md not found`** (the guard above echoes it; `validate.sh all` also exits 2 with the same message) → hard-stop redirect (do **not** bootstrap here):
+- **`CLAUDE.md not found`** (the guard above echoes it; `validate.sh all` also exits 2 with the same message) → hard-stop redirect (do **not** bootstrap here):
   > The project isn't set up yet. Capture something first with `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, or `/task:to-spec` — those four set the project up inline.
   > → Next: `/task:to-roadmap`
 - **Any other non-zero exit from `validate.sh`** → `validate.sh all` checks every artifact, so an error may sit on a task or roadmap unrelated to this run. **Mind the timing:** at this point the roadmap has not been picked yet (that happens in the *Roadmap* sub-step below), so do not try to judge here which errors are "yours". Surface every reported error now, block on none of them, and **hold** the roadmap ones. Once `<slug>` is resolved below, check the held list: if an error was reported against **that** file, stop then — "→ Next: fix the reported error in `.task/roadmap/<slug>.md`, then rerun `/task:roadmap-to-workflow <slug>`". Errors on any other artifact never block. (The one case where the roadmap *is* already known at gate time is a positional `<roadmap-slug>` in `$ARGUMENTS`; there you may apply the check immediately.) WARN lines never set a non-zero exit; they are informational only.
@@ -147,7 +147,7 @@ async function runPlan(n, title, model, w) {
   const plan = await agent(
     `Read ${PLUGIN_ROOT}/skills/to-plan/SKILL.md and run it NON-INTERACTIVELY for roadmap item
      ${slug}#${n} ("${title}"). Draft ${AI_DIR}/task/<item-slug>.md (Description +
-     ## Plan, + ## Tests if the config Testing Policy calls for it), stamping
+     ## Plan, + ## Tests if .task/CLAUDE.md → Testing Policy calls for it), stamping
      the header with "Roadmap: ${slug}" and "Source item: #${n}", plus a
      "Spec: <spec-slug>" line for each spec the item cites (via its
      "### Spec references → <spec-slug> §N" entries) plus every roadmap-level
@@ -170,13 +170,14 @@ async function runPlan(n, title, model, w) {
 // disk (no chat carries over from the plan agent). Run one at a time within a
 // wave — this is the sole mutator of the shared working tree, so each implement
 // sees its already-landed wave-mates' commits. Review is NOT its job: it does
-// not spawn the reviewer itself (despite the ## Execution block), because the
+// not spawn the reviewer itself (despite ## Executing a task step 4), because the
 // driver runs the review as its own stage below. Returns the digest.
 async function runImplement(n, itemSlug, model, w) {
   const r = await agent(
-    `Implement ${AI_DIR}/task/${itemSlug}.md. Follow its ## Execution block
-     exactly, with two carve-outs: implement the ## Plan (or ## Description if
-     no Plan), then commit per .task/config/config.md → Commit Format — and do
+    `Implement ${AI_DIR}/task/${itemSlug}.md. Follow its ## Execution pointer —
+     it sends you to .task/CLAUDE.md → ## Executing a task — with two carve-outs:
+     implement the ## Plan (or ## Description if no Plan), then commit per
+     .task/CLAUDE.md → Commit Format — and do
      NOT spawn the task:code-reviewer agent, and do NOT tick the roadmap
      checkbox. The driver runs the review as its own stage right after this
      call, and ticks the checkbox after that.
@@ -243,7 +244,7 @@ for (const [w, items] of waves.entries()) {
 
     // The plugin's own review pass: proves each finding, fixes what it confirms
     // within Touches (plus regressions this diff introduced outside them), runs
-    // config.md → Build and Tests, and amends the implement agent's commit. A
+    // .task/CLAUDE.md → Build and Tests, and amends the implement agent's commit. A
     // failed review stops the wave exactly as a failed implement does.
     const review = await runReview(n, itemSlug, w + 1);
     console.log(review);                                  // per-item review digest
@@ -284,7 +285,7 @@ for (const [w, items] of waves.entries()) {
 return "roadmap-to-workflow: all items shipped.";
 ```
 
-**Graceful fallback:** if the Workflow tool isn't available in this environment, run the items one at a time by hand, respecting the same wave order: for each item, run `to-plan` for that roadmap item (writes `.task/task/<item-slug>.md`) and take the exact written path from `to-plan`'s own Step 8 output digest — do **not** reconstruct `<item-slug>` from the item title, since `to-plan` may disambiguate the slug on a collision (its Step 2a.5). Then in a plain session say `implement <that path>`: its `## Execution` block already carries the plan → commit → `task:code-reviewer` sequence, so the review happens there rather than as a driver stage. Tell that session **not to tick the roadmap checkbox itself** (despite its `## Execution` block); then — as the driver — manually tick that item's checkbox in `.task/roadmap/<slug>.md` once the review came back OK, before moving to the next. This keeps the auto-mark the driver's job, exactly as in the Workflow path.
+**Graceful fallback:** if the Workflow tool isn't available in this environment, run the items one at a time by hand, respecting the same wave order: for each item, run `to-plan` for that roadmap item (writes `.task/task/<item-slug>.md`) and take the exact written path from `to-plan`'s own Step 8 output digest — do **not** reconstruct `<item-slug>` from the item title, since `to-plan` may disambiguate the slug on a collision (its Step 2a.5). Then in a plain session say `implement <that path>`: its `## Execution` pointer sends that session to `.task/CLAUDE.md` → `## Executing a task`, which already carries the plan → commit → `task:code-reviewer` sequence, so the review happens there rather than as a driver stage. Tell that session **not to tick the roadmap checkbox itself** (despite `## Executing a task` step 5); then — as the driver — manually tick that item's checkbox in `.task/roadmap/<slug>.md` once the review came back OK, before moving to the next. This keeps the auto-mark the driver's job, exactly as in the Workflow path.
 
 ## Output
 
@@ -301,7 +302,7 @@ return "roadmap-to-workflow: all items shipped.";
 
 ## Forbidden
 
-- Running setup / bootstrap on a missing `config.md` — this skill hard-stops and redirects; only `to-task` / `to-plan` / `to-roadmap` / `to-spec` are intake-capable.
+- Running setup / bootstrap on a missing `.task/CLAUDE.md` — this skill hard-stops and redirects; only `to-task` / `to-plan` / `to-roadmap` / `to-spec` are intake-capable.
 - Looping the items yourself in this session's main thread instead of authoring a Workflow — the Workflow tool is what gives each item fresh per-item context, per-item model control, parallel planning, and driver-side auto-mark; a hand-rolled loop reintroduces the accumulation problems this skill exists to remove. (The one-at-a-time manual fallback is only for when the Workflow tool is unavailable.)
 - Running items whose dependencies are still unchecked, or placing an item in an earlier wave than its `Dependencies` allow.
 - Auto-marking roadmap checkboxes from inside a per-item agent — that is the driver's job, strictly after the item's **review** returns `OK`, to avoid parallel writers racing on the roadmap file.

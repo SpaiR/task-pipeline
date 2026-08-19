@@ -33,13 +33,13 @@ If you'd rather not run it at all, nothing is gated: the commit stands as it is,
 Claude Code's own `/verify` and `/code-review` are marked `disable-model-invocation`, which means a subagent — and a session that was merely *told* `implement …` rather than typing the command itself — cannot run them, and the failure is silent: an unlisted command is skipped, not refused, so the run would still report success. The pipeline names its own agent instead, so a missing reviewer fails loudly.
 :::
 
-### "config.md not found"
+### "CLAUDE.md not found"
 
-**Symptom** — a skill stops with `.task/config/config.md not found`.
+**Symptom** — a skill stops with `.task/CLAUDE.md not found`.
 
-**Cause** — `/task:roadmap-to-workflow` and `validate` require `config.md`, and it hasn't been written in this project yet. The four capture skills (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) write it inline on first use instead of stopping, and `/task:grill` needs no config at all. There is no separate setup command — setup is folded inline into those four capture skills.
+**Cause** — `/task:roadmap-to-workflow` and `validate` require `.task/CLAUDE.md`, and it hasn't been written in this project yet. The four capture skills (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) write it inline on first use instead of stopping, and `/task:grill` needs no setup at all. There is no separate setup command — setup is folded inline into those four capture skills.
 
-**Fix** — run any of `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, or `/task:to-spec`. Each detects language and test policy, asks for one confirmation, writes `config.md`, records `git config task.root`, and continues into the capture. `/task:roadmap-to-workflow` is *not* setup-capable by design — if you hit this there, run a capture skill first, then retry.
+**Fix** — run any of `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, or `/task:to-spec`. Each detects language and test policy, writes `.task/CLAUDE.md`, records `git config task.root`, reports what it wrote, and continues into the capture. `/task:roadmap-to-workflow` is *not* setup-capable by design — if you hit this there, run a capture skill first, then retry.
 
 ### .task/ shows up in git status
 
@@ -83,7 +83,7 @@ Claude Code's own `/verify` and `/code-review` are marked `disable-model-invocat
 
 **Cause** — worktrees resolve the shared `.task/` through `git config --local task.root` (fallbacks: an upward walk, then `dirname(git-common-dir)`). The anchor can be missing (repo set up by an older version) or wrong.
 
-A **moved or copied repo** is the common way it goes wrong: `task.root` is an absolute path stored in `.git/config`, so it travels with the directory and then points at where the repo used to live. The resolver only trusts the anchor when that path actually holds a `config/config.md`, so a stale one is ignored and the upward walk finds the real `.task/` that moved with the repo — but the anchor stays stale until a capture skill rewrites it.
+A **moved or copied repo** is the common way it goes wrong: `task.root` is an absolute path stored in `.git/config`, so it travels with the directory and then points at where the repo used to live. The resolver only trusts the anchor when that path actually holds a `.task/CLAUDE.md`, so a stale one is ignored and the upward walk finds the real `.task/` that moved with the repo — but the anchor stays stale until a capture skill rewrites it.
 
 **Fix** — run any capture skill from the stuck worktree; its inline setup records `task.root` and every worktree then resolves the same `.task/`. To point it at an existing `.task/` yourself: `git config --local task.root /abs/path/containing/dot-task` (the directory that *contains* `.task`, not `.task` itself).
 

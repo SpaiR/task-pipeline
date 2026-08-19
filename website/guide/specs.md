@@ -40,7 +40,7 @@ You can carry more than one `Spec:` line. Roadmaps reference specs the same way,
 
 ## How the executing session uses it
 
-When a session implements a task carrying a `Spec:` header, its `## Execution` block tells it to **read each referenced spec first and treat its decisions as fixed** before implementing. The spec is an anchor, not a plan — it says what was decided and why, not how to build it.
+When a session implements a task carrying a `Spec:` header, its `## Execution` pointer sends it to `.task/CLAUDE.md` → `## Executing a task`, whose first step is to **read each referenced spec first and treat its decisions as fixed** before implementing. The spec is an anchor, not a plan — it says what was decided and why, not how to build it.
 
 ## Where specs live
 

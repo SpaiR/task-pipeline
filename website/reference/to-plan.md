@@ -40,7 +40,7 @@ See the [single-task guide](/guide/single-task) for how promote/revise work in p
 
 ## Tests
 
-Governed by `config.md` → Testing Policy: `always` writes Tests every time; `on-demand` (default) only when the discussion asks; `never` omits them. Each `## Plan` step that satisfies a test references it by number.
+Governed by `.task/CLAUDE.md` → Testing Policy: `always` writes Tests every time; `on-demand` (default) only when the discussion asks; `never` omits them. Each `## Plan` step that satisfies a test references it by number.
 
 ## Output
 

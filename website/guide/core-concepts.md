@@ -20,21 +20,23 @@ implement .task/task/http-retry-backoff.md
 
 This is why the plan survives `/clear`, compaction, and tomorrow's fresh session: the handle is a file path on disk, not conversation state.
 
-## 4. Execution is a block, not a skill
+## 4. Execution is a section, not a skill
 
-Execution isn't a command you learn. Every artifact carries a `## Execution` block — a few lines of stamped, English boilerplate — and any ordinary session told to implement the file simply follows it:
+Execution isn't a command you learn. Every artifact ends with a one-line pointer:
 
-> Implement the Plan (or the Description if none). Commit per `config.md` → Commit Format. Then spawn the `task:code-reviewer` agent on this file: it proves each finding, fixes confirmed defects within **Touches**, runs Build and Tests, and amends the commit. If it's a roadmap item, tick its checkbox once the review returns OK.
+> Read `.task/CLAUDE.md` and follow its `## Executing a task` section.
 
-The mechanism lives in the file, not in a command. That's the whole execution side.
+And that section — one copy, in your project — says: implement the Plan (or the Description if none); commit per Commit Format; spawn the `task:code-reviewer` agent on the diff, which proves each finding, fixes confirmed defects within **Touches**, runs Build and Tests, and amends the commit; tick the roadmap checkbox once the review returns OK.
 
-## 5. config.md holds project policy
+The mechanism lives in files, not in a command — and because the instructions sit in one place, editing them changes how every task is executed, including ones captured earlier.
 
-`.task/config/config.md` is written once, inline, on your first capture. It records:
+## 5. `.task/CLAUDE.md` holds project policy
 
-- **Language** — by default your Description is in your language; everything parser-stable (headers, the `## Execution` block, commit trailers) stays English.
+`.task/CLAUDE.md` is written once, inline, on your first capture — then it's yours: setup never rewrites it. Being a nested `CLAUDE.md`, Claude Code loads it into any session that reads a file under `.task/`, so an implementing session and the reviewer pick it up without being told to. It records:
+
+- **Language** — by default your Description is in your language; everything parser-stable (headers, the `## Execution` pointer, commit trailers) stays English.
 - **Testing policy** — `always` / `on-demand` (default) / `never`, which governs whether a task gets a `## Tests` section.
-- **Commit format**, code-navigation tool priority, and project conventions.
+- **Build and tests**, **commit format**, code-navigation tool priority, and `## Executing a task`.
 
 See [Configuration](/reference/configuration) for the details.
 

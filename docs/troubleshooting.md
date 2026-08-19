@@ -3,7 +3,7 @@
 > **Moved.** The user-facing troubleshooting guide now lives on the docs site:
 > <https://spair.github.io/task-pipeline/guide/troubleshooting>
 >
-> It covers first-run problems (commands not appearing, `config.md not found`, `.task/`
+> It covers first-run problems (commands not appearing, `CLAUDE.md not found`, `.task/`
 > showing in `git status`, `validate.sh` failures) and the recurring edge cases —
 > roadmap checkboxes, worktrees finding `.task/`, and picking your own in-flight
 > work back up.

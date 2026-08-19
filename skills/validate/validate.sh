@@ -13,7 +13,7 @@
 # Exit codes:
 #   0 — all checks passed
 #   1 — at least one validation error
-#   2 — usage error or missing precondition (config.md absent)
+#   2 — usage error or missing precondition (.task/CLAUDE.md absent)
 #
 # Output: each issue is printed on its own line as
 #     <severity> <artifact>: <message>
@@ -47,18 +47,18 @@ source "$SCRIPT_DIR/../_lib/resolve-ws.sh"
 # shellcheck source=../_lib/roadmap.sh
 source "$SCRIPT_DIR/../_lib/roadmap.sh"
 
-# --- Precondition: config.md ---
+# --- Precondition: .task/CLAUDE.md ---
 require_config() {
-  # Resolve AI_DIR via the upward walk before reading config.md. find_ai_dir
+  # Resolve AI_DIR via the upward walk before reading CLAUDE.md. find_ai_dir
   # is idempotent (no-op once AI_DIR is set).
   find_ai_dir
-  if [[ ! -f "$AI_DIR/config/config.md" ]]; then
-    # Keep the literal substring `config.md not found` — to-roadmap, to-spec and
+  if [[ ! -f "$AI_DIR/CLAUDE.md" ]]; then
+    # Keep the literal substring `CLAUDE.md not found` — to-roadmap, to-spec and
     # roadmap-to-workflow all branch on it. Everything after it is for the human
     # who ran this script by hand, which is the only way to reach this line.
-    echo "ERROR precondition: config.md not found at $AI_DIR/config/config.md" >&2
+    echo "ERROR precondition: CLAUDE.md not found at $AI_DIR/CLAUDE.md" >&2
     echo "  The project isn't set up yet. Run /task:to-task, /task:to-plan, /task:to-roadmap" >&2
-    echo "  or /task:to-spec once — those four write config.md inline on first use." >&2
+    echo "  or /task:to-spec once — those four write .task/CLAUDE.md inline on first use." >&2
     exit 2
   fi
 }
@@ -126,13 +126,14 @@ validate_task() {
     err "$label" "'## Tests' section is present but contains no '### Test N:' blocks"
   fi
 
-  # `## Execution` boilerplate must be present — the executing session reads it
-  # to implement, commit, spawn the `task:code-reviewer` agent (which proves its
-  # findings, fixes within Touches, runs Build and Tests, and amends the commit),
-  # and auto-mark the roadmap item. Its text is stamped verbatim by the to-*
-  # skills, so check presence only, not the exact wording.
+  # `## Execution` must be present — it is the pointer that sends the executing
+  # session to `.task/CLAUDE.md` → `## Executing a task`, which carries implement
+  # → commit → `task:code-reviewer` → auto-mark. The pointer is load-bearing even
+  # though the platform also loads `.task/CLAUDE.md` on its own: that load only
+  # fires for file-read tools, so a session that opens the artifact with `cat`
+  # would otherwise get no instructions at all. Check presence, not wording.
   if ! grep -qE '^## Execution[[:space:]]*$' "$file"; then
-    err "$label" "missing '## Execution' section heading — the executing session has no instructions without it"
+    err "$label" "missing '## Execution' section heading — the executing session has no pointer to .task/CLAUDE.md without it"
   fi
 
   # Dangling `Spec:` header references → WARN (advisory, not an error).

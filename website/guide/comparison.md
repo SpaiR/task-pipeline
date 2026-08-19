@@ -12,7 +12,7 @@
 
 Two honest limits frame all of it. It runs on **Claude Code only** — leave Claude Code and the artifacts are just Markdown you'd read by hand. And **nothing is enforced**: `validate.sh` only reports, and `implement <path>` is a plain instruction a session can deviate from — you stay in the loop by design, not by a gate. (A two-file, twenty-minute fix also doesn't need any of this.)
 
-The sections below compare against six references — default Claude Code (plan mode + TodoWrite), [obra/superpowers](https://github.com/obra/superpowers), [Matt Pocock's skills](https://github.com/mattpocock/skills), [Fission-AI/OpenSpec](https://github.com/Fission-AI/OpenSpec), [github/spec-kit](https://github.com/github/spec-kit), and [claude-task-master](https://github.com/eyaltoledano/claude-task-master) — on one shared axis set: where the plan lives, who authors the plan, plan format, result review, moving parts & infrastructure, trace in the repo, and multi-task initiatives. Each ends with an honest "Use X if". The other tools' details are as of July 2026 and from their own docs — check them if a difference is load-bearing for you. (task-pipeline's own multilingual claim has one caveat: only your artifact prose is translated; the format's fixed strings — section headers, commit trailers, the Execution block — stay English.)
+The sections below compare against six references — default Claude Code (plan mode + TodoWrite), [obra/superpowers](https://github.com/obra/superpowers), [Matt Pocock's skills](https://github.com/mattpocock/skills), [Fission-AI/OpenSpec](https://github.com/Fission-AI/OpenSpec), [github/spec-kit](https://github.com/github/spec-kit), and [claude-task-master](https://github.com/eyaltoledano/claude-task-master) — on one shared axis set: where the plan lives, who authors the plan, plan format, result review, moving parts & infrastructure, trace in the repo, and multi-task initiatives. Each ends with an honest "Use X if". The other tools' details are as of July 2026 and from their own docs — check them if a difference is load-bearing for you. (task-pipeline's own multilingual claim has one caveat: only your artifact prose is translated; the format's fixed strings — section headers, commit trailers, the Execution pointer — stay English.)
 
 ## vs default Claude Code
 
@@ -34,11 +34,11 @@ The sections below compare against six references — default Claude Code (plan 
 |---|---|---|
 | **Who authors the plan** | You, by hand; a `/task:…` skill serializes it | Auto-triggered by context; a skills library steers the agent |
 | **Form** | Linear capture → any session implements | A library of situational skills |
-| **Project config** | `config.md` (stack, commits, language) | Minimal |
+| **Project config** | `.task/CLAUDE.md` (stack, commits, language) | Minimal |
 | **Result review** | One `task:code-reviewer` agent: prove-before-fix, fixes scoped to `Touches`, your build and tests, then amend | Test-first TDD (red/green/refactor) plus a between-task code-review skill |
 | **Moving parts** | Flat Markdown under `.task/`; Claude Code only | Skills library installed across many agents |
 | **Platforms** | Claude Code only | Claude Code, Antigravity, Codex App, Codex CLI, Cursor, Factory Droid, GitHub Copilot CLI, Kimi Code, OpenCode, Pi |
-| **Artifact languages** | Any, via `config.md` | English by default |
+| **Artifact languages** | Any, via `.task/CLAUDE.md` | English by default |
 
 **Use task-pipeline** if you want a controlled capture-then-implement process, non-English artifacts, and a review pass that has to prove a defect before it edits anything. **Use superpowers** if you want skills that fire automatically, a strict test-first workflow, and one library that follows you across many coding agents.
 
@@ -67,7 +67,7 @@ task-pipeline's `grill` is openly inspired by Matt Pocock's grilling skill, and 
 | **Spec granularity** | Pinned per-decision `.task/spec/<slug>.md` files, cited via `Spec:` | A living whole-system spec |
 | **Moving parts** | Flat Markdown under `.task/`, git-excluded | An `openspec/` directory committed to the repo |
 | **Trace in the repo** | Invisible — a personal tool, no repo trace | Part of the repository, visible to the team |
-| **Language** | Multilingual via `config.md` | English by default |
+| **Language** | Multilingual via `.task/CLAUDE.md` | English by default |
 
 **Use task-pipeline** if you want a personal tool with no trace in the repo and specs pinned per decision. **Use OpenSpec** if you work in a team where a whole-system spec committed to the repo is the source of truth.
 

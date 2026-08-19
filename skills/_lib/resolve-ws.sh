@@ -17,7 +17,7 @@
 # Resolution order (first hit wins):
 #   1. `git config --local task.root` — the anchor recorded by the intake
 #      skills' inline Step 0 setup, accepted only when it ALREADY holds a
-#      `config/config.md` (evidence, as in step 4: a stale anchor left by a
+#      `CLAUDE.md` (evidence, as in step 4: a stale anchor left by a
 #      moved or copied repo is ignored, not trusted). Lives in the repo-local
 #      (common) git config, so it is shared by EVERY worktree of the repo: all
 #      worktrees resolve the same `.task/` with zero setup — no symlink, no
@@ -28,7 +28,7 @@
 #      (`roadmap-to-workflow` runs its items in the shared tree, and the
 #      reviewer must see and amend that same tree, so neither sets
 #      `isolation`).
-#   2. Upward walk from $PWD for a `.task/config/config.md` ancestor — the
+#   2. Upward walk from $PWD for a `.task/CLAUDE.md` ancestor — the
 #      pre-anchor fallback. Covers a main worktree, a nested worktree, or a
 #      `.task` created in a subdir, for repos bootstrapped before the anchor
 #      existed.
@@ -36,10 +36,10 @@
 #      sibling worktrees) or the bare repo's container (bare). Catches sibling
 #      worktrees and bare repos that the upward walk in (2) misses.
 #   4. `$CLAUDE_PROJECT_DIR/.task` when that path ALREADY holds a
-#      `config/config.md` — like steps 1-3, this step claims a root only on
+#      `CLAUDE.md` — like steps 1-3, this step claims a root only on
 #      evidence, never on the variable being set alone. Otherwise the relative
 #      `.task`: the historical default, so a call from outside any project
-#      still fails cleanly on the config gate with "config.md not found".
+#      still fails cleanly on the setup gate with "CLAUDE.md not found".
 #
 # AI_DIR is exported as `<root>/.task` with the `.task` component appended
 # literally (never `cd`'d into). Only acts when AI_DIR is unset, so a caller
@@ -54,20 +54,20 @@ find_ai_dir() {
   #    Claimed on EVIDENCE, exactly like step 4: the anchor is an absolute path
   #    baked into `.git/config`, which travels with the repo when it is moved or
   #    copied. A stale anchor pointing at a vanished path would resolve to an
-  #    AI_DIR with no config.md, the gate would report the project unconfigured,
-  #    and intake setup would regenerate config.md over the real one that moved
+  #    AI_DIR with no CLAUDE.md, the gate would report the project unconfigured,
+  #    and intake setup would regenerate CLAUDE.md over the real one that moved
   #    with the repo. Fall through to the ancestor walk instead.
   if [[ "$have_git" -eq 1 ]]; then
     root=$(git config --local --get task.root 2>/dev/null) || root=""
-    [[ -n "$root" && ! -f "$root/.task/config/config.md" ]] && root=""
+    [[ -n "$root" && ! -f "$root/.task/CLAUDE.md" ]] && root=""
   fi
 
-  # 2. Upward walk for a config.md ancestor (pre-anchor repos).
+  # 2. Upward walk for a CLAUDE.md ancestor (pre-anchor repos).
   if [[ -z "$root" ]]; then
     local dir
     dir=$(pwd)
     while :; do
-      if [[ -f "$dir/.task/config/config.md" ]]; then root="$dir"; break; fi
+      if [[ -f "$dir/.task/CLAUDE.md" ]]; then root="$dir"; break; fi
       [[ "$dir" == "/" ]] && break
       dir=${dir%/*}; [[ -z "$dir" ]] && dir=/   # parent, no `dirname` fork
     done
@@ -84,7 +84,7 @@ find_ai_dir() {
 
   # 4. Hook context, then the historical relative default.
   if [[ -z "$root" && -n "${CLAUDE_PROJECT_DIR:-}" \
-        && -f "$CLAUDE_PROJECT_DIR/.task/config/config.md" ]]; then
+        && -f "$CLAUDE_PROJECT_DIR/.task/CLAUDE.md" ]]; then
     root="$CLAUDE_PROJECT_DIR"
   fi
 

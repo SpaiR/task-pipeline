@@ -31,7 +31,7 @@ What you just watched has a name. `task-pipeline` doesn't drive your work — it
 That distinction is why it stays small, and it's the opposite bet from the breadth-first tools nearby: rather than dozens of skills or a full SDLC, it leans on what Claude Code already ships (dynamic Workflows, your project's own build and test commands) and adds just enough structure around them:
 
 - **one file per task** — `.task/task/<slug>.md`, carrying the discussion's decisions;
-- **a stamped `## Execution` block** inside that file, which carries the run from implementation through commit to the review pass;
+- **a stamped one-line `## Execution` pointer** inside that file, into `.task/CLAUDE.md` → `## Executing a task` — the single copy of the instructions that carries the run from implementation through commit to the review pass;
 - **one agent** — `task:code-reviewer`, which reviews that commit, proves what it flags, fixes the confirmed defects inside the plan's **Touches**, and amends.
 
 What gets pinned is an *argued* decision, serialized at the depth you chose — the skill you pick decides how much structure the file carries, from a bare "what and why" to a stepwise plan. (And yes, the file then outlives the `/clear`, the compaction, and tomorrow's fresh session that would otherwise erase it — table stakes, not the point.)
@@ -52,7 +52,7 @@ implement session   roadmap-to-workflow   ← the launcher fans items out to ses
 A few things to notice, because they're the load-bearing design choices:
 
 - **Depth of capture is the skill you pick, not a flag.** [`to-task`](/reference/to-task) records just the "what and why". [`to-plan`](/reference/to-plan) adds a step-by-step Plan. [`to-roadmap`](/reference/to-roadmap) captures a whole multi-task initiative. There is no `--plan` or `--deep` switch anywhere.
-- **There is no execution skill.** Every artifact carries its own `## Execution` block, and any ordinary session told `implement .task/task/<slug>.md` follows it.
+- **There is no execution skill.** Every artifact ends with a one-line `## Execution` pointer into `.task/CLAUDE.md` → `## Executing a task`, and any ordinary session told `implement .task/task/<slug>.md` follows it.
 - **[`grill`](/reference/grill) sits before capture.** It interrogates a plan one question at a time and hands off to the right capture skill — it writes nothing itself.
 - **[`to-spec`](/reference/to-spec) is orthogonal.** It pins load-bearing technical decisions into their own file, which tasks and roadmaps point at with a `Spec:` header.
 

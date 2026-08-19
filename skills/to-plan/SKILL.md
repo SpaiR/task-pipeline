@@ -5,7 +5,7 @@ disable-model-invocation: true
 user-invocable: true
 ---
 
-Distil the chat discussion so far (or a roadmap item) into `.task/task/<slug>.md` — `## Description` **and** `## Plan` (Goal/Touches/Logic steps), plus `## Tests` when the testing policy calls for it, and the standard `## Execution` block. The deepest of the three capture skills (`to-task` / `to-plan` / `to-roadmap`): use it when you know enough about the approach to hand straight to implementation, or run it again on a `to-task`-only file to add the Plan in place. The slug is the filename; the artifact path is the handle.
+Distil the chat discussion so far (or a roadmap item) into `.task/task/<slug>.md` — `## Description` **and** `## Plan` (Goal/Touches/Logic steps), plus `## Tests` when the testing policy calls for it, and the `## Execution` pointer. The deepest of the three capture skills (`to-task` / `to-plan` / `to-roadmap`): use it when you know enough about the approach to hand straight to implementation, or run it again on a `to-task`-only file to add the Plan in place. The slug is the filename; the artifact path is the handle.
 
 **Input:** `$ARGUMENTS` — optional. Recognized forms:
 - (empty) — draft from the chat discussion so far, or continue a task this conversation is clearly about (see Step 1).
@@ -17,21 +17,21 @@ Distil the chat discussion so far (or a roadmap item) into `.task/task/<slug>.md
 
 ## Step 0: Setup gate
 
-Resolve the pipeline root, then check whether its `config/config.md` exists:
+Resolve the pipeline root, then check whether its `CLAUDE.md` exists:
 
 ```bash
 source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # sourcing runs find_ai_dir → sets AI_DIR
-[[ -f "$AI_DIR/config/config.md" ]] || echo "config.md not found"
+[[ -f "$AI_DIR/CLAUDE.md" ]] || echo "CLAUDE.md not found"
 ```
 
 Use `${CLAUDE_PLUGIN_ROOT}` — a bare `skills/…` path resolves against the user's project cwd, where it does not exist, and an unset `$AI_DIR` would send Step 7's `mkdir -p "$AI_DIR/task"` to the filesystem root.
 
-**Once `config.md` exists, every artifact path in this skill is under that resolved `$AI_DIR`, never the cwd** (the inline setup below is the one exception — it runs before a root exists) — `.task/task/<slug>.md` below is shorthand for `$AI_DIR/task/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves `$AI_DIR` itself) never sees.
+**Once `.task/CLAUDE.md` exists, every artifact path in this skill is under that resolved `$AI_DIR`, never the cwd** (the inline setup below is the one exception — it runs before a root exists) — `.task/task/<slug>.md` below is shorthand for `$AI_DIR/task/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves `$AI_DIR` itself) never sees.
 
-- **Absent → inline setup.** Run the inline setup gate exactly as [`skills/to-task/SKILL.md`](../to-task/SKILL.md) Step 0 does (detect stack → ONE `AskUserQuestion` confirmation with **Accept** / **Edit** / **Decline** chips → write `config.md` + `git config --local task.root "$ROOT"` + exclude `.task`). `to-task`'s Step 0 is the single source of truth for the sub-steps; do not defer to a separate setup command. Two `to-plan`-specific notes: create `<ROOT>/.task/task/` alongside `config.md`, and on **Decline** report "`config.md` not written — nothing was created. If the detected language or testing policy looked wrong, re-run and pick **Edit** to change them before the write. → Next: `/task:to-plan`" and **stop**. On success, continue to the validate call below with the original `$ARGUMENTS` unchanged.
-- **Present → skip silently**, proceed to validate.
+- **Absent → inline setup.** Run the inline setup gate exactly as [`skills/to-task/SKILL.md`](../to-task/SKILL.md) Step 0 does (detect stack → write `$AI_DIR/CLAUDE.md` from the template there → record `git config --local task.root "$ROOT"` → exclude `.task` → report what was written). No confirmation chip: the file is written first and edited afterwards if a detected value was wrong. `to-task`'s Step 0 is the single source of truth for the sub-steps *and* for the file template; do not defer to a separate setup command and do not restate the template here. One `to-plan`-specific note: create `<ROOT>/.task/task/` alongside `.task/CLAUDE.md`. Then continue to the validate call below with the original `$ARGUMENTS` unchanged.
+- **Present → leave it alone.** It is user-owned; only `task.root` and the `.git/info/exclude` line are restored when missing.
 
-Then run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all` as a self-check — there is no gate, so report any findings and continue rather than blocking. Only a config-precondition failure (exit 2) should stop the flow.
+Then run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all` as a self-check — there is no gate, so report any findings and continue rather than blocking. Only a setup-precondition failure (exit 2) should stop the flow.
 
 ## Step 1: Resolve the target and capture mode
 
@@ -67,15 +67,16 @@ Only for fresh capture (skip entirely for promote/revise — see Step 1).
 
 ### Step 2b: Chat-draft
 
-1. **Slug.** Generate a short kebab-case slug (2–4 words) from the chat's essence, in English regardless of `config.md` → Language (the slug is a filename, a parser-stable string). If it collides with an existing, unrelated task file, disambiguate rather than overwriting.
-2. **Distil the chat.** Read back over the discussion in this conversation (not the codebase yet) and draft `## Description` — the why + what, in the user's own framing, written per `config.md` → Language (the section labels themselves stay English). Use `### Problem` / `### Outcome` / `### Scope` / `### Constraints` sub-headers where the discussion gives signal for them; omit a sub-header rather than inventing content. Do not fabricate anything not actually discussed.
+1. **Slug.** Generate a short kebab-case slug (2–4 words) from the chat's essence, in English regardless of `.task/CLAUDE.md` → Language (the slug is a filename, a parser-stable string). If it collides with an existing, unrelated task file, disambiguate rather than overwriting.
+2. **Read `.task/CLAUDE.md`** for Language and Testing Policy before drafting — Step 0's gate only *tests* for the file with Bash, which does not pull it into context (the platform's auto-load fires for file-read tools only).
+3. **Distil the chat.** Read back over the discussion in this conversation (not the codebase yet) and draft `## Description` — the why + what, in the user's own framing, written per `.task/CLAUDE.md` → Language (the section labels themselves stay English). Use `### Problem` / `### Outcome` / `### Scope` / `### Constraints` sub-headers where the discussion gives signal for them; omit a sub-header rather than inventing content. Do not fabricate anything not actually discussed.
 3. Hold the header line `# {Short task title}` (no `Roadmap:` / `Source item:` lines in this mode) and the drafted Description for Step 7's write. If the discussion clearly relies on a spec in `.task/spec/`, hold a `Spec: <slug>` header line for each relevant one too (never invent a reference; never author the spec — that is `to-spec`'s job). Continue to Step 3.
 
 ## Step 3: Analyze the codebase
 
 Shared by every mode (fresh chat-draft, fresh from-roadmap, promote, revise): `## Plan` steps need real paths, not paraphrase.
 
-Use the Description (fresh capture) or the existing `## Description` (promote/revise) as the "what" to ground against real code. Read code in ascending cost order per `config.md` → Code Navigation (MCP tools first, built-ins as fallback):
+Use the Description (fresh capture) or the existing `## Description` (promote/revise) as the "what" to ground against real code. Read code in ascending cost order per `.task/CLAUDE.md` → Code Navigation (MCP tools first, built-ins as fallback):
 
 1. From modules/packages/files named or implied in the Description — get a structural overview.
 2. Read symbol bodies selectively — only those directly affected.
@@ -91,7 +92,7 @@ Stop analysis as soon as you can name every file each step will touch and how �
 
 ## Step 4: Resolve `tests_required`
 
-From `.task/config/config.md` → Testing Policy → Mode:
+From `.task/CLAUDE.md` → Testing Policy:
 
 - `always` → `tests_required = true`.
 - `never` → `tests_required = false`.
@@ -184,29 +185,20 @@ Spec: {spec-slug}          (one line per relevant spec; omit if none)
 {drafted body, only if tests_required}
 
 ## Execution
-> If `Spec:` headers are present, read each `.task/spec/<slug>.md` first and honor its
-> decisions as fixed. `.task/` is pipeline-internal and invisible to the repo: never name
-> `.task/` paths, spec/roadmap/task slugs, or `§` numbers in code, comments, commits, or PR
-> text. Implement the Plan above (or the Description if none) with the tools in
-> `.task/config/config.md` → Code Navigation / Code Editing, then commit per
-> `.task/config/config.md` → Commit Format. Then spawn the `task:code-reviewer` agent on this
-> file: it proves each finding, fixes confirmed defects within **Touches** plus regressions
-> this diff introduced outside them, runs Build and Tests, and amends the commit; with no
-> `## Plan`, scope fixes to what you changed. If `Roadmap:` + `Source item:` are present,
-> tick item #N's checkbox in `.task/roadmap/<slug>.md` once the review returns OK.
+> Read `.task/CLAUDE.md` and follow its `## Executing a task` section.
 ```
 
-**Two notations in one template — do not mix them up.** `{braces}` in the header and body lines are placeholders you substitute (`{Title}`, `{slug}`, `{N}`, `{drafted steps}`). The `## Execution` blockquote is **stamped verbatim**: its `<slug>`, `#N` and `.task/…` strings stay literal, exactly as written. Do **not** substitute this task's slug or roadmap item number into it — the header lines above already carry them, the block must stay byte-identical across every artifact, and `validate.sh` checks only that `## Execution` is *present*, so a paraphrased block ships unflagged.
+`{braces}` in the header and body lines are placeholders you substitute (`{Title}`, `{slug}`, `{N}`, `{drafted steps}`). The `## Execution` pointer is **stamped verbatim** — one line, byte-identical in every artifact, English, never translated and never expanded back into instructions. Those live in `.task/CLAUDE.md` → `## Executing a task`, in a single copy, so an edit there reaches tasks written earlier. The pointer still has to be in the file: the platform loads `.task/CLAUDE.md` only for file-read tools, so a session that opens the artifact with `cat` would otherwise see no instructions at all.
 
-**Promote:** edit the existing `.task/task/<slug>.md` in place — insert the new `## Plan` block (and `## Tests`, if added) between `## Description`'s content and the existing `## Execution` block (a `to-task`-written file has no `## Tests`, so `## Plan` (+ new `## Tests`) is always inserted directly before `## Execution`). Do not touch the header, the `---` separator, `## Description`, or `## Execution` itself.
+**Promote:** edit the existing `.task/task/<slug>.md` in place — insert the new `## Plan` block (and `## Tests`, if added) between `## Description`'s content and the existing `## Execution` pointer (a `to-task`-written file has no `## Tests`, so `## Plan` (+ new `## Tests`) is always inserted directly before `## Execution`). Do not touch the header, the `---` separator, `## Description`, or `## Execution` itself.
 
 Two defensive cases, since Step 1 accepts a hand-written or hand-edited path as the target:
-- **No `## Execution` block to anchor on** (hand-written file) → append `## Plan` (and `## Tests`) at end of file, then stamp the canonical `## Execution` block after them, exactly as a fresh capture does. Same fallback revise mode already declares below — do not guess an insert position instead.
+- **No `## Execution` pointer to anchor on** (hand-written file) → append `## Plan` (and `## Tests`) at end of file, then stamp the `## Execution` pointer after them, exactly as a fresh capture does. Same fallback revise mode already declares below — do not guess an insert position instead.
 - **No `## Description`** → the file is not a task artifact this skill can promote. **Stop and ask** rather than inventing one: "`.task/task/<slug>.md` has no `## Description` — say whether to treat it as a fresh capture at that path (overwriting it) or point me at a different file."
 
 **Revise:** edit the existing `.task/task/<slug>.md` in place — replace the whole prior `## Plan` block with the new one (same position, still before `## Execution`). Replace `## Tests` only if the current chat's edit touched it; otherwise leave it exactly as it was. Leave `## Execution` untouched (re-stamp it only in the defensive case it's missing).
 
-Then validate the written file: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" task <slug>` — surface any WARN/ERROR in Step 8's digest; only a config-precondition failure (exit 2) hard-stops.
+Then validate the written file: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" task <slug>` — surface any WARN/ERROR in Step 8's digest; only a setup-precondition failure (exit 2) hard-stops.
 
 ## Step 8: Output — digest
 

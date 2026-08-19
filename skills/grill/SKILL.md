@@ -9,7 +9,7 @@ Pressure-test a plan, decision, or idea **before** it is frozen into an artifact
 
 **Input:** `$ARGUMENTS` — optional. A topic or free-form context to grill (e.g. "the retry design", "whether to shard the queue"). Empty → grill the plan/decision being discussed in the current chat.
 
-**No config gate, no setup.** `grill` reads nothing under `.task/` — `config.md` included — so it runs in a fresh, unconfigured project before any capture exists. Dialog mirrors the language of the chat; facts are looked up with plain tools (Read / Grep / Glob / Bash).
+**No setup gate, no setup.** `grill` reads nothing under `.task/` — `.task/CLAUDE.md` included, so the platform never auto-loads it here — so it runs in a fresh, unconfigured project before any capture exists. Dialog mirrors the language of the chat; facts are looked up with plain tools (Read / Grep / Glob / Bash).
 
 ### Step 1: Frame what is being grilled
 
@@ -82,7 +82,7 @@ Pick the one that fits; state the reason in the same language as the dialog. Do 
 ## Forbidden
 
 - **Writing anything, anywhere** — no files, no edits, above all nothing under `.task/`. Serializing the ledger is the `to-*` skills' job; `grill` only hardens the discussion.
-- **Reading or writing anything under `.task/`, `config.md` included** — no config gate, no inline setup; `grill` runs before any config exists and dialog mirrors the chat's language.
+- **Reading or writing anything under `.task/`, `.task/CLAUDE.md` included** — no setup gate, no inline setup; `grill` runs before any setup exists and dialog mirrors the chat's language.
 - **Batching questions** — one `AskUserQuestion` per fork, always. No multi-question rounds.
 - **Acting on the grilled plan** — no implementing, refactoring, or "just fixing it" mid-grill. This skill interrogates; it does not execute.
 - **Asking what the environment can answer** — resolve facts by looking them up; spend questions only on genuine decisions.
