@@ -4,8 +4,8 @@
 
 ```text
 .task/
-├── config/
-│   └── config.md              project policy — language, tests, commits
+├── CLAUDE.md                  project policy + how to execute a task; auto-loaded
+│                              by any session that reads a file under .task/
 ├── task/
 │   ├── http-retry-backoff.md  one file per task; slug = filename = identity
 │   └── migrate-auth-endpoints.md
@@ -40,13 +40,13 @@ Why + what, distilled from the chat.
 ### Test 1: <what is asserted>
 
 ## Execution
-> …stamped verbatim by every capture skill…
+> Read `.task/CLAUDE.md` and follow its `## Executing a task` section.
 ```
 
 - **Line 1** is a plain `# <Title>` — no bracketed task-id.
 - `Roadmap:` / `Source item:` / `Spec:` headers sit above the `---`, ASCII.
 - `## Description` is mandatory; `## Plan` and `## Tests` are optional.
-- `## Execution` is stamped boilerplate — the mechanism that carries implement → commit → review.
+- `## Execution` is a one-line pointer, stamped verbatim by `to-task` / `to-plan`. The instructions it names live once in `.task/CLAUDE.md` → `## Executing a task` — that is the mechanism carrying implement → commit → review.
 
 ## roadmap.md
 

@@ -38,7 +38,7 @@ agents/                          the plugin's subagent definitions (auto-loaded 
                                    plugin loader; agent type = `task:<name>`)
   code-reviewer.md               task:code-reviewer — the post-implementation review pass:
                                    prove each finding, fix the confirmed ones within the
-                                   plan's Touches, run config.md → Build and Tests, amend
+                                   plan's Touches, run .task/CLAUDE.md → Build and Tests, amend
                                    the implementation's commit
 CLAUDE.md                        invariants + maintainer guidance
 docs/
@@ -267,7 +267,7 @@ Internal cleanups (bash-helper refactor, regex tightening, comment typo, README 
 
 Format follows [Keep a Changelog](https://keepachangelog.com/): `Added` / `Changed` / `Removed` / `Deprecated` / `Fixed` / `Security`. Breaking changes use `Changed (breaking)` / `Removed (breaking)` and **must** include a migration note. The current development line lives under `## [Unreleased]` until the next release is cut.
 
-**CHANGELOG entries are written in English**, regardless of any per-project `config.md` → "Language" setting. The changelog is the plugin's public release log — keeping it in one language across the whole contributor base is more important than matching the language of any single task. All repo documentation (`README.md`, `CLAUDE.md`, this file) is English as well; `config.md` → "Language" governs only the artifacts produced by the skills in a consumer project, never this repo's own docs.
+**CHANGELOG entries are written in English**, regardless of any per-project `.task/CLAUDE.md` → "Language" setting. The changelog is the plugin's public release log — keeping it in one language across the whole contributor base is more important than matching the language of any single task. All repo documentation (`README.md`, `CLAUDE.md`, this file) is English as well; `.task/CLAUDE.md` → "Language" governs only the artifacts produced by the skills in a consumer project, never this repo's own docs.
 
 ## Contributing with AI Agents
 
@@ -304,7 +304,7 @@ fix(validate): propagate config language to validator output
 
 validate.sh inherits a per-call prompt template, but the language
 block was being filled from a hard-coded English default instead of
-`config.md` → "Language". Pass it through explicitly so findings
+`.task/CLAUDE.md` → "Language". Pass it through explicitly so findings
 render in the configured language.
 
 Fixes #42

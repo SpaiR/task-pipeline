@@ -14,13 +14,13 @@ Then it won't. The capture skills only ever write Markdown under `.task/` — no
 
 Yes. There's one `.task/` per repo, and every worktree resolves the same one through `git config task.root` (with an upward-walk fallback). If a worktree can't find `.task/`, run any capture skill from it once to record the anchor, or set it by hand with `git config --local task.root /path/that/contains/dot-task`. See [worktree can't find .task/](/guide/troubleshooting#a-worktree-cant-find-task).
 
-## What if I just read the file myself and ignore the Execution block?
+## What if I just read the file myself and ignore the Execution pointer?
 
-That's fine — it's plain Markdown, not a runtime. The `## Execution` block is a standing instruction for a session that has no other context; it isn't enforced by anything. You're free to read the `## Description` and `## Plan` and implement by hand, or hand the file to a session and let it follow the block. There's [no hook and no hidden orchestration](/guide/trust#no-hidden-orchestration) making you do either.
+That's fine — it's plain Markdown, not a runtime. The `## Execution` pointer just sends a session to `.task/CLAUDE.md` → `## Executing a task`, a standing instruction for a session that has no other context; nothing enforces it. You're free to read the `## Description` and `## Plan` and implement by hand, or hand the file to a session and let it follow the block. There's [no hook and no hidden orchestration](/guide/trust#no-hidden-orchestration) making you do either.
 
 ## Does it work in languages other than English?
 
-Yes. Descriptions and the dialogue follow `config.md` → Language, so you can write and discuss tasks in your own language. Only the format's fixed strings — section headers, commit trailers, and the `## Execution` block — stay English, so the validator and any implementing session read them the same way. See [Configuration](/reference/configuration).
+Yes. Descriptions and the dialogue follow `.task/CLAUDE.md` → Language, so you can write and discuss tasks in your own language. Only the format's fixed strings — section headers, commit trailers, and the `## Execution` block — stay English, so the validator and any implementing session read them the same way. See [Configuration](/reference/configuration).
 
 ## How do I uninstall cleanly?
 

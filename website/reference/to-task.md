@@ -36,7 +36,7 @@ When opened from a roadmap item, it also stamps `Roadmap: <slug>` and `Source it
 
 ## First run
 
-On a fresh project, `to-task` runs setup inline: detect language + test policy → one **Accept / Edit / Decline** confirmation → write `config.md`, record `git config task.root`, exclude `.task`. Then it continues into the capture. See [Configuration](/reference/configuration).
+On a fresh project, `to-task` runs setup inline: detect language + test policy → write `.task/CLAUDE.md` (no confirmation chip) → record `git config task.root`, exclude `.task`. Then it continues into the capture. See [Configuration](/reference/configuration).
 
 ## Output
 

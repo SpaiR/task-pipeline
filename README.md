@@ -33,7 +33,7 @@ discuss in chat
 
 Talk a task through in chat — say, an HTTP retry system with backoff and a dead-letter queue.
 
-Optional first move: grill the plan before you freeze it. It writes nothing and needs no setup, so it works as the very first command in a fresh project — the config confirmation only appears later, at capture:
+Optional first move: grill the plan before you freeze it. It writes nothing and needs no setup, so it works as the very first command in a fresh project — `.task/CLAUDE.md` is only written later, at your first capture:
 
 ```text
 /task:grill
@@ -57,15 +57,15 @@ Hand the file to any session — this one or a fresh one:
 
 ```text
 "implement .task/task/http-retry-backoff.md"
-#   → follows the artifact's ## Execution block: implement per the plan
-#   → commits per config.md → Commit Format
+#   → follows the artifact's ## Execution pointer into .task/CLAUDE.md
+#   → implements per the plan, commits per .task/CLAUDE.md → Commit Format
 #   → hands that diff to the task:code-reviewer agent: it proves each finding
 #     before fixing it, runs your build and tests, and amends the commit
 ```
 
-That session follows the artifact's own `## Execution` block: implement the plan, commit per `config.md` → Commit Format, then spawn `task:code-reviewer` on the resulting diff. The reviewer proves each candidate defect independently, fixes only the confirmed ones inside the files named in **Touches** (plus a regression this change caused outside them), reports the rest instead of quietly widening the diff, runs `config.md` → Build and Tests, and amends the commit — so one task stays one commit.
+That session follows the artifact's `## Execution` pointer into `.task/CLAUDE.md` → `## Executing a task`: implement the plan, commit per `.task/CLAUDE.md` → Commit Format, then spawn `task:code-reviewer` on the resulting diff. The reviewer proves each candidate defect independently, fixes only the confirmed ones inside the files named in **Touches** (plus a regression this change caused outside them), reports the rest instead of quietly widening the diff, runs `.task/CLAUDE.md` → Build and Tests, and amends the commit — so one task stays one commit.
 
-The first capture in a fresh project also writes `.task/config/config.md` inline (detect language + test policy, one confirmation) — there's no separate setup command to run first. Prefer a lighter touch? `/task:to-task` skips the Plan — good for a quick capture you'll flesh out with `/task:to-plan` later, or hand straight to implementation when the fix is obvious.
+The first capture in a fresh project also writes `.task/CLAUDE.md` inline (detect language + test policy, write, report) — there's no separate setup command to run first, and no confirmation to click through. Prefer a lighter touch? `/task:to-task` skips the Plan — good for a quick capture you'll flesh out with `/task:to-plan` later, or hand straight to implementation when the fix is obvious.
 
 > [!TIP]
 > More scenarios — roadmap-driven initiatives, `/task:roadmap-to-workflow`, and returning to a task later — live in the **[guide on the docs site](https://spair.github.io/task-pipeline/guide/roadmaps)**.
@@ -78,7 +78,7 @@ Concretely, you get:
 
 - **Depth is a skill you pick, not a flag.** A two-file fix and a month-long migration don't deserve the same ceremony — reach for `to-task`, `to-plan`, `to-roadmap`, or `to-spec` and the file carries exactly that much structure. There is no `--plan` or `--deep` switch anywhere.
 - **The plan gets grilled before it gets frozen.** `/task:grill` keeps a decision-plus-rationale ledger, makes recommendations that are allowed to disagree with you, and closes with a pre-mortem — so no "great idea!" rubber-stamp makes it into the file.
-- **Nothing new to learn on the execution side.** There is no extra command to run — any session told `implement .task/task/<slug>.md` reads the artifact and follows its own `## Execution` block through to a commit.
+- **Nothing new to learn on the execution side.** There is no extra command to run — any session told `implement .task/task/<slug>.md` reads the artifact and follows its `## Execution` pointer into `.task/CLAUDE.md` → `## Executing a task`, through to a commit.
 - **Invisible to your repo.** `.task/` is git-excluded, never shows in `git status`, and `rm -rf .task` leaves the repo exactly as before — [the trust section below](#why-you-can-trust-this) spells out precisely what it will and won't touch.
 - **And yes, the discussion survives `/clear`, compaction, and tomorrow's fresh session** — table stakes, but worth saying. The artifact's path is the only handle; there's no active-task state to lose or heal.
 
@@ -86,7 +86,7 @@ Concretely, you get:
 
 It runs bash, edits files, and writes commits — so here is exactly what it will and won't touch:
 
-- **Nothing is committed until the implementing session does so, per `## Execution`.** Until then every change is just working-tree edits; back them out with plain `git restore` / `git checkout`. One opt-in exception: `/task:roadmap-to-workflow` (autopilot) commits each roadmap item as it lands — it still never pushes.
+- **Nothing is committed until the implementing session does so, per `## Executing a task`.** Until then every change is just working-tree edits; back them out with plain `git restore` / `git checkout`. One opt-in exception: `/task:roadmap-to-workflow` (autopilot) commits each roadmap item as it lands — it still never pushes.
 - **Commits stage only task-related files, and never push.** Nothing leaves your machine.
 - **No hidden orchestration.** The capture skills spawn nothing. The plugin ships exactly one subagent — `task:code-reviewer`, the review pass, whose whole prompt is a readable Markdown file in this repo (`agents/code-reviewer.md`) — and `/task:roadmap-to-workflow` is a plain Workflow the skill itself authors, which you can inspect before it runs.
 - **The pipeline leaves no trace in the repo.** `.task/` is excluded via `.git/info/exclude` (not `.gitignore`), so it never shows up in `git status`; delete it with `rm -rf .task` and the repo is exactly as before.
@@ -94,7 +94,7 @@ It runs bash, edits files, and writes commits — so here is exactly what it wil
 ## Requirements
 
 - [Claude Code](https://docs.claude.com/en/docs/claude-code) — this ships as a Claude Code plugin.
-- Nothing else. The review pass is the plugin's own agent (`task:code-reviewer`), so no platform slash command has to be available — it just needs the plugin enabled. Verification uses whatever build/test command your project declares in `config.md` → Build and Tests; when there is none, the reviewer says so instead of implying a green run.
+- Nothing else. The review pass is the plugin's own agent (`task:code-reviewer`), so no platform slash command has to be available — it just needs the plugin enabled. Verification uses whatever build/test command your project declares in `.task/CLAUDE.md` → Build and Tests; when there is none, the reviewer says so instead of implying a green run.
 
 ## Installation
 
@@ -109,7 +109,7 @@ From then on, updates are a single command: `/plugin marketplace update task-pip
 
 After installation, Claude Code gains the commands `/task:grill`, `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, `/task:to-spec`, `/task:roadmap-to-workflow`, plus the `task:code-reviewer` agent the execution step spawns for you (you never invoke it by hand). There is no hook — enforcement is by convention, not a gate.
 
-In a new project you don't have to run setup by hand first: the first `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, or `/task:to-spec` in an unconfigured project detects language and test policy, presents both for one confirmation, writes `.task/config/config.md`, and continues with the requested capture. `/task:grill` needs no config at all — it writes nothing and can run at the discussion stage before any capture exists. `/task:roadmap-to-workflow` presupposes an existing roadmap, so a fresh-project first-use of it hard-stops with a redirect to run a capture skill first.
+In a new project you don't have to run setup by hand first: the first `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, or `/task:to-spec` in an unconfigured project detects language and test policy, writes `.task/CLAUDE.md`, reports what it wrote, and continues with the requested capture. `/task:grill` needs no setup at all — it writes nothing and can run at the discussion stage before any capture exists. `/task:roadmap-to-workflow` presupposes an existing roadmap, so a fresh-project first-use of it hard-stops with a redirect to run a capture skill first.
 
 <details>
 <summary>Local development</summary>
@@ -153,11 +153,12 @@ Full head-to-head tables against default Claude Code, superpowers, Matt Pocock's
 
 ## Configuration & policy
 
-All of this lives in `.task/config/config.md`, written inline on first use of a capture skill:
+All of this lives in `.task/CLAUDE.md`, written inline on first use of a capture skill. It is a nested `CLAUDE.md`, so Claude Code loads it by itself in any session that reads a file under `.task/` — which is how an implementing session and the reviewer pick up your settings without being told to:
 
-- **Language** — by default the Description is in your language, everything else (headers, the `## Execution` block, commits) is in English, per "Commit Format".
-- **Test policy** — `Testing Policy → Mode`: `always` / `on-demand` *(default)* / `never`. In `on-demand`, `## Tests` is written only if the Description explicitly asks for it ("needs tests" / "with tests" / "cover with tests").
-- **Idempotency** — `config.md` is regenerated in full whenever setup runs again. After an interruption, implementation picks up from `.task/task/<slug>.md` as it stands.
+- **Language** — by default the Description is in your language, everything else (headers, the `## Execution` pointer, commits) is in English, per "Commit Format".
+- **Test policy** — `Testing Policy`: `always` / `on-demand` *(default)* / `never`. In `on-demand`, `## Tests` is written only if the Description explicitly asks for it ("needs tests" / "with tests" / "cover with tests").
+- **Executing a task** — the instructions an implementing session follows, in one copy. Edit them and the change applies to tasks you captured earlier, too.
+- **Yours to edit** — setup writes the file once and never rewrites it. Change any line by hand; to start over, delete the file and run any capture again.
 
 ## How it works
 

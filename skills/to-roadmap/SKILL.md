@@ -13,7 +13,7 @@ Fix a **multi-task initiative** (phases, dependencies, or more than a couple of 
 
 ## Instructions
 
-### Step 0: Config gate
+### Step 0: Setup gate
 
 Resolve the pipeline root first, then validate:
 
@@ -24,8 +24,8 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
 
 **Every artifact path in this skill is under that resolved `$AI_DIR`, never the cwd** — `.task/roadmap/<slug>.md` below is shorthand for `$AI_DIR/roadmap/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves `$AI_DIR` itself) never sees.
 
-- **`config.md not found`** → `/task:to-roadmap` is intake-capable: run the inline setup gate exactly as `skills/to-task/SKILL.md` Step 0 does (detect stack → one `AskUserQuestion` confirmation, Accept / Edit / Decline chips → write `config.md` + `git config --local task.root` + exclude `.task`), then re-run `validate.sh all`. If config is now present → continue. If the user declined setup → report "`config.md` not written — nothing was created. If the detected language or testing policy looked wrong, re-run and pick **Edit** to change them before the write. → Next: `/task:to-roadmap`" and **stop**.
-- **Exit 1** (one or more *existing* artifacts fail validation) → surface the validator output, but **do not block**: those errors are pre-existing files, not the roadmap you're about to write (mirrors `to-task` Step 0 and `roadmap-to-workflow`, and `validate.sh` is advisory, never config-malformed — it doesn't inspect `config.md` content). Only a missing `config.md` (exit 2, handled above) hard-stops.
+- **`CLAUDE.md not found`** → `/task:to-roadmap` is intake-capable: run the inline setup gate exactly as `skills/to-task/SKILL.md` Step 0 does (detect stack → write `$AI_DIR/CLAUDE.md` from the template there → record `git config --local task.root` → exclude `.task` → report what was written), then re-run `validate.sh all` and continue. No confirmation chip — the file is written first and edited afterwards if a detected value was wrong. `to-task`'s Step 0 owns the sub-steps and the template; do not restate either here. If `.task/CLAUDE.md` already exists, leave it untouched: it is user-owned, and only `task.root` and the `.git/info/exclude` line are restored when missing.
+- **Exit 1** (one or more *existing* artifacts fail validation) → surface the validator output, but **do not block**: those errors are pre-existing files, not the roadmap you're about to write (mirrors `to-task` Step 0 and `roadmap-to-workflow`, and `validate.sh` is advisory — it never inspects `.task/CLAUDE.md` content). Only a missing `.task/CLAUDE.md` (exit 2, handled above) hard-stops.
 
 ### Preconditions
 
@@ -35,7 +35,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
 
 ### Step 1: Load context
 
-Issue these independent reads and listings as one parallel batch — none depends on another. Read `.task/config/config.md` (Language, conventions), `CLAUDE.md` if present, and list `.task/roadmap/*` — match existing structural style and declare any in-flight related roadmap as a Prerequisite. List the `docs/` top level and skim entry points if any exist. Do not open source files — this is a shallow scan, not investigation.
+Issue these independent reads and listings as one parallel batch — none depends on another. Read `.task/CLAUDE.md` (Language, conventions), `CLAUDE.md` if present, and list `.task/roadmap/*` — match existing structural style and declare any in-flight related roadmap as a Prerequisite. List the `docs/` top level and skim entry points if any exist. Do not open source files — this is a shallow scan, not investigation.
 
 ### Step 2: Cold start or harvest
 
@@ -48,7 +48,7 @@ On the fence, prefer harvest — a false positive costs one extra recap the user
 
 #### Step 2H: Harvest — Decision Inventory
 
-Comb the prior conversation and print, as message text in your reply (chat-only, never written to a file; heading skeleton English, prose in config language):
+Comb the prior conversation and print, as message text in your reply (chat-only, never written to a file; heading skeleton English, prose in the language from `.task/CLAUDE.md`):
 
 ```
 ## Roadmap — Decision Inventory
@@ -144,7 +144,7 @@ Write the file directly — no in-chat preview, no confirmation prompt.
 2. **Slug collision (soft).** Create `$AI_DIR/roadmap/` if missing. If `$AI_DIR/roadmap/<slug>.md` already exists → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). Never silently overwrite.
 3. Write `$AI_DIR/roadmap/<slug>.md` with the full content, including any `Spec: <spec-slug>` header lines for specs referenced in Step 3.
 4. Modify no file other than `$AI_DIR/roadmap/<slug>.md` (spec authorship is `to-spec`'s job — see Forbidden).
-5. Validate the written file: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" roadmap <slug>` — surface any WARN/ERROR in the Step 6 digest; only a config-precondition failure (exit 2) hard-stops.
+5. Validate the written file: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" roadmap <slug>` — surface any WARN/ERROR in the Step 6 digest; only a setup-precondition failure (exit 2) hard-stops.
 
 ### Step 5: Light self-check (report-only)
 

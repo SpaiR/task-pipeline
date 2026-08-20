@@ -17,11 +17,11 @@ You improve; you do not audit. If duplicated copies actually *disagree*, that is
   - Copies that **disagree today** → Contract/Docs-sync violation → `defer: self-audit`. NOT yours.
   - Copies that **agree but should not both exist** → yours: propose one owner + pointer. Nobody is wrong yet; you are removing future-drift risk.
   - A doc that **omits/misnames** a real skill → Docs-sync → `defer: self-audit`. A doc that **duplicates** content with a natural single owner → yours.
-- **Some duplication is sanctioned.** Before flagging duplication, check it is not deliberate. If `CLAUDE.md` or `docs/contract.md` declares a duplication intentional (e.g. a bash-layer precondition that must stand on its own, or the `## Execution` block being stamped verbatim into every task file by design), do NOT flag it — the `## Execution` boilerplate in particular is *meant* to live in each artifact, not be collapsed to a pointer.
+- **Some duplication is sanctioned.** Before flagging duplication, check it is not deliberate. If `CLAUDE.md` or `docs/contract.md` declares a duplication intentional (e.g. a bash-layer precondition that must stand on its own, or the one-line `## Execution` pointer being stamped verbatim into every task file by design), do NOT flag it — the one-line `## Execution` pointer in particular is *meant* to be stamped into each artifact, because the platform auto-loads `.task/CLAUDE.md` only for file-read tools.
 
 ## What counts as a Leanness improvement (representative, non-exhaustive)
 
-- The same multi-sentence rule copied verbatim (or near-verbatim) into 3+ of {a SKILL.md, CLAUDE.md, `docs/contract.md`, README.md} with no designated source of truth — collapse to one owner, replace the rest with a one-line pointer. (Exception: the `## Execution` block, which is stamped into each task file on purpose.)
+- The same multi-sentence rule copied verbatim (or near-verbatim) into 3+ of {a SKILL.md, CLAUDE.md, `docs/contract.md`, README.md} with no designated source of truth — collapse to one owner, replace the rest with a one-line pointer. (Exception: the one-line `## Execution` pointer, which is stamped into each task file on purpose.)
 - A `skills/_lib/*.sh` (or `validate.sh`) helper/function that is a thin wrapper around a single command with no added logic, called from one place.
 - A `$ARGUMENTS` branch in a skill that no code path or doc actually exercises (dead option). Note the *pipeline* is flag-free; the only flags in the repo are the meta-skills' own (`self-improve --propose-only`), so a "dead flag" is far more likely in a meta-skill than in a capture skill.
 - A `skills/_lib/` helper whose logic could fold into its single caller with no lost seam — machinery split out as ceremony rather than for reuse.

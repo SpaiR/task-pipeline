@@ -3,7 +3,7 @@
 ## Requirements
 
 - [Claude Code](https://docs.claude.com/en/docs/claude-code) — `task-pipeline` ships as a Claude Code plugin.
-- A build/test command worth running — the review pass runs whatever your project declares in `config.md` → Build and Tests. It's optional: with nothing declared, the reviewer reports the skip in words rather than implying a green run. No platform slash command is required; review is the plugin's own `task:code-reviewer` agent, so it only needs the plugin enabled — if it doesn't resolve, see [Troubleshooting](/guide/troubleshooting#code-reviewer-agent-not-found).
+- A build/test command worth running — the review pass runs whatever your project declares in `.task/CLAUDE.md` → Build and Tests. It's optional: with nothing declared, the reviewer reports the skip in words rather than implying a green run. No platform slash command is required; review is the plugin's own `task:code-reviewer` agent, so it only needs the plugin enabled — if it doesn't resolve, see [Troubleshooting](/guide/troubleshooting#code-reviewer-agent-not-found).
 - Dynamic Workflows — only [`/task:roadmap-to-workflow`](/guide/autopilot) needs them, to fan a roadmap's items out to parallel sessions. Everything else works without. There's no pinned version to match: task-pipeline uses these features as your Claude Code install exposes them.
 
 ## Install
@@ -36,7 +36,7 @@ There is no hook — enforcement is by convention, not a gate. (If the commands 
 
 ## Your first capture
 
-You don't run a setup command first. The first capture in a new project detects your language and test policy, asks you to confirm once, writes `.task/config/config.md`, and continues straight into the capture.
+You don't run a setup command first. The first capture in a new project detects your language and test policy, writes `.task/CLAUDE.md`, tells you what it wrote, and continues straight into the capture.
 
 Talk a task through in chat — say, an HTTP retry system with backoff and a dead-letter queue — then capture it:
 
@@ -46,10 +46,10 @@ Talk a task through in chat — say, an HTTP retry system with backoff and a dea
 
 On a fresh project this will:
 
-1. **Detect and confirm config.** It reads `CLAUDE.md` and your commit conventions, then shows one confirmation:
-   > Detected — Language: follow task.md Description; Testing policy: on-demand.
+1. **Detect and write the settings.** It reads `CLAUDE.md` and your commit conventions, writes `.task/CLAUDE.md`, records `git config task.root`, excludes `.task` from git, and reports what it wrote:
+   > Wrote `.task/CLAUDE.md` — Language: follow task.md Description; Testing Policy: on-demand.
 
-   with **Accept / Edit / Decline** chips. Accept and it writes `.task/config/config.md`, records `git config task.root`, and excludes `.task` from git.
+   There is no confirmation to click: if a detected value is wrong, edit the file. Setup writes it once and never rewrites it.
 
 2. **Write the artifact.** It drafts `.task/task/http-retry-backoff.md` with a `## Description` and a `## Plan` (Goal / Touches / Logic steps), then prints a short digest of what it captured.
 
@@ -64,11 +64,11 @@ Hand the file to any session — this one, or a fresh one tomorrow. `implement` 
 implement .task/task/http-retry-backoff.md
 ```
 
-That session follows the artifact's own `## Execution` block:
+That session follows the artifact's `## Execution` pointer into `.task/CLAUDE.md` → `## Executing a task`:
 
 - implement per the `## Plan` (or the `## Description` if there's no plan);
-- commit per `config.md` → Commit Format;
-- spawn `task:code-reviewer` on that diff — it proves each defect it suspects before touching anything, fixes the confirmed ones within the files named in **Touches**, reports the rest, runs `config.md` → Build and Tests, and amends the commit.
+- commit per `.task/CLAUDE.md` → Commit Format;
+- spawn `task:code-reviewer` on that diff — it proves each defect it suspects before touching anything, fixes the confirmed ones within the files named in **Touches**, reports the rest, runs `.task/CLAUDE.md` → Build and Tests, and amends the commit.
 
 Nothing is committed until this step runs. Until then, every change is just working-tree edits.
 
@@ -76,11 +76,12 @@ Nothing is committed until this step runs. Until then, every change is just work
 
 ```text
 .task/
-├── config/
-│   └── config.md                    ← written once, on first capture
+├── CLAUDE.md                        ← written once, on first capture; yours to edit
 └── task/
     └── http-retry-backoff.md        ← your task; the slug is its identity
 ```
+
+`.task/CLAUDE.md` is a nested `CLAUDE.md`, so Claude Code loads it into any session that reads a file under `.task/` — that's how an implementing session picks up your settings without being told to.
 
 `.task/` is flat and invisible to your repo — it's excluded via `.git/info/exclude`, so it never shows in `git status`. Delete it with `rm -rf .task` and the repo is exactly as before. See [.task/ layout](/reference/task-layout) for the full picture.
 

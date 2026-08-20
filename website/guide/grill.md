@@ -29,7 +29,7 @@ A typical grill is 3–7 questions. It chases the one answer that would change e
 
 ## No config needed
 
-`grill` is the one skill that neither reads nor writes anything under `.task/` — `config.md` included. It runs in a fresh, unconfigured project, before any capture exists. Its dialog mirrors the language of your chat.
+`grill` is the one skill that neither reads nor writes anything under `.task/` — `.task/CLAUDE.md` included, so the platform never auto-loads it there. It runs in a fresh, unconfigured project, before any capture exists. Its dialog mirrors the language of your chat.
 
 ## Where it routes you
 
