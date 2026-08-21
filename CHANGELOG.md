@@ -4,6 +4,30 @@ All notable changes to this project are documented here. Format — [Keep a Chan
 
 This file is maintained in **English** — see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-policy).
 
+## [3.4.0] — 2026-08-21
+
+Project settings move from a bespoke config file to a nested `CLAUDE.md` the platform loads on its own, and `grill` stops counting questions. **Contains a breaking change** — see Migration.
+
+### Changed
+- **`config.md` is replaced by a nested [`.task/CLAUDE.md`](docs/contract.md)** — the platform auto-loads a nested `CLAUDE.md` into any session that reads a file under `.task/`, so the executing session and `task:code-reviewer` pick up Language, Testing Policy, Build and Tests and Commit Format without being told to open a config file. Two limits are load-bearing and shape the rest of the change: the auto-load fires only for file-read tools (never for `cat` or `sed`), and a nested `CLAUDE.md` is **not** re-injected after `/compact`.
+- **The file is the user's, not the pipeline's** — setup writes it once, without a confirmation chip, and never rewrites or section-repairs it. Only `task.root` and the git-exclude line are repaired on later runs, so hand edits survive every capture. To regenerate it, delete it and re-run any capture.
+- **The stamped `## Execution` block collapsed to a one-line pointer** at `.task/CLAUDE.md` → `## Executing a task`. The execution instructions now exist in exactly one copy, so editing them reaches tasks captured earlier. The pointer stays stamped in every artifact regardless — it is what survives `/compact` and a `cat`-based read.
+- **`grill` scales depth to the decision** — the "typical 3–7 questions" anchor is gone, replaced by a functional stopping rule. Forks are asked in descending blast-radius order so an early stop loses the least, a wrap-up-or-keep-going checkpoint hands the stop decision to the user rather than the model, and the pre-mortem is skippable when no answer to it would change the ledger (Step 2's no-manufactured-questions rule, applied to the finale).
+
+### Fixed
+- **The docs site build no longer fails on the changelog's own links** — `changelog.md` inlines `CHANGELOG.md` verbatim, so every repo-relative link in it must be exempt from the dead-link check. The v3.3.0 entry added a `README.md` link the exemption list did not cover, and the Pages deploy had failed on it since. `README` now sits alongside the CONTRIBUTING / CLAUDE / contract / agents patterns.
+
+### Migration
+
+`.task/config/config.md` is no longer recognised. Before the next capture:
+
+```bash
+git mv .task/config/config.md .task/CLAUDE.md 2>/dev/null || mv .task/config/config.md .task/CLAUDE.md
+rmdir .task/config
+```
+
+Until you do, the setup gate reports the project as unconfigured and writes a fresh `.task/CLAUDE.md`, orphaning any hand-edited settings; where `.task/` sits in a subdirectory, root resolution falls through to the parent and creates a second `.task/` beside the real one. Existing task files keep working — re-run `/task:to-plan` on one to re-stamp its `## Execution` pointer.
+
 ## [3.3.0] — 2026-08-11
 
 The pipeline stops borrowing the platform's review commands and ships its own review agent. Non-breaking — no artifact-shape changes; existing task files keep working, though re-running `/task:to-plan` on one re-stamps its `## Execution` block with the new sequence.
