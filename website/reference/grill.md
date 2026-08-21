@@ -18,9 +18,9 @@ See the [grill guide](/guide/grill) for the full walkthrough.
 - Resolves *facts* itself (from the codebase) and spends questions only on genuine *decisions*.
 - Grills one `AskUserQuestion` fork at a time — each with 2–4 concrete options and an honest recommendation.
 - Keeps a decision ledger: `{the decision} — because {the reason}`.
-- Ends with a pre-mortem kill-shot question, then prints the full ledger.
+- Ends with a pre-mortem kill-shot question — skipped when no answer to it would change the ledger — then prints the full ledger.
 
-Typical depth is 3–7 questions.
+Depth is an outcome, not a target — it stops when no unanswered fork would change the capture, and offers a wrap-up-or-keep-going choice when only secondary forks remain.
 
 ## Config
 

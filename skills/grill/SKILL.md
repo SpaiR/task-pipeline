@@ -36,7 +36,9 @@ Each question:
 - **Carries a recommendation.** The first chip is your recommended answer, labelled `… (Recommended)`. Each option's `description` states its consequence — what you get and what it costs — so the choice is informed, not blind.
 - **Anti-sycophancy rule.** The recommendation is your honest read, not an echo of where the user seems to be leaning. When the user's implied leaning looks wrong, the recommended chip **must be the disagreement**, and its description must say why the leaning is the weaker call. Agreeing by reflex is a failure of this skill.
 
-**Depth budget.** A typical grill is 3–7 questions. Depth over breadth — chase the one answer that would change everything, not ten that wouldn't. Stop as soon as the remaining forks would not change what gets captured.
+**Stopping rule.** Keep asking while an unanswered fork would change what gets captured; stop the moment none would. The question count is an outcome, not a target — a thin decision may settle in 2 questions, a spec-bound initiative may take 12. Depth over breadth: ask forks in descending blast radius — the answer that would change everything first — so stopping early loses the least.
+
+**Continuation checkpoint.** When the capture-changing forks are resolved but genuine secondary forks remain, don't cut them off unilaterally — spend one `AskUserQuestion` on the fork about the grill itself: `Wrap up (Recommended)` vs. `Keep going`, the keep-going chip's description naming the remaining forks in one line. When nothing genuine remains, skip the checkpoint — it is a real path fork (convention (c)), not a ritual.
 
 ### Step 4: Maintain the decision ledger
 
@@ -51,9 +53,11 @@ Once the branches are resolved, ask **one** kill-shot question via `AskUserQuest
 
 Fold the answer into the ledger as a final decision line (the mitigation, or the confirmed reason to proceed anyway).
 
+**Skip it when it earns nothing.** If the grill was thin enough that no plausible failure mode or simpler alternative would change the ledger, the pre-mortem is a manufactured question — Step 2's rule applies to it too. Go straight to Step 6.
+
 ### Step 6: Print the ledger
 
-Once the pre-mortem answer is folded in, process the whole set of answers together and print the full ledger **as message text in your reply** — the whole block, once (convention (b)):
+Once the pre-mortem answer is folded in (or the pre-mortem was skipped), process the whole set of answers together and print the full ledger **as message text in your reply** — the whole block, once (convention (b)):
 
 ```
 ## Decision ledger

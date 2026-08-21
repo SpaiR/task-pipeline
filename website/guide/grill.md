@@ -22,10 +22,10 @@ A capture skill freezes a discussion into a file. If the discussion was fuzzy, t
 2. **It resolves facts itself.** Anything the codebase can answer — what a file does, whether a library is already a dependency — it looks up with plain tools. It spends questions only on genuine decisions.
 3. **It grills, one question at a time.** Each question is a real fork with 2–4 concrete options and a recommendation. The first chip is its honest recommended answer — and if your leaning looks like the weaker call, the recommendation will say so rather than agree by reflex.
 4. **It keeps a ledger.** After each answer it echoes one new line: `{the decision} — because {the reason}`.
-5. **It ends with a pre-mortem** — one kill-shot question, like *"this shipped and failed; what was the cause?"* — and folds the answer into the ledger.
+5. **It ends with a pre-mortem** — one kill-shot question, like *"this shipped and failed; what was the cause?"* — and folds the answer into the ledger. If the grill was thin enough that no answer here would change the ledger, it skips the pre-mortem instead of manufacturing it.
 6. **It prints the full ledger** and routes you onward.
 
-A typical grill is 3–7 questions. It chases the one answer that would change everything, not ten that wouldn't.
+The question count is an outcome, not a target: it keeps asking while an unanswered fork would change what gets captured, and stops the moment none would — a thin decision may settle in 2 questions, a spec-bound initiative may take 12. It asks the biggest-impact forks first, and when only secondary forks remain it asks you whether to wrap up or keep going instead of deciding for you.
 
 ## No config needed
 
