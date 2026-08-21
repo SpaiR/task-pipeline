@@ -17,7 +17,7 @@ to-spec                               ← pins technical decisions, cited via Sp
 implement session   roadmap-to-workflow   ← the launcher fans items out to sessions
 ```
 
-- `grill` — **pre-capture, produces no artifact.** Interrogates a plan/decision one question at a time, keeps an in-chat decision-plus-rationale ledger, ends with a pre-mortem, and routes to the right capture skill. Touches nothing under `.task/`; its output is a hardened discussion the `to-*` skills then serialize.
+- `grill` — **pre-capture, produces no artifact.** Interrogates a plan/decision one question at a time, keeps an in-chat decision-plus-rationale ledger, ends with a pre-mortem (skipped when it would change nothing), and routes to the right capture skill. Depth is an outcome, not a target — it stops when no unanswered fork would change the capture, offering a wrap-up-or-keep-going checkpoint when only secondary forks remain. Touches nothing under `.task/`; its output is a hardened discussion the `to-*` skills then serialize.
 - `to-task` — capture chat → `.task/task/<slug>.md`, `## Description` only, no `## Plan`.
 - `to-plan` — same, **with** a `## Plan` section (Goal / Touches / Logic).
 - `to-roadmap` — capture an initiative → `.task/roadmap/<slug>.md`.
