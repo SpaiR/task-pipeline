@@ -28,15 +28,17 @@ A spec doesn't wire itself in — the referencing skill does that. When you capt
 
 ```markdown
 # Migrate auth endpoints
-Roadmap: api-v2-migration
+Roadmap: [api-v2-migration](../roadmap/api-v2-migration.md)
 Source item: #1
-Spec: event-envelope
+Spec: [event-envelope](../spec/event-envelope.md)
 ---
 ## Description
 …
 ```
 
-You can carry more than one `Spec:` line. Roadmaps reference specs the same way, and items cite specific sections as `### Spec references → event-envelope §2`.
+The header is a **Markdown link**, so the reference is clickable in any Markdown viewer or plan-review tool — the link text is the slug that identifies the spec, the target is what a viewer follows. Every artifact kind sits one level under `.task/`, so a reference is always `../<kind>/<slug>.md`.
+
+You can carry more than one `Spec:` line. Roadmaps reference specs the same way — their `Spec:` headers sit directly under the roadmap's `# <Title>` — and items cite specific sections as `### Spec references → [event-envelope](../spec/event-envelope.md) §2`.
 
 ## How the executing session uses it
 

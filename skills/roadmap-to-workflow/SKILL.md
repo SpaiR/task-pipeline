@@ -61,7 +61,7 @@ done
 
 Every refusal on a complete roadmap ends the same way, in the wording the capture skills also use: "Every item in `<slug>` is already checked off — nothing left to run. → Next: `/task:to-roadmap` for a new initiative, or uncheck the items you want rerun."
 
-Read the roadmap's `Spec: <slug>` header lines, if any — resolve each to an **absolute** `$AI_DIR/spec/<slug>.md` path and echo the list. These paths are baked into the Workflow script's `SPEC_PATHS` literal (Step 2) and interpolated into every item's plan-agent prompt as fixed technical-decision anchors; the JS sandbox cannot expand `$AI_DIR`, so the absolute values must be literals.
+Read the roadmap's `Spec:` header lines, if any — each is a Markdown link, `Spec: [<slug>](../spec/<slug>.md)`, so take `<slug>` from the link **text** (a hand-edited roadmap may carry a bare slug; same reading) and resolve it to an **absolute** `$AI_DIR/spec/<slug>.md` path, never by following the relative link target. Echo the list. These paths are baked into the Workflow script's `SPEC_PATHS` literal (Step 2) and interpolated into every item's plan-agent prompt as fixed technical-decision anchors; the JS sandbox cannot expand `$AI_DIR`, so the absolute values must be literals.
 
 ### Item scope
 
@@ -130,8 +130,10 @@ const ROADMAP = `${AI_DIR}/roadmap/${slug}.md`;   // the file the driver's auto-
 const SPEC_PATHS = [];                            // from Step 0 — absolute $AI_DIR/spec/<slug>.md
 // paths for the roadmap's own `Spec:` headers, baked as literals ([] when it has none)
 const SPEC_SLUGS = SPEC_PATHS.map(p => p.split("/").pop().replace(/\.md$/, ""));
-// the `Spec:` header contract is a bare slug, never a path — stamp from SPEC_SLUGS,
-// read from SPEC_PATHS
+// A `Spec:` header is `Spec: [<slug>](../spec/<slug>.md)` — the slug carries the
+// identity, the relative target is what makes it navigable in a viewer. Stamp the
+// header from SPEC_SLUGS (never an absolute path — SPEC_PATHS is absolute, and the
+// header target must stay `../spec/<slug>.md`); read the spec files from SPEC_PATHS.
 const waves = [                                   // from Step 1 — dependency order
   [ { n: 1, title: "…", model: "sonnet" }, { n: 2, title: "…", model: "haiku" } ],
   [ { n: 3, title: "…", model: "opus"   } ],
@@ -148,11 +150,14 @@ async function runPlan(n, title, model, w) {
     `Read ${PLUGIN_ROOT}/skills/to-plan/SKILL.md and run it NON-INTERACTIVELY for roadmap item
      ${slug}#${n} ("${title}"). Draft ${AI_DIR}/task/<item-slug>.md (Description +
      ## Plan, + ## Tests if .task/CLAUDE.md → Testing Policy calls for it), stamping
-     the header with "Roadmap: ${slug}" and "Source item: #${n}", plus a
-     "Spec: <spec-slug>" line for each spec the item cites (via its
-     "### Spec references → <spec-slug> §N" entries) plus every roadmap-level
-     spec — those slugs are: ${SPEC_SLUGS.join(", ") || "(none)"}. A "Spec:"
-     header value is the bare slug, never a path. Read the corresponding spec
+     the header with "Roadmap: [${slug}](../roadmap/${slug}.md)" and
+     "Source item: #${n}", plus a "Spec: [<spec-slug>](../spec/<spec-slug>.md)"
+     line for each spec the item cites (via its
+     "### Spec references → [<spec-slug>](../spec/<spec-slug>.md) §N" entries) plus
+     every roadmap-level spec — those slugs are: ${SPEC_SLUGS.join(", ") || "(none)"}.
+     Cross-artifact headers are Markdown links whose text is the slug and whose
+     target is always "../<kind>/<slug>.md" — never an absolute path, and never a
+     bare slug. Read the corresponding spec
      files first as fixed technical anchors: ${SPEC_PATHS.join(", ") || "(none)"}. Auto-accept every confirmation; make constructive
      assumptions; never block on a prompt. Do NOT implement or commit.
      Suppress to-plan's "→ Next:" handoff footer (its Step 8 driver-mode

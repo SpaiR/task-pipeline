@@ -111,12 +111,14 @@ Topics the user explicitly said to skip stay skipped — do not raise them again
 
 ### Step 3: Draft the file
 
-Once you have **printed** the Step 2H inventory (or the Step 2C recap) — no user reply is required and none is awaited; a correction, if the user makes one, arrives as chat and you reprint before drafting — draft the full roadmap per [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd): title + intro, `## Prerequisites`, `## Phase summary` table, one `## Phase X` section per phase with `### - [ ] N. <title>` items (`**Dependencies:**` — emit an em dash `—` when the item has none, otherwise a comma-separated list of item numbers; `roadmap-to-workflow`'s wave sorter also tolerates `-` / `none` / `n/a` on hand-edited files, but reads any other word as a dependency on a missing item and hard-stops — optional `**Model:**`, `**Ready description:**` blockquote with `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria`), `## Out of scope`, `## Backlinks`. Item numbers `N` run continuously across the whole file — never restart the numbering per phase.
+Once you have **printed** the Step 2H inventory (or the Step 2C recap) — no user reply is required and none is awaited; a correction, if the user makes one, arrives as chat and you reprint before drafting — draft the full roadmap per [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd): `# <Title>` on line 1, any `Spec:` header lines directly under it, then the intro, `## Prerequisites`, `## Phase summary` table, one `## Phase X` section per phase with `### - [ ] N. <title>` items (`**Dependencies:**` — emit an em dash `—` when the item has none, otherwise a comma-separated list of item numbers; `roadmap-to-workflow`'s wave sorter also tolerates `-` / `none` / `n/a` on hand-edited files, but reads any other word as a dependency on a missing item and hard-stops — optional `**Model:**`, `**Ready description:**` blockquote with `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria`), `## Out of scope`, `## Backlinks`. Item numbers `N` run continuously across the whole file — never restart the numbering per phase.
+
+`## Prerequisites` and `## Backlinks` are the file's two pointing-elsewhere sections, and both hold **Markdown links**, never bare slugs or bare paths — a related roadmap is `[<slug>](<slug>.md)` (same directory), a spec `[<slug>](../spec/<slug>.md)`, anything outside `.task/` a repo-relative or absolute link. Omit either section rather than leaving it empty.
 
 **Route every confirmed decision to a home:**
 
 - Observable behavior / user-facing effect → the item's `### Outcomes`, or `### Acceptance criteria` when it's a testable assertion.
-- Cross-item technical decision → a standalone spec. If a `.task/spec/<spec-slug>.md` already covers it, add a `Spec: <spec-slug>` header line to the roadmap (ASCII, above the title/intro) and cite it from each steered item as `### Spec references → <spec-slug> §N`. If no spec exists yet, **do not write one here** — surface the decision with a one-line recommendation to capture it via `/task:to-spec`, then reference it on a later run.
+- Cross-item technical decision → a standalone spec. If a `.task/spec/<spec-slug>.md` already covers it, add a `Spec: [<spec-slug>](../spec/<spec-slug>.md)` header line to the roadmap — ASCII, **directly under `# <Title>` and above the intro prose**, so line 1 stays the document's own H1 — and cite it from each steered item as `### Spec references → [<spec-slug>](../spec/<spec-slug>.md) §N`. The link text is the slug that carries the identity; the target is what lets a Markdown viewer navigate, and is always `../spec/<spec-slug>.md` since `.task/roadmap/` and `.task/spec/` are siblings. If no spec exists yet, **do not write one here** — surface the decision with a one-line recommendation to capture it via `/task:to-spec`, then reference it on a later run.
 - Scope exclusion → `## Out of scope`, with the reason.
 - Anything else → drop it, but say so to the user with a one-line reason — never a silent omission.
 
@@ -134,7 +136,8 @@ Before saving, self-check and fix inline (drafting hygiene, distinct from Step 5
 4. Every `**Dependencies:**` cites a task number that exists in this file.
 5. Every item heading produces a unique kebab-case slug.
 6. Item numbers are unique across the whole file (numbering does not restart per phase) — a duplicate `N` is a `validate.sh` error, and the `roadmap-to-workflow` driver's auto-mark keys on the number, so two items sharing one would be ticked together.
-7. Every confirmed decision (Step 2) resolved to a concrete home — `### Outcomes`/`### Acceptance criteria`, `## Out of scope`, a spec `### Spec references → <spec-slug> §N` citation (or a decision flagged for a `/task:to-spec` follow-up) — or was explicitly dropped with a stated reason.
+7. Every confirmed decision (Step 2) resolved to a concrete home — `### Outcomes`/`### Acceptance criteria`, `## Out of scope`, a spec `### Spec references → [<spec-slug>](../spec/<spec-slug>.md) §N` citation (or a decision flagged for a `/task:to-spec` follow-up) — or was explicitly dropped with a stated reason.
+8. Every cross-artifact reference is a Markdown link — the `Spec:` headers, the `### Spec references` citations, and everything under `## Prerequisites` / `## Backlinks`.
 
 ### Step 4: Save
 
@@ -142,7 +145,7 @@ Write the file directly — no in-chat preview, no confirmation prompt.
 
 1. Slug: kebab-case from the initiative title, ≤ 50 chars (e.g. `add-auth-flow`, `migrate-to-vite`).
 2. **Slug collision (soft).** Create `$AI_DIR/roadmap/` if missing. If `$AI_DIR/roadmap/<slug>.md` already exists → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). Never silently overwrite.
-3. Write `$AI_DIR/roadmap/<slug>.md` with the full content, including any `Spec: <spec-slug>` header lines for specs referenced in Step 3.
+3. Write `$AI_DIR/roadmap/<slug>.md` with the full content, including any `Spec: [<spec-slug>](../spec/<spec-slug>.md)` header lines for specs referenced in Step 3 — directly under `# <Title>`, above the intro.
 4. Modify no file other than `$AI_DIR/roadmap/<slug>.md` (spec authorship is `to-spec`'s job — see Forbidden).
 5. Validate the written file: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" roadmap <slug>` — surface any WARN/ERROR in the Step 6 digest; only a setup-precondition failure (exit 2) hard-stops.
 
@@ -152,7 +155,7 @@ After Save, skim the just-saved file (not the in-chat draft) against three lense
 
 - **Coverage** — phase/fork coverage, dependency integrity (dangling or cyclic `**Dependencies:**`).
 - **Decomposition** — any item that reads as compound (spans ≥ 2 unrelated concerns, or has far more outcomes than the rest) and should be split.
-- **Clarity** — behavioral discipline held, descriptions self-contained, every `### Spec references → <spec-slug> §N` citation names a `Spec:`-referenced `.task/spec/<spec-slug>.md` that actually contains that `§N`.
+- **Clarity** — behavioral discipline held, descriptions self-contained, every `### Spec references → [<spec-slug>](../spec/<spec-slug>.md) §N` citation names a `Spec:`-referenced `.task/spec/<spec-slug>.md` that actually contains that `§N`, and every link target matches its link text (a copied citation whose target still points at the previous spec resolves for the agent and misleads the human).
 
 Report a compact findings summary — a count per lens plus the obvious issues, a few lines. **Never rewrite the saved file** — anything found here is surfaced for the user to fix by hand or discuss further in chat; there is no inline auto-apply and no `--refine` mode to escalate to.
 

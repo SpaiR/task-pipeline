@@ -6,9 +6,12 @@
 #
 # The layout is flat: <slug> is both the filename and the identity — there is no
 # task-id, no workspace, no active-task pointer. This is an OPTIONAL
-# self-check; no hook calls it. A task/roadmap `Spec: <slug>` header that
-# doesn't resolve to a .task/spec/<slug>.md is reported as a WARN (dangling
-# reference), never an ERROR — the only cross-file check, and advisory only.
+# self-check; no hook calls it. A task/roadmap `Spec:` header whose slug doesn't
+# resolve to a .task/spec/<slug>.md is reported as a WARN (dangling reference),
+# never an ERROR — the only cross-file check, and advisory only. A header whose
+# link target disagrees with its own label is a second WARN, checked within the
+# one line. Both header forms are accepted: `Spec: [<slug>](../spec/<slug>.md)`
+# (canonical) and the bare `Spec: <slug>` that earlier versions wrote.
 #
 # Exit codes:
 #   0 — all checks passed
@@ -68,19 +71,63 @@ require_config() {
 # resolver, keyed on the .task subdirectory.
 
 # --- check_spec_refs <file> <label> ---
-# WARN (never ERROR) for any `Spec: <slug>` header in <file> that does not
+# WARN (never ERROR) for any `Spec:` header in <file> whose slug does not
 # resolve to an existing .task/spec/<slug>.md. This is the only cross-file
 # check in the pipeline, and it is advisory — validate.sh is not a gate.
 # Runs in the caller's shell (not a subshell), so WARNS is updated directly.
+#
+# The header value is a Markdown link — `Spec: [<slug>](../spec/<slug>.md)` — so
+# viewers can navigate it; the LINK LABEL carries the identity. The bare
+# `Spec: <slug>` form predates that and stays accepted: artifacts written by
+# earlier versions are still valid, and flagging them all as dangling would make
+# this the noisiest check in the pipeline instead of its only useful one.
+#
+# Resolution is label-only: the canonical path is always $AI_DIR/spec/<slug>.md,
+# and a relative href would resolve against the caller's cwd, not the artifact's
+# directory. But the href is still READ, for one intra-line check — a target that
+# disagrees with its label is a WARN of its own. Nothing else would ever catch it:
+# the agent follows the label and works correctly, so a stale target after a
+# rename silently sends every human who clicks it to the wrong file, which is the
+# single failure the link form exists to prevent. This stays an intra-line
+# consistency check, NOT a second cross-file one — the dangling-spec WARN below
+# remains the pipeline's only cross-file validation.
+#
+# The awk split is deliberately forgiving, because these lines are hand-edited:
+# backticks are stripped BEFORE the link is unwrapped (so `` `[s](t)` `` and
+# `` [`s`](t) `` both reduce), trailing text after the link is tolerated (a
+# literal copy of a template's `(one line per spec; …)` annotation is the common
+# case), and the extracted label is re-trimmed. Anchoring the pattern at
+# end-of-line instead would leave those forms un-unwrapped and emit a WARN naming
+# a garbage slug on a spec that exists.
+#
+# Runs in the caller's shell (not a subshell), so WARNS is updated directly.
 check_spec_refs() {
-  local file="$1" label="$2" slug
+  local file="$1" label="$2" slug target
   [[ -f "$file" ]] || return
-  while IFS= read -r slug; do
+  while IFS=$'\t' read -r slug target; do
     [[ -z "$slug" ]] && continue
     if [[ ! -f "$AI_DIR/spec/$slug.md" ]]; then
       warn "$label" "Spec: $slug — no such spec at $AI_DIR/spec/$slug.md (dangling reference)"
+    elif [[ -n "$target" && "$target" != "../spec/$slug.md" ]]; then
+      warn "$label" "Spec: $slug — link target '$target' does not match the slug (expected '../spec/$slug.md'); agents follow the label, so only a human clicking the link would land on the wrong file"
     fi
-  done < <(grep -E '^Spec:[[:space:]]' "$file" 2>/dev/null | sed -E 's/^Spec:[[:space:]]*//; s/[[:space:]]+$//')
+  done < <(awk '
+    /^Spec:[[:space:]]/ {
+      v = $0
+      sub(/^Spec:[[:space:]]*/, "", v)
+      gsub(/`/, "", v)
+      target = ""
+      if (match(v, /^\[[^]]+\]\([^)]*\)/)) {
+        link = substr(v, RSTART, RLENGTH)
+        slug = link;   sub(/^\[/, "", slug);      sub(/\].*$/, "", slug)
+        target = link; sub(/^[^(]*\(/, "", target); sub(/\)$/, "", target)
+        v = slug
+      }
+      sub(/^[[:space:]]+/, "", v);      sub(/[[:space:]]+$/, "", v)
+      sub(/^[[:space:]]+/, "", target); sub(/[[:space:]]+$/, "", target)
+      if (v != "") print v "\t" target
+    }
+  ' "$file" 2>/dev/null)
 }
 
 # ---------------- task.md ----------------

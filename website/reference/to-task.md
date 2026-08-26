@@ -22,7 +22,7 @@ See the [single-task guide](/guide/single-task) for how it fits the everyday flo
 
 ```markdown
 # {Short task title}
-Spec: {spec-slug}          (one line per relevant spec; omitted if none)
+Spec: [{spec-slug}](../spec/{spec-slug}.md)   (one line per relevant spec; omitted if none)
 ---
 ## Description
 
@@ -32,7 +32,7 @@ Spec: {spec-slug}          (one line per relevant spec; omitted if none)
 > …stamped verbatim…
 ```
 
-When opened from a roadmap item, it also stamps `Roadmap: <slug>` and `Source item: #N` so the executing session can tick the right checkbox.
+When opened from a roadmap item, it also stamps `Roadmap: [<slug>](../roadmap/<slug>.md)` and `Source item: #N` so the executing session can tick the right checkbox.
 
 ## First run
 

@@ -59,11 +59,19 @@ Claude Code's own `/verify` and `/code-review` are marked `disable-model-invocat
 
 ### validate.sh warns "no such spec … (dangling reference)"
 
-**Symptom** — a `WARN` names a `Spec: <slug>` header pointing at a `.task/spec/<slug>.md` that doesn't exist.
+**Symptom** — a `WARN` names a `Spec:` header pointing at a `.task/spec/<slug>.md` that doesn't exist.
 
 **Cause** — the header names a spec that was never written, was renamed, or was deleted. This is the pipeline's one cross-file check, and only ever a `WARN`.
 
-**Fix** — capture the missing spec with `/task:to-spec` (using that slug), correct the slug in the header, or drop the header if the reference is stale.
+**Fix** — capture the missing spec with `/task:to-spec` (using that slug), correct the slug in the header, or drop the header if the reference is stale. The check reads the slug from the header's **link text**, so `Spec: [<slug>](../spec/<slug>.md)` and a bare `Spec: <slug>` behave the same — a hand-edited header in either form is never flagged for its shape, only for a spec that genuinely isn't there.
+
+### validate.sh warns "link target … does not match the slug"
+
+**Symptom** — a `WARN` says a `Spec:` header's target isn't `../spec/<slug>.md`.
+
+**Cause** — the link text and the link target disagree, which is what renaming a spec and updating only one half leaves behind.
+
+**Fix** — make the target `../spec/<slug>.md` for the slug in the link text. Worth doing even though nothing is broken for the agent: every consumer resolves the **label**, so the task still implements correctly and only a human clicking the link lands on the wrong file — which is the one thing the link form was added to prevent.
 
 ## Working with roadmaps
 
@@ -71,7 +79,7 @@ Claude Code's own `/verify` and `/code-review` are marked `disable-model-invocat
 
 **Cause** — the auto-mark step is conditional on the task file carrying both `Roadmap:` and `Source item: #N` header lines, above the `---`. If the file was hand-created, those headers were edited out, or the item number doesn't match, the executing session has nothing to key the flip off of.
 
-**Fix** — check the top of `.task/task/<item-slug>.md` for both header lines and a correct `#N`. Add them if missing (ASCII, above `---`) and re-run, or just tick the box yourself — it's a plain `- [ ]` → `- [x]` edit.
+**Fix** — check the top of `.task/task/<item-slug>.md` for both header lines and a correct `#N`. Add them if missing (ASCII, above `---`, `Roadmap: [<slug>](../roadmap/<slug>.md)`) and re-run, or just tick the box yourself — it's a plain `- [ ]` → `- [x]` edit.
 
 ### A roadmap-to-workflow run stops on a failed item
 

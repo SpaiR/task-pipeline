@@ -17,7 +17,8 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" [ all | task <slug> | r
 - `## Plan` is optional — if present, it has ≥1 `### Step N:` block;
 - `## Tests` is optional — if present, it has ≥1 `### Test N:` block;
 - `## Execution` is present (presence only);
-- each `Spec: <slug>` header resolves to an existing spec — a miss is a `WARN`, not an error.
+- each `Spec:` header's slug resolves to an existing spec — a miss is a `WARN`, not an error. The slug is read from the link text, so `Spec: [<slug>](../spec/<slug>.md)` and a bare `Spec: <slug>` check identically;
+- a `Spec:` header whose link target isn't `../spec/<slug>.md` is a second `WARN` — the label and the target disagree, which is what a rename leaves behind.
 
 **`roadmap <slug>`** — `.task/roadmap/<slug>.md`:
 - ≥1 item heading `### - [ ] N. <title>` — the checkbox prefix is required;

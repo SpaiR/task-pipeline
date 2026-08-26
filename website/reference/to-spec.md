@@ -46,8 +46,9 @@ Pins:
 validate: OK — 0 errors, 0 warnings
 
 → Next: `/task:to-plan` for a task that leans on `.task/spec/event-envelope.md` —
-  or add the line `Spec: event-envelope` above the `---` of an existing task or
-  roadmap to attach it.
+  or attach it by hand with the line
+  `Spec: [event-envelope](../spec/event-envelope.md)`, above the `---` in a task
+  or directly under a roadmap's `# <Title>`.
 ```
 
 ## Does not

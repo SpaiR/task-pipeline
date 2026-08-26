@@ -66,7 +66,7 @@ logger as a min-level: quiet raises the floor to `error`, so info/debug are
 dropped but `error` still writes to stderr.
 
 ## Execution
-> Read `.task/CLAUDE.md` and follow its `## Executing a task` section.
+> Read [.task/CLAUDE.md](../CLAUDE.md) and follow its `## Executing a task` section.
 ```
 
 That one-line `## Execution` pointer is stamped on every task. The instructions themselves live in `.task/CLAUDE.md`, in a single copy — so you never re-explain the process, and editing them there changes how *every* task is executed, including ones you captured earlier.
