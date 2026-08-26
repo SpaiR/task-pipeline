@@ -54,8 +54,8 @@ There are **no user-facing flags** anywhere — footers, descriptions, and examp
 The resolver is a **pure `.task/`-root finder**. It exports **`AI_DIR`** = the discovered `.task` directory, first hit wins:
 
 1. `git config --local task.root` — the anchor recorded by the inline Step 0 setup, **claimed only on evidence**: accepted when `<root>/.task/CLAUDE.md` exists, ignored otherwise. The anchor is an absolute path living in `.git/config`, which travels with the repo when it is moved or copied; a stale one would resolve to an `AI_DIR` with no `CLAUDE.md`, the gate would call the project unconfigured, and capture setup would write a fresh `.task/CLAUDE.md` while the real one moved with the repo. A stale anchor therefore falls through to step 2. Repo-common, so **every worktree resolves the same `.task/` with zero setup** — no symlink, no join step. This is what lets user-created parallel worktrees of a repo share one `.task/`.
-2. Upward walk from `$PWD` for a `.task/CLAUDE.md` ancestor — pre-anchor fallback.
-3. `dirname(git-common-dir)/.task` — main-worktree root / sibling worktrees / bare repos.
+2. Upward walk from `$PWD` for a `.task/CLAUDE.md` ancestor — pre-anchor fallback, **ceilinged at this checkout's top level** (`git rev-parse --show-toplevel`). The top level itself is checked, the directory above it is not: an unbounded walk climbs out of the working tree and claims a *neighbouring* project's `.task/`, so a checkout with no `.task/` of its own that sits under a directory which has one would write every artifact into that project's flat namespace — silently, because the setup gate finds a `CLAUDE.md` there and skips setup. A checkout with no ceiling (not a git repo, or a bare repo with no working tree) keeps the unbounded walk.
+3. `dirname(git-common-dir)/.task` — main-worktree root / sibling worktrees / bare repos. This is how a **sibling** worktree still finds the shared `.task/`: it is not below the main root, so step 2's ceilinged walk cannot reach it and step 3 supplies it directly.
 4. `$CLAUDE_PROJECT_DIR/.task` when that path already holds a `CLAUDE.md` (evidence, not merely the variable being set), else the relative `./.task` — so a call from outside a project still fails cleanly on the setup gate.
 
 **Producers write under the resolved `$AI_DIR`, never a cwd-relative `.task/`.** Each capture skill resolves it in its Step 0, and `validate.sh` resolves it independently in its own subprocess — so a cwd-relative write from a subdirectory or a linked worktree splits the root: the artifact lands in a second `.task/` the validator never looks at. `.task/<kind>/<slug>.md` in this document and in the skills is shorthand for `$AI_DIR/<kind>/<slug>.md`.
@@ -213,7 +213,7 @@ Field labels and blockquote sub-headings (`### Context` / `### Goal` / `### Outc
 Load-bearing item fields for `roadmap-to-workflow`:
 
 - **Checkbox state** — the item heading's checkbox is a **5-state** class, `[ x~>-]`. `[ ]` is unchecked (eligible to run); `[x]` / `[~]` / `[>]` / `[-]` all count as **already-marked / not-eligible** — for progress counting (`roadmap.sh:roadmap_progress_counts`), the driver's auto-mark, and wave dependency-satisfaction. Do **not** narrow it to `[ x]` only: `roadmap.sh`, `validate.sh`, and the wave sorter all key on the full class.
-- **`**Dependencies:**`** — `—` (none) or a comma-separated list of item numbers. `—` is the form `to-roadmap` emits; the driver's parser also tolerates `-`, `none`, and `n/a` as "no dependency", since roadmaps are hand-edited. Anything else is read as a dependency on an item number, so an unrecognised word becomes a phantom dependency and a hard stop. The driver **topologically sorts** items into dependency-ordered **waves**: items in the same wave have no unmet dependency and run in parallel; a barrier separates waves.
+- **`**Dependencies:**`** — `—` (none) or a comma-separated list of item numbers. `—` is the form `to-roadmap` emits; the driver's parser also tolerates `-`, `none`, and `n/a` as "no dependency", since roadmaps are hand-edited. Anything else is read as a dependency on an item number, so an unrecognised word becomes a phantom dependency and a hard stop — `validate.sh roadmap` now catches both that and a number with no matching item, before a run can trip on it. The driver **topologically sorts** items into dependency-ordered **waves**: items in the same wave have no unmet dependency and run in parallel; a barrier separates waves.
 - **`**Model:**`** — optional per-item hint (`haiku` / `sonnet` / `opus`). The driver passes it as `opts.model` to the per-item implement agent. It is **not** validated — a missing or off-list value simply means no hint (defaults apply).
 
 ### Roadmap `Spec:` headers
@@ -294,7 +294,7 @@ Three categories, not two:
 
 ### resolve-ws.sh (root finder only)
 
-Sourced (not exec'd). Runs `find_ai_dir` at source time and **exports `AI_DIR`** = the discovered `.task` directory, via the four-step order in *Root resolution* above. No pointer, no `WS_DIR`, no `resolve_ws`, no `TASK_ID_OVERRIDE`. macOS-safe (no `realpath` / `readlink -f`).
+Sourced (not exec'd). Runs `find_ai_dir` at source time and **exports `AI_DIR`** = the discovered `.task` directory, via the four-step order in *Root resolution* above. The ancestor walk in step 2 is ceilinged at `--show-toplevel` and compares `pwd -P` against it, since git reports that path physically and the compare is a string compare — a symlinked checkout must not hand it a logical path. No pointer, no `WS_DIR`, no `resolve_ws`, no `TASK_ID_OVERRIDE`. macOS-safe (no `realpath` / `readlink -f`).
 
 ### validate.sh (optional self-check, not a gate)
 
@@ -311,13 +311,15 @@ Keeps the `.task/CLAUDE.md` precondition and English parser-stable strings. **No
   - a `Spec:` header whose link target is not `../spec/<label>.md` is a second **`WARN`** — label/target disagreement, the drift a rename leaves behind. Intra-line only; the bare form has no target and is never flagged.
 - **`roadmap <slug>`** — validate `.task/roadmap/<slug>.md`:
   - ≥1 item heading matching `^### - \[[ x~>-]\] N\. <title>` — the checkbox prefix is **required** (an item with a bare `### N.` heading and no checkbox is an error, since the driver's auto-mark and item selection both rely on it);
+  - a heading that **near-misses** the canonical form is an error of its own — `[X]` uppercase, a double space around the checkbox, `####`, a missing `- `. Such a heading is not an item to any consumer (`roadmap_progress_counts` under-counts it, the driver's collector skips it, the block parser never opens a block for it), so without this check the file validates clean while an item silently vanishes from the run. A `### Spec references → …` citation is structurally excluded;
+  - **`**Dependencies:**` values are checked intra-file**: the value must be a no-dependency token (`—`, `-`, `none`, `n/a`) or a comma-separated list of item numbers, and every number cited must have a matching item heading in the same file. Both are errors. Whitespace is stripped before parsing, so a hand-written `1 2` becomes a dependency on item `12` — which is exactly why it is caught here rather than mid-run;
   - item numbers are unique, since the driver's auto-mark keys on the number — numbering runs continuously across the whole file and never restarts per phase;
   - each item block carries the `**Ready description:**` label (required — `to-plan` and the executing session key on it to find the item body) and, inside its blockquote, the sub-headings `### Context`, `### Goal`, `### Outcomes`, `### Acceptance criteria` (matched as `> ### <name>`); `### Invariants` is **optional** and not required;
   - dangling `Spec:` headers `WARN` as for `task`.
 - **`spec <slug>`** — validate `.task/spec/<slug>.md`: line 1 matches `^# .+`; ≥1 `## N.` numbered decision section. (No `---` separator check — a spec has no parser-stable header block above a body, so there is nothing to separate.)
 - **`all`** — validate every `.task/task/*.md`, every `.task/roadmap/*.md`, plus every `.task/spec/*.md`.
 
-`## Execution` is a stamped pointer; `validate.sh` checks it is **present** (presence only, not its exact text). There is **no `Implement-Model:` check** — the per-item model hint lives on roadmap items and is not `validate.sh`'s concern. The dangling-`Spec:` check is the pipeline's only cross-file validation, and only ever a `WARN`; the label/target check beside it reads one line against itself, so it adds no second cross-file dependency.
+`## Execution` is a stamped pointer; `validate.sh` checks it is **present** (presence only, not its exact text). There is **no `Implement-Model:` check** — the per-item model hint lives on roadmap items and is not `validate.sh`'s concern. The dangling-`Spec:` check is the pipeline's only cross-file validation, and only ever a `WARN`; the label/target check beside it reads one line against itself, and the near-miss-heading and `**Dependencies:**` checks read a roadmap against itself, so none of them adds a second cross-file dependency.
 
 ### Helpers
 

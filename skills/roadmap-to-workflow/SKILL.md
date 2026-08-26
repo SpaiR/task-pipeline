@@ -104,6 +104,16 @@ awk '
     }
     next
   }
+  # `### Spec references → …` is a top-level heading that lives INSIDE an item
+  # (the same tolerance validate.sh grants it), so it is NOT a terminator — it
+  # may sit above **Dependencies:**, and flushing here would drop them.
+  /^### Spec references/ { next }
+  # Any OTHER heading closes the item. Without this, a heading that drifted from
+  # the exact anchor above (`[X]`, a double space after the checkbox, `####`) is
+  # not an item to this parser AND does not end the previous one, so the drifted
+  # item's Dependencies/Model are attributed to the item ABOVE it — a phantom
+  # dependency, a wrong wave, or the wrong model, with no signal anywhere.
+  /^#+[[:space:]]/ { flush(); next }
   /^\*\*Dependencies:\*\*/ && pend { deps=$0; sub(/^\*\*Dependencies:\*\* */,"",deps); gsub(/[ \t]/,"",deps); if (deps=="—"||deps=="-"||tolower(deps)=="none"||tolower(deps)=="n/a") deps="" }
   /^\*\*Model:\*\*/       && pend { model=$0; sub(/^\*\*Model:\*\* */,"",model); gsub(/[ \t]/,"",model); if (model!="haiku" && model!="sonnet" && model!="opus") model="" }
   END { flush() }

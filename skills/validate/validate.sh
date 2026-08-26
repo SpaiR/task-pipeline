@@ -265,6 +265,61 @@ validate_roadmap() {
     done <<< "$dup"
   fi
 
+  # Near-miss item headings. The canonical anchor is narrow by design, so a
+  # heading that drifted from it — `[X]` uppercase, a double space after the
+  # checkbox, `####`, a missing `- ` — is not an item to ANY consumer:
+  # `roadmap_progress_counts` under-counts it, the driver's Step 1 collector
+  # skips it, and the block parser below never opens a block for it, so its
+  # missing sub-headings go unreported too. Without this check the file
+  # validates clean while an item silently vanishes from the run, and the
+  # autopilot ends "all items shipped" having skipped it. A
+  # `### Spec references → [slug](target) §N` citation cannot match: its bracket
+  # is preceded by text, not by `###` and an optional `- `.
+  while IFS= read -r line; do
+    echo "$line" >&2
+    [[ "$line" == ERROR* ]] && ERRORS=$((ERRORS + 1))
+  done < <(awk -v label="$label" '
+    /^### - \[[ x~>-]\] [0-9]+\. .+$/ { next }
+    /^#+[[:space:]]*-?[[:space:]]*\[[^]]*\][[:space:]]*[0-9]+\./ {
+      print "ERROR " label ": item heading does not match the required '"'"'### - [ ] N. <title>'"'"' form (checkbox class is lowercase [ x~>-], one space either side): " $0
+    }
+  ' "$file")
+
+  # `**Dependencies:**` values, checked intra-file. The driver reads anything
+  # that is not a no-dependency token as a list of item numbers, so a hand edit
+  # like `1 2` has its whitespace stripped and becomes a dependency on item 12,
+  # and a `99` on a three-item roadmap passes validation only to hard-stop the
+  # run mid-flight with advice the operator cannot act on. Same file only — this
+  # adds no second cross-file check (the dangling-Spec WARN remains the only one).
+  while IFS= read -r line; do
+    echo "$line" >&2
+    [[ "$line" == ERROR* ]] && ERRORS=$((ERRORS + 1))
+  done < <(awk -v label="$label" '
+    /^### - \[[ x~>-]\] [0-9]+\. / {
+      m = $0; sub(/^### - \[[ x~>-]\] /, "", m); sub(/\..*$/, "", m)
+      item = m; items[m] = 1; next
+    }
+    /^\*\*Dependencies:\*\*/ {
+      if (item == "") next
+      v = $0; sub(/^\*\*Dependencies:\*\*[[:space:]]*/, "", v); gsub(/[[:space:]]/, "", v)
+      lv = tolower(v)
+      if (v == "" || v == "—" || v == "-" || lv == "none" || lv == "n/a") next
+      if (v !~ /^[0-9]+(,[0-9]+)*$/) { bad[++nbad] = item SUBSEP v; next }
+      k = split(v, d, ",")
+      for (i = 1; i <= k; i++) { nref++; ref_item[nref] = item; ref_num[nref] = d[i] }
+      next
+    }
+    END {
+      for (i = 1; i <= nbad; i++) {
+        split(bad[i], q, SUBSEP)
+        print "ERROR " label ": Task " q[1] " has an unparsable **Dependencies:** value \"" q[2] "\" — write an em dash for none, or a comma-separated list of item numbers"
+      }
+      for (i = 1; i <= nref; i++)
+        if (!(ref_num[i] in items))
+          print "ERROR " label ": Task " ref_item[i] " depends on item " ref_num[i] ", which has no item heading in this file"
+    }
+  ' "$file")
+
   # Run the block-parser in a process substitution (not a pipe) so the loop
   # body executes in THIS shell and can bump ERRORS directly — no temp-file
   # counter needed.

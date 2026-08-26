@@ -22,7 +22,9 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" [ all | task <slug> | r
 
 **`roadmap <slug>`** — `.task/roadmap/<slug>.md`:
 - ≥1 item heading `### - [ ] N. <title>` — the checkbox prefix is required;
+- a heading that *nearly* matches is an error too — `[X]` uppercase, a double space around the checkbox, `####`, a missing `- `. Such a heading is invisible to the autopilot, so catching it here is what stops an item from silently dropping out of a run;
 - item numbers are unique;
+- `**Dependencies:**` is a no-dependency token (`—`, `-`, `none`, `n/a`) or a comma-separated list of item numbers, and each number names an item that exists in the same file. A space-separated `1 2` reads as item `12`, so it is caught here rather than mid-run;
 - each item carries `### Context` / `### Goal` / `### Outcomes` / `### Acceptance criteria` (Invariants optional);
 - dangling `Spec:` headers `WARN`.
 

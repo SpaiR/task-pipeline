@@ -31,10 +31,12 @@
 #   2. Upward walk from $PWD for a `.task/CLAUDE.md` ancestor — the
 #      pre-anchor fallback. Covers a main worktree, a nested worktree, or a
 #      `.task` created in a subdir, for repos bootstrapped before the anchor
-#      existed.
+#      existed. CEILINGED at this checkout's top level (`--show-toplevel`): the
+#      top level is checked, the directory above it is not, so the walk cannot
+#      claim a neighbouring project's `.task/`.
 #   3. Parent of the git common dir — the main worktree root (normal / nested /
 #      sibling worktrees) or the bare repo's container (bare). Catches sibling
-#      worktrees and bare repos that the upward walk in (2) misses.
+#      worktrees and bare repos that the ceilinged walk in (2) misses.
 #   4. `$CLAUDE_PROJECT_DIR/.task` when that path ALREADY holds a
 #      `CLAUDE.md` — like steps 1-3, this step claims a root only on
 #      evidence, never on the variable being set alone. Otherwise the relative
@@ -62,12 +64,32 @@ find_ai_dir() {
     [[ -n "$root" && ! -f "$root/.task/CLAUDE.md" ]] && root=""
   fi
 
-  # 2. Upward walk for a CLAUDE.md ancestor (pre-anchor repos).
+  # Ceiling for the walk below: THIS checkout's top level. A `.task/` may sit at
+  # the top level or in any subdir of it, and the repo's main worktree root is
+  # reached by step 3 — nothing above either is ours.
+  local top=""
+  if [[ "$have_git" -eq 1 ]]; then
+    top=$(git rev-parse --path-format=absolute --show-toplevel 2>/dev/null) || top=""
+  fi
+
+  # 2. Upward walk for a CLAUDE.md ancestor (pre-anchor repos), CEILINGED at the
+  #    checkout's top level. Unbounded, this walk climbs out of the working tree
+  #    and claims a NEIGHBOURING project's `.task/`: a checkout with no `.task/`
+  #    of its own, sitting under a directory that has one, resolves to that
+  #    parent and writes every artifact into the other project's flat namespace
+  #    — silently, because the setup gate finds a CLAUDE.md there and skips
+  #    setup. The top level itself is still checked; only above it is off limits,
+  #    and step 3 then supplies the main worktree root (which is how a sibling
+  #    worktree, not being below it, still finds the shared `.task/`).
   if [[ -z "$root" ]]; then
     local dir
-    dir=$(pwd)
+    # `pwd -P` (a builtin, so still no `realpath` / `readlink -f`): git reports
+    # the top level as a PHYSICAL path and the ceiling compare below is a string
+    # compare, so a symlinked checkout must not hand us a logical one.
+    dir=$(pwd -P)
     while :; do
       if [[ -f "$dir/.task/CLAUDE.md" ]]; then root="$dir"; break; fi
+      [[ -n "$top" && "$dir" == "$top" ]] && break
       [[ "$dir" == "/" ]] && break
       dir=${dir%/*}; [[ -z "$dir" ]] && dir=/   # parent, no `dirname` fork
     done
