@@ -90,6 +90,6 @@ feat(cli): add --quiet flag to silence normal output
 - raise the logger floor to error when set; errors still reach stderr
 ```
 
-One file of code, one commit, and a `.task/quiet-flag.md` you can delete or keep as the record. That's the loop. Everything else in these docs is the same loop at larger sizes — plans, roadmaps, specs, autopilot.
+One file of code, one commit, and a `.task/task/quiet-flag.md` you can delete or keep as the record. That's the loop. Everything else in these docs is the same loop at larger sizes — plans, roadmaps, specs, autopilot.
 
 → Next: [Getting started](/guide/getting-started) — install it and run the first capture in your own project.

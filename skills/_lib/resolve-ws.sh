@@ -15,7 +15,7 @@
 # find_ai_dir — discover the pipeline root that holds `.task/`.
 #
 # Resolution order (first hit wins):
-#   1. `git config --local task.root` — the anchor recorded by the intake
+#   1. `git config --local task.root` — the anchor recorded by the capture
 #      skills' inline Step 0 setup, accepted only when it ALREADY holds a
 #      `CLAUDE.md` (evidence, as in step 4: a stale anchor left by a
 #      moved or copied repo is ignored, not trusted). Lives in the repo-local
@@ -55,7 +55,7 @@ find_ai_dir() {
   #    baked into `.git/config`, which travels with the repo when it is moved or
   #    copied. A stale anchor pointing at a vanished path would resolve to an
   #    AI_DIR with no CLAUDE.md, the gate would report the project unconfigured,
-  #    and intake setup would regenerate CLAUDE.md over the real one that moved
+  #    and capture setup would regenerate CLAUDE.md over the real one that moved
   #    with the repo. Fall through to the ancestor walk instead.
   if [[ "$have_git" -eq 1 ]]; then
     root=$(git config --local --get task.root 2>/dev/null) || root=""

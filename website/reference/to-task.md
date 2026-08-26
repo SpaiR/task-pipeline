@@ -1,6 +1,6 @@
 # to-task
 
-Distils the chat discussion (or a roadmap item) into `.task/task/<slug>.md` with a `## Description` only — no `## Plan`. The lightest of the three capture skills.
+Distils the chat discussion (or a roadmap item) into `.task/task/<slug>.md` with a `## Description` only — no `## Plan`. The lightest of the three depth-capture skills (`to-task` / `to-plan` / `to-roadmap`).
 
 See the [single-task guide](/guide/single-task) for how it fits the everyday flow.
 

@@ -36,7 +36,15 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
 
 ### Roadmap
 
-If `$ARGUMENTS` gives a positional `<roadmap-slug>`/path, resolve it with `resolve_artifact_path roadmap "<arg>"` and skip the picker — **but check the result before using it.** An empty return means no such roadmap (a typo is the common case); do **not** fall through to the item scan with an unresolved path, because an empty filename makes the Step 1 `awk` read stdin, come back with zero items, and report the roadmap as fully done. Stop instead, and list what is actually there (the picker query below already produces the list):
+If `$ARGUMENTS` gives a positional `<roadmap-slug>`/path, resolve it and skip the picker — **but source the helpers first, and check the result before using it.** Each bash call is a fresh shell, and the only other block that sources `roadmap.sh` is the picker query below, which this branch skips: without its own source, `resolve_artifact_path` is an undefined command whose empty output reads as "no such roadmap" for a slug that is perfectly valid.
+
+```bash
+source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # exports AI_DIR
+source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap.sh"      # defines resolve_artifact_path
+resolve_artifact_path roadmap "<arg>"
+```
+
+An empty return means no such roadmap (a typo is the common case); do **not** fall through to the item scan with an unresolved path, because an empty filename makes the Step 1 `awk` read stdin, come back with zero items, and report the roadmap as fully done. Stop instead, and list what is actually there (the picker query below already produces the list):
 
 > no roadmap `<arg>` under `$AI_DIR/roadmap/`. Available: `<slug>` (2/7), `<slug>` (0/4).
 > → Next: `/task:roadmap-to-workflow <one of those slugs>`
@@ -181,9 +189,9 @@ async function runImplement(n, itemSlug, model, w) {
   const r = await agent(
     `Implement ${AI_DIR}/task/${itemSlug}.md. Follow its ## Execution pointer —
      it sends you to .task/CLAUDE.md → ## Executing a task — with two carve-outs:
-     implement the ## Plan (or ## Description if no Plan), then commit per
-     .task/CLAUDE.md → Commit Format — and do
-     NOT spawn the task:code-reviewer agent, and do NOT tick the roadmap
+     implement the ## Plan (or ## Description if no Plan) plus any ## Tests it
+     carries, then commit per .task/CLAUDE.md → Commit Format — and do NOT
+     spawn the task:code-reviewer agent, and do NOT tick the roadmap
      checkbox. The driver runs the review as its own stage right after this
      call, and ticks the checkbox after that.
      Make constructive assumptions; never block on a prompt.

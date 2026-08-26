@@ -98,7 +98,9 @@ require_config() {
 # literal copy of a template's `(one line per spec; …)` annotation is the common
 # case), and the extracted label is re-trimmed. Anchoring the pattern at
 # end-of-line instead would leave those forms un-unwrapped and emit a WARN naming
-# a garbage slug on a spec that exists.
+# a garbage slug on a spec that exists. The bare form gets the same tolerance
+# from the `else` branch, which truncates at the first whitespace run — a slug
+# never contains one, so the same copied annotation cannot corrupt it either.
 #
 # Runs in the caller's shell (not a subshell), so WARNS is updated directly.
 check_spec_refs() {
@@ -122,6 +124,14 @@ check_spec_refs() {
         slug = link;   sub(/^\[/, "", slug);      sub(/\].*$/, "", slug)
         target = link; sub(/^[^(]*\(/, "", target); sub(/\)$/, "", target)
         v = slug
+      } else {
+        # Bare `Spec: <slug>` — the legacy form. Give it the same trailing-text
+        # tolerance the link branch above gets: a slug never contains
+        # whitespace, so anything past the first space is a copied template
+        # annotation or a hand-written comment, not part of the identity.
+        # Without this, `Spec: event-envelope  (one line per relevant spec;
+        # omit if none)` WARNs about a garbage slug on a spec that exists.
+        sub(/[[:space:]].*$/, "", v)
       }
       sub(/^[[:space:]]+/, "", v);      sub(/[[:space:]]+$/, "", v)
       sub(/^[[:space:]]+/, "", target); sub(/[[:space:]]+$/, "", target)
