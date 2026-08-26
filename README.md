@@ -131,6 +131,8 @@ In a new project you don't have to run setup by hand first: the first `/task:to-
 
 Each capture produces exactly one `.task/task/<slug>.md`, where `<slug>` is both the filename and the identity — no task-id, no umbrella folder. A closed task is just a file that stays in `.task/task/` (or you delete it); git history is the record, there is no archive. A **roadmap** (`.task/roadmap/<slug>.md`) groups several such items into one initiative; `to-task`/`to-plan` can open the next unchecked item directly, or `roadmap-to-workflow` fans the whole backlog out at once. A **spec** (`.task/spec/<slug>.md`) is a standalone file of load-bearing technical decisions that tasks and roadmaps point at with a `Spec:` header.
 
+Those cross-references are written as Markdown links — `Spec: [event-envelope](../spec/event-envelope.md)`, `Roadmap: [api-v2](../roadmap/api-v2.md)`, and an `## Execution` pointer at `[.task/CLAUDE.md](../CLAUDE.md)` — so a `.task/` file is navigable in any Markdown viewer or plan-review tool, not just readable by an agent. The link text is the slug that carries the identity; the target is what a viewer follows.
+
 ## Commands
 
 | Command | In brief |

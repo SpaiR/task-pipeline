@@ -41,7 +41,7 @@ Each task file ends with a one-line pointer:
 
 ```markdown
 ## Execution
-> Read `.task/CLAUDE.md` and follow its `## Executing a task` section.
+> Read [.task/CLAUDE.md](../CLAUDE.md) and follow its `## Executing a task` section.
 ```
 
 The instructions themselves are in `.task/CLAUDE.md`, once. Edit them and the change applies to every task — including ones captured weeks ago. Rewording the pointer inside a task file, on the other hand, changes nothing but that file.
@@ -53,4 +53,4 @@ Two limits are worth knowing, and they are why the pointer exists at all:
 
 ## Language policy in practice
 
-The split is deliberate: **content** follows your language, **contract strings** stay English. Your `## Description` and Plan prose can be in any language, while `## Description`, `### Step N:`, `Roadmap:`, `Spec:`, the `## Execution` pointer, and commit trailers are always English — because parsers and the executing session key on them.
+The split is deliberate: **content** follows your language, **contract strings** stay English. Your `## Description` and Plan prose can be in any language, while `## Description`, `### Step N:`, `Roadmap:`, `Spec:` (including the slug in a header's link text), the `## Execution` pointer, and commit trailers are always English — because parsers and the executing session key on them.

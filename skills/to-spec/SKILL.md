@@ -5,7 +5,7 @@ disable-model-invocation: true
 user-invocable: true
 ---
 
-Fix **load-bearing technical decisions** — a protocol, a cross-cutting data shape, a "we picked X over Y because…" whose reasoning wouldn't survive re-derivation — into `.task/spec/<slug>.md`. Unlike `to-task` / `to-plan` / `to-roadmap`, a spec does not decompose work; it pins the decisions that work must honor. A task or roadmap references it via a `Spec: <slug>` header, and the executing session reads it as a fixed anchor (per `.task/CLAUDE.md` → `## Executing a task`, which its `## Execution` pointer names). One spec may be cited by many tasks and roadmaps, and can be captured before any exist.
+Fix **load-bearing technical decisions** — a protocol, a cross-cutting data shape, a "we picked X over Y because…" whose reasoning wouldn't survive re-derivation — into `.task/spec/<slug>.md`. Unlike `to-task` / `to-plan` / `to-roadmap`, a spec does not decompose work; it pins the decisions that work must honor. A task or roadmap references it via a `Spec: [<slug>](../spec/<slug>.md)` header, and the executing session reads it as a fixed anchor (per `.task/CLAUDE.md` → `## Executing a task`, which its `## Execution` pointer names). One spec may be cited by many tasks and roadmaps, and can be captured before any exist.
 
 **Input:** `$ARGUMENTS` — a rough description of the decision area, or a reference back to a prior discussion in this conversation ("write a spec from what we settled").
 
@@ -107,7 +107,7 @@ Keep one decision per section. Before saving, a quick self-check, fixed inline:
 1. Every decision is load-bearing (would distort work if re-derived differently) — no local, single-task details, no restating behavioral outcomes.
 2. Each `## N.` section stands alone — a reader who hasn't seen this chat understands the decision and why.
 3. No placeholders (`TBD`, `TODO`, `???`, `fill in`).
-4. Section numbers are contiguous from 1 — `Spec references → <slug> §N` citations depend on stable numbering.
+4. Section numbers are contiguous from 1 — `### Spec references → [<slug>](../spec/<slug>.md) §N` citations depend on stable numbering.
 
 ### Step 4: Save
 
@@ -134,7 +134,7 @@ validate: {OK — 0 errors, N warning(s) | the FAIL lines}
 
 When the validate result is **not** clean (any WARN or FAIL), append `re-check after editing: bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" spec <slug>` — `validate` is not a slash command, so the invocation is worth spelling out. Omit it on a clean result.
 
-The file is already written — to change any pin, just say so. Then close with the handoff footer (convention (a), flag-free), leading with the path it just wrote and keeping the command itself pasteable: `→ Next: \`/task:to-plan\` for a task that leans on \`.task/spec/<slug>.md\` — or add the line \`Spec: <slug>\` above the \`---\` of an existing task or roadmap to attach it.`
+The file is already written — to change any pin, just say so. Then close with the handoff footer (convention (a), flag-free), leading with the path it just wrote and keeping the command itself pasteable: `→ Next: \`/task:to-plan\` for a task that leans on \`.task/spec/<slug>.md\` — or attach it by hand with the line \`Spec: [<slug>](../spec/<slug>.md)\`, above the \`---\` in a task or directly under a roadmap's \`# <Title>\`.`
 
 ## Forbidden
 

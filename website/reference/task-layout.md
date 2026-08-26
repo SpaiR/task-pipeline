@@ -23,9 +23,9 @@
 
 ```markdown
 # <Title>
-Roadmap: <slug>          (optional — roadmap items only)
-Source item: #N          (optional — the item number)
-Spec: <slug>             (optional, repeatable — each cites a spec anchor)
+Roadmap: [<slug>](../roadmap/<slug>.md)   (optional — roadmap items only)
+Source item: #N                           (optional — the item number)
+Spec: [<slug>](../spec/<slug>.md)         (optional, repeatable — each cites a spec)
 ---
 ## Description
 Why + what, distilled from the chat.
@@ -40,17 +40,27 @@ Why + what, distilled from the chat.
 ### Test 1: <what is asserted>
 
 ## Execution
-> Read `.task/CLAUDE.md` and follow its `## Executing a task` section.
+> Read [.task/CLAUDE.md](../CLAUDE.md) and follow its `## Executing a task` section.
 ```
 
 - **Line 1** is a plain `# <Title>` — no bracketed task-id.
 - `Roadmap:` / `Source item:` / `Spec:` headers sit above the `---`, ASCII.
+- Cross-references are **Markdown links**, so a `.task/` file is navigable in a Markdown viewer or plan-review tool. The link **text** is the slug that carries the identity; the target is what a viewer follows, and is always `../<kind>/<slug>.md` — `task/`, `roadmap/` and `spec/` are siblings under `.task/`. `Source item:` is a number, not a reference, so it stays bare.
 - `## Description` is mandatory; `## Plan` and `## Tests` are optional.
 - `## Execution` is a one-line pointer, stamped verbatim by `to-task` / `to-plan`. The instructions it names live once in `.task/CLAUDE.md` → `## Executing a task` — that is the mechanism carrying implement → commit → review.
 
 ## roadmap.md
 
-An item backlog. Each item:
+An item backlog. Line 1 is its `# <Title>`; optional `Spec:` headers sit directly under it, above the intro prose:
+
+```markdown
+# <Title>
+Spec: [<slug>](../spec/<slug>.md)   (optional, repeatable)
+
+<intro prose>
+```
+
+Each item:
 
 ```markdown
 ### - [ ] 1. <Task title>
@@ -68,6 +78,8 @@ An item backlog. Each item:
 ```
 
 The checkbox is the progress marker; `**Dependencies:**` drives the wave ordering in [`roadmap-to-workflow`](/reference/roadmap-to-workflow). Write `—` (or `-` / `none` / `n/a`) when an item has none — any other word is read as an item number and stops the run.
+
+An item that leans on a spec decision cites it as `### Spec references → [<slug>](../spec/<slug>.md) §N`. `## Prerequisites` and `## Backlinks` hold Markdown links too — a sibling roadmap is `[<slug>](<slug>.md)`, a spec `[<slug>](../spec/<slug>.md)`.
 
 ## spec.md
 

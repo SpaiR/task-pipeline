@@ -95,15 +95,37 @@ Rules:
 - **`## Executing a task` is the single copy of the execution instructions.** Editing it reaches artifacts written earlier — the pre-`.task/CLAUDE.md` design stamped the same text into every task file, where an edit reached nothing.
 - Section headings are parser-stable English; the prose inside follows `## Language`. `.task/CLAUDE.md` is git-excluded along with the rest of `.task/`.
 
+## Cross-artifact references
+
+Every reference from one `.task/` artifact to another is written as a **Markdown link** — an artifact is read as often by a human in a Markdown viewer (or a plan-review tool) as by an agent, and a bare slug is a dead end there. Every place this applies:
+
+| Where | Form |
+|-------|------|
+| `task.md` header | `Roadmap: [<slug>](../roadmap/<slug>.md)` |
+| `task.md` header | `Spec: [<slug>](../spec/<slug>.md)` |
+| roadmap header | `Spec: [<slug>](../spec/<slug>.md)` |
+| roadmap item citation | `### Spec references → [<slug>](../spec/<slug>.md) §N` |
+| `## Execution` pointer | `> Read [.task/CLAUDE.md](../CLAUDE.md) and follow its …` |
+
+Hrefs are relative to the **artifact's own directory**, which is what a Markdown viewer resolves against. `.task/task/`, `.task/roadmap/` and `.task/spec/` all sit one level under `.task/`, so a sibling-kind reference is always `../<kind>/<slug>.md` and `.task/CLAUDE.md` is always `../CLAUDE.md` — no per-file depth arithmetic.
+
+**The label carries the identity; the href is for viewers.** A consumer takes the slug from the link **label** and rebuilds the canonical `$AI_DIR/<kind>/<slug>.md` itself. It must never follow the relative href literally: an agent's cwd is the project root, not `.task/task/`, so `../spec/x.md` would resolve to a sibling of the repository. Every consumer that resolves one of these headers — `## Executing a task`, `agents/code-reviewer.md` phase 0, `to-plan` Step 1/2a, `roadmap-to-workflow` Step 0, `validate.sh:check_spec_refs` — is written that way.
+
+**The bare form stays readable.** `Spec: <slug>` (and `Roadmap: <slug>`) is what earlier versions wrote, and `.task/` artifacts are hand-edited. Producers emit the link form; consumers accept either, and `validate.sh` unwraps the label — tolerating backticks and trailing text around it — before checking the reference. A bare slug is never re-flagged as malformed, only as dangling if the spec genuinely does not exist.
+
+**One consumer the change cannot reach: an existing `.task/CLAUDE.md`.** It is written once and then **never rewritten** (see the rules above), so a project set up before this change keeps a `## Executing a task` whose steps 1 and 5 say only *read each `.task/spec/<slug>.md`* / *tick item #N in `.task/roadmap/<slug>.md`*, with no label-vs-target guidance — while its captures now emit link-form headers. This resolves in practice because the link **label is exactly the slug those steps ask for**, so the instruction reads correctly against the new header. It is nonetheless the pipeline's one unreachable consumer: a user who wants the rule stated explicitly edits that file (it is theirs), or deletes it and re-runs any capture to get the current template. **Do not** add a re-stamp or section-repair path to setup for this — that invariant is load-bearing and costs more than the wording it would fix.
+
+**The target is checked, but only against its own label.** `validate.sh` WARNs when a `Spec:` header's target is not `../spec/<label>.md` — an intra-line consistency check, not a second cross-file one. It exists because every other consumer follows the label and therefore *works*, so a target left stale by a rename fails silently and only for humans: exactly the navigation the link form was added to provide.
+
 ## `task.md` format (`.task/task/<slug>.md`)
 
 One format, produced by **both** `to-task` and `to-plan`. `to-plan` additionally writes `## Plan`; `to-task` omits it. The slug is the **filename**, never in the title.
 
 ```markdown
 # <Title>
-Roadmap: <slug>          (optional; present only for roadmap items — load-bearing)
-Source item: #N          (optional; the item number in the roadmap)
-Spec: <slug>             (optional, repeatable; each cites a .task/spec/<slug>.md anchor)
+Roadmap: [<slug>](../roadmap/<slug>.md)   (optional; roadmap items only — load-bearing)
+Source item: #N                           (optional; the item number in the roadmap)
+Spec: [<slug>](../spec/<slug>.md)         (optional, repeatable; each cites a spec anchor)
 ---
 ## Description
 Why + what, distilled from the chat.
@@ -121,14 +143,15 @@ Why + what, distilled from the chat.
 ### Test 2: ...
 
 ## Execution
-> Read `.task/CLAUDE.md` and follow its `## Executing a task` section.
+> Read [.task/CLAUDE.md](../CLAUDE.md) and follow its `## Executing a task` section.
 ```
 
 Rules:
 
 - **Line 1** is `# <Title>` — a plain title, no bracketed task-id.
 - **`Roadmap:` / `Source item:`** are optional header lines above the `---` separator. They are load-bearing for the executing session's auto-mark step (see below). Keep them **ASCII and above `---`**.
-- **`Spec:`** is an optional, **repeatable** header line above `---`. Each `Spec: <slug>` names a `.task/spec/<slug>.md` the executing session reads as a fixed technical anchor before implementing (see `## Executing a task`). Load-bearing; keep it **ASCII and above `---`**. One task may carry several.
+- **`Spec:`** is an optional, **repeatable** header line above `---`. Each one names a `.task/spec/<slug>.md` the executing session reads as a fixed technical anchor before implementing (see `## Executing a task`). Load-bearing; keep it **ASCII and above `---`**. One task may carry several.
+- **Cross-artifact headers are Markdown links** — see [§ Cross-artifact references](#cross-artifact-references) for the form and the one rule that keeps them safe.
 - **`---`** on its own line separates the header block from the body.
 - **`## Description`** is mandatory. It carries the "why + what" from the chat.
 - **`## Plan`** is optional (written only by `to-plan`). When present it uses the three-layer step contract — **Goal / Touches / Logic**. `Goal` is the observable target; `Touches` lists the files (and scopes review fixes); `Logic` is optional guidance. Each step is a `### Step N:` block.
@@ -139,7 +162,9 @@ Rules:
 
 Artifact prose (Description, Plan, Tests body) follows `.task/CLAUDE.md` → Language. Everything parser-stable stays English — the full inventory is enumerated once, in [§ Frontmatter](#frontmatter); do not restate it here.
 
-One consequence is worth spelling out at the point of use: the `## Execution` blockquote is stamped **byte-identical** in every artifact and carries no placeholders at all — nothing in it is substituted per task. `validate.sh` checks only that `## Execution` is *present*, so a paraphrase would ship unflagged.
+One consequence is worth spelling out at the point of use: the `## Execution` blockquote carries no placeholders at all — nothing in it is substituted per task, so every artifact a given version writes gets it **byte-identical**. `validate.sh` checks only that `## Execution` is *present*, so a paraphrase would ship unflagged.
+
+**Byte-identical per version, not across versions.** The canonical text has changed once — the pointer's `.task/CLAUDE.md` became the Markdown link `[.task/CLAUDE.md](../CLAUDE.md)` (see [§ Cross-artifact references](#cross-artifact-references)). Artifacts written before that keep the old wording indefinitely: `to-plan`'s promote and revise modes are required to leave `## Execution` untouched, and nothing re-stamps an existing file. Both forms name the same file and are read by the same instruction, so the divergence is inert — but it means a pre-existing artifact carrying the old pointer is **correct, not drifted**. Only a *newly written* pointer that departs from the current blockquote is a finding.
 
 ### `to-plan` may target an existing file (promote / revise)
 
@@ -193,7 +218,29 @@ Load-bearing item fields for `roadmap-to-workflow`:
 
 ### Roadmap `Spec:` headers
 
-A roadmap may carry optional, **repeatable** `Spec: <slug>` header lines (above its title/intro, ASCII), each naming a `.task/spec/<slug>.md` that holds load-bearing cross-item technical decisions. Items cite specific decisions as `### Spec references → <slug> §N` (the `<slug>` qualifier is required — several specs may be reachable). When `roadmap-to-workflow` runs the roadmap, it passes these spec paths to each item's plan agent; when `to-plan`/`to-task` open an item by hand, they carry the relevant `Spec:` headers onto the task file so the executing session reads them per `## Executing a task`.
+A roadmap may carry optional, **repeatable** `Spec:` header lines, each naming a `.task/spec/<slug>.md` that holds load-bearing cross-item technical decisions. They sit **directly under `# <Title>`, above the intro prose**, ASCII — the same position the `task.md` header block occupies:
+
+```markdown
+# <Title>
+Spec: [<slug>](../spec/<slug>.md)
+
+<intro prose>
+
+## Prerequisites
+```
+
+Line 1 of a roadmap is therefore always its `# <Title>`, as in every other artifact. (Earlier versions put the `Spec:` lines *above* the title, which left a Markdown viewer rendering a stray line before the document's own H1. `validate.sh` never checked a roadmap's line 1, so files in the old shape still validate — nothing needs migrating.)
+
+Items cite specific decisions as `### Spec references → [<slug>](../spec/<slug>.md) §N` — the slug qualifier is required, since several specs may be reachable. Both the header and the citation follow [§ Cross-artifact references](#cross-artifact-references): the label is the identity, the href is for viewers.
+
+When `roadmap-to-workflow` runs the roadmap, it passes these spec paths to each item's plan agent; when `to-plan`/`to-task` open an item by hand, they carry the relevant `Spec:` headers onto the task file so the executing session reads them per `## Executing a task`.
+
+### Roadmap link sections
+
+Two roadmap sections exist to point elsewhere, and both hold **Markdown links**, never bare slugs or paths:
+
+- **`## Prerequisites`** — in-flight work this initiative depends on. A related roadmap is `[<slug>](<slug>.md)` (same directory), a spec `[<slug>](../spec/<slug>.md)`; anything outside `.task/` is a repo-relative or absolute link.
+- **`## Backlinks`** — where this initiative came from and what it feeds: the discussion, issue, or doc behind it, plus sibling roadmaps and specs. Same link forms. Omit the section rather than leaving it empty.
 
 ---
 
@@ -206,7 +253,8 @@ Produced by `to-spec`; user-edited thereafter. A **standalone** home for load-be
 
 > One-line purpose. Load-bearing technical decisions for <topic> — NOT a full
 > implementation plan (the plan owns that). One numbered section per decision;
-> tasks and roadmap items cite sections as `### Spec references → <slug> §N`.
+> tasks and roadmap items cite sections as
+> `### Spec references → [<slug>](../spec/<slug>.md) §N`.
 
 ## 1. <decision title>
 **Decision:** <what was chosen>
@@ -259,7 +307,8 @@ Keeps the `.task/CLAUDE.md` precondition and English parser-stable strings. **No
   - `## Plan` is **optional** — if present, it has ≥1 `### Step N:` block;
   - `## Tests` is **optional** — if present, it has ≥1 `### Test N:` block;
   - `## Execution` is present (presence only — the pointer is stamped verbatim, so its text is not re-checked);
-  - each `Spec: <slug>` header resolves to an existing `.task/spec/<slug>.md` — a miss is a **`WARN`** (dangling reference), not an error (`validate.sh` is advisory, not a gate).
+  - each `Spec:` header's slug resolves to an existing `.task/spec/<slug>.md` — a miss is a **`WARN`** (dangling reference), not an error (`validate.sh` is advisory, not a gate). The slug is read from the **link label**, so the canonical `Spec: [<slug>](../spec/<slug>.md)` and the legacy bare `Spec: <slug>` check identically (see [§ Cross-artifact references](#cross-artifact-references));
+  - a `Spec:` header whose link target is not `../spec/<label>.md` is a second **`WARN`** — label/target disagreement, the drift a rename leaves behind. Intra-line only; the bare form has no target and is never flagged.
 - **`roadmap <slug>`** — validate `.task/roadmap/<slug>.md`:
   - ≥1 item heading matching `^### - \[[ x~>-]\] N\. <title>` — the checkbox prefix is **required** (an item with a bare `### N.` heading and no checkbox is an error, since the driver's auto-mark and item selection both rely on it);
   - item numbers are unique, since the driver's auto-mark keys on the number — numbering runs continuously across the whole file and never restarts per phase;
@@ -268,7 +317,7 @@ Keeps the `.task/CLAUDE.md` precondition and English parser-stable strings. **No
 - **`spec <slug>`** — validate `.task/spec/<slug>.md`: line 1 matches `^# .+`; ≥1 `## N.` numbered decision section. (No `---` separator check — a spec has no parser-stable header block above a body, so there is nothing to separate.)
 - **`all`** — validate every `.task/task/*.md`, every `.task/roadmap/*.md`, plus every `.task/spec/*.md`.
 
-`## Execution` is a stamped pointer; `validate.sh` checks it is **present** (presence only, not its exact text). There is **no `Implement-Model:` check** — the per-item model hint lives on roadmap items and is not `validate.sh`'s concern. The dangling-`Spec:` check is the pipeline's only cross-file validation, and only ever a `WARN`.
+`## Execution` is a stamped pointer; `validate.sh` checks it is **present** (presence only, not its exact text). There is **no `Implement-Model:` check** — the per-item model hint lives on roadmap items and is not `validate.sh`'s concern. The dangling-`Spec:` check is the pipeline's only cross-file validation, and only ever a `WARN`; the label/target check beside it reads one line against itself, so it adds no second cross-file dependency.
 
 ### Helpers
 
@@ -334,7 +383,7 @@ All three are cheap and architecture-independent. Human-facing dialog only — p
 
 ### Frontmatter
 
-Every skill carries `disable-model-invocation: true` and `user-invocable: true`. (`validate` is a bash-only utility — `skills/validate/validate.sh`, no `SKILL.md` — so it carries no frontmatter.) Artifacts and user dialog follow `.task/CLAUDE.md` → Language — except `grill`, which by design reads nothing under `.task/` and so mirrors the chat's own language instead; parser-stable strings (header keys, section labels, commit trailers, the `## Execution` pointer, driver return strings) stay English.
+Every skill carries `disable-model-invocation: true` and `user-invocable: true`. (`validate` is a bash-only utility — `skills/validate/validate.sh`, no `SKILL.md` — so it carries no frontmatter.) Artifacts and user dialog follow `.task/CLAUDE.md` → Language — except `grill`, which by design reads nothing under `.task/` and so mirrors the chat's own language instead; parser-stable strings (header keys, section labels, commit trailers, the `## Execution` pointer, cross-artifact link labels, driver return strings) stay English.
 
 ### `roadmap-to-workflow` execution shape (driver contract)
 

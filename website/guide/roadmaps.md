@@ -17,7 +17,7 @@ Talk through the initiative in chat — phases, dependencies, open questions —
 
 Each item is written so a reader who hasn't seen the discussion could pick it up cold. Items describe **observable behavior** — no project-specific file or symbol names; those are decided when the item is picked up in `to-plan`.
 
-If a load-bearing technical decision surfaces during the discussion, capture it separately with [`/task:to-spec`](/guide/specs) and reference it from the roadmap via a `Spec:` header — roadmaps don't inline cross-item technical decisions.
+If a load-bearing technical decision surfaces during the discussion, capture it separately with [`/task:to-spec`](/guide/specs) and reference it from the roadmap via a `Spec: [<slug>](../spec/<slug>.md)` header, directly under the roadmap's `# <Title>` — roadmaps don't inline cross-item technical decisions.
 
 ## Pick up items by hand
 
@@ -26,7 +26,7 @@ If a load-bearing technical decision surfaces during the discussion, capture it 
 ```text
 /task:to-plan api-v2-migration#1
 # → drafts .task/task/migrate-auth-endpoints.md, stamped with
-#   Roadmap: api-v2-migration / Source item: #1
+#   Roadmap: [api-v2-migration](../roadmap/api-v2-migration.md) / Source item: #1
 # → footer: implement it now, or in a fresh session run:
 #   `implement .task/task/migrate-auth-endpoints.md`
 

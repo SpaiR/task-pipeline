@@ -40,7 +40,7 @@ The artifact path is the handle. Resolve a target reference, in order:
 1. **Explicit path, or a slug with evidence** — an explicit path (contains `/`, or ends in `.md`), **or** a bare slug for which `.task/task/<slug>.md` **already exists** → that path is the target. A bare slug alone is *not* enough: "matches `.task/task/<slug>.md`, existing or not" would be satisfied vacuously by any token and would swallow case 2.
 2. **Roadmap reference in `$ARGUMENTS`** (`<roadmap-slug>` or `<roadmap-slug>#<N>`, matching an existing `.task/roadmap/<slug>.md`) → resolve the item (Step 2a's item-picking logic) and derive its target path `.task/task/<item-slug>.md` from the item title. **A bare slug that matches no task file but does match a roadmap file lands here, not in case 1.** If it somehow matches both an existing task file and a roadmap, case 1 wins — the concrete task file is the more specific target.
 
-   **Is the existing file this item's, or someone else's?** When the derived `.task/task/<item-slug>.md` already exists, do not assume it belongs to this item. Read its header: if its `Roadmap:` and `Source item: #N` match this roadmap slug and this item number, it **is** the same item → continue to the promote/revise branch below. If it carries different `Roadmap:` headers, or none at all, it is an unrelated task that merely kebab-cases the same → disambiguate the slug per Step 2a.5 instead, and never enter revise mode on it.
+   **Is the existing file this item's, or someone else's?** When the derived `.task/task/<item-slug>.md` already exists, do not assume it belongs to this item. Read its header: if its `Roadmap:` and `Source item: #N` match this roadmap slug and this item number, it **is** the same item → continue to the promote/revise branch below. The `Roadmap:` value is a Markdown link, `Roadmap: [<slug>](../roadmap/<slug>.md)` — compare against the link **text**; a hand-edited or older file may carry a bare slug, which compares the same way. If it carries different `Roadmap:` headers, or none at all, it is an unrelated task that merely kebab-cases the same → disambiguate the slug per Step 2a.5 instead, and never enter revise mode on it.
 3. **No positional reference, but the chat is clearly continuing or refining a task this session already captured** (a `to-task`/`to-plan` run earlier in this conversation, or the user names an existing task by title/slug) → that file is the target. If more than one file could plausibly match, ask via `AskUserQuestion` (convention (c)) rather than guessing.
 4. **Nothing resolves** → no target; go to Step 2 for a fresh capture with no prior reference.
 
@@ -61,7 +61,7 @@ Only for fresh capture (skip entirely for promote/revise — see Step 1).
 1. Resolve `<slug>` to `.task/roadmap/<slug>.md`; if ambiguous or missing — stop and ask.
 2. Pick `<N>`: if given, use it. Otherwise collect open items (`- [ ]` checkbox headings); if none — stop with "Every item in `<slug>` is already checked off." and a **runnable** footer: substitute a real item number from the file, never a literal `<N>` — `→ Next: \`/task:to-plan <slug>#3\` to redo a specific item (numbers as in the roadmap), or describe new work in chat and run \`/task:to-plan\`.` More than one open item → ask via `AskUserQuestion` (chip per `#<N> — <title>`, first/lowest default); exactly one → auto-pick it.
 3. Read the item's `**Ready description:**` blockquote — its sub-headings are quoted (`> ### Context` / `> ### Goal` / `> ### Outcomes` / `> ### Invariants` / `> ### Acceptance criteria`); strip the `> ` prefix as you read. (`validate.sh` makes both the label and the blockquote a hard ERROR, so a bare unquoted `### Context` means the roadmap is malformed, not that the shape is optional.) `### Context` becomes the Description's "why"; the rest folds into the "what". `### Acceptance criteria` entries are good candidates to carry into `## Tests` (Step 4) verbatim as test intents when tests are required.
-4. Note the specs this item relies on: any `### Spec references → <spec-slug> §N` in the item body, plus the roadmap's own `Spec: <slug>` header lines. Read each `.task/spec/<spec-slug>.md` now — carry them into Step 3 as pinned anchors (see Step 3's note), and hold the distinct `<spec-slug>`s for the `Spec:` headers in Step 7's write.
+4. Note the specs this item relies on: any `### Spec references → [<spec-slug>](../spec/<spec-slug>.md) §N` in the item body, plus the roadmap's own `Spec:` header lines. Read a slug from the link **text**, never by following the link target — that target is relative to the roadmap file's directory, not your cwd; a hand-edited roadmap may carry the older bare form, read it the same way. Read each `.task/spec/<spec-slug>.md` now — carry them into Step 3 as pinned anchors (see Step 3's note), and hold the distinct `<spec-slug>`s for the `Spec:` headers in Step 7's write.
 5. Derive the slug: kebab-case of the item title (2–4 words). If it collides with an existing, unrelated `.task/task/<slug>.md`, disambiguate with a short qualifier (e.g. append a second distinguishing word) rather than overwriting.
 6. Hold, for Step 7's write, the header lines in the shape Step 7 writes — `# {Item title}` plus `Roadmap:` / `Source item:` and a `Spec:` line per cited spec — and the drafted `## Description` body (why from Context, what from Goal/Outcomes/Invariants/Acceptance criteria). Continue to Step 3 — do not write the file yet; the full task.md (Description + Plan + Tests) is assembled and written once, together, in Step 7.
 
@@ -70,7 +70,7 @@ Only for fresh capture (skip entirely for promote/revise — see Step 1).
 1. **Slug.** Generate a short kebab-case slug (2–4 words) from the chat's essence, in English regardless of `.task/CLAUDE.md` → Language (the slug is a filename, a parser-stable string). If it collides with an existing, unrelated task file, disambiguate rather than overwriting.
 2. **Read `.task/CLAUDE.md`** for Language and Testing Policy before drafting — Step 0's gate only *tests* for the file with Bash, which does not pull it into context (the platform's auto-load fires for file-read tools only).
 3. **Distil the chat.** Read back over the discussion in this conversation (not the codebase yet) and draft `## Description` — the why + what, in the user's own framing, written per `.task/CLAUDE.md` → Language (the section labels themselves stay English). Use `### Problem` / `### Outcome` / `### Scope` / `### Constraints` sub-headers where the discussion gives signal for them; omit a sub-header rather than inventing content. Do not fabricate anything not actually discussed.
-3. Hold the header line `# {Short task title}` (no `Roadmap:` / `Source item:` lines in this mode) and the drafted Description for Step 7's write. If the discussion clearly relies on a spec in `.task/spec/`, hold a `Spec: <slug>` header line for each relevant one too (never invent a reference; never author the spec — that is `to-spec`'s job). Continue to Step 3.
+3. Hold the header line `# {Short task title}` (no `Roadmap:` / `Source item:` lines in this mode) and the drafted Description for Step 7's write. If the discussion clearly relies on a spec in `.task/spec/`, hold a `Spec: [<slug>](../spec/<slug>.md)` header line for each relevant one too (never invent a reference; never author the spec — that is `to-spec`'s job). Continue to Step 3.
 
 ## Step 3: Analyze the codebase
 
@@ -86,7 +86,7 @@ Use the Description (fresh capture) or the existing `## Description` (promote/re
 
 Reads at the same step are independent — issue them as one parallel batch, not one round-trip at a time.
 
-**Pinned technical decisions.** If the task carries (or, on fresh capture, will carry) any `Spec: <slug>` header, read each `.task/spec/<slug>.md` and treat its decisions as a fixed anchor — `## Plan` must honor them, not re-derive a different technical choice. No `Spec:` header at all → no anchors, proceed on the Description alone.
+**Pinned technical decisions.** If the task carries (or, on fresh capture, will carry) any `Spec:` header, take its `<slug>` from the link text and read each `.task/spec/<slug>.md`, treating its decisions as a fixed anchor — `## Plan` must honor them, not re-derive a different technical choice. No `Spec:` header at all → no anchors, proceed on the Description alone.
 
 Stop analysis as soon as you can name every file each step will touch and how — deeper investigation than that belongs to the implementing session's own reasoning, not to planning.
 
@@ -171,9 +171,9 @@ The re-source is mandatory, not decorative: sourcing `resolve-ws.sh` is idempote
 Header + body, in order:
 ```markdown
 # {Title}
-Roadmap: {slug}            (from-roadmap only)
-Source item: #{N}          (from-roadmap only)
-Spec: {spec-slug}          (one line per relevant spec; omit if none)
+Roadmap: [{slug}](../roadmap/{slug}.md)        (from-roadmap only)
+Source item: #{N}                              (from-roadmap only)
+Spec: [{spec-slug}](../spec/{spec-slug}.md)    (one line per relevant spec; omit if none)
 ---
 ## Description
 {drafted body}
@@ -185,10 +185,10 @@ Spec: {spec-slug}          (one line per relevant spec; omit if none)
 {drafted body, only if tests_required}
 
 ## Execution
-> Read `.task/CLAUDE.md` and follow its `## Executing a task` section.
+> Read [.task/CLAUDE.md](../CLAUDE.md) and follow its `## Executing a task` section.
 ```
 
-`{braces}` in the header and body lines are placeholders you substitute (`{Title}`, `{slug}`, `{N}`, `{drafted steps}`). The `## Execution` pointer is **stamped verbatim** — one line, byte-identical in every artifact, English, never translated and never expanded back into instructions. Those live in `.task/CLAUDE.md` → `## Executing a task`, in a single copy, so an edit there reaches tasks written earlier. The pointer still has to be in the file: the platform loads `.task/CLAUDE.md` only for file-read tools, so a session that opens the artifact with `cat` would otherwise see no instructions at all.
+`{braces}` in the header and body lines are placeholders you substitute (`{Title}`, `{slug}`, `{N}`, `{drafted steps}`) — including inside the link targets, so `Roadmap: [api-v2](../roadmap/api-v2.md)`. The **Markdown-link form is the contract**: the link text is the slug that carries the identity, the target is what lets a viewer navigate. Both targets are `../<kind>/<slug>.md` because `.task/task/`, `.task/roadmap/` and `.task/spec/` are siblings — never compute a different depth. `Source item:` is a number, not a reference, and stays bare. The `## Execution` pointer is **stamped verbatim** — one line, byte-identical in every artifact, English, never translated and never expanded back into instructions. Those live in `.task/CLAUDE.md` → `## Executing a task`, in a single copy, so an edit there reaches tasks written earlier. The pointer still has to be in the file: the platform loads `.task/CLAUDE.md` only for file-read tools, so a session that opens the artifact with `cat` would otherwise see no instructions at all.
 
 **Promote:** edit the existing `.task/task/<slug>.md` in place — insert the new `## Plan` block (and `## Tests`, if added) between `## Description`'s content and the existing `## Execution` pointer (a `to-task`-written file has no `## Tests`, so `## Plan` (+ new `## Tests`) is always inserted directly before `## Execution`). Do not touch the header, the `---` separator, `## Description`, or `## Execution` itself.
 

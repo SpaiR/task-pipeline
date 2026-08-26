@@ -108,7 +108,7 @@ and last error, instead of surfacing as an unhandled failure.
 return a typed `RetriesExhausted` result the caller can branch on.
 
 ## Execution
-> Read `.task/CLAUDE.md` and follow its `## Executing a task` section.
+> Read [.task/CLAUDE.md](../CLAUDE.md) and follow its `## Executing a task` section.
 ```
 :::
 

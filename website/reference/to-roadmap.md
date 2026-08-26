@@ -39,7 +39,7 @@ Items describe **observable behavior** — no project-specific file or symbol na
 
 ## Specs
 
-If a load-bearing cross-item technical decision surfaces, `to-roadmap` does **not** inline it — it surfaces a recommendation to capture it via [`/task:to-spec`](/reference/to-spec), then the roadmap references it with a `Spec:` header and items cite `### Spec references → <slug> §N`.
+If a load-bearing cross-item technical decision surfaces, `to-roadmap` does **not** inline it — it surfaces a recommendation to capture it via [`/task:to-spec`](/reference/to-spec), then the roadmap references it with a `Spec: [<slug>](../spec/<slug>.md)` header directly under its `# <Title>`, and items cite `### Spec references → [<slug>](../spec/<slug>.md) §N`. Both are Markdown links, so the reference is clickable in a viewer; the link text is the slug that carries the identity.
 
 ## Output
 
