@@ -112,4 +112,4 @@ grep '^### - \[ \]' .task/roadmap/<slug>.md
 
 Once you've found the file, any session picks it up with `implement .task/task/<slug>.md`.
 
-→ See also the maintainer-facing [troubleshooting notes](https://github.com/SpaiR/task-pipeline/blob/main/docs/troubleshooting.md) in the repo.
+→ See also the maintainer-facing [artifact contract](https://github.com/SpaiR/task-pipeline/blob/main/docs/contract.md) in the repo.

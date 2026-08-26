@@ -52,7 +52,7 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/what-is-task-pipeline', activeMatch: '/guide/' },
       { text: 'Reference', link: '/reference/commands', activeMatch: '/reference/' },
       {
-        text: 'v3.2.0',
+        text: 'v3.4.0',
         items: [
           { text: 'Changelog', link: '/changelog' },
           { text: 'Contributing', link: `${gh}/blob/main/CONTRIBUTING.md` },

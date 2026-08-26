@@ -42,11 +42,12 @@ agents/                          the plugin's subagent definitions (auto-loaded 
                                    the implementation's commit
 CLAUDE.md                        invariants + maintainer guidance
 docs/
+  README.md                      docs index (table of the files below)
   contract.md                    the authoritative artifact contract — flat .task/ layout,
                                    AI_DIR resolution, task.md + roadmap formats, producer/
                                    consumer table, bash-layer inventory, interaction conventions
   usage.md                       pointer to the docs site (user-facing usage moved to website/)
-  troubleshooting.md              pointer to the docs site (user-facing guide moved to website/)
+  troubleshooting.md             pointer to the docs site (user-facing guide moved to website/)
 website/                         VitePress docs site (landing + guide + reference), deployed
                                    to GitHub Pages by .github/workflows/docs.yml; source of
                                    truth for user-facing usage/guide prose
@@ -158,7 +159,7 @@ The `footer` is optional. The [Commit Message Footer](#commit-message-footer) fo
   │       │             │
   │       │             └─⫸ Summary in imperative, present tense. Not capitalized. No period at the end.
   │       │
-  │       └─⫸ Commit Scope: skill name | skills | agents | lib | hooks | plugin | github | readme | claudemd | contract | changelog | contributing
+  │       └─⫸ Commit Scope: skill name | skills | agents | lib | plugin | github | website | readme | claudemd | contract | changelog | contributing
   │
   └─⫸ Commit Type: feat | fix | refactor | perf | docs | test | chore | revert
 ```
@@ -186,7 +187,6 @@ Must be one of the following:
 * **`skills`** — cross-cutting change that touches several skills at once.
 * **`agents`** — the plugin's subagent definitions under `agents/` (currently only `code-reviewer.md`).
 * **`lib`** — the shared bash helpers under `skills/_lib/` (`resolve-ws.sh`, `roadmap.sh`) and `skills/validate/validate.sh`, plus their templates.
-* **`hooks`** — `hooks/hooks.json`.
 * **`plugin`** — `.claude-plugin/plugin.json` and install-path concerns.
 * **`github`** — files under `.github/` (PR/issue templates, any repo automation).
 * **`website`** — the VitePress docs site under `website/` (landing, guide, reference pages, theme, config).

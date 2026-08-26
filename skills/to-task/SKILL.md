@@ -1,6 +1,6 @@
 ---
 name: to-task
-description: Capture the current chat discussion into a task, no implementation plan
+description: 'Capture the chat (or a roadmap item) into `.task/task/<slug>.md` — `## Description` only, no `## Plan`.'
 disable-model-invocation: true
 user-invocable: true
 ---
@@ -21,7 +21,7 @@ source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # sourcing runs find_
 [[ -f "$AI_DIR/CLAUDE.md" ]] || echo "CLAUDE.md not found"
 ```
 
-The helper walks `task.root` git config → ancestor `.task/CLAUDE.md` → `dirname(git-common-dir)/.task` → `$CLAUDE_PROJECT_DIR/.task` when that path already holds a `CLAUDE.md` → `./.task`. Use `${CLAUDE_PLUGIN_ROOT}` — a bare `skills/…` path resolves against the user's project cwd, where it does not exist.
+The helper walks `task.root` git config when that path already holds a `.task/CLAUDE.md` → ancestor `.task/CLAUDE.md` → `dirname(git-common-dir)/.task` → `$CLAUDE_PROJECT_DIR/.task` when that path already holds a `CLAUDE.md` → `./.task`. Use `${CLAUDE_PLUGIN_ROOT}` — a bare `skills/…` path resolves against the user's project cwd, where it does not exist.
 
 **Once `.task/CLAUDE.md` exists, every artifact path in this skill is under that resolved `$AI_DIR`, never the cwd** — `.task/task/<slug>.md` below is shorthand for `$AI_DIR/task/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves `$AI_DIR` itself) never sees. The inline setup below is the one exception: it runs *before* a root exists, writes to `<ROOT>/.task`, and records `git config task.root "$ROOT"` — which is exactly what `$AI_DIR` resolves to on every later run.
 
@@ -71,8 +71,9 @@ The helper walks `task.root` git config → ancestor `.task/CLAUDE.md` → `dirn
      2. `.task/` is pipeline-internal and invisible to the repo: never name `.task/`
         paths, spec/roadmap/task slugs, or `§` numbers in code, comments, commits or PR text.
      3. Implement the `## Plan` (or the `## Description` when there is none) with the tools
-        this file declares under Code Navigation / Code Editing, if any, then commit per
-        Commit Format above.
+        this file declares under Code Navigation / Code Editing, if any. When the file
+        carries a `## Tests` section, write the assertions it names as part of the same
+        change. Then commit per Commit Format above.
      4. Spawn the `task:code-reviewer` agent on that task file: it proves each finding, fixes
         confirmed defects within **Touches** plus regressions this diff introduced outside
         them, runs Build and Tests, and amends the commit. With no `## Plan`, scope fixes to
@@ -113,7 +114,7 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
 
 ### Step 1a: From-roadmap mode
 
-1. Resolve `<slug>` to `.task/roadmap/<slug>.md`; if ambiguous or missing — stop and ask.
+1. Resolve `<slug>` to `.task/roadmap/<slug>.md`; if ambiguous or missing — **stop**, name the roadmap slugs that do exist, and close with a runnable footer (convention (a)): `→ Next: \`/task:to-task <one of those slugs>\``.
 2. Pick `<N>`: if given, use it. Otherwise collect open items (`- [ ]` checkbox headings); if none — stop with "Every item in `<slug>` is already checked off." and a **runnable** footer: substitute a real item number from the file, never a literal `<N>` — `→ Next: \`/task:to-task <slug>#3\` to redo a specific item (numbers as in the roadmap), or describe new work in chat and run \`/task:to-task\`.` If more than one open item, ask via `AskUserQuestion` (chip per `#<N> — <title>`, first/lowest default); if exactly one, auto-pick it.
 3. Read the item's `**Ready description:**` blockquote — its sub-headings are quoted (`> ### Context` / `> ### Goal` / `> ### Outcomes` / `> ### Invariants` / `> ### Acceptance criteria`); strip the `> ` prefix as you read. (`validate.sh` makes both the label and the blockquote a hard ERROR, so a bare unquoted `### Context` means the roadmap is malformed, not that the shape is optional.) `### Context` becomes the Description's "why"; the rest folds into the "what". Also note any `### Spec references → [<spec-slug>](../spec/<spec-slug>.md) §N` the item carries, and the roadmap's own `Spec:` header lines — collect the distinct `<spec-slug>`s to stamp as `Spec:` headers on the task (step 5). Read a slug from the link **text**, not from the link target: the target is relative to the roadmap file's own directory and would not resolve from your cwd. A hand-edited roadmap may carry the older bare `Spec: <slug>` / `### Spec references → <slug> §N` form — read it the same way.
 4. Derive `<item-slug>` — kebab-case English from the item's own title (not the roadmap's). No task-id, no `derive-task-id` helper: the item gets its own `<item-slug>.md`, independent of the roadmap's slug.

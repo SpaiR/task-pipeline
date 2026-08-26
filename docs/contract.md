@@ -36,12 +36,12 @@ There are **no user-facing flags** anywhere — footers, descriptions, and examp
 
 | Path | Role |
 |------|------|
-| `.task/CLAUDE.md` | Project settings — Language, Testing Policy, Build and Tests, Commit Format, tool priority — plus `## Executing a task`, the one copy of the execution instructions. A **nested `CLAUDE.md`**: the platform loads it into any session that reads a file under `.task/`. Written once by the intake skills' inline Step 0 setup, then **user-owned** — setup never rewrites an existing one. |
+| `.task/CLAUDE.md` | Project settings — Language, Testing Policy, Build and Tests, Commit Format, tool priority — plus `## Executing a task`, the one copy of the execution instructions. A **nested `CLAUDE.md`**: the platform loads it into any session that reads a file under `.task/`. Written once by the capture skills' inline Step 0 setup, then **user-owned** — setup never rewrites an existing one. |
 | `.task/task/<slug>.md` | **One file per task.** `<slug>` is both the filename and the identity. Written by `to-task` / `to-plan`. |
 | `.task/roadmap/<slug>.md` | One file per multi-task initiative. Item backlog with checkboxes. |
 | `.task/spec/<slug>.md` | **One file per spec.** Standalone load-bearing technical decisions, topic-derived slug. Written by `to-spec`. Cited by task/roadmap `Spec:` headers. |
 
-`.task/` is git-excluded via `.git/info/exclude` (pattern `.task`), written once by the intake skills' inline Step 0 setup. No tracked edits ever land outside `.task/` — the pipeline is invisible to the project.
+`.task/` is git-excluded via `.git/info/exclude` (pattern `.task`), written once by the capture skills' inline Step 0 setup. No tracked edits ever land outside `.task/` — the pipeline is invisible to the project.
 
 ### Slug as identifier
 
@@ -53,7 +53,7 @@ There are **no user-facing flags** anywhere — footers, descriptions, and examp
 
 The resolver is a **pure `.task/`-root finder**. It exports **`AI_DIR`** = the discovered `.task` directory, first hit wins:
 
-1. `git config --local task.root` — the anchor recorded by the inline Step 0 setup, **claimed only on evidence**: accepted when `<root>/.task/CLAUDE.md` exists, ignored otherwise. The anchor is an absolute path living in `.git/config`, which travels with the repo when it is moved or copied; a stale one would resolve to an `AI_DIR` with no `CLAUDE.md`, the gate would call the project unconfigured, and intake setup would write a fresh `.task/CLAUDE.md` while the real one moved with the repo. A stale anchor therefore falls through to step 2. Repo-common, so **every worktree resolves the same `.task/` with zero setup** — no symlink, no join step. This is what lets user-created parallel worktrees of a repo share one `.task/`.
+1. `git config --local task.root` — the anchor recorded by the inline Step 0 setup, **claimed only on evidence**: accepted when `<root>/.task/CLAUDE.md` exists, ignored otherwise. The anchor is an absolute path living in `.git/config`, which travels with the repo when it is moved or copied; a stale one would resolve to an `AI_DIR` with no `CLAUDE.md`, the gate would call the project unconfigured, and capture setup would write a fresh `.task/CLAUDE.md` while the real one moved with the repo. A stale anchor therefore falls through to step 2. Repo-common, so **every worktree resolves the same `.task/` with zero setup** — no symlink, no join step. This is what lets user-created parallel worktrees of a repo share one `.task/`.
 2. Upward walk from `$PWD` for a `.task/CLAUDE.md` ancestor — pre-anchor fallback.
 3. `dirname(git-common-dir)/.task` — main-worktree root / sibling worktrees / bare repos.
 4. `$CLAUDE_PROJECT_DIR/.task` when that path already holds a `CLAUDE.md` (evidence, not merely the variable being set), else the relative `./.task` — so a call from outside a project still fails cleanly on the setup gate.
@@ -66,7 +66,7 @@ The resolver is a **pure `.task/`-root finder**. It exports **`AI_DIR`** = the d
 
 A **nested `CLAUDE.md`**, not a bespoke config format. The platform loads it into any session that reads a file under `.task/` — which is exactly the executing session, `task:code-reviewer`, and every capture skill. Two properties follow from that and are load-bearing:
 
-- **The auto-load fires only for file-read tools.** A session that opens an artifact with `cat` or `sed` never triggers it. That is why `task.md` still carries an explicit `## Execution` pointer, and why the reviewer reads the file explicitly in its phase 1.
+- **The auto-load fires only for file-read tools.** A session that opens an artifact with `cat` or `sed` never triggers it. That is why `task.md` still carries an explicit `## Execution` pointer, and why the reviewer reads the file explicitly in its phase 0.
 - **It is not re-injected after `/compact`** (a project-root `CLAUDE.md` is; a nested one is not). It reloads on the next read of a file under `.task/`.
 
 ```markdown
@@ -172,7 +172,7 @@ One consequence is worth spelling out at the point of use: the `## Execution` bl
 
 - **promote** (file has no `## Plan`) — insert `## Plan` (and `## Tests`, if newly warranted) between `## Description`'s content and `## Execution`.
 - **revise** (file already has a `## Plan`) — replace the prior `## Plan` in place, same position; leave `## Tests` alone unless the current edit touched it.
-- **Both** preserve the header block, the `---` separator, `## Description` and `## Execution` verbatim. If a hand-written target carries no `## Execution` to anchor on, append the Plan at end of file and stamp the pointer after it.
+- **Both** preserve the header block, the `---` separator, `## Description` and `## Execution` verbatim. If a hand-written target carries no `## Execution` to anchor on, append the Plan at end of file and stamp the pointer after it; if it carries no `---` separator, insert one above `## Description` — a missing separator is a `validate.sh` ERROR, so the promoted file would otherwise fail the skill's own post-write check.
 
 Anyone changing the `task.md` section order or the `## Execution` pointer is changing promote's insert anchor — that is why it is recorded here and not only in the skill.
 
@@ -273,10 +273,10 @@ Section labels (`## N.`, `**Decision:**` / `**Rationale:**` / `**Constrains:**`)
 | Artifact | Produced by | Consumed by |
 |----------|-------------|-------------|
 | *(none — chat only)* | `grill` — an in-chat decision ledger, never a file | the `to-*` capture skill the user runs next |
-| `.task/CLAUDE.md` | intake skills' inline Step 0 setup (once; never rewritten afterwards) + **the user**, by hand | every skill **except `grill`** + every executing session + `task:code-reviewer` — Language, Testing Policy, Build and Tests, Commit Format, tool priority, `## Executing a task`. Reaches consumers two ways: the platform auto-loads it when a session reads a file under `.task/`, and the `## Execution` pointer names it explicitly |
-| `.task/task/<slug>.md` | `to-task` (header + `## Description` + `## Execution`); `to-plan` (same + `## Plan`, optional `## Tests`) — `to-plan` also **edits an existing file in place**, see § *promote / revise* above | **the executing session** (reads `## Description`, `## Plan` if present, follows `## Execution` to `.task/CLAUDE.md`, reads `Spec:` for anchors and `Roadmap:` + `Source item:` for auto-mark); `roadmap-to-workflow` per-item implement agent; **`task:code-reviewer`** (reads `Touches` as fix scope + `Spec:` as fixed anchors — read-only); `validate.sh` (read-only format check) |
+| `.task/CLAUDE.md` | capture skills' inline Step 0 setup (once; never rewritten afterwards) + **the user**, by hand | every skill **except `grill`** + every executing session + `task:code-reviewer` — Language, Testing Policy, Build and Tests, Commit Format, tool priority, `## Executing a task`. Reaches consumers two ways: the platform auto-loads it when a session reads a file under `.task/`, and the `## Execution` pointer names it explicitly |
+| `.task/task/<slug>.md` | `to-task` (header + `## Description` + `## Execution`); `to-plan` (same + `## Plan`, optional `## Tests`) — `to-plan` also **edits an existing file in place**, see § *promote / revise* above | **the executing session** (reads `## Description`, `## Plan` and `## Tests` if present, follows `## Execution` to `.task/CLAUDE.md`, reads `Spec:` for anchors and `Roadmap:` + `Source item:` for auto-mark); `roadmap-to-workflow` per-item implement agent; **`task:code-reviewer`** (reads `Touches` as fix scope + `Spec:` as fixed anchors — read-only); `validate.sh` (read-only format check) |
 | `.task/roadmap/<slug>.md` | `to-roadmap` (initial); user-edited; `roadmap-to-workflow` **driver** flips `- [ ]` → `- [x]` after an item's agent returns OK | `roadmap-to-workflow` driver (loops unchecked items, reads `**Dependencies:**` + `**Model:**` + `Spec:`); `to-plan` / `to-task` (when picking up an item); `validate.sh` (read-only format check) |
-| `.task/spec/<slug>.md` | `to-spec` or user | **the executing session** (via a task's `Spec:` header) + `to-plan` (technical-decision anchor) + `roadmap-to-workflow` per-item plan agent; `validate.sh` (read-only format check) |
+| `.task/spec/<slug>.md` | `to-spec` or user | **the executing session** (via a task's `Spec:` header) + `to-plan` (technical-decision anchor) + `roadmap-to-workflow` per-item plan agent; **`task:code-reviewer`** (phase 0 — reads each cited spec as a fixed anchor, read-only); `validate.sh` (read-only format check) |
 
 The executing session writes no separate pipeline artifacts — its implementation lands in the working tree, then in the commit, and `task:code-reviewer` reviews that diff. Auto-mark inside a single-task execution is done by the executing session itself (per `## Executing a task`, after the review returns OK); auto-mark during a roadmap run is done by the **driver**, not the per-item agent, so parallel item agents never race on the roadmap file.
 
@@ -284,7 +284,7 @@ The executing session writes no separate pipeline artifacts — its implementati
 
 Three categories, not two:
 
-- **Intake skills** (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) auto-run setup inline in a fresh project — they write `.task/CLAUDE.md` on first use, without a confirmation chip, and never rewrite one that already exists.
+- **Capture skills** (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) — the *intake-capable* four, in the skills' own wording — auto-run setup inline in a fresh project: they write `.task/CLAUDE.md` on first use, without a confirmation chip, and never rewrite one that already exists.
 - **Consumer skills** (`roadmap-to-workflow`, `validate`) check `.task/CLAUDE.md` and hard-stop if it is absent.
 - **`grill`** is exempt from both: it neither checks nor creates `.task/CLAUDE.md`, so it can run at the discussion stage before any setup or capture exists. It never reads or writes anything under `.task/`; dialog mirrors the chat's language.
 
@@ -324,7 +324,7 @@ Keeps the `.task/CLAUDE.md` precondition and English parser-stable strings. **No
 | Script | Role |
 |--------|------|
 | `roadmap.sh` | artifact-path + roadmap parsing helpers: `resolve_artifact_path` (called by `roadmap-to-workflow` and `validate.sh`) and `roadmap_progress_counts` (called by `roadmap-to-workflow` only). The driver's per-item checkbox flip is inline `awk`, **not** a helper here. |
-| `templates/conventional-commits.md` | commit-format fallback: the intake Step 0 setup points `.task/CLAUDE.md` → Commit Format at it when the project declares no convention of its own (no commit-format doc, nothing usable in `git log`) |
+| `templates/conventional-commits.md` | commit-format fallback: the capture skills' Step 0 setup points `.task/CLAUDE.md` → Commit Format at it when the project declares no convention of its own (no commit-format doc, nothing usable in `git log`) |
 
 ---
 
@@ -332,7 +332,7 @@ Keeps the `.task/CLAUDE.md` precondition and English parser-stable strings. **No
 
 The plugin ships **exactly one** agent: `agents/code-reviewer.md`, resolved as the agent type **`task:code-reviewer`** (plugin `agents/` directories are auto-loaded; the type is `[plugin, ...subdirs, name].join(":")`). It is the pipeline's own review pass — the platform's `/verify` and `/code-review` commands are marked `disable-model-invocation`, so neither a subagent nor a session that was told `implement …` can run them, and the failure is silent (an unlisted command is skipped, not refused).
 
-It is invoked identically from both execution paths, always given the task artifact's path plus a reference string to echo in its digest:
+It is invoked identically from both execution paths, always given the task artifact's path, plus a reference string to echo in its digest when the caller has one — a roadmap run passes `#N <item-slug>`; a plain session may omit it, and the reviewer then defaults to the task slug:
 
 - a plain session following `## Executing a task` spawns it with the `Agent` tool (depth 0 → 1);
 - `roadmap-to-workflow`'s driver spawns it as its own stage in the per-item serial loop (depth 1 → 2).
