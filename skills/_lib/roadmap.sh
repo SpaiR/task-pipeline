@@ -4,8 +4,7 @@
 #
 #   source "$SCRIPT_DIR/../_lib/roadmap.sh"
 #
-# Not auto-sourced anywhere — source it explicitly from the helpers that need
-# it. Today's callers: `validate.sh` and `roadmap-to-workflow`.
+# Not auto-sourced anywhere. Today's callers: `validate.sh` and `roadmap-to-workflow`.
 #
 # Exposed API:
 #   resolve_artifact_path <kind> <arg>  — slug-or-path → absolute path under
