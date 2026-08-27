@@ -19,6 +19,7 @@ Resolve the pipeline root first, then validate:
 
 ```bash
 source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # exports AI_DIR
+echo "$AI_DIR"                                             # the resolved root — use this value verbatim in every artifact path below
 bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
 ```
 

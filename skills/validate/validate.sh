@@ -66,6 +66,19 @@ require_config() {
   fi
 }
 
+# --- awk_report <awk-program> <file> ---
+# Runs an awk check whose output is `ERROR <label>: …` lines, echoes each to
+# stderr and counts it. Called via process substitution so the counting loop runs
+# in THIS shell and can bump ERRORS directly — the same reason `err`/`warn` are
+# plain functions. `$label` is read from the caller's scope, as those two do.
+awk_report() {
+  local line
+  while IFS= read -r line; do
+    echo "$line" >&2
+    [[ "$line" == ERROR* ]] && ERRORS=$((ERRORS + 1))
+  done < <(awk -v label="$label" "$1" "$2")
+}
+
 # Task and spec path resolution reuse `resolve_artifact_path <kind> <arg>` from
 # `_lib/roadmap.sh` (sourced above) — same three-branch lookup as the roadmap
 # resolver, keyed on the .task subdirectory.
@@ -240,6 +253,45 @@ validate_roadmap() {
   # Dangling `Spec:` header references → WARN (advisory, not an error).
   check_spec_refs "$file" "$label"
 
+  # CRLF. The parsers strip different whitespace classes — the driver's collector
+  # strips `[ \t]`, this file strips `[[:space:]]` — so a trailing CR survives
+  # into the driver's `**Dependencies:**` / `**Model:**` values, where it becomes
+  # a phantom dependency on a missing item and silently drops the model hint.
+  # Flag the file once here instead of normalizing CR in every parser.
+  if LC_ALL=C grep -q $'\r' "$file"; then
+    err "$label" "file has CRLF line endings — the driver keeps the trailing CR in **Dependencies:** / **Model:** values, turning a dependency into a phantom one and dropping the model hint; convert the file to LF"
+  fi
+
+  # --- Item-heading shape ---------------------------------------------------
+  # Runs BEFORE the required-heading guard below, on purpose: when EVERY heading
+  # has drifted, that guard returns early, and this is the only check that can
+  # tell the operator WHY the file looks itemless.
+  #
+  # A heading that ATTEMPTED to be an item and missed the canonical anchor is not
+  # an item to ANY consumer — `roadmap_progress_counts` under-counts it, the
+  # driver's Step 1 collector skips it, and the block parser opens no block for
+  # it, so its missing sub-headings go unreported too. Unflagged, the file
+  # validates clean while an item silently vanishes and the autopilot reports
+  # "all items shipped" having never run it. Two shapes count as an attempt:
+  #   - a checkbox-ish bracket (`[ ]`, `[X]`, `[]`) anywhere a checkbox belongs.
+  #     The bracket body is capped at ONE character so a legitimate heading that
+  #     opens with a Markdown link (`### [text](url)`) is not swept up;
+  #   - a bullet followed by a number, i.e. the checkbox was deleted outright.
+  # `### N.` with no bullet is left to the block parser, which already names it.
+  # `### Spec references → [slug](target) §N` is a citation inside an item.
+  awk_report '
+    /^### - \[[ x~>-]\] [0-9]+\. .+$/ { next }
+    /^### Spec references/              { next }
+    /^#+[[:space:]]*[-*+]?[[:space:]]*\[[^]]?\]/ {
+      print "ERROR " label ": item heading does not match the required `### - [ ] N. <title>` form: " $0
+      next
+    }
+    /^#+[[:space:]]*[-*+][[:space:]]*[0-9]/ {
+      print "ERROR " label ": item heading is missing its `[ ]` checkbox; required form is `### - [ ] N. <title>`: " $0
+      next
+    }
+  ' "$file"
+
   # Find task headings: `### - [x] | - [ ] | - [~] | - [>] | - [-] N. <title>`.
   # Checkbox prefix is REQUIRED — the roadmap-to-workflow driver's auto-mark
   # and item selection both rely on it.
@@ -265,13 +317,64 @@ validate_roadmap() {
     done <<< "$dup"
   fi
 
-  # Run the block-parser in a process substitution (not a pipe) so the loop
-  # body executes in THIS shell and can bump ERRORS directly — no temp-file
-  # counter needed.
-  while IFS= read -r line; do
-    echo "$line" >&2
-    [[ "$line" == ERROR* ]] && ERRORS=$((ERRORS + 1))
-  done < <(awk -v label="$label" '
+  # --- `**Dependencies:**` values, checked against this same file -------------
+  # Only UNCHECKED items are checked: the driver reads dependencies while
+  # collecting runnable items, so a shipped `[x]` item's dependency is history
+  # nothing consumes — erroring on it would make a completed roadmap unfixable
+  # by format after an item is tidied away.
+  # Item state is closed by the same terminators the collector uses, so a stray
+  # `**Dependencies:**` under `## Out of scope` is not billed to the last item.
+  awk_report '
+    /^### - \[[ x~>-]\] [0-9]+\. / {
+      m = $0; sub(/^### - \[[ x~>-]\] /, "", m); sub(/\..*$/, "", m)
+      item = m; open = ($0 ~ /^### - \[ \] /); items[m + 0] = 1; next
+    }
+    /^### Spec references/ { next }                       # lives inside an item
+    /^#+[[:space:]]*[-*+]?[[:space:]]*\[[^]]?\]/ { item = ""; next }
+    /^#+[[:space:]]*[-*+][[:space:]]*[0-9]/       { item = ""; next }
+    /^### /             { item = ""; next }
+    /^## /              { item = ""; next }
+    /^---[[:space:]]*$/ { item = ""; next }
+    /^\*\*Dependencies:\*\*/ {
+      if (item == "" || !open) next
+      raw = $0; sub(/^\*\*Dependencies:\*\*[[:space:]]*/, "", raw)
+      sub(/[[:space:]]+$/, "", raw)
+      v = raw; gsub(/[[:space:]]/, "", v)
+      lv = tolower(v)
+      if (v == "" || v == "—" || v == "-" || lv == "none" || lv == "n/a") next
+      # Test the RAW value first. Stripping whitespace before the format check
+      # is what silently fuses the `1 2` hand edit into a dependency on item 12.
+      if (raw ~ /[[:space:]]/ && raw !~ /^[0-9]+([[:space:]]*,[[:space:]]*[0-9]+)*$/) {
+        print "ERROR " label ": Task " item " has a space-separated **Dependencies:** value \"" raw "\" — separate item numbers with commas (`1, 2`); without them the value reads as the single item " v
+        next
+      }
+      if (v !~ /^[0-9]+(,[0-9]+)*$/) {
+        print "ERROR " label ": Task " item " has an unparsable **Dependencies:** value \"" raw "\" — write an em dash for none, or a comma-separated list of item numbers"
+        next
+      }
+      k = split(v, d, ",")
+      for (i = 1; i <= k; i++) {
+        if (d[i] + 0 == item + 0) {
+          print "ERROR " label ": Task " item " lists itself in **Dependencies:** — the driver reads that as an unsatisfiable cycle and hard-stops the run"
+          continue
+        }
+        nref++; ref_item[nref] = item; ref_num[nref] = d[i]
+      }
+      next
+    }
+    # Item numbers are compared NUMERICALLY, so a zero-padded `01.` heading and a
+    # dependency written `1` are the same item, as every other consumer treats them.
+    END {
+      for (i = 1; i <= nref; i++)
+        if (!((ref_num[i] + 0) in items))
+          print "ERROR " label ": Task " ref_item[i] " depends on item " ref_num[i] ", which has no item heading in this file"
+    }
+  ' "$file"
+
+  # The per-item block parser: requires the `**Ready description:**` label and
+  # its quoted sub-headings. Reported through `awk_report`, like the two checks
+  # above it.
+  awk_report '
     function flush_block() {
       if (in_block == 0) return
       if (!has_ready)    print "ERROR " label ": Task " task_no " missing '\''**Ready description:**'\'' label"
@@ -309,6 +412,11 @@ validate_roadmap() {
     # errors — must come before the generic `^### ` flush rule below.
     /^### Spec references/ { next }
 
+    # A drifted item-heading ATTEMPT closes the block too, so this parser and
+    # the driver'"'"'s Step 1 collector agree on what ends an item.
+    /^#+[[:space:]]*[-*+]?[[:space:]]*\[[^]]?\]/ { flush_block(); next }
+    /^#+[[:space:]]*[-*+][[:space:]]*[0-9]/       { flush_block(); next }
+
     # Stop at next `### ` heading that is NOT a sub-heading of this block.
     # Sub-headings inside the blockquote start with `> ### `, so they do not
     # match `^### `. Other top-level `### ` headings end the block.
@@ -339,7 +447,7 @@ validate_roadmap() {
     }
 
     END { flush_block() }
-  ' "$file")
+  ' "$file"
 }
 
 # ---------------- main ----------------

@@ -53,7 +53,7 @@ Claude Code's own `/verify` and `/code-review` are marked `disable-model-invocat
 
 **Symptom** — `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all` ends with `FAIL <N> error(s)`, preceded by `ERROR <label>: <message>` lines.
 
-**Cause** — a task or roadmap file drifted from the expected format: a missing `# <Title>` first line, no `---` separator, no `## Description`, a `## Plan` with zero `### Step N:` blocks, or a roadmap item missing its checkbox prefix or a required sub-heading.
+**Cause** — a task or roadmap file drifted from the expected format: a missing `# <Title>` first line, no `---` separator, no `## Description`, a `## Plan` with zero `### Step N:` blocks, a roadmap item missing its checkbox prefix or a required sub-heading, a roadmap item heading that *nearly* matches the required form (`[X]` uppercase, a double space around the checkbox, `####`, or the checkbox deleted), a `**Dependencies:**` value that doesn't parse (use an em dash for none, or a comma-separated list of item numbers), one that cites a number with no matching item, one that lists its own item, or a file saved with CRLF line endings.
 
 **Fix** — read each `ERROR <label>:` line (it names the file and the exact problem) and fix the artifact by hand — these are plain Markdown files. Re-check with `validate.sh all`. It's an optional self-check, not a gate — only genuine structural `ERROR`s are worth fixing before you hand the file to an implementing session; a `WARN` never blocks anything.
 

@@ -32,7 +32,7 @@ All three are **read-only** named agents at `.claude/agents/self-{invariants,con
 ### Step 1: Gather context
 
 In one parallel batch, run:
-- `ls skills/` — full skill list (folder names = canonical slugs; expect `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`, `validate`, `_lib`).
+- `ls skills/` — full skill list (folder names = canonical slugs; expect `grill`, `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`, `validate`, `_lib`).
 - `ls .claude/agents/` — local self-* agents (sanity check before fan-out).
 - `git status --porcelain` — flag a dirty tree to the user before starting (audit findings against working state may diverge from `HEAD`).
 - Read `.claude/.audit-baseline.json` if it exists (prior ratchet metrics; absent on first run — treat as no baseline).

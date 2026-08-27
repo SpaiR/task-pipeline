@@ -104,6 +104,25 @@ awk '
     }
     next
   }
+  # `### Spec references → …` is a top-level heading that lives INSIDE an item
+  # (the same tolerance validate.sh grants it), so it is NOT a terminator — it
+  # may sit above **Dependencies:**, and flushing here would drop them.
+  /^### Spec references/ { next }
+  # A heading that ATTEMPTED to be an item and drifted (`[X]`, a double space
+  # after the checkbox, `####`, a missing `- `) closes the current item.
+  # Otherwise its Dependencies/Model are attributed to the item ABOVE it — a
+  # phantom dependency, a wrong wave, or the wrong model, with no signal.
+  # Matched the same way `validate.sh` reports it, so both parsers agree on what
+  # counts as an item attempt.
+  /^#+[[:space:]]*[-*+]?[[:space:]]*\[[^]]?\]/ { flush(); next }
+  /^#+[[:space:]]*[-*+][[:space:]]*[0-9]/       { flush(); next }
+  # The section terminators `validate.sh`'s block parser uses. Deliberately NOT
+  # every `#`-prefixed line: a `#### Notes` sub-heading, or a `#` comment inside
+  # a fenced block, sits INSIDE an item — flushing on those would drop that
+  # item's Dependencies/Model on a file that validates perfectly clean.
+  /^### / { flush(); next }
+  /^## /  { flush(); next }
+  /^---[[:space:]]*$/ { flush(); next }
   /^\*\*Dependencies:\*\*/ && pend { deps=$0; sub(/^\*\*Dependencies:\*\* */,"",deps); gsub(/[ \t]/,"",deps); if (deps=="—"||deps=="-"||tolower(deps)=="none"||tolower(deps)=="n/a") deps="" }
   /^\*\*Model:\*\*/       && pend { model=$0; sub(/^\*\*Model:\*\* */,"",model); gsub(/[ \t]/,"",model); if (model!="haiku" && model!="sonnet" && model!="opus") model="" }
   END { flush() }

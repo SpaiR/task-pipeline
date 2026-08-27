@@ -17,10 +17,19 @@ We use [GitHub](https://github.com/SpaiR/task-pipeline) to host code, track issu
 ```
 .claude-plugin/plugin.json       plugin manifest (name `task`, version, metadata)
 .claude-plugin/marketplace.json  catalog for the `task-pipeline` marketplace
+.claude/                         repo-local maintainer tooling — NOT shipped with the plugin:
+  skills/self-audit/             meta-skill: audits this repo for invariant / contract /
+                                   docs drift (three read-only lens agents)
+  skills/self-improve/           meta-skill: raises quality where nothing is broken yet
+                                   (four read-only lens agents)
+  agents/self-*.md               the lens agents both meta-skills fan out to
+                                   (read-only: Read, Grep, Glob, Bash — no Edit/Write)
+  .audit-baseline.json           gitignored ratchet metrics for self-audit
+  .improve-baseline.json         gitignored ratchet metrics for self-improve
 skills/                          SKILL.md per skill + shared bash helpers
   _lib/                          shared bash helpers:
                                    resolve-ws.sh (pure .task/-root finder, exports AI_DIR),
-                                   roadmap.sh (roadmap parsing / checkbox auto-mark helpers);
+                                   roadmap.sh (artifact-path resolution + roadmap progress counts);
                                    templates/conventional-commits.md (commit-format fallback)
   grill/                         SKILL.md — pre-capture interrogation; writes nothing,
                                    no config gate, touches nothing under .task/
@@ -170,8 +179,8 @@ The `<type>` and `<summary>` fields are mandatory; the `(<scope>)` field is opti
 
 Must be one of the following:
 
-* **feat** — A new skill, agent, hook, slash-command form, or any user-visible capability.
-* **fix** — A bug fix in a skill, agent, bash helper, or hook.
+* **feat** — A new skill, agent, slash-command form, or any user-visible capability.
+* **fix** — A bug fix in a skill, agent, or bash helper.
 * **refactor** — Internal change that does not add a feature or fix a bug (rename, restructure, extract).
 * **perf** — A change whose primary goal is to shrink a skill/agent's token or context footprint (or its latency) **without** changing behavior. Distinct from `refactor`: the win is measured in tokens/context, not readability.
 * **docs** — Documentation only: `README.md`, `CLAUDE.md`, `CHANGELOG.md`, `docs/`, this file, or prose inside skills.
@@ -184,8 +193,8 @@ Must be one of the following:
 **Do NOT invent new scopes.** Pick from the list below; if none fits, omit the scope entirely.
 
 * **A skill name** (no `task:` prefix): `grill`, `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`, `validate`.
-* **`skills`** — cross-cutting change that touches several skills at once.
-* **`agents`** — the plugin's subagent definitions under `agents/` (currently only `code-reviewer.md`).
+* **`skills`** — cross-cutting change that touches several skills at once. Also covers the repo-local meta-skills under `.claude/skills/` (`self-audit`, `self-improve`), which ship with no plugin scope of their own.
+* **`agents`** — the plugin's subagent definitions under `agents/` (currently only `code-reviewer.md`), and the repo-local lens agents under `.claude/agents/`.
 * **`lib`** — the shared bash helpers under `skills/_lib/` (`resolve-ws.sh`, `roadmap.sh`) and `skills/validate/validate.sh`, plus their templates.
 * **`plugin`** — `.claude-plugin/plugin.json` and install-path concerns.
 * **`github`** — files under `.github/` (PR/issue templates, any repo automation).
@@ -242,7 +251,7 @@ The plugin follows [Semantic Versioning](https://semver.org/). The version of re
 ### Bump rules
 
 * **Patch** (`X.Y.z` → `X.Y.(z+1)`) — bug fixes, internal refactors, doc improvements. No change to slash-command names, artifact contract, or install steps. Existing `.task/` directories continue to work without user action.
-* **Minor** (`X.y.z` → `X.(y+1).0`) — new skills, new hooks; any backward-compatible addition. Existing flows and `.task/` directories keep working without user action.
+* **Minor** (`X.y.z` → `X.(y+1).0`) — new skills, new agents; any backward-compatible addition. Existing flows and `.task/` directories keep working without user action.
 * **Major** (`x` → `(x+1).0.0`) — any breaking change to the artifact contract or the slash-command surface. Anything tagged `Changed (breaking)` / `Removed (breaking)` in the changelog forces a major bump and requires a written migration note.
 
 As of `1.0.0` the artifact contract and the slash-command surface are stable, so SemVer applies in full: breaking changes bump major, never minor. Every breaking change is loud — `!` in the commit header, a dedicated `Changed (breaking)` / `Removed (breaking)` changelog section, and a migration note.
@@ -257,11 +266,11 @@ Update only on explicit request from the project owner — AI agents and contrib
 
 When asked to add an entry, the user-visible difference categories are:
 
-* new, removed, or renamed skill / agent / hook
+* new, removed, or renamed skill / agent
 * changed slash-command form (e.g. namespace shift, new flag, removed flag)
 * new, removed, or restructured artifact in the [artifact contract](docs/contract.md)
 * changed install / migration steps
-* changed plugin manifest fields users notice (`name`, `version`, `hooks`)
+* changed plugin manifest fields users notice (`name`, `version`)
 
 Internal cleanups (bash-helper refactor, regex tightening, comment typo, README wording polish) typically don't warrant an entry even on request — flag and confirm.
 

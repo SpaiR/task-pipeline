@@ -18,10 +18,13 @@ Resolve the pipeline root, then check whether its `CLAUDE.md` exists:
 
 ```bash
 source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # sourcing runs find_ai_dir → sets AI_DIR
+echo "$AI_DIR"                                             # the resolved root — use this value verbatim in every artifact path below
 [[ -f "$AI_DIR/CLAUDE.md" ]] || echo "CLAUDE.md not found"
 ```
 
-The helper walks `task.root` git config when that path already holds a `.task/CLAUDE.md` → ancestor `.task/CLAUDE.md` → `dirname(git-common-dir)/.task` → `$CLAUDE_PROJECT_DIR/.task` when that path already holds a `CLAUDE.md` → `./.task`. Use `${CLAUDE_PLUGIN_ROOT}` — a bare `skills/…` path resolves against the user's project cwd, where it does not exist.
+The helper walks `task.root` git config when that path already holds a `.task/CLAUDE.md` → ancestor `.task/CLAUDE.md` (the walk stops at the top of this project, so it never claims a neighbouring one's `.task/`) → `dirname(git-common-dir)/.task` → `$CLAUDE_PROJECT_DIR/.task` when that path already holds a `CLAUDE.md` → `./.task`. Use `${CLAUDE_PLUGIN_ROOT}` — a bare `skills/…` path resolves against the user's project cwd, where it does not exist.
+
+The echoed value is normally absolute. In a project that is not a git repository and has no `.task/` yet it can be the bare relative `.task` — the historical default; treat that as "unconfigured" and let the inline setup below establish `<ROOT>/.task`, rather than writing a cwd-relative artifact from a subdirectory.
 
 **Once `.task/CLAUDE.md` exists, every artifact path in this skill is under that resolved `$AI_DIR`, never the cwd** — `.task/task/<slug>.md` below is shorthand for `$AI_DIR/task/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves `$AI_DIR` itself) never sees. The inline setup below is the one exception: it runs *before* a root exists, writes to `<ROOT>/.task`, and records `git config task.root "$ROOT"` — which is exactly what `$AI_DIR` resolves to on every later run.
 
@@ -67,7 +70,8 @@ The helper walks `task.root` git config when that path already holds a `.task/CL
         honor its decisions as fixed. A header value is a Markdown link,
         `Spec: [<slug>](../spec/<slug>.md)` — take `<slug>` from the link text and open
         `.task/spec/<slug>.md` from the pipeline root; never follow the relative link
-        target, which resolves against your cwd, not the artifact's directory.
+        target, which resolves against your cwd, not the artifact's directory. An older
+        or hand-edited artifact may carry a bare `Spec: <slug>`; read it the same way.
      2. `.task/` is pipeline-internal and invisible to the repo: never name `.task/`
         paths, spec/roadmap/task slugs, or `§` numbers in code, comments, commits or PR text.
      3. Implement the `## Plan` (or the `## Description` when there is none) with the tools
@@ -80,7 +84,7 @@ The helper walks `task.root` git config when that path already holds a `.task/CL
         what you changed.
      5. If the file carries `Roadmap:` + `Source item: #N`, tick item #N's checkbox in
         `.task/roadmap/<slug>.md` once the review returns OK — `<slug>` read from the
-        `Roadmap:` link's text, same rule as step 1.
+        `Roadmap:` link's text, or from a bare `Roadmap: <slug>`, same rule as step 1.
      ```
 
      Substitute every `{…}` with a real value — except `${CLAUDE_PLUGIN_ROOT}` inside the Commit Format option, which is not a placeholder but a shell variable: `echo` it first and write the resolved absolute path, never the literal `${CLAUDE_PLUGIN_ROOT}` (nothing expands it inside a user's `.task/CLAUDE.md`). Keep the section headings and the `## Executing a task` steps as they stand — `.task/task/<slug>.md` points at that heading by name, and the reviewer and `to-plan` look their settings up by heading.

@@ -21,6 +21,7 @@ Resolve the pipeline root, then check whether its `CLAUDE.md` exists:
 
 ```bash
 source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # sourcing runs find_ai_dir → sets AI_DIR
+echo "$AI_DIR"                                             # the resolved root — use this value verbatim in every artifact path below
 [[ -f "$AI_DIR/CLAUDE.md" ]] || echo "CLAUDE.md not found"
 ```
 
@@ -70,7 +71,7 @@ Only for fresh capture (skip entirely for promote/revise — see Step 1).
 1. **Slug.** Generate a short kebab-case slug (2–4 words) from the chat's essence, in English regardless of `.task/CLAUDE.md` → Language (the slug is a filename, a parser-stable string). If it collides with an existing, unrelated task file, disambiguate rather than overwriting.
 2. **Read `.task/CLAUDE.md`** for Language and Testing Policy before drafting — Step 0's gate only *tests* for the file with Bash, which does not pull it into context (the platform's auto-load fires for file-read tools only).
 3. **Distil the chat.** Read back over the discussion in this conversation (not the codebase yet) and draft `## Description` — the why + what, in the user's own framing, written per `.task/CLAUDE.md` → Language (the section labels themselves stay English). Use `### Problem` / `### Outcome` / `### Scope` / `### Constraints` sub-headers where the discussion gives signal for them; omit a sub-header rather than inventing content. Do not fabricate anything not actually discussed.
-3. Hold the header line `# {Short task title}` (no `Roadmap:` / `Source item:` lines in this mode) and the drafted Description for Step 7's write. If the discussion clearly relies on a spec in `.task/spec/`, hold a `Spec: [<slug>](../spec/<slug>.md)` header line for each relevant one too (never invent a reference; never author the spec — that is `to-spec`'s job). Continue to Step 3.
+4. Hold the header line `# {Short task title}` (no `Roadmap:` / `Source item:` lines in this mode) and the drafted Description for Step 7's write. If the discussion clearly relies on a spec in `.task/spec/`, hold a `Spec: [<slug>](../spec/<slug>.md)` header line for each relevant one too (never invent a reference; never author the spec — that is `to-spec`'s job). Continue to Step 3.
 
 ## Step 3: Analyze the codebase
 
@@ -225,7 +226,7 @@ For **promote** / **revise**, note plainly what stayed untouched (Description, a
 
 `→ Next: implement it now, or in a fresh session run: \`implement .task/task/<slug>.md\``
 
-**Driver mode — suppress the footer.** In a non-interactive run as `roadmap-to-workflow`'s per-item plan agent (the same run Step 4 already carves out), print the digest but **omit** the `→ Next:` line and end with the driver's parser-stable line instead — `OK #N <item-slug> planned`. The driver reads the last non-empty line and takes `<item-slug>` from it; a trailing footer would hand it a garbage slug and the next agent a non-existent task path.
+**Driver mode — suppress the footer.** In a non-interactive run as `roadmap-to-workflow`'s per-item plan agent (the same run Step 4 already carves out), print the digest but **omit** the `→ Next:` line and end with the driver's parser-stable line instead — `OK #N <item-slug> planned` on success, or `FAIL #N <item-slug> <what failed>` if you could not produce the plan (the driver's plan stage branches on both; a stop with no digest line at all leaves it nothing to read, so emit one of these two even when failing). The driver reads the last non-empty line and takes `<item-slug>` from it; a trailing footer would hand it a garbage slug and the next agent a non-existent task path.
 
 ## Forbidden
 
