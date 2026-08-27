@@ -21,6 +21,7 @@ Resolve the pipeline root, then check whether its `CLAUDE.md` exists:
 
 ```bash
 source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # sourcing runs find_ai_dir → sets AI_DIR
+echo "$AI_DIR"                                             # the resolved root — use this value verbatim in every artifact path below
 [[ -f "$AI_DIR/CLAUDE.md" ]] || echo "CLAUDE.md not found"
 ```
 
@@ -225,7 +226,7 @@ For **promote** / **revise**, note plainly what stayed untouched (Description, a
 
 `→ Next: implement it now, or in a fresh session run: \`implement .task/task/<slug>.md\``
 
-**Driver mode — suppress the footer.** In a non-interactive run as `roadmap-to-workflow`'s per-item plan agent (the same run Step 4 already carves out), print the digest but **omit** the `→ Next:` line and end with the driver's parser-stable line instead — `OK #N <item-slug> planned`. The driver reads the last non-empty line and takes `<item-slug>` from it; a trailing footer would hand it a garbage slug and the next agent a non-existent task path.
+**Driver mode — suppress the footer.** In a non-interactive run as `roadmap-to-workflow`'s per-item plan agent (the same run Step 4 already carves out), print the digest but **omit** the `→ Next:` line and end with the driver's parser-stable line instead — `OK #N <item-slug> planned` on success, or `FAIL #N <item-slug> <what failed>` if you could not produce the plan (the driver's plan stage branches on both; a stop with no digest line at all leaves it nothing to read, so emit one of these two even when failing). The driver reads the last non-empty line and takes `<item-slug>` from it; a trailing footer would hand it a garbage slug and the next agent a non-existent task path.
 
 ## Forbidden
 

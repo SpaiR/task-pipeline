@@ -31,12 +31,15 @@
 #   2. Upward walk from $PWD for a `.task/CLAUDE.md` ancestor — the
 #      pre-anchor fallback. Covers a main worktree, a nested worktree, or a
 #      `.task` created in a subdir, for repos bootstrapped before the anchor
-#      existed. CEILINGED at this checkout's top level (`--show-toplevel`): the
-#      top level is checked, the directory above it is not, so the walk cannot
-#      claim a neighbouring project's `.task/`.
+#      existed. CEILINGED at the highest directory that still belongs to this
+#      project — the highest of this checkout's top level, the main worktree
+#      root, and the superproject's working tree that is still an ancestor of
+#      $PWD. That directory is checked; above it is someone else's project, so
+#      the walk cannot claim a neighbouring `.task/`.
 #   3. Parent of the git common dir — the main worktree root (normal / nested /
 #      sibling worktrees) or the bare repo's container (bare). Catches sibling
-#      worktrees and bare repos that the ceilinged walk in (2) misses.
+#      worktrees and bare repos that the ceilinged walk in (2) misses; reuses
+#      the value (2) already computed.
 #   4. `$CLAUDE_PROJECT_DIR/.task` when that path ALREADY holds a
 #      `CLAUDE.md` — like steps 1-3, this step claims a root only on
 #      evidence, never on the variable being set alone. Otherwise the relative
@@ -64,43 +67,99 @@ find_ai_dir() {
     [[ -n "$root" && ! -f "$root/.task/CLAUDE.md" ]] && root=""
   fi
 
-  # Ceiling for the walk below: THIS checkout's top level. A `.task/` may sit at
-  # the top level or in any subdir of it, and the repo's main worktree root is
-  # reached by step 3 — nothing above either is ours.
-  local top=""
-  if [[ "$have_git" -eq 1 ]]; then
-    top=$(git rev-parse --path-format=absolute --show-toplevel 2>/dev/null) || top=""
-  fi
+  # `common_root` is computed in step 2 (it is one of the walk's ceiling
+  # candidates) and REUSED by step 3, so the git fork is paid at most once.
+  local common_root=""
 
-  # 2. Upward walk for a CLAUDE.md ancestor (pre-anchor repos), CEILINGED at the
-  #    checkout's top level. Unbounded, this walk climbs out of the working tree
-  #    and claims a NEIGHBOURING project's `.task/`: a checkout with no `.task/`
-  #    of its own, sitting under a directory that has one, resolves to that
-  #    parent and writes every artifact into the other project's flat namespace
-  #    — silently, because the setup gate finds a CLAUDE.md there and skips
-  #    setup. The top level itself is still checked; only above it is off limits,
-  #    and step 3 then supplies the main worktree root (which is how a sibling
-  #    worktree, not being below it, still finds the shared `.task/`).
+  # 2. Upward walk for a `.task/CLAUDE.md` ancestor (pre-anchor repos),
+  #    CEILINGED so it cannot climb out of this project and claim a
+  #    NEIGHBOURING one. Unbounded, a checkout with no `.task/` of its own that
+  #    sits under a directory which has one resolves to that parent and writes
+  #    every artifact into the other project's flat namespace — silently,
+  #    because the setup gate finds a CLAUDE.md there and skips setup.
+  #
+  #    The ceiling is the HIGHEST directory that still belongs to this project.
+  #    Three candidates, because a `.task/` legitimately lives at any of them:
+  #      - this checkout's own top level;
+  #      - the repo's main worktree root, for a linked worktree nested under a
+  #        subdir-hosted `.task/` (`.task/` above the worktree, below the root);
+  #      - the superproject's working tree, for a submodule whose CONTAINING
+  #        project owns the `.task/` — step 3 is no help there, since for a
+  #        submodule `dirname(git-common-dir)` points inside `.git/modules`.
+  #    Each candidate must lie on $dir's own ancestor chain to bound this walk
+  #    at all: a sibling worktree's main root is not above the sibling, so it is
+  #    correctly ignored here and supplied by step 3 instead.
   if [[ -z "$root" ]]; then
-    local dir
-    # `pwd -P` (a builtin, so still no `realpath` / `readlink -f`): git reports
-    # the top level as a PHYSICAL path and the ceiling compare below is a string
-    # compare, so a symlinked checkout must not hand us a logical one.
-    dir=$(pwd -P)
+    local dir ceiling="" cand top="" super="" phys=""
+    # The walk itself is LOGICAL (plain `pwd`), as it has always been: entering a
+    # project through a symlinked subdir must still find that project's own
+    # `.task/`, and a physical walk would leave its chain entirely. `pwd` also
+    # keeps answering from bash's cached $PWD when the cwd has been deleted under
+    # us (a removed worktree with a shell still inside it), where `pwd -P` fails.
+    dir=$(pwd 2>/dev/null) || dir="$PWD"
+    phys=$(pwd -P 2>/dev/null) || phys="$dir"
+
+    # The ceiling compares against git's PHYSICAL paths, so it can only be
+    # applied when the logical and physical cwd agree. Under a symlinked entry
+    # path they do not, and there we walk unbounded — exactly as before the
+    # ceiling existed. Resolving too permissively in that corner is strictly
+    # better than failing to find a root that is really there.
+    if [[ "$have_git" -eq 1 && "$dir" == "$phys" ]]; then
+      top=$(git rev-parse --path-format=absolute --show-toplevel 2>/dev/null) || top=""
+      local common
+      if common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) \
+         && [[ -n "$common" ]]; then
+        common_root=$(dirname "$common")
+      fi
+      # One level of superproject covers a submodule of a configured project;
+      # deeper nesting falls back to the tighter ceiling, never to a wrong root.
+      super=$(git rev-parse --show-superproject-working-tree 2>/dev/null) || super=""
+
+      for cand in "$top" "$common_root" "$super"; do
+        [[ -n "$cand" ]] || continue
+        [[ "$dir" == "$cand" || "$dir" == "$cand"/* ]] || continue   # on our chain?
+        # `common_root` is only the MAIN WORKTREE root when it actually holds a
+        # `.git`. With `git init --separate-git-dir=…` it is merely whatever
+        # directory the git dir was parked in — often a level above the checkout,
+        # which would hand the walk a ceiling ABOVE the project and re-open the
+        # neighbouring-`.task/` hole this ceiling exists to close.
+        if [[ "$cand" == "$common_root" && ! -e "$cand/.git" ]]; then continue; fi
+        [[ -z "$ceiling" || ${#cand} -lt ${#ceiling} ]] && ceiling="$cand"
+      done
+    fi
+
     while :; do
       if [[ -f "$dir/.task/CLAUDE.md" ]]; then root="$dir"; break; fi
-      [[ -n "$top" && "$dir" == "$top" ]] && break
+      [[ -n "$ceiling" && "$dir" == "$ceiling" ]] && break   # empty => unbounded
       [[ "$dir" == "/" ]] && break
       dir=${dir%/*}; [[ -z "$dir" ]] && dir=/   # parent, no `dirname` fork
     done
   fi
 
-  # 3. Parent of the git common dir (sibling worktrees / bare repos).
+  # 3. Parent of the git common dir (sibling worktrees / bare repos) — already
+  #    computed as a ceiling candidate above when step 2 ran.
   if [[ -z "$root" && "$have_git" -eq 1 ]]; then
-    local common
-    if common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) \
-       && [[ -n "$common" ]]; then
-      root=$(dirname "$common")
+    local top3="${top:-}"      # `local` is function-scoped, but be explicit
+    if [[ -z "$common_root" ]]; then
+      local common3
+      if common3=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) \
+         && [[ -n "$common3" ]]; then
+        common_root=$(dirname "$common3")
+      fi
+    fi
+    [[ -n "$top3" ]] || top3=$(git rev-parse --path-format=absolute --show-toplevel 2>/dev/null) || top3=""
+    if [[ -n "$common_root" && -e "$common_root/.git" ]]; then
+      # A real main worktree root: normal, nested and sibling worktrees all land
+      # here, which is what lets every worktree of a repo share one `.task/`.
+      root="$common_root"
+    elif [[ -n "$top3" ]]; then
+      # `git init --separate-git-dir=…` parks the git dir outside the checkout,
+      # so `dirname(git-common-dir)` is just whatever directory holds it — often
+      # a level ABOVE the checkout, i.e. a neighbouring project. The checkout's
+      # own top level is the honest answer there.
+      root="$top3"
+    elif [[ -n "$common_root" ]]; then
+      root="$common_root"          # bare repo: no working tree, so no top level
     fi
   fi
 
