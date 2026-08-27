@@ -115,6 +115,11 @@ awk_report() {
 # from the `else` branch, which truncates at the first whitespace run — a slug
 # never contains one, so the same copied annotation cannot corrupt it either.
 #
+# Only the HEADER BLOCK is scanned — the awk stops at the first `---` separator
+# (task) or the first `## ` heading (roadmap), whichever comes first, because
+# `Spec:` is defined as a header line and a body line that merely starts with
+# `Spec: ` (a quoted example, a pasted template line) is not a reference.
+#
 # Runs in the caller's shell (not a subshell), so WARNS is updated directly.
 check_spec_refs() {
   local file="$1" label="$2" slug target
@@ -127,6 +132,13 @@ check_spec_refs() {
       warn "$label" "Spec: $slug — link target '$target' does not match the slug (expected '../spec/$slug.md'); agents follow the label, so only a human clicking the link would land on the wrong file"
     fi
   done < <(awk '
+    # `Spec:` is a HEADER line: above the `---` separator in a task, directly
+    # under `# <Title>` (above the first `## ` heading) in a roadmap. Stop at
+    # whichever bound comes first, so a `Spec:`-shaped line quoted in a body
+    # (e.g. the attach-by-hand line from to-spec'\''s footer, pasted into a
+    # Description) never emits a spurious dangling-reference WARN.
+    /^---[[:space:]]*$/ { exit }
+    /^## /              { exit }
     /^Spec:[[:space:]]/ {
       v = $0
       sub(/^Spec:[[:space:]]*/, "", v)
@@ -176,8 +188,12 @@ validate_task() {
     err "$label" "first line must match '# <Title>'; got: ${first_line:-<empty>}"
   fi
 
-  if ! grep -qxF -- '---' "$file"; then
-    err "$label" "missing '---' separator between header and Description"
+  # The separator must sit in the HEADER block — before the first `## ` heading.
+  # A `---` thematic break inside the body must not satisfy this check: a deleted
+  # header separator would then pass silently, and to-plan's promote repair
+  # (which relies on this ERROR firing) would never trigger.
+  if ! awk '/^---$/{found=1; exit} /^## /{exit} END{exit !found}' "$file"; then
+    err "$label" "missing '---' separator between header and Description (a '---' inside the body does not count)"
   fi
 
   if ! grep -qE '^## Description[[:space:]]*$' "$file"; then
@@ -187,12 +203,12 @@ validate_task() {
   # `## Plan` is OPTIONAL (only to-plan writes it). If present, it must carry
   # at least one `### Step N:` block. One awk pass does both the presence and
   # the step check: exit non-zero only when a Plan heading is seen with no step.
-  if ! awk '/^## Plan[[:space:]]*$/{seen=1; flag=1; next} /^## /{flag=0} flag && /^### Step [0-9]+/{found=1} END{exit (seen && !found)}' "$file"; then
+  if ! awk '/^## Plan[[:space:]]*$/{seen=1; flag=1; next} /^## /{flag=0} flag && /^### Step [0-9]+:/{found=1} END{exit (seen && !found)}' "$file"; then
     err "$label" "'## Plan' section is present but contains no '### Step N:' blocks"
   fi
 
   # `## Tests` is OPTIONAL. If present, it must carry at least one `### Test N:`.
-  if ! awk '/^## Tests[[:space:]]*$/{seen=1; flag=1; next} /^## /{flag=0} flag && /^### Test [0-9]+/{found=1} END{exit (seen && !found)}' "$file"; then
+  if ! awk '/^## Tests[[:space:]]*$/{seen=1; flag=1; next} /^## /{flag=0} flag && /^### Test [0-9]+:/{found=1} END{exit (seen && !found)}' "$file"; then
     err "$label" "'## Tests' section is present but contains no '### Test N:' blocks"
   fi
 

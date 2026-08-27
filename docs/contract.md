@@ -172,7 +172,7 @@ One consequence is worth spelling out at the point of use: the `## Execution` bl
 
 - **promote** (file has no `## Plan`) — insert `## Plan` (and `## Tests`, if newly warranted) between `## Description`'s content and `## Execution`.
 - **revise** (file already has a `## Plan`) — replace the prior `## Plan` in place, same position; leave `## Tests` alone unless the current edit touched it.
-- **Both** preserve the header block, the `---` separator, `## Description` and `## Execution` verbatim. If a hand-written target carries no `## Execution` to anchor on, append the Plan at end of file and stamp the pointer after it; if it carries no `---` separator, insert one above `## Description` — a missing separator is a `validate.sh` ERROR, so the promoted file would otherwise fail the skill's own post-write check. If it carries no `## Description` at all, promote **stops and asks** rather than inventing one: `## Description` is the one mandatory body section, and `validate.sh` errors on its absence just as it does on the separator.
+- **Both** preserve the header block, the `---` separator, `## Description` and `## Execution` verbatim. If a hand-written target carries no `## Execution` to anchor on, append the Plan at end of file and stamp the pointer after it; if it carries no `---` separator, insert one above `## Description` — a missing separator is a `validate.sh` ERROR, so the promoted file would otherwise fail the skill's own post-write check. If it carries no `## Description` at all, promote **stops and asks** (via the slug-collision overwrite-guard `AskUserQuestion` — overwriting the file is a destructive action) rather than inventing one: `## Description` is the one mandatory body section, and `validate.sh` errors on its absence just as it does on the separator.
 
 Anyone changing the `task.md` section order or the `## Execution` pointer is changing promote's insert anchor — that is why it is recorded here and not only in the skill.
 
@@ -302,12 +302,12 @@ Keeps the `.task/CLAUDE.md` precondition and English parser-stable strings. **No
 
 - **`task <slug>`** — validate `.task/task/<slug>.md`:
   - line 1 matches `^# .+` (a title);
-  - a `---` separator line is present;
+  - a `---` separator line is present **in the header block** (before the first `## ` heading) — a thematic break inside the body does not satisfy it;
   - `## Description` is present;
   - `## Plan` is **optional** — if present, it has ≥1 `### Step N:` block;
   - `## Tests` is **optional** — if present, it has ≥1 `### Test N:` block;
   - `## Execution` is present (presence only — the pointer is stamped verbatim, so its text is not re-checked);
-  - each `Spec:` header's slug resolves to an existing `.task/spec/<slug>.md` — a miss is a **`WARN`** (dangling reference), not an error (`validate.sh` is advisory, not a gate). The slug is read from the **link label**, so the canonical `Spec: [<slug>](../spec/<slug>.md)` and the legacy bare `Spec: <slug>` check identically (see [§ Cross-artifact references](#cross-artifact-references));
+  - each `Spec:` header's slug resolves to an existing `.task/spec/<slug>.md` — a miss is a **`WARN`** (dangling reference), not an error (`validate.sh` is advisory, not a gate). The slug is read from the **link label**, so the canonical `Spec: [<slug>](../spec/<slug>.md)` and the legacy bare `Spec: <slug>` check identically (see [§ Cross-artifact references](#cross-artifact-references)). Only header-block `Spec:` lines are scanned — the check stops at the first `---` separator (task) or the first `## ` heading (roadmap), so a `Spec:`-shaped line quoted in a body never WARNs;
   - a `Spec:` header whose link target is not `../spec/<label>.md` is a second **`WARN`** — label/target disagreement, the drift a rename leaves behind. Intra-line only; the bare form has no target and is never flagged.
 - **`roadmap <slug>`** — validate `.task/roadmap/<slug>.md`:
   - ≥1 item heading matching `^### - \[[ x~>-]\] N\. <title>` — the checkbox prefix is **required** (an item with a bare `### N.` heading and no checkbox is an error, since the driver's auto-mark and item selection both rely on it);
