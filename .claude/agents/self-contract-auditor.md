@@ -18,7 +18,7 @@ The artifact contract is the producer→consumer table in [`docs/contract.md`](.
 
 | File | Produced by | Consumed by |
 |------|-------------|-------------|
-| `.task/CLAUDE.md` | intake skills' inline Step 0 setup (once, then user-owned) | every skill + every executing session + `task:code-reviewer` (Language, Testing Policy, Build and Tests, Commit Format, tool priority, `## Executing a task`) |
+| `.task/CLAUDE.md` | intake skills' Step 0 setup, per `skills/_lib/setup.md` (once, then user-owned) | every skill + every executing session + `task:code-reviewer` (Language, Testing Policy, Build and Tests, Commit Format, tool priority, `## Executing a task`) |
 | `.task/task/<slug>.md` | `to-task` (header + `## Description` + `## Execution`); `to-plan` (same + `## Plan`, optional `## Tests`) | the executing session (reads `## Description`, `## Plan` if present, follows `## Execution`, reads `Roadmap:` + `Source item:` for auto-mark); `roadmap-to-workflow` per-item implement agent |
 | `.task/roadmap/<slug>.md` | `to-roadmap` (initial); user-edited; `roadmap-to-workflow` **driver** flips `- [ ]` → `- [x]` after an item's agent returns OK | `roadmap-to-workflow` driver (loops unchecked items, reads `**Dependencies:**` + `**Model:**`); `to-plan` (when picking up an item) |
 | `.task/spec/<slug>.md` | `to-spec` | tasks/roadmaps referencing it via a `Spec:` header; the executing session reads it as a fixed anchor |

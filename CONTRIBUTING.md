@@ -31,12 +31,13 @@ skills/                          SKILL.md per skill + shared bash helpers
                                    resolve-ws.sh (pure .task/-root finder, exports AI_DIR),
                                    roadmap.sh (artifact-path resolution + roadmap progress counts),
                                    roadmap-driver.js (the static Workflow script roadmap-to-workflow invokes),
-                                   plan-driver.md (non-interactive to-plan mirror for the driver's plan agents);
+                                   plan-driver.md (non-interactive to-plan mirror for the driver's plan agents),
+                                   setup.md (first-run setup sub-steps + the .task/CLAUDE.md template);
                                    templates/conventional-commits.md (commit-format fallback)
   grill/                         SKILL.md — pre-capture interrogation; writes nothing,
                                    no config gate, touches nothing under .task/
-  to-task/                       SKILL.md — Description only, no Plan; folds in the
-                                   inline config setup on a fresh project
+  to-task/                       SKILL.md — Description only, no Plan; runs first-use
+                                   config setup from _lib/setup.md on a fresh project
   to-plan/                       SKILL.md — Description + `## Plan` (Goal/Touches/Logic);
                                    promotes/revises a to-task-only file in place
   to-roadmap/                    SKILL.md — multi-task initiative → .task/roadmap/<slug>.md
@@ -197,7 +198,7 @@ Must be one of the following:
 * **A skill name** (no `task:` prefix): `grill`, `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`, `validate`.
 * **`skills`** — cross-cutting change that touches several skills at once. Also covers the repo-local meta-skills under `.claude/skills/` (`self-audit`, `self-improve`), which ship with no plugin scope of their own.
 * **`agents`** — the plugin's subagent definitions under `agents/` (currently only `code-reviewer.md`), and the repo-local lens agents under `.claude/agents/`.
-* **`lib`** — the shared helpers under `skills/_lib/` (`resolve-ws.sh`, `roadmap.sh`, `roadmap-driver.js`, `plan-driver.md`) and `skills/validate/validate.sh`, plus their templates.
+* **`lib`** — the shared helpers under `skills/_lib/` (`resolve-ws.sh`, `roadmap.sh`, `roadmap-driver.js`, `plan-driver.md`, `setup.md`) and `skills/validate/validate.sh`, plus their templates.
 * **`plugin`** — `.claude-plugin/plugin.json` and install-path concerns.
 * **`github`** — files under `.github/` (PR/issue templates, any repo automation).
 * **`website`** — the VitePress docs site under `website/` (landing, guide, reference pages, theme, config).

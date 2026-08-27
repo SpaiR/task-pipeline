@@ -69,6 +69,8 @@ A **nested `CLAUDE.md`**, not a bespoke config format. The platform loads it int
 - **The auto-load fires only for file-read tools.** A session that opens an artifact with `cat` or `sed` never triggers it. That is why `task.md` still carries an explicit `## Execution` pointer, and why the reviewer reads the file explicitly in its phase 0.
 - **It is not re-injected after `/compact`** (a project-root `CLAUDE.md` is; a nested one is not). It reloads on the next read of a file under `.task/`.
 
+The file is written once by first-run setup — the procedure and the authoring template live in `skills/_lib/setup.md`, which each capture skill's Step 0 reads when the file is absent. The shape below is the contract that template must keep producing:
+
 ```markdown
 # task-pipeline
 
@@ -273,7 +275,7 @@ Section labels (`## N.`, `**Decision:**` / `**Rationale:**` / `**Constrains:**`)
 | Artifact | Produced by | Consumed by |
 |----------|-------------|-------------|
 | *(none — chat only)* | `grill` — an in-chat decision ledger, never a file | the `to-*` capture skill the user runs next |
-| `.task/CLAUDE.md` | capture skills' inline Step 0 setup (once; never rewritten afterwards) + **the user**, by hand | every skill **except `grill`** + every executing session + `task:code-reviewer` — Language, Testing Policy, Build and Tests, Commit Format, tool priority, `## Executing a task`. Reaches consumers two ways: the platform auto-loads it when a session reads a file under `.task/`, and the `## Execution` pointer names it explicitly |
+| `.task/CLAUDE.md` | capture skills' Step 0 setup, per `skills/_lib/setup.md` (once; never rewritten afterwards) + **the user**, by hand | every skill **except `grill`** + every executing session + `task:code-reviewer` — Language, Testing Policy, Build and Tests, Commit Format, tool priority, `## Executing a task`. Reaches consumers two ways: the platform auto-loads it when a session reads a file under `.task/`, and the `## Execution` pointer names it explicitly |
 | `.task/task/<slug>.md` | `to-task` (header + `## Description` + `## Execution`); `to-plan` (same + `## Plan`, optional `## Tests`) — `to-plan` also **edits an existing file in place**, see § *promote / revise* above | **the executing session** (reads `## Description`, `## Plan` and `## Tests` if present, follows `## Execution` to `.task/CLAUDE.md`, reads `Spec:` for anchors and `Roadmap:` + `Source item:` for auto-mark); `roadmap-to-workflow` per-item implement agent; **`task:code-reviewer`** (reads `Touches` as fix scope + `Spec:` as fixed anchors — read-only); `validate.sh` (read-only format check) |
 | `.task/roadmap/<slug>.md` | `to-roadmap` (initial); user-edited; `roadmap-to-workflow` **driver** flips `- [ ]` → `- [x]` after an item's agent returns OK | `roadmap-to-workflow` driver (loops unchecked items, reads `**Dependencies:**` + `**Model:**` + `Spec:`); `to-plan` / `to-task` (when picking up an item); `validate.sh` (read-only format check) |
 | `.task/spec/<slug>.md` | `to-spec` or user | **the executing session** (via a task's `Spec:` header) + `to-plan` (technical-decision anchor) + `roadmap-to-workflow` per-item plan agent; **`task:code-reviewer`** (phase 0 — reads each cited spec as a fixed anchor, read-only); `validate.sh` (read-only format check) |
@@ -284,7 +286,7 @@ The executing session writes no separate pipeline artifacts — its implementati
 
 Three categories, not two:
 
-- **Capture skills** (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) — the *intake-capable* four, in the skills' own wording — auto-run setup inline in a fresh project: they write `.task/CLAUDE.md` on first use, without a confirmation chip, and never rewrite one that already exists.
+- **Capture skills** (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) — the *intake-capable* four, in the skills' own wording — auto-run setup in a fresh project by following `skills/_lib/setup.md`: they write `.task/CLAUDE.md` on first use, without a confirmation chip, and never rewrite one that already exists.
 - **Consumer skills** (`roadmap-to-workflow`, `validate`) check `.task/CLAUDE.md` and hard-stop if it is absent.
 - **`grill`** is exempt from both: it neither checks nor creates `.task/CLAUDE.md`, so it can run at the discussion stage before any setup or capture exists. It never reads or writes anything under `.task/`; dialog mirrors the chat's language.
 
@@ -329,6 +331,7 @@ Keeps the `.task/CLAUDE.md` precondition and English parser-stable strings. **No
 | `roadmap.sh` | artifact-path + roadmap parsing helpers: `resolve_artifact_path` (called by `roadmap-to-workflow` and `validate.sh`) and `roadmap_progress_counts` (called by `roadmap-to-workflow` only). The driver's per-item checkbox flip is its mark stage (see [§ execution shape](#roadmap-to-workflow-execution-shape-driver-contract)), **not** a helper here. |
 | `roadmap-driver.js` | the static Workflow script `roadmap-to-workflow` invokes via `scriptPath` — dependency waves in, parallel plan / serial implement → review → mark per item; parameterized only through `args` (see [§ execution shape](#roadmap-to-workflow-execution-shape-driver-contract)) |
 | `plan-driver.md` | the non-interactive mirror of `to-plan` that the driver's plan agents read instead of the full skill; mirrors [§ task.md format](#taskmd-format-tasktaskslugmd) — a change to that format or to `to-plan` Steps 3–7 changes this file in the same commit |
+| `setup.md` | first-run setup: the sub-steps and the `.task/CLAUDE.md` authoring template, read by a capture skill's Step 0 when the file is absent (see [§ `.task/CLAUDE.md` format](#taskclaudemd-format)) |
 | `templates/conventional-commits.md` | commit-format fallback: the capture skills' Step 0 setup points `.task/CLAUDE.md` → Commit Format at it when the project declares no convention of its own (no commit-format doc, nothing usable in `git log`) |
 
 ---
