@@ -114,22 +114,24 @@ async function runReview(n, itemSlug, w) {
 
 // MARK — the driver-side checkbox flip, as its own serial stage right after the
 // review returns OK (the sandbox cannot write files itself). The command is
-// fully baked: the anchored awk matches ONLY `### - [ ] N. ` so a blockquoted
-// line or a substring number is never touched, and `hits == 1` gates the mv — a
-// zero-match rewrite discards the temp file and FAILs loudly instead of copying
-// the file over itself in silence (the item's commit is already in the tree; a
-// silent miss would make the next run re-implement landed work).
+// fully baked: the anchored awk matches ONLY `### - [ ] N. ` (`0*` tolerates a
+// hand-written zero-padded `0N.`, which validate.sh sanctions as the same item)
+// so a blockquoted line or a substring number is never touched, and `hits == 1`
+// gates the mv — a zero-match rewrite discards the temp file, exits non-zero,
+// and FAILs loudly instead of copying the file over itself in silence (the
+// item's commit is already in the tree; a silent miss would make the next run
+// re-implement landed work).
 async function runMark(n, itemSlug, w) {
   const r = await agent(
     `Run EXACTLY this bash command, once, verbatim — do not modify it, do not
      retry with a different command, and do not edit any file yourself:
 
        awk -v n="${n}" '
-         $0 ~ ("^### - \\\\[ \\\\] " n "\\\\. ") { sub(/\\[ \\]/, "[x]"); hits++ } { print }
+         $0 ~ ("^### - \\\\[ \\\\] 0*" n "\\\\. ") { sub(/\\[ \\]/, "[x]"); hits++ } { print }
          END { exit (hits == 1 ? 0 : 1) }
        ' "${ROADMAP}" > "${ROADMAP}.tmp" \\
          && mv "${ROADMAP}.tmp" "${ROADMAP}" \\
-         || rm -f "${ROADMAP}.tmp"
+         || { rm -f "${ROADMAP}.tmp"; exit 1; }
 
      If the command exited 0, your last non-empty line MUST be exactly:
        OK #${n} ${itemSlug} marked
