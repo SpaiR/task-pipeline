@@ -22,7 +22,7 @@ implement session   roadmap-to-workflow   ← the launcher fans items out to ses
 - `to-plan` — same, **with** a `## Plan` section (Goal / Touches / Logic).
 - `to-roadmap` — capture an initiative → `.task/roadmap/<slug>.md`.
 - `to-spec` — capture load-bearing technical decisions → `.task/spec/<slug>.md`; referenced by tasks/roadmaps via `Spec:` headers, and read by the executing session as a fixed anchor.
-- `roadmap-to-workflow` — the one launcher. Authors + invokes a dynamic Workflow that runs the roadmap's unchecked items.
+- `roadmap-to-workflow` — the one launcher. Computes dependency waves over the roadmap's unchecked items and invokes the plugin-shipped Workflow driver (`skills/_lib/roadmap-driver.js`, via `scriptPath` + `args`).
 
 **Execution is not a skill.** An ordinary session told `implement .task/task/<slug>.md` reads the artifact, whose `## Execution` pointer sends it to `.task/CLAUDE.md` → `## Executing a task` (implement → commit → `task:code-reviewer` reviews, fixes and amends). There is **no execution skill** — the behavior is that one section plus the one agent the plugin ships.
 
@@ -69,6 +69,8 @@ A **nested `CLAUDE.md`**, not a bespoke config format. The platform loads it int
 - **The auto-load fires only for file-read tools.** A session that opens an artifact with `cat` or `sed` never triggers it. That is why `task.md` still carries an explicit `## Execution` pointer, and why the reviewer reads the file explicitly in its phase 0.
 - **It is not re-injected after `/compact`** (a project-root `CLAUDE.md` is; a nested one is not). It reloads on the next read of a file under `.task/`.
 
+The file is written once by first-run setup — the procedure and the authoring template live in `skills/_lib/setup.md`, which each capture skill's Step 0 reads when the file is absent. The shape below is the contract that template must keep producing:
+
 ```markdown
 # task-pipeline
 
@@ -109,7 +111,7 @@ Every reference from one `.task/` artifact to another is written as a **Markdown
 
 Hrefs are relative to the **artifact's own directory**, which is what a Markdown viewer resolves against. `.task/task/`, `.task/roadmap/` and `.task/spec/` all sit one level under `.task/`, so a sibling-kind reference is always `../<kind>/<slug>.md` and `.task/CLAUDE.md` is always `../CLAUDE.md` — no per-file depth arithmetic.
 
-**The label carries the identity; the href is for viewers.** A consumer takes the slug from the link **label** and rebuilds the canonical `$AI_DIR/<kind>/<slug>.md` itself. It must never follow the relative href literally: an agent's cwd is the project root, not `.task/task/`, so `../spec/x.md` would resolve to a sibling of the repository. Every consumer that resolves one of these headers — `## Executing a task`, `agents/code-reviewer.md` phase 0, `to-task` Step 1a, `to-plan` Step 1/2a, `roadmap-to-workflow` Step 0 (roadmap-level header) and its Step 2 `runPlan` prompt (per-item citation), `validate.sh:check_spec_refs` — is written that way.
+**The label carries the identity; the href is for viewers.** A consumer takes the slug from the link **label** and rebuilds the canonical `$AI_DIR/<kind>/<slug>.md` itself. It must never follow the relative href literally: an agent's cwd is the project root, not `.task/task/`, so `../spec/x.md` would resolve to a sibling of the repository. Every consumer that resolves one of these headers — `## Executing a task`, `agents/code-reviewer.md` phase 0, `to-task` Step 1a, `to-plan` Step 1/2a, `roadmap-to-workflow` Step 0 (roadmap-level header) and the driver's plan stage via `skills/_lib/plan-driver.md` (per-item citation), `validate.sh:check_spec_refs` — is written that way.
 
 **The bare form stays readable.** `Spec: <slug>` (and `Roadmap: <slug>`) is what earlier versions wrote, and `.task/` artifacts are hand-edited. Producers emit the link form; consumers accept either, and `validate.sh` unwraps the label — tolerating backticks and trailing text around it — before checking the reference. A bare slug is never re-flagged as malformed, only as dangling if the spec genuinely does not exist.
 
@@ -214,7 +216,7 @@ Load-bearing item fields for `roadmap-to-workflow`:
 
 - **Checkbox state** — the item heading's checkbox is a **5-state** class, `[ x~>-]`. `[ ]` is unchecked (eligible to run); `[x]` / `[~]` / `[>]` / `[-]` all count as **already-marked / not-eligible** — for progress counting (`roadmap.sh:roadmap_progress_counts`), the driver's auto-mark, and wave dependency-satisfaction. Do **not** narrow it to `[ x]` only: `roadmap.sh`, `validate.sh`, and the wave sorter all key on the full class.
 - **`**Dependencies:**`** — `—` (none) or a comma-separated list of item numbers. `—` is the form `to-roadmap` emits; the driver's parser also tolerates `-`, `none`, and `n/a` as "no dependency", since roadmaps are hand-edited. Anything else is read as a dependency on an item number, so an unrecognised word becomes a phantom dependency and a hard stop — `validate.sh roadmap` now catches both that and a number with no matching item, before a run can trip on it. The driver **topologically sorts** items into dependency-ordered **waves**: items in the same wave have no unmet dependency and run in parallel; a barrier separates waves.
-- **`**Model:**`** — optional per-item hint (`haiku` / `sonnet` / `opus`). The driver passes it as `opts.model` to the per-item implement agent. It is **not** validated — a missing or off-list value simply means no hint (defaults apply).
+- **`**Model:**`** — optional per-item hint (`haiku` / `sonnet` / `opus`). The driver passes it as `opts.model` to the per-item implement agent, and scales the plan stage down for a `haiku` hint (sonnet planner at low effort instead of opus). It is **not** validated — a missing or off-list value simply means no hint (defaults apply).
 
 ### Roadmap `Spec:` headers
 
@@ -273,7 +275,7 @@ Section labels (`## N.`, `**Decision:**` / `**Rationale:**` / `**Constrains:**`)
 | Artifact | Produced by | Consumed by |
 |----------|-------------|-------------|
 | *(none — chat only)* | `grill` — an in-chat decision ledger, never a file | the `to-*` capture skill the user runs next |
-| `.task/CLAUDE.md` | capture skills' inline Step 0 setup (once; never rewritten afterwards) + **the user**, by hand | every skill **except `grill`** + every executing session + `task:code-reviewer` — Language, Testing Policy, Build and Tests, Commit Format, tool priority, `## Executing a task`. Reaches consumers two ways: the platform auto-loads it when a session reads a file under `.task/`, and the `## Execution` pointer names it explicitly |
+| `.task/CLAUDE.md` | capture skills' Step 0 setup, per `skills/_lib/setup.md` (once; never rewritten afterwards) + **the user**, by hand | every skill **except `grill`** + every executing session + `task:code-reviewer` — Language, Testing Policy, Build and Tests, Commit Format, tool priority, `## Executing a task`. Reaches consumers two ways: the platform auto-loads it when a session reads a file under `.task/`, and the `## Execution` pointer names it explicitly |
 | `.task/task/<slug>.md` | `to-task` (header + `## Description` + `## Execution`); `to-plan` (same + `## Plan`, optional `## Tests`) — `to-plan` also **edits an existing file in place**, see § *promote / revise* above | **the executing session** (reads `## Description`, `## Plan` and `## Tests` if present, follows `## Execution` to `.task/CLAUDE.md`, reads `Spec:` for anchors and `Roadmap:` + `Source item:` for auto-mark); `roadmap-to-workflow` per-item implement agent; **`task:code-reviewer`** (reads `Touches` as fix scope + `Spec:` as fixed anchors — read-only); `validate.sh` (read-only format check) |
 | `.task/roadmap/<slug>.md` | `to-roadmap` (initial); user-edited; `roadmap-to-workflow` **driver** flips `- [ ]` → `- [x]` after an item's agent returns OK | `roadmap-to-workflow` driver (loops unchecked items, reads `**Dependencies:**` + `**Model:**` + `Spec:`); `to-plan` / `to-task` (when picking up an item); `validate.sh` (read-only format check) |
 | `.task/spec/<slug>.md` | `to-spec` or user | **the executing session** (via a task's `Spec:` header) + `to-plan` (technical-decision anchor) + `roadmap-to-workflow` per-item plan agent; **`task:code-reviewer`** (phase 0 — reads each cited spec as a fixed anchor, read-only); `validate.sh` (read-only format check) |
@@ -284,7 +286,7 @@ The executing session writes no separate pipeline artifacts — its implementati
 
 Three categories, not two:
 
-- **Capture skills** (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) — the *intake-capable* four, in the skills' own wording — auto-run setup inline in a fresh project: they write `.task/CLAUDE.md` on first use, without a confirmation chip, and never rewrite one that already exists.
+- **Capture skills** (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) — the *intake-capable* four, in the skills' own wording — auto-run setup in a fresh project by following `skills/_lib/setup.md`: they write `.task/CLAUDE.md` on first use, without a confirmation chip, and never rewrite one that already exists.
 - **Consumer skills** (`roadmap-to-workflow`, `validate`) check `.task/CLAUDE.md` and hard-stop if it is absent.
 - **`grill`** is exempt from both: it neither checks nor creates `.task/CLAUDE.md`, so it can run at the discussion stage before any setup or capture exists. It never reads or writes anything under `.task/`; dialog mirrors the chat's language.
 
@@ -298,7 +300,7 @@ Sourced (not exec'd). Runs `find_ai_dir` at source time and **exports `AI_DIR`**
 
 ### validate.sh (optional self-check, not a gate)
 
-Keeps the `.task/CLAUDE.md` precondition and English parser-stable strings. **No hook calls it.** Subcommands:
+Keeps the `.task/CLAUDE.md` precondition and English parser-stable strings. **No hook calls it.** The skills run it narrowly: each capture validates the one artifact it just wrote (post-write, surfacing the result in its digest — there is no full-scan call at capture entry), and `roadmap-to-workflow`'s Step 0 gate sweeps `all`. Subcommands:
 
 - **`task <slug>`** — validate `.task/task/<slug>.md`:
   - line 1 matches `^# .+` (a title);
@@ -326,7 +328,10 @@ Keeps the `.task/CLAUDE.md` precondition and English parser-stable strings. **No
 
 | Script | Role |
 |--------|------|
-| `roadmap.sh` | artifact-path + roadmap parsing helpers: `resolve_artifact_path` (called by `roadmap-to-workflow` and `validate.sh`) and `roadmap_progress_counts` (called by `roadmap-to-workflow` only). The driver's per-item checkbox flip is inline `awk`, **not** a helper here. |
+| `roadmap.sh` | artifact-path + roadmap parsing helpers: `resolve_artifact_path` (called by `roadmap-to-workflow` and `validate.sh`) and `roadmap_progress_counts` (called by `roadmap-to-workflow` only). The driver's per-item checkbox flip is its mark stage (see [§ execution shape](#roadmap-to-workflow-execution-shape-driver-contract)), **not** a helper here. |
+| `roadmap-driver.js` | the static Workflow script `roadmap-to-workflow` invokes via `scriptPath` — dependency waves in, parallel plan / serial implement → review → mark per item; parameterized only through `args` (see [§ execution shape](#roadmap-to-workflow-execution-shape-driver-contract)) |
+| `plan-driver.md` | the non-interactive mirror of `to-plan` that the driver's plan agents read instead of the full skill; mirrors [§ task.md format](#taskmd-format-tasktaskslugmd) — a change to that format or to `to-plan` Steps 3–7 changes this file in the same commit |
+| `setup.md` | first-run setup: the sub-steps and the `.task/CLAUDE.md` authoring template, read by a capture skill's Step 0 when the file is absent (see [§ `.task/CLAUDE.md` format](#taskclaudemd-format)) |
 | `templates/conventional-commits.md` | commit-format fallback: the capture skills' Step 0 setup points `.task/CLAUDE.md` → Commit Format at it when the project declares no convention of its own (no commit-format doc, nothing usable in `git log`) |
 
 ---
@@ -390,8 +395,9 @@ Every skill carries `disable-model-invocation: true` and `user-invocable: true`.
 
 ### `roadmap-to-workflow` execution shape (driver contract)
 
-- **Per-item default is OPUS-PLANS / SONNET-IMPLEMENTS / REVIEWER-REVIEWS:** a first `agent()` runs `to-plan` for the item on `{ model: 'opus' }` (writes `.task/task/<item-slug>.md`); that plan agent suppresses `to-plan`'s `→ Next:` footer so its last non-empty line is the parser-stable `OK #N <item-slug> planned` the driver reads the slug from; a second `agent()` implements + commits on `{ model: item.model ?? 'sonnet' }`; a third spawns `task:code-reviewer` (`agentType`), which reviews that commit, fixes what it proves, runs Build and Tests, and amends. Context passes via the on-disk task file — no chat transfer.
-- **Dependency-ordered waves:** within a wave, plan agents run in `parallel()` (they write only their own task files) and then implement **and review** run **strictly one at a time** per item, inside the same serial loop — the shared working tree keeps exactly one writer, and item N never starts implementing while item N−1 is still under review. A barrier separates waves. A dependency **cycle** among scoped items (no wave can be formed) is a hard stop, reported for the user to break — never run an item before its dependency lands.
-- **Driver auto-marks:** after an item's review returns OK, the driver ticks that item's checkbox in the roadmap file (never the per-item agent — avoids parallel writes racing). The flip **must verify it matched exactly one heading** and stop the wave otherwise: the anchor is narrow by design, so a drifted heading matches nothing, the rewrite silently copies the file over itself, and the run reports success while the next run redoes work already committed.
-- **Stop-on-FAIL;** parser-stable digest last line `OK|FAIL #N <slug> <summary>`. Digests are LLM output, so the driver **asserts the shape before consuming it** — in particular the plan stage's `OK #N <item-slug> planned`, whose slug is indexed out and becomes the next agent's file path. A drifted line is a hard stop, not an `undefined` path handed downstream.
+- **The driver is a shipped file, not an authored script:** the skill computes the waves, then invokes `skills/_lib/roadmap-driver.js` via the Workflow tool's `scriptPath`, passing `{slug, aiDir, pluginRoot, specPaths, waves}` as real JSON `args` with **absolute** paths — the sandbox cannot expand env vars, and the driver asserts every arg up front, returning a `bad args` line instead of launching an agent against a garbage path. The script never changes between runs, so `resumeFromRunId` replays completed stages from cache.
+- **Per-item default is OPUS-PLANS / SONNET-IMPLEMENTS / REVIEWER-REVIEWS / DRIVER-MARKS:** a first `agent()` follows `skills/_lib/plan-driver.md` — the non-interactive mirror of `to-plan` — on `{ model: 'opus', effort: 'medium' }`, or `{ model: 'sonnet', effort: 'low' }` when the item's `**Model:**` hint is `haiku`, and writes `.task/task/<item-slug>.md`, ending on the parser-stable `OK #N <item-slug> planned` the driver reads the slug from; a second `agent()` implements + commits on `{ model: item.model ?? 'sonnet' }`; a third spawns `task:code-reviewer` (`agentType`), which reviews that commit, fixes what it proves, runs Build and Tests, and amends; a fourth, cheap mark agent flips the item's checkbox (next bullet). Context passes via the on-disk task file — no chat transfer.
+- **Dependency-ordered waves:** within a wave, plan agents run in `parallel()` (they write only their own task files) and then implement, review **and mark** run **strictly one at a time** per item, inside the same serial loop — the shared working tree keeps exactly one writer, and item N never starts implementing while item N−1 is still under review. A barrier separates waves. A dependency **cycle** among scoped items (no wave can be formed) is a hard stop, reported for the user to break — never run an item before its dependency lands.
+- **Driver auto-marks:** after an item's review returns OK, the driver's own **mark stage** ticks that item's checkbox — a dedicated serial `agent()` (haiku, low effort) running one fully-baked `awk` command, since the Workflow sandbox cannot write files itself. Never the per-item plan/implement/review agents — that is what keeps parallel writers off the roadmap file. The flip **must verify it matched exactly one heading** and stop the wave otherwise: the anchor is narrow by design, so a drifted heading matches nothing, a silent rewrite would copy the file over itself, and the run would report success while the next run redoes work already committed.
+- **Stop-on-FAIL;** parser-stable digest last line `OK|FAIL #N <slug> <summary>`. Digests are LLM output, so the driver **asserts the shape before consuming it** — the plan stage's `OK #N <item-slug> planned`, whose slug becomes the next agent's file path, and the mark stage's `OK #N <item-slug> marked`. A drifted line is a hard stop, not an `undefined` path handed downstream.
 - **Graceful fallback:** if the Workflow tool is unavailable, run items one at a time via `to-plan` + a plain implement session, manually. Being a skill whose instructions invoke Workflow is itself the sanctioned opt-in.

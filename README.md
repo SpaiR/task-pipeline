@@ -88,7 +88,7 @@ It runs bash, edits files, and writes commits — so here is exactly what it wil
 
 - **Nothing is committed until the implementing session does so, per `## Executing a task`.** Until then every change is just working-tree edits; back them out with plain `git restore` / `git checkout`. One opt-in exception: `/task:roadmap-to-workflow` (autopilot) commits each roadmap item as it lands — it still never pushes.
 - **Commits stage only task-related files, and never push.** Nothing leaves your machine.
-- **No hidden orchestration.** The capture skills spawn nothing. The plugin ships exactly one subagent — `task:code-reviewer`, the review pass, whose whole prompt is a readable Markdown file in this repo (`agents/code-reviewer.md`) — and `/task:roadmap-to-workflow` is a plain Workflow the skill itself authors, which you can inspect before it runs.
+- **No hidden orchestration.** The capture skills spawn nothing. The plugin ships exactly one subagent — `task:code-reviewer`, the review pass, whose whole prompt is a readable Markdown file in this repo (`agents/code-reviewer.md`) — and `/task:roadmap-to-workflow` runs a static Workflow script shipped with the plugin (`skills/_lib/roadmap-driver.js`), inspectable at any time — the skill only passes it the item waves as arguments.
 - **The pipeline leaves no trace in the repo.** `.task/` is excluded via `.git/info/exclude` (not `.gitignore`), so it never shows up in `git status`; delete it with `rm -rf .task` and the repo is exactly as before.
 
 ## Requirements
@@ -142,8 +142,8 @@ Those cross-references are written as Markdown links — `Spec: [event-envelope]
 | `/task:to-plan [<context>]` | Fixes the chat discussion (or a roadmap item) into `.task/task/<slug>.md` with **`## Description` + `## Plan`** (Goal/Touches/Logic steps) and, when the testing policy calls for it, `## Tests`. Deepest one-task capture — hand straight to implementation. Re-running it on an existing file edits in place: it adds the Plan to a `to-task`-only file, or replaces an existing one, leaving the title, Description and `## Execution` block untouched either way. |
 | `/task:to-roadmap <idea>` | Fixes a multi-task initiative discussed in chat into `.task/roadmap/<slug>.md` — a phase-grouped backlog of ready-to-pick-up items, each with optional `**Dependencies:**` and `**Model:**` hints, referencing standalone specs via `Spec:` headers where a load-bearing technical decision applies. Closes with a report-only self-check; findings are surfaced, never silently rewritten into the file. |
 | `/task:to-spec [<context>]` | Fixes load-bearing technical decisions discussed in chat into a standalone `.task/spec/<slug>.md` — numbered Decision / Rationale / Constrains sections. Orthogonal to the depth-capture skills: tasks and roadmaps reference a spec via a `Spec:` header, and the implementing session reads it as a fixed anchor. Capture it before, alongside, or independently of any roadmap. |
-| `/task:roadmap-to-workflow [<roadmap>]` | Autopilot over an approved roadmap: authors and invokes a dynamic Workflow that runs the roadmap's unchecked items in dependency-ordered waves (parallel planning, serialized implementation within a wave). Default per-item shape is opus-plans / sonnet-implements / reviewer-reviews — a first agent runs `to-plan` for the item, a second implements and commits (using the item's `**Model:**` hint if present), and a third is `task:code-reviewer`, which reviews that commit, fixes what it proves, runs the project's build and tests, and amends. The driver ticks the roadmap checkbox after each item's review comes back OK. Launched with no arguments it asks (via chips) which roadmap and how much to run; falls back to one-item-at-a-time by hand if the Workflow tool is unavailable. |
-| `validate` *(utility)* | Optional formal validator of `.task/task/<slug>.md` / roadmap format. Never invoked automatically — no hook calls it. Manual check: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" [task <slug>\|roadmap <slug>\|spec <slug>\|all]`. |
+| `/task:roadmap-to-workflow [<roadmap>]` | Autopilot over an approved roadmap: invokes the plugin's shipped Workflow driver (`skills/_lib/roadmap-driver.js`), which runs the roadmap's unchecked items in dependency-ordered waves (parallel planning, serialized implementation within a wave). Default per-item shape is opus-plans / sonnet-implements / reviewer-reviews — a first agent plans the item per `skills/_lib/plan-driver.md` (on sonnet when the item's `**Model:**` hint is `haiku`), a second implements and commits (using the item's `**Model:**` hint if present), and a third is `task:code-reviewer`, which reviews that commit, fixes what it proves, runs the project's build and tests, and amends. The driver ticks the roadmap checkbox after each item's review comes back OK. Launched with no arguments it asks (via chips) which roadmap and how much to run; falls back to one-item-at-a-time by hand if the Workflow tool is unavailable. |
+| `validate` *(utility)* | Optional formal validator of `.task/task/<slug>.md` / roadmap format. No hook calls it; each capture validates the one file it just wrote, and `/task:roadmap-to-workflow` sweeps `all` in its gate. Manual check: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" [task <slug>\|roadmap <slug>\|spec <slug>\|all]`. |
 
 ## Comparison with alternatives
 
@@ -175,8 +175,8 @@ discuss freely in chat
 /task:to-spec             … pin technical decisions (tasks/roadmaps cite via Spec:)
   ↓                                          ↓
 implement it now,                /task:roadmap-to-workflow
-in a fresh session:                fans unchecked items out to
-"implement .task/task/<slug>.md"   a dynamic Workflow, one per item
+in a fresh session:                fans unchecked items out to the
+"implement .task/task/<slug>.md"   shipped Workflow driver, one per item
   → work the plan → commit → task:code-reviewer reviews, fixes, amends
 ```
 

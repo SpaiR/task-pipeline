@@ -1,6 +1,6 @@
 # validate
 
-An optional formal validator of `.task/` artifact formats. It is **not** a slash command, **not** a gate, and **never** invoked automatically — no hook calls it. Use it as a manual self-check.
+An optional formal validator of `.task/` artifact formats. It is **not** a slash command, **not** a gate, and no hook calls it. The skills run it narrowly — each capture validates the one file it just wrote (the result lands in its digest), and `/task:roadmap-to-workflow` sweeps `all` in its setup gate; anything wider is a manual self-check you run by hand.
 
 ## Usage
 
@@ -43,6 +43,6 @@ Because it's advisory, nothing forces you to run it *directly*. One caveat: `/ta
 
 ## Does not
 
-- Run automatically — no hook or skill invokes it; you call it by hand.
+- Run from a hook — none exists. Beyond each capture's own post-write check and `/task:roadmap-to-workflow`'s gate sweep, you call it by hand.
 - Fix or rewrite files — it reports, never edits.
 - Gate committing — a FAIL blocks nothing; the implementing session commits regardless. (`/task:roadmap-to-workflow` is the one command that does stop on a roadmap `ERROR`, before it starts — see above.)
