@@ -27,9 +27,11 @@ We use [GitHub](https://github.com/SpaiR/task-pipeline) to host code, track issu
   .audit-baseline.json           gitignored ratchet metrics for self-audit
   .improve-baseline.json         gitignored ratchet metrics for self-improve
 skills/                          SKILL.md per skill + shared bash helpers
-  _lib/                          shared bash helpers:
+  _lib/                          shared helpers:
                                    resolve-ws.sh (pure .task/-root finder, exports AI_DIR),
-                                   roadmap.sh (artifact-path resolution + roadmap progress counts);
+                                   roadmap.sh (artifact-path resolution + roadmap progress counts),
+                                   roadmap-driver.js (the static Workflow script roadmap-to-workflow invokes),
+                                   plan-driver.md (non-interactive to-plan mirror for the driver's plan agents);
                                    templates/conventional-commits.md (commit-format fallback)
   grill/                         SKILL.md — pre-capture interrogation; writes nothing,
                                    no config gate, touches nothing under .task/
@@ -40,8 +42,8 @@ skills/                          SKILL.md per skill + shared bash helpers
   to-roadmap/                    SKILL.md — multi-task initiative → .task/roadmap/<slug>.md
   to-spec/                       SKILL.md — load-bearing technical decisions →
                                    .task/spec/<slug>.md, referenced via `Spec:` headers
-  roadmap-to-workflow/           SKILL.md — the one launcher; authors + invokes a dynamic
-                                   Workflow over a roadmap's unchecked items
+  roadmap-to-workflow/           SKILL.md — the one launcher; computes dependency waves and
+                                   invokes _lib/roadmap-driver.js over a roadmap's unchecked items
   validate/                      validate.sh — optional self-check; bash-only utility, no SKILL.md
 agents/                          the plugin's subagent definitions (auto-loaded by the
                                    plugin loader; agent type = `task:<name>`)
@@ -195,7 +197,7 @@ Must be one of the following:
 * **A skill name** (no `task:` prefix): `grill`, `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`, `validate`.
 * **`skills`** — cross-cutting change that touches several skills at once. Also covers the repo-local meta-skills under `.claude/skills/` (`self-audit`, `self-improve`), which ship with no plugin scope of their own.
 * **`agents`** — the plugin's subagent definitions under `agents/` (currently only `code-reviewer.md`), and the repo-local lens agents under `.claude/agents/`.
-* **`lib`** — the shared bash helpers under `skills/_lib/` (`resolve-ws.sh`, `roadmap.sh`) and `skills/validate/validate.sh`, plus their templates.
+* **`lib`** — the shared helpers under `skills/_lib/` (`resolve-ws.sh`, `roadmap.sh`, `roadmap-driver.js`, `plan-driver.md`) and `skills/validate/validate.sh`, plus their templates.
 * **`plugin`** — `.claude-plugin/plugin.json` and install-path concerns.
 * **`github`** — files under `.github/` (PR/issue templates, any repo automation).
 * **`website`** — the VitePress docs site under `website/` (landing, guide, reference pages, theme, config).

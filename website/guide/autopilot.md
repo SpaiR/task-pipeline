@@ -1,6 +1,6 @@
 # Autopilot a roadmap
 
-[`/task:roadmap-to-workflow`](/reference/roadmap-to-workflow) is the one launcher. Point it at an approved roadmap and it runs the unchecked items end to end — no babysitting each one. It's the only place in the pipeline that spawns parallel sessions, and it does so through Claude Code's own dynamic Workflow tool, not hand-rolled orchestration.
+[`/task:roadmap-to-workflow`](/reference/roadmap-to-workflow) is the one launcher. Point it at an approved roadmap and it runs the unchecked items end to end — no babysitting each one. It's the only place in the pipeline that spawns parallel sessions, and it does so through Claude Code's own dynamic Workflow tool running a static driver script shipped with the plugin (`skills/_lib/roadmap-driver.js`) — not hand-rolled or re-generated orchestration.
 
 ## Run it
 
@@ -16,7 +16,7 @@ Launched with no argument, it asks which roadmap and how much to cover.
 
 1. **Sorts items into dependency waves.** It reads each unchecked item's `**Dependencies:**` and topologically sorts them: items with no unmet dependency land in the same wave.
 2. **Plans a wave in parallel, then implements and reviews it one item at a time.** Within a wave, every item is *planned* at once (each plan agent only writes its own `.task/task/<item-slug>.md`, so there's no collision), then each item is *implemented and reviewed* strictly one at a time in the shared working tree — the tree keeps exactly one writer, so item N never starts implementing while item N−1 is still under review. A barrier separates waves — a later wave never starts before every item it depends on has landed, and each implement sees its already-landed wave-mates' reviewed commits.
-3. **Plans, implements, reviews — per item.** The default per-item shape is **opus-plans / sonnet-implements / reviewer-reviews**: a first agent runs `to-plan` for the item (writing `.task/task/<item-slug>.md`), a second implements and commits, and a third is `task:code-reviewer`, which reviews that commit, fixes what it proves within the plan's **Touches**, runs your build and tests, and amends. If the item has a `**Model:**` hint, the implement agent uses it — the reviewer pins its own model, so a `haiku` item never gets a `haiku` review.
+3. **Plans, implements, reviews — per item.** The default per-item shape is **opus-plans / sonnet-implements / reviewer-reviews**: a first agent plans the item from the roadmap (writing `.task/task/<item-slug>.md`), a second implements and commits, and a third is `task:code-reviewer`, which reviews that commit, fixes what it proves within the plan's **Touches**, runs your build and tests, and amends. If the item has a `**Model:**` hint, the implement agent uses it, and a `haiku` hint also scales the plan agent down to sonnet — the reviewer pins its own model, so a `haiku` item never gets a `haiku` review.
 4. **Ticks the checkbox — from the driver.** After an item's *review* returns OK, the **driver** ticks that item's checkbox, never the per-item agent. That's deliberate: parallel wave-mates would otherwise race on the roadmap file.
 
 Output is one digest line per stage as each wave lands:

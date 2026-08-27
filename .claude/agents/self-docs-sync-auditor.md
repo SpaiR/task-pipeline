@@ -14,7 +14,7 @@ You are a **read-only** auditor for the task-pipeline skills repository itself. 
 
 ## What to check
 
-Compare the doc statements against `ls skills/` and the actual frontmatter of each `SKILL.md` — never against your own recollection of the roster. The reality is **six user-invocable skills** (`grill`, `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`) plus the bash-only `validate` (`validate.sh`, no `SKILL.md`, no frontmatter), and a thin `skills/_lib/` (`resolve-ws.sh`, `roadmap.sh`, `templates/conventional-commits.md`). The repo-level `agents/` directory holds **exactly one** agent, `agents/code-reviewer.md` (spawned as `task:code-reviewer`); there are **no `phases/*.md` companions** and **no `docs/spec/`**. Any doc claim about counts, rosters, or a review step that contradicts what is on disk is drift — flag it.
+Compare the doc statements against `ls skills/` and the actual frontmatter of each `SKILL.md` — never against your own recollection of the roster. The reality is **six user-invocable skills** (`grill`, `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`) plus the bash-only `validate` (`validate.sh`, no `SKILL.md`, no frontmatter), and a thin `skills/_lib/` (`resolve-ws.sh`, `roadmap.sh`, `roadmap-driver.js`, `plan-driver.md`, `templates/conventional-commits.md`). The repo-level `agents/` directory holds **exactly one** agent, `agents/code-reviewer.md` (spawned as `task:code-reviewer`); there are **no `phases/*.md` companions** and **no `docs/spec/`**. Any doc claim about counts, rosters, or a review step that contradicts what is on disk is drift — flag it.
 
 In `README.md` (Russian, human-facing):
 - The pipeline diagram lists every skill in `skills/` and only those (the six user skills; `validate` is a utility, not a pipeline stage).
@@ -31,7 +31,7 @@ In `CLAUDE.md` (English, assistant-facing):
 
 In `docs/contract.md` (the contract source of truth):
 - The producer/consumer table lists every artifact a skill produces or consumes and every skill by its current name.
-- The `skills/_lib/` inventory matches what is actually on disk (`resolve-ws.sh`, `roadmap.sh`, `templates/conventional-commits.md`, and nothing it does not list).
+- The `skills/_lib/` inventory matches what is actually on disk (`resolve-ws.sh`, `roadmap.sh`, `roadmap-driver.js`, `plan-driver.md`, `templates/conventional-commits.md`, and nothing it does not list).
 - The skill roster and pipeline diagram agree with `ls skills/`.
 
 Cross-doc:

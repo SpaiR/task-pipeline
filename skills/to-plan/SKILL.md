@@ -99,7 +99,7 @@ From `.task/CLAUDE.md` → Testing Policy:
 - `never` → `tests_required = false`.
 - `on-demand` → `true` only if the Description (or the chat discussion) explicitly asks for tests (phrases like "with tests", "add tests", "write tests"). Otherwise resolve two remaining cases distinctly:
   - **Silent** — nothing about tests anywhere → `tests_required = false`, no prompt.
-  - **Testing-adjacent but unclear** — tests/testing mentioned but not whether *new* tests are wanted → in an interactive run, resolve it with one `AskUserQuestion` (convention (c)) before drafting `## Tests`: **Add tests** / **No tests this run**; in a non-interactive run (no user to ask — e.g. `to-plan` invoked as `roadmap-to-workflow`'s per-item planning agent) do not block, default to `false`.
+  - **Testing-adjacent but unclear** — tests/testing mentioned but not whether *new* tests are wanted → in an interactive run, resolve it with one `AskUserQuestion` (convention (c)) before drafting `## Tests`: **Add tests** / **No tests this run**; in a non-interactive run (no user to ask) do not block, default to `false`.
 
 `to-task` never writes `## Tests` (only `to-plan` does), so there is nothing to reuse from a prior `to-task` capture — resolve fresh here. In **revise** mode, reuse the prior `## Tests` resolution unless the current chat discussion or edit explicitly changes the testing ask.
 
@@ -225,8 +225,6 @@ re-check after editing: bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh"
 For **promote** / **revise**, note plainly what stayed untouched (Description, and pre-existing Tests unless the edit touched them). The file is already written — to change anything, just say so. Then close with the handoff footer (convention (a), flag-free):
 
 `→ Next: implement it now, or in a fresh session run: \`implement .task/task/<slug>.md\``
-
-**Driver mode — suppress the footer.** In a non-interactive run as `roadmap-to-workflow`'s per-item plan agent (the same run Step 4 already carves out), print the digest but **omit** the `→ Next:` line and end with the driver's parser-stable line instead — `OK #N <item-slug> planned` on success, or `FAIL #N <item-slug> <what failed>` if you could not produce the plan (the driver's plan stage branches on both; a stop with no digest line at all leaves it nothing to read, so emit one of these two even when failing). The driver reads the last non-empty line and takes `<item-slug>` from it; a trailing footer would hand it a garbage slug and the next agent a non-existent task path.
 
 ## Forbidden
 

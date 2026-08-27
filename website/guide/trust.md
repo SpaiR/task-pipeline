@@ -14,7 +14,7 @@ The executing session stages only the files it touched and commits per your `.ta
 
 ## No hidden orchestration
 
-The capture skills spawn nothing. The plugin ships exactly one subagent — `task:code-reviewer`, the review pass an implementing session hands its commit to — and its entire prompt is a Markdown file in the repo (`agents/code-reviewer.md`) you can read before it ever runs. It works in the same working tree as the implementation, edits only what it can prove is broken, and never pushes. The one skill that spawns parallel sessions — [`roadmap-to-workflow`](/guide/autopilot) — is a plain dynamic Workflow that the skill itself authors, also inspectable before it runs. There is no hook, no background gate intercepting your tool calls.
+The capture skills spawn nothing. The plugin ships exactly one subagent — `task:code-reviewer`, the review pass an implementing session hands its commit to — and its entire prompt is a Markdown file in the repo (`agents/code-reviewer.md`) you can read before it ever runs. It works in the same working tree as the implementation, edits only what it can prove is broken, and never pushes. The one skill that spawns parallel sessions — [`roadmap-to-workflow`](/guide/autopilot) — is a plain dynamic Workflow running a static driver script shipped with the plugin (`skills/_lib/roadmap-driver.js`), inspectable at any time; the skill only passes it the item waves as arguments. There is no hook, no background gate intercepting your tool calls.
 
 ## The pipeline leaves no trace in your repo
 
