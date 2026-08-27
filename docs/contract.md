@@ -300,7 +300,7 @@ Sourced (not exec'd). Runs `find_ai_dir` at source time and **exports `AI_DIR`**
 
 ### validate.sh (optional self-check, not a gate)
 
-Keeps the `.task/CLAUDE.md` precondition and English parser-stable strings. **No hook calls it.** Subcommands:
+Keeps the `.task/CLAUDE.md` precondition and English parser-stable strings. **No hook calls it.** The skills run it narrowly: each capture validates the one artifact it just wrote (post-write, surfacing the result in its digest — there is no full-scan call at capture entry), and `roadmap-to-workflow`'s Step 0 gate sweeps `all`. Subcommands:
 
 - **`task <slug>`** — validate `.task/task/<slug>.md`:
   - line 1 matches `^# .+` (a title);

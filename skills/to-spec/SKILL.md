@@ -15,18 +15,19 @@ Fix **load-bearing technical decisions** — a protocol, a cross-cutting data sh
 
 ### Step 0: Setup gate
 
-Resolve the pipeline root first, then validate:
+Resolve the pipeline root, then check whether its `CLAUDE.md` exists:
 
 ```bash
 source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # exports AI_DIR
 echo "$AI_DIR"                                             # the resolved root — use this value verbatim in every artifact path below
-bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
+[[ -f "$AI_DIR/CLAUDE.md" ]] || echo "CLAUDE.md not found"
 ```
 
 **Every artifact path in this skill is under that resolved `$AI_DIR`, never the cwd** — `.task/spec/<slug>.md` below is shorthand for `$AI_DIR/spec/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves `$AI_DIR` itself) never sees.
 
-- **`CLAUDE.md not found`** → `/task:to-spec` is intake-capable: read `${CLAUDE_PLUGIN_ROOT}/skills/_lib/setup.md` and follow it (detect stack → write `$AI_DIR/CLAUDE.md` from its template → record `git config --local task.root` → exclude `.task` → report what was written), then re-run `validate.sh all` and continue. No confirmation chip — the file is written first and edited afterwards if a detected value was wrong. `setup.md` owns the sub-steps and the template; do not restate either here. If `.task/CLAUDE.md` already exists, leave it untouched: it is user-owned, and only `task.root` and the `.git/info/exclude` line are restored when missing.
-- **Exit 1** (one or more *existing* artifacts fail validation) → surface the validator output, but **do not block**: those errors are pre-existing files, not the spec you're about to write (mirrors `to-task` Step 0 and `roadmap-to-workflow`, and `validate.sh` is advisory — it never inspects `.task/CLAUDE.md` content). Only a missing `.task/CLAUDE.md` (exit 2, handled above) hard-stops.
+- **`CLAUDE.md not found`** → `/task:to-spec` is intake-capable: read `${CLAUDE_PLUGIN_ROOT}/skills/_lib/setup.md` and follow it (detect stack → write `$AI_DIR/CLAUDE.md` from its template → record `git config --local task.root` → exclude `.task` → report what was written), then continue. No confirmation chip — the file is written first and edited afterwards if a detected value was wrong. `setup.md` owns the sub-steps and the template; do not restate either here. If `.task/CLAUDE.md` already exists, leave it untouched: it is user-owned, and only `task.root` and the `.git/info/exclude` line are restored when missing.
+
+There is no full-scan validate call here — the file this run writes is validated after the save (Step 4.5), and pre-existing artifacts are checked on demand with `validate.sh all`, never as an entry gate.
 
 ### Preconditions
 

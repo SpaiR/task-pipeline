@@ -31,7 +31,7 @@ The echoed value is normally absolute. In a project that is not a git repository
 - **Absent → inline setup.** Read `${CLAUDE_PLUGIN_ROOT}/skills/_lib/setup.md` and follow it: detect the stack → write `$AI_DIR/CLAUDE.md` from its template → record `git config --local task.root` → exclude `.task` → report what was written. **No confirmation chip:** the file is written first and edited afterwards if a detected value came out wrong. `setup.md` is the single source of truth for the sub-steps *and* for the `.task/CLAUDE.md` template — do not restate either here. Then continue with the original `$ARGUMENTS` unchanged.
 - **Present → leave it alone.** The file is user-owned: never rewrite it, never re-detect its values, never "repair" a section you find missing. Only the two markers are restored silently when absent: `git config --local task.root` and the `.task` line in `.git/info/exclude`. To regenerate the file from scratch, the user deletes it and re-runs any capture.
 
-Then run `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all` — an optional self-check, not a gate: report any WARN/ERROR lines, but only hard-stop when `.task/CLAUDE.md` is genuinely absent (Step 0 just handled that). Never block on a pre-existing artifact failing validation.
+There is no full-scan validate call here — the file this run writes is validated after the write (Step 2.5 / Step 1a.6), and pre-existing artifacts are checked on demand with `validate.sh all`, never as an entry gate.
 
 ## Step 1: Entry
 
