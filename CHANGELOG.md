@@ -4,6 +4,14 @@ All notable changes to this project are documented here. Format — [Keep a Chan
 
 This file is maintained in **English** — see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-policy).
 
+## [3.5.1] — 2026-09-01
+
+A patch release for the roadmap autopilot's mark stage, which could stop a wave on an item it had just ticked successfully.
+
+### Fixed
+- **The auto-mark stage is idempotent and reports its own result** — a `roadmap-to-workflow` run could stop after an item with `auto-mark matched no unique '### - [ ] N.' heading` even though the checkbox was flipped and the commit had landed. The flip printed nothing, so the mark agent, asked to branch on an exit code it could not see, re-ran the same command to observe it; the second pass found `[x]`, matched nothing, and reported failure. The heading is now matched on the full declared 5-state class `[ x~>-]`, so the hit count means "item N exists" rather than "item N is unchecked" — an already-ticked item becomes a no-op that reports OK, while a missing, renumbered or duplicated heading still stops the wave, which is the property worth stopping on. Both branches echo `MARK-OK` / `MARK-FAIL` and the digest is mapped off stdout, so success is never invisible and no agent has to infer it — this also covers an `agent()` retry after a transient API error, which would have failed identically with a perfectly obedient agent. The rewrite is anchored to `^### - \[ \]`, since with the widened match class the line may already read `[x]` and an unanchored substitution would rewrite a literal `[ ]` inside the item's own title. The driver's stop message now names the remaining failure cause and tells the operator to tick the box by hand and rerun, the item's work being committed by then.
+- **Docs realigned with the new semantics** — `CLAUDE.md`, `docs/contract.md`, `roadmap-to-workflow`'s SKILL.md, the `validate.sh` comment, and the autopilot, troubleshooting and reference pages on the docs site all asserted the old unchecked-only match.
+
 ## [3.5.0] — 2026-08-27
 
 Cross-artifact references become Markdown links, so a `.task/` file is navigable in a viewer instead of dead-ending on a bare slug, and the per-invocation prompt cost of the capture skills and `roadmap-to-workflow` drops sharply. Non-breaking — every consumer still accepts the bare form, and existing artifacts keep validating.
