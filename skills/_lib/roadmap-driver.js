@@ -114,29 +114,45 @@ async function runReview(n, itemSlug, w) {
 
 // MARK — the driver-side checkbox flip, as its own serial stage right after the
 // review returns OK (the sandbox cannot write files itself). The command is
-// fully baked: the anchored awk matches ONLY `### - [ ] N. ` (`0*` tolerates a
-// hand-written zero-padded `0N.`, which validate.sh sanctions as the same item)
-// so a blockquoted line or a substring number is never touched, and `hits == 1`
-// gates the mv — a zero-match rewrite discards the temp file, exits non-zero,
-// and FAILs loudly instead of copying the file over itself in silence (the
-// item's commit is already in the tree; a silent miss would make the next run
-// re-implement landed work).
+// fully baked and deliberately IDEMPOTENT + SELF-REPORTING, because the mark
+// agent is the one stage whose whole job is a side effect with no output:
+//   * it matches the item heading on the full 5-state class `[ x~>-]` (`0*`
+//     tolerates a hand-written zero-padded `0N.`, which validate.sh sanctions as
+//     the same item), so `hits` counts "item N EXISTS", not "item N is
+//     unchecked". `hits == 1` gates the mv: a drifted/renumbered heading (zero)
+//     or a duplicate N (two) discards the temp file, exits non-zero and FAILs
+//     loudly instead of copying the file over itself in silence (the item's
+//     commit is already in the tree; a silent miss would make the next run
+//     re-implement landed work). An ALREADY-ticked item is the desired end
+//     state, so it is a no-op that reports OK — re-running the flip must never
+//     turn a success into a failure, whether the agent re-ran it to observe an
+//     exit code it could not see, or `agent()` retried after an API error.
+//   * the sub is anchored to `^### - \[ \]`, never a bare `\[ \]`: with the
+//     widened match class the line may already be `[x]`, and an unanchored sub
+//     would rewrite a literal `[ ]` inside the item's TITLE.
+//   * both branches echo, so stdout is never empty. Success used to print
+//     nothing, leaving the agent to infer it from `(Bash completed with no
+//     output)` — which is what drove it to re-run the destructive command.
 async function runMark(n, itemSlug, w) {
   const r = await agent(
-    `Run EXACTLY this bash command, once, verbatim — do not modify it, do not
-     retry with a different command, and do not edit any file yourself:
+    `Run EXACTLY this bash command, once, verbatim — do not modify it and do not
+     edit any file yourself. It prints its own outcome and is safe to re-run, so
+     read the outcome off stdout; never infer it from the exit code:
 
        awk -v n="${n}" '
-         $0 ~ ("^### - \\\\[ \\\\] 0*" n "\\\\. ") { sub(/\\[ \\]/, "[x]"); hits++ } { print }
+         $0 ~ ("^### - \\\\[[ x~>-]\\\\] 0*" n "\\\\. ") { hits++; sub(/^### - \\[ \\]/, "### - [x]") } { print }
          END { exit (hits == 1 ? 0 : 1) }
        ' "${ROADMAP}" > "${ROADMAP}.tmp" \\
-         && mv "${ROADMAP}.tmp" "${ROADMAP}" \\
-         || { rm -f "${ROADMAP}.tmp"; exit 1; }
+         && mv "${ROADMAP}.tmp" "${ROADMAP}" && echo "MARK-OK #${n}" \\
+         || { rm -f "${ROADMAP}.tmp"; echo "MARK-FAIL #${n}"; exit 1; }
 
-     If the command exited 0, your last non-empty line MUST be exactly:
+     The command prints exactly one line. Decide from THAT line, then report.
+
+     If stdout says "MARK-OK #${n}", your last non-empty line MUST be exactly,
+     with no leading spaces and nothing after it:
        OK #${n} ${itemSlug} marked
-     Otherwise (the checkbox was NOT flipped and the temp file was discarded):
-       FAIL #${n} ${itemSlug} auto-mark matched no unique '### - [ ] ${n}.' heading`,
+     If stdout says "MARK-FAIL #${n}", it MUST be exactly:
+       FAIL #${n} ${itemSlug} no unique '### - [ ] ${n}.' heading in the roadmap`,
     { model: 'haiku', effort: 'low', label: `mark #${n}`, phase: `Wave ${w} · Item #${n}` }
   )
   return lastLine(r)
@@ -178,7 +194,7 @@ for (const [wIdx, items] of waves.entries()) {
     log(marked || `FAIL #${n} ${itemSlug} mark agent returned nothing`)
     const mm = (marked || '').match(/^OK #(\d+) (\S+) marked$/)
     if (!mm || Number(mm[1]) !== n)
-      return `roadmap-to-workflow stopped in wave ${w} (mark), item #${n}: ${marked || 'mark agent returned nothing'} — the item's commit is in the tree but its checkbox is not flipped`
+      return `roadmap-to-workflow stopped in wave ${w} (mark), item #${n}: ${marked || 'mark agent returned nothing'} — the item's commit is in the tree but its checkbox is not flipped. The flip is idempotent, so this means item #${n} has no unique '### - [ ] ${n}.' heading in ${ROADMAP} (renumbered, retitled, or duplicated): tick it by hand, then rerun /task:roadmap-to-workflow ${slug}`
   }
   // Barrier: the next wave starts only after every item above is reviewed and marked.
 }

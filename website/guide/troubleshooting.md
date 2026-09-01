@@ -87,6 +87,8 @@ Claude Code's own `/verify` and `/code-review` are marked `disable-model-invocat
 
 **Fix** — read the failure digest, fix the item (edit `.task/task/<item-slug>.md`, or re-implement it by hand), tick its checkbox, then rerun `/task:roadmap-to-workflow <slug>`. Completed items stay checked, so the rerun only picks up the unchecked remainder.
 
+One digest is worth reading closely: a stop from the **mark** stage means the item's work already landed and was committed, and only the checkbox is behind. The flip is idempotent, so this is never "the box was already ticked" — it means the roadmap has no unique `### - [ ] N.` heading for that item, because it was renumbered, retitled, or duplicated. Tick it by hand and rerun; there is nothing to re-implement.
+
 ### A worktree can't find .task/
 
 **Cause** — worktrees resolve the shared `.task/` through `git config --local task.root` (fallbacks: an upward walk, then `dirname(git-common-dir)`). The anchor can be missing (repo set up by an older version) or wrong.
