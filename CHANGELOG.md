@@ -4,6 +4,16 @@ All notable changes to this project are documented here. Format — [Keep a Chan
 
 This file is maintained in **English** — see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-policy).
 
+## [3.5.2] — 2026-09-05
+
+A patch release for the review pass's final step, which asked for a permission the harness's auto-accept mode does not grant.
+
+### Changed
+- **`task:code-reviewer` commits its fixes on top instead of amending** — phase 6 ended on `git commit --amend --no-edit`, folding the review's fixes into the implementation's commit to keep history at one item = one commit. Auto-accept mode blocks the amend, so in practice the phase either stalled on a permission prompt or ended with the fixes silently left in the working tree — the one outcome the phase exists to prevent, since an unattended autopilot then ticked the roadmap item and moved on. The reviewer now stages only the files it changed and writes its own follow-up commit, `fix(<scope>): address review findings` per `.task/CLAUDE.md` → **Commit Format**, one body bullet per fix it actually applied. Two behaviours are deliberately unchanged: a review that fixes nothing commits nothing, and an implementation that was never committed still leaves the fixes in the working tree rather than sweeping someone else's work into the reviewer's message. Phase 1's `amend: <sha>` bookkeeping is renamed to `implementation commit: <sha>` and the report prints `Implementation:` and `Review fixes:` on separate lines.
+- **The reviewer may no longer rewrite any commit at all** — the Forbidden list banned `push`, `rebase`, `reset` and "amending any commit other than `HEAD`"; it now bans `git commit --amend` outright. That is a stronger guarantee than the rule it replaces, and it is what the docs site's trust page now states in place of "one task stays one commit".
+- **The `.task/CLAUDE.md` template's `## Executing a task` step 4 and `## Build and Tests` gloss** describe the follow-up commit. The file is written once and never rewritten, so a project set up before this release keeps the old wording and needs a one-line manual edit to match — nothing breaks if it doesn't; the agent's own contract governs.
+- **Docs realigned** — `README.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `docs/contract.md`, `roadmap-to-workflow`'s SKILL.md, the plugin description, comments in `roadmap-driver.js` and `resolve-ws.sh`, and thirteen pages of the docs site all asserted the amend or the one-commit property.
+
 ## [3.5.1] — 2026-09-01
 
 A patch release for the roadmap autopilot's mark stage, which could stop a wave on an item it had just ticked successfully.
