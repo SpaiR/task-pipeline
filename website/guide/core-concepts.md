@@ -28,7 +28,7 @@ Execution isn't a command you learn. Every artifact ends with a one-line pointer
 > Read [.task/CLAUDE.md](../CLAUDE.md) and follow its `## Executing a task` section.
 ```
 
-And that section — one copy, in your project — says: implement the Plan (or the Description if none); commit per Commit Format; spawn the `task:code-reviewer` agent on the diff, which proves each finding, fixes confirmed defects within **Touches**, runs Build and Tests, and amends the commit; tick the roadmap checkbox once the review returns OK.
+And that section — one copy, in your project — says: implement the Plan (or the Description if none); commit per Commit Format; spawn the `task:code-reviewer` agent on the diff, which proves each finding, fixes confirmed defects within **Touches**, runs Build and Tests, and commits its fixes on top; tick the roadmap checkbox once the review returns OK.
 
 The mechanism lives in files, not in a command — and because the instructions sit in one place, editing them changes how every task is executed, including ones captured earlier.
 

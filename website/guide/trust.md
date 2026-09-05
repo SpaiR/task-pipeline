@@ -10,7 +10,7 @@ One exception, and it's opt-in: [`roadmap-to-workflow`](/guide/autopilot) (autop
 
 ## Commits stage only task-related files, and never push
 
-The executing session stages only the files it touched and commits per your `.task/CLAUDE.md` → Commit Format. The review pass that follows amends **that** commit — keeping its message and its trailers — rather than stacking a "review fixes" commit on top, so one task stays one commit. It touches no other commit: no rebase, no reset, and it does **not** push. Nothing leaves your machine unless you push it yourself.
+The executing session stages only the files it touched and commits per your `.task/CLAUDE.md` → Commit Format. The review pass that follows never rewrites it: when it fixes something, it stages only what *it* changed and adds a second `fix(…): address review findings` commit on top; when it fixes nothing, it commits nothing. No amend, no rebase, no reset, no other commit touched — and it does **not** push. Nothing leaves your machine unless you push it yourself.
 
 ## No hidden orchestration
 
@@ -31,7 +31,7 @@ The only markers the pipeline writes are that git-exclude entry and a `git confi
 | The pipeline… | …and specifically |
 |---|---|
 | edits files | only Markdown under `.task/`, until you run an implementing session |
-| commits | only when the `## Execution` block runs; only task-related files; the reviewer amends that same commit, never another; never pushes |
+| commits | only when the `## Execution` block runs; only task-related files; the reviewer adds its fixes as a new commit on top, never rewrites one; never pushes |
 | orchestrates | only via a Workflow you can read first; no hooks; one subagent, the reviewer, whose prompt is a file in the repo |
 | touches your repo | never a tracked file; invisible to `git status`; fully removable |
 
