@@ -93,10 +93,10 @@ async function runImplement(n, itemSlug, model, w) {
   return lastLine(r)
 }
 
-// REVIEW + FIX + BUILD/TESTS + AMEND via the plugin's own agent. Runs inside the
+// REVIEW + FIX + BUILD/TESTS + COMMIT via the plugin's own agent. Runs inside the
 // serial per-item loop, right after that item's implement. No `model` opt:
 // task:code-reviewer pins its own model/effort, so a haiku item never gets a
-// haiku review. No `isolation`: it must see and amend this very working tree.
+// haiku review. No `isolation`: it must see and commit into this very working tree.
 async function runReview(n, itemSlug, w) {
   const r = await agent(
     `Review the implementation of ${aiDir}/task/${itemSlug}.md, which was just

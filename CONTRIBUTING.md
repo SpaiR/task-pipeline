@@ -50,8 +50,8 @@ agents/                          the plugin's subagent definitions (auto-loaded 
                                    plugin loader; agent type = `task:<name>`)
   code-reviewer.md               task:code-reviewer — the post-implementation review pass:
                                    prove each finding, fix the confirmed ones within the
-                                   plan's Touches, run .task/CLAUDE.md → Build and Tests, amend
-                                   the implementation's commit
+                                   plan's Touches, run .task/CLAUDE.md → Build and Tests, commit
+                                   the fixes on top of the implementation's commit
 CLAUDE.md                        invariants + maintainer guidance
 docs/
   README.md                      docs index (table of the files below)

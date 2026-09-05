@@ -32,7 +32,7 @@ If a load-bearing technical decision surfaces during the discussion, capture it 
 
 implement .task/task/migrate-auth-endpoints.md
 # → follows ## Execution: implement → commit → task:code-reviewer reviews,
-#   fixes what it proves, runs your build and tests, amends the commit
+#   fixes what it proves, runs your build and tests, commits the fixes
 # → because Roadmap: / Source item: are present, the executing session also
 #   ticks item #1's checkbox in the roadmap file once the review comes back OK
 ```

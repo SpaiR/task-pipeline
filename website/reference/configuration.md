@@ -28,7 +28,7 @@ To regenerate the file from scratch, delete it and run any capture skill again.
 |---|---|
 | **Language** | By default the Description is in your language; everything parser-stable (headers, the `## Execution` pointer, commit trailers) stays English. |
 | **Testing Policy** | `always` / `on-demand` *(default)* / `never`. In `on-demand`, `## Tests` is written only if the Description explicitly asks for it ("needs tests", "with tests", "cover with tests"). |
-| **Build and Tests** | The command(s) `task:code-reviewer` runs end to end before it amends the commit. A red run fails the item; when nothing is declared, the reviewer reports the skip in words rather than implying a green run. |
+| **Build and Tests** | The command(s) `task:code-reviewer` runs end to end before it commits its fixes. A red run fails the item; when nothing is declared, the reviewer reports the skip in words rather than implying a green run. |
 | **Commit Format** | A pointer to your existing `CONTRIBUTING.md`; failing that, rules derived from `git log`; failing that, a pointer to the plugin's bundled Conventional Commits template. |
 | **Code Navigation / Code Editing** | Tool priority — which MCP tools or built-ins the executing session prefers. Omitted when your project has nothing beyond the built-ins. |
 | **Executing a task** | The instructions an implementing session follows: read `Spec:` anchors, implement the Plan, commit, spawn the reviewer, tick the roadmap checkbox. |

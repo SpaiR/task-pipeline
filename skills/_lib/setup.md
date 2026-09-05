@@ -22,7 +22,7 @@ Read and followed by a capture skill's Step 0 (`to-task` / `to-plan` / `to-roadm
     `to-plan` writes `## Tests` only when the Description asks for tests.}
 
    ## Build and Tests
-   {the command(s) `task:code-reviewer` runs end to end before amending the commit,
+   {the command(s) `task:code-reviewer` runs end to end before it commits its fixes,
     or the literal line `None declared.` — the reviewer then reports the skip in words}
 
    ## Commit Format
@@ -53,8 +53,8 @@ Read and followed by a capture skill's Step 0 (`to-task` / `to-plan` / `to-roadm
       change. Then commit per Commit Format above.
    4. Spawn the `task:code-reviewer` agent on that task file: it proves each finding, fixes
       confirmed defects within **Touches** plus regressions this diff introduced outside
-      them, runs Build and Tests, and amends the commit. With no `## Plan`, scope fixes to
-      what you changed.
+      them, runs Build and Tests, and commits its fixes as a follow-up commit — it never
+      rewrites yours. With no `## Plan`, scope fixes to what you changed.
    5. If the file carries `Roadmap:` + `Source item: #N`, tick item #N's checkbox in
       `.task/roadmap/<slug>.md` once the review returns OK — `<slug>` read from the
       `Roadmap:` link's text, or from a bare `Roadmap: <slug>`, same rule as step 1.

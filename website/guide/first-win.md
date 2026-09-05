@@ -79,7 +79,7 @@ Hand the path to any session — this one, or a fresh one after a `/clear`. `imp
 implement .task/task/quiet-flag.md
 ```
 
-That session works the plan and commits — then spawns `task:code-reviewer` on the diff. The reviewer reads the commit, proves each defect it suspects before touching anything, fixes the confirmed ones within the files under **Touches**, runs your build and tests, and amends that same commit. Nothing was committed before this step — until now it was all working-tree edits.
+That session works the plan and commits — then spawns `task:code-reviewer` on the diff. The reviewer reads the commit, proves each defect it suspects before touching anything, fixes the confirmed ones within the files under **Touches**, runs your build and tests, and commits whatever it fixed as a second commit on top — your implementation commit is never rewritten. Nothing was committed before this step — until now it was all working-tree edits.
 
 ## 6. What the commit looks like
 
@@ -90,6 +90,6 @@ feat(cli): add --quiet flag to silence normal output
 - raise the logger floor to error when set; errors still reach stderr
 ```
 
-One file of code, one commit, and a `.task/task/quiet-flag.md` you can delete or keep as the record. That's the loop. Everything else in these docs is the same loop at larger sizes — plans, roadmaps, specs, autopilot.
+One file of code, one commit (two if the review had something to fix), and a `.task/task/quiet-flag.md` you can delete or keep as the record. That's the loop. Everything else in these docs is the same loop at larger sizes — plans, roadmaps, specs, autopilot.
 
 → Next: [Getting started](/guide/getting-started) — install it and run the first capture in your own project.

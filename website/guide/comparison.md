@@ -21,7 +21,7 @@ The sections below compare against six references — default Claude Code (plan 
 | **Where the plan lives** | Text in chat; lost on `/clear` | `## Plan` inside `.task/task/<slug>.md`; hand-editable, `/clear`-durable |
 | **Who authors the plan** | You draft it in plan mode, but it evaporates with the context | You author it in chat; the skill only serializes what you decided |
 | **Plan format** | Arbitrary text / TodoWrite items | `### Step N` with `Goal` / `Touches` / optional `Logic`, checked by `validate.sh` on write |
-| **Result review** | Whatever the model decides to do | The `## Execution` block hands the commit to `task:code-reviewer`: prove each finding → fix the confirmed ones inside `Touches` → run the project's build and tests → amend |
+| **Result review** | Whatever the model decides to do | The `## Execution` block hands the commit to `task:code-reviewer`: prove each finding → fix the confirmed ones inside `Touches` → run the project's build and tests → commit the fixes on top |
 | **Moving parts** | None beyond the chat | Flat Markdown under `.task/`; nothing else added |
 | **Trace in the repo** | None | Normal code commits; the plan artifacts stay local and git-excluded |
 | **Multi-task initiatives** | None | `to-roadmap` → a plan per item, or opt-in autopilot `roadmap-to-workflow` |
@@ -35,7 +35,7 @@ The sections below compare against six references — default Claude Code (plan 
 | **Who authors the plan** | You, by hand; a `/task:…` skill serializes it | Auto-triggered by context; a skills library steers the agent |
 | **Form** | Linear capture → any session implements | A library of situational skills |
 | **Project config** | `.task/CLAUDE.md` (stack, commits, language) | Minimal |
-| **Result review** | One `task:code-reviewer` agent: prove-before-fix, fixes scoped to `Touches`, your build and tests, then amend | Test-first TDD (red/green/refactor) plus a between-task code-review skill |
+| **Result review** | One `task:code-reviewer` agent: prove-before-fix, fixes scoped to `Touches`, your build and tests, then a follow-up commit with the fixes | Test-first TDD (red/green/refactor) plus a between-task code-review skill |
 | **Moving parts** | Flat Markdown under `.task/`; Claude Code only | Skills library installed across many agents |
 | **Platforms** | Claude Code only | Claude Code, Antigravity, Codex App, Codex CLI, Cursor, Factory Droid, GitHub Copilot CLI, Kimi Code, OpenCode, Pi |
 | **Artifact languages** | Any, via `.task/CLAUDE.md` | English by default |
@@ -91,7 +91,7 @@ task-pipeline's `grill` is openly inspired by Matt Pocock's grilling skill, and 
 | **Who authors the plan** | You author it in chat; the skill serializes your decisions | Generated: `task-master parse-prd` turns a PRD into tasks |
 | **Where tasks live** | `## Plan` in flat Markdown under `.task/` | Its own `.taskmaster/` task store |
 | **Moving parts & infrastructure** | No MCP server, no API keys, no task database | Runs as an MCP server (`npx task-master-ai`); needs a provider API key (Anthropic / OpenAI / Gemini / others), or the Claude Code CLI without keys |
-| **Result review** | `task:code-reviewer` on the commit: prove, fix inside `Touches`, run the build and tests, amend | Tracks task status; review is not its job |
+| **Result review** | `task:code-reviewer` on the commit: prove, fix inside `Touches`, run the build and tests, commit the fixes on top | Tracks task status; review is not its job |
 | **Editors** | Claude Code | Cursor, Windsurf, VS Code, Q Developer CLI and others, via MCP |
 
 **Use task-pipeline** if you want to serialize your own decisions into flat Markdown with no extra infrastructure. **Use Task Master** if you want tasks generated from a PRD into a managed store and an MCP-native tracker shared across several editors.

@@ -68,7 +68,7 @@ That session follows the artifact's `## Execution` pointer into `.task/CLAUDE.md
 
 - implement per the `## Plan` (or the `## Description` if there's no plan);
 - commit per `.task/CLAUDE.md` → Commit Format;
-- spawn `task:code-reviewer` on that diff — it proves each defect it suspects before touching anything, fixes the confirmed ones within the files named in **Touches**, reports the rest, runs `.task/CLAUDE.md` → Build and Tests, and amends the commit.
+- spawn `task:code-reviewer` on that diff — it proves each defect it suspects before touching anything, fixes the confirmed ones within the files named in **Touches**, reports the rest, runs `.task/CLAUDE.md` → Build and Tests, and commits its fixes as a second commit on top.
 
 Nothing is committed until this step runs. Until then, every change is just working-tree edits.
 

@@ -69,7 +69,7 @@ features:
     <div class="tp-prompt">implement .task/task/http-retry-backoff.md</div>
     <div class="tp-out">  → follows the file's ## Execution pointer into .task/CLAUDE.md —</div>
     <div class="tp-out">    the steps that tell any session what to do next:</div>
-    <div class="tp-out">    implement · commit · task:code-reviewer reviews, fixes, amends</div>
+    <div class="tp-out">    implement · commit · task:code-reviewer reviews, fixes, commits the fixes</div>
   </div>
 </div>
 

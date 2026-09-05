@@ -26,7 +26,7 @@
 #      cannot leak in. This is what lets user-created parallel worktrees of a
 #      repo share one `.task/` — no skill spawns worktrees of its own
 #      (`roadmap-to-workflow` runs its items in the shared tree, and the
-#      reviewer must see and amend that same tree, so neither sets
+#      reviewer must see and commit into that same tree, so neither sets
 #      `isolation`).
 #   2. Upward walk from $PWD for a `.task/CLAUDE.md` ancestor — the
 #      pre-anchor fallback. Covers a main worktree, a nested worktree, or a
