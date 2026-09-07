@@ -59,12 +59,9 @@ Only for fresh capture (skip entirely for promote/revise — see Step 1).
 
 ### Step 2a: From-roadmap
 
-1. Resolve `<slug>` to `.task/roadmap/<slug>.md`; if ambiguous or missing — **stop**, name the roadmap slugs that do exist, and close with a runnable footer (convention (a)): `→ Next: \`/task:to-plan <one of those slugs>\``.
-2. Pick `<N>`: if given, use it. Otherwise take the numbers from that roadmap's `unchecked=` list and read their titles from the file; if the list is empty — stop with "Every item in `<slug>` is already checked off." and a **runnable** footer: substitute a real item number from the file, never a literal `<N>` — `→ Next: \`/task:to-plan <slug>#3\` to redo a specific item (numbers as in the roadmap), or describe new work in chat and run \`/task:to-plan\`.` More than one open item → ask via `AskUserQuestion` (chip per `#<N> — <title>`, first/lowest default); exactly one → auto-pick it.
-3. Read the item's `**Ready description:**` blockquote — its sub-headings are quoted (`> ### Context` / `> ### Goal` / `> ### Outcomes` / `> ### Invariants` / `> ### Acceptance criteria`); strip the `> ` prefix as you read. (`validate.sh` makes both the label and the blockquote a hard ERROR, so a bare unquoted `### Context` means the roadmap is malformed, not that the shape is optional.) `### Context` becomes the Description's "why"; the rest folds into the "what". `### Acceptance criteria` entries are good candidates to carry into `## Tests` (Step 4) verbatim as test intents when tests are required.
-4. Note the specs this item relies on: any `### Spec references → [<spec-slug>](../spec/<spec-slug>.md) §N` in the item body, plus the roadmap's own `Spec:` header lines. Read a slug from the link **text**, never by following the link target — that target is relative to the roadmap file's directory, not your cwd; a hand-edited roadmap may carry the older bare form, read it the same way. Read each `.task/spec/<spec-slug>.md` now — carry them into Step 3 as pinned anchors (see Step 3's note), and hold the distinct `<spec-slug>`s for the `Spec:` headers in Step 7's write.
-5. Derive the slug: kebab-case of the item title (2–4 words). If it collides with an unrelated slug in Step 0's `TASKS:` list, disambiguate with a short qualifier (e.g. append a second distinguishing word) rather than overwriting.
-6. Hold, for Step 7's write, the header lines in the shape Step 7 writes — `# {Item title}` plus `Roadmap:` / `Source item:` and a `Spec:` line per cited spec — and the drafted `## Description` body (why from Context, what from Goal/Outcomes/Invariants/Acceptance criteria). Continue to Step 3 — do not write the file yet; the full task.md (Description + Plan + Tests) is assembled and written once, together, in Step 7.
+Follow `${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap-item.md` — resolve the roadmap, pick `#<N>`, read the ready description, collect the spec slugs, derive `<item-slug>` and check whose file it is. That file is the one owner of those rules; `to-task` and the driver's plan agent read the same copy. Its footers take this skill's own command, so a stop reads `→ Next: \`/task:to-plan <slug>#3\``.
+
+Hold what it produces for Step 7's write — the item title, the roadmap slug, `#<N>`, the distinct spec slugs, and the Description drafted from the ready description (why from Context, what from Goal / Outcomes / Invariants / Acceptance criteria). Do not write the file yet: Description, Plan and Tests are assembled and written once, together, in Step 7.
 
 ### Step 2b: Chat-draft
 
@@ -73,124 +70,23 @@ Only for fresh capture (skip entirely for promote/revise — see Step 1).
 3. **Distil the chat.** Read back over the discussion in this conversation (not the codebase yet) and draft `## Description` — the why + what, in the user's own framing, written per `.task/CLAUDE.md` → Language (the section labels themselves stay English). Use `### Problem` / `### Outcome` / `### Scope` / `### Constraints` sub-headers where the discussion gives signal for them; omit a sub-header rather than inventing content. Do not fabricate anything not actually discussed.
 4. Hold the header line `# {Short task title}` (no `Roadmap:` / `Source item:` lines in this mode) and the drafted Description for Step 7's write. If the discussion clearly relies on a spec in `.task/spec/`, hold a `Spec: [<slug>](../spec/<slug>.md)` header line for each relevant one too (never invent a reference; never author the spec — that is `to-spec`'s job). Continue to Step 3.
 
-## Step 3: Analyze the codebase
+## Steps 3–6: Anchors, analysis, `tests_required`, draft, self-check
 
-Shared by every mode (fresh chat-draft, fresh from-roadmap, promote, revise): `## Plan` steps need real paths, not paraphrase.
+Read `${CLAUDE_PLUGIN_ROOT}/skills/_lib/plan-driver.md` § **Core** and follow steps 1–5. It is the single owner of the plan pipeline — the anchors to read, the ascending-cost codebase analysis, the `tests_required` decision, the three-layer `### Step N:` contract, and the self-check list. The driver's per-item plan agent follows the same copy, so the interactive and non-interactive paths cannot drift.
 
-Use the Description (fresh capture) or the existing `## Description` (promote/revise) as the "what" to ground against real code. Read code in ascending cost order per `.task/CLAUDE.md` → Code Navigation (MCP tools first, built-ins as fallback):
+Two things Core leaves to this skill, because they need a user:
 
-1. From modules/packages/files named or implied in the Description — get a structural overview.
-2. Read symbol bodies selectively — only those directly affected.
-3. Identify dependencies and usage locations.
-4. Find existing patterns in neighboring code for reuse.
-5. Assess impact on adjacent modules/components.
-
-Reads at the same step are independent — issue them as one parallel batch, not one round-trip at a time.
-
-**Pinned technical decisions.** If the task carries (or, on fresh capture, will carry) any `Spec:` header, take its `<slug>` from the link text and read each `.task/spec/<slug>.md`, treating its decisions as a fixed anchor — `## Plan` must honor them, not re-derive a different technical choice. No `Spec:` header at all → no anchors, proceed on the Description alone.
-
-Stop analysis as soon as you can name every file each step will touch and how — deeper investigation than that belongs to the implementing session's own reasoning, not to planning.
-
-## Step 4: Resolve `tests_required`
-
-From `.task/CLAUDE.md` → Testing Policy:
-
-- `always` → `tests_required = true`.
-- `never` → `tests_required = false`.
-- `on-demand` → `true` only if the Description (or the chat discussion) explicitly asks for tests (phrases like "with tests", "add tests", "write tests"). Otherwise resolve two remaining cases distinctly:
-  - **Silent** — nothing about tests anywhere → `tests_required = false`, no prompt.
-  - **Testing-adjacent but unclear** — tests/testing mentioned but not whether *new* tests are wanted → in an interactive run, resolve it with one `AskUserQuestion` (convention (c)) before drafting `## Tests`: **Add tests** / **No tests this run**; in a non-interactive run (no user to ask) do not block, default to `false`.
-
-`to-task` never writes `## Tests` (only `to-plan` does), so there is nothing to reuse from a prior `to-task` capture — resolve fresh here. In **revise** mode, reuse the prior `## Tests` resolution unless the current chat discussion or edit explicitly changes the testing ask.
-
-## Step 5: Draft the Plan (and Tests)
-
-Write `## Plan` using the three-layer step contract from `docs/contract.md`:
-
-```markdown
-## Plan
-
-### Step 1: {short action title}
-**Goal:** {the observable end state this step reaches — detailed enough that an
-executor understands intent and result without guessing. Do not compress into
-one line if the task has nuance; do not pad it with filler either.}
-**Touches:** `{full path}` `{full path}` {…as many as this step actually changes}
-**Logic:** {optional — pseudocode clarifying non-obvious branching/flow. Omit
-entirely when Goal + Touches leave no ambiguity. Never include for a
-straightforward step.}
-
-### Step 2: ...
-```
-
-Rules:
-- Full paths from the project root in `Touches`; no placeholders like `...` outside a `Logic` block.
-- If a step is a new file, `Goal` states its role and `Touches` still names it; if a step modifies an existing file, `Goal` states the nature of the change and, where the file holds more than one unrelated concern, name the specific symbol(s) touched alongside the path (e.g. `` `src/auth/session.ts` (exports `refreshToken`) ``) so the implementing session doesn't have to guess.
-- `Logic` is the only place a pseudocode block or a `...` placeholder belongs.
-- Dry technical text throughout — but never at the cost of `Goal` being too thin to execute against.
-- Order steps so no step depends on a fact that only a later step establishes.
-
-If `tests_required` (Step 4) is `true`, append:
-
-```markdown
-## Tests
-
-### Test 1: {what is asserted}
-{file path; one line: the arrange/act/assert in prose. No code yet — the implementing session writes the real test.}
-
-### Test 2: ...
-```
-
-Each `## Plan` step that satisfies a test references it by number in its `Goal` (e.g. "…; satisfies Test 2"). If `tests_required` is `false`, omit `## Tests` entirely — do not emit an empty heading.
-
-**Not part of the format:** no `Implement-Model:` stamp (model hints live only on roadmap items as `**Model:**`), no `## Verification`, no `## Risks` — the `task.md` format ends at Execution.
-
-## Step 6: Self-check before writing
-
-Run through this checklist against the draft; fix inline before the write (Step 7), don't write something you already know is broken:
-
-- [ ] Does `## Description` state the why, not just the what? (Fresh capture only — promote/revise inherit it as-is.)
-- [ ] Does every `### Step N:` have a non-empty `**Touches:**` with at least one real path?
-- [ ] Is `**Logic:**` present only where Goal + Touches genuinely leave ambiguity — not decoration?
-- [ ] If `tests_required` is true, is `## Tests` present and does every step that satisfies a test reference it by number?
-- [ ] If `tests_required` is false, is `## Tests` fully absent (no empty heading)?
-- [ ] Any pinned spec decisions (`Spec:` headers, Step 3) honored, not silently overridden?
-- [ ] No placeholders (`TBD`, `TODO`, `???`) anywhere outside an explicitly-marked `Logic` pseudocode block?
-- [ ] Steps ordered so nothing depends on a not-yet-established fact?
+- **`tests_required`, the testing-adjacent case** (tests mentioned, but not whether *new* ones are wanted) → resolve it with one `AskUserQuestion` (convention (c)) before drafting `## Tests`: **Add tests** / **No tests this run**. Core's fallback of `false` is for the driver, which has nobody to ask.
+- **Promote / revise** → the Description already exists and is inherited as-is; Core step 4 drafts only the Plan (and Tests). In revise, reuse the prior `## Tests` resolution unless this chat's edit explicitly changes the testing ask.
 
 ## Step 7: Write
 
-`skills/_lib/write-task.sh` writes the file — it owns the header link forms, the `---` separator, the section order, the stamped `## Execution` pointer and the validate call, so none of that is assembled here. [docs/contract.md § task.md format](../../docs/contract.md#taskmd-format-tasktaskslugmd) is the shape it produces. No in-chat draft and no confirmation prompt: the chat discussion (and, in promote/revise, the existing Description) was the review, and Step 8's digest lets the user judge whether to open the file.
+`plan-driver.md` § Core step 6 is the write: `skills/_lib/write-task.sh`, one Bash call, bodies through quoted heredocs, `--fresh` / `--promote` / `--revise` per the mode Step 1 resolved. No in-chat draft and no confirmation prompt — the chat discussion (and, in promote/revise, the existing Description) was the review, and Step 8's digest lets the user judge whether to open the file.
 
-One Bash call does all of it. Bodies go in via heredocs — **quoted delimiters** (`<<'PLAN'`), so backticks and `$` in your prose reach the file verbatim — and each holds the section **body only**, never its `## …` heading. Write the heredoc lines flush-left — a quoted heredoc keeps whatever indentation you type:
+The two refusals are where this skill has a user, and both mean nothing was written:
 
-```bash
-d=$(mktemp); p=$(mktemp); t=$(mktemp)
-cat >"$d" <<'DESC'
-{drafted Description body}
-DESC
-cat >"$p" <<'PLAN'
-{drafted ### Step N: blocks}
-PLAN
-cat >"$t" <<'TESTS'
-{drafted ### Test N: blocks — omit this heredoc and --tests when tests_required is false}
-TESTS
-bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/write-task.sh" --fresh \
-  --slug <slug> --title "{Title}" \
-  --description "$d" --plan "$p" --tests "$t" \
-  --roadmap <roadmap-slug> --item <N> --spec <spec-slug>   # from-roadmap only; repeat --spec per cited spec
-rm -f "$d" "$p" "$t"
-```
-
-- **Fresh capture** → `--fresh`, as above. `--title` and `--description` are required; drop `--roadmap`/`--item` in chat-draft mode and `--spec` when nothing is cited.
-- **Promote** → `--promote --slug <slug> --plan "$p"` (plus `--tests "$t"` when this run adds tests). The plan lands directly above `## Execution`; the header, separator, Description and pointer are untouched.
-- **Revise** → `--revise --slug <slug> --plan "$p"`. Pass `--tests` **only** if the current chat's edit touches the tests — without it the existing `## Tests` is left byte-for-byte as it was.
-
-The script resolves `$AI_DIR` itself, so nothing here re-sources `resolve-ws.sh`, and it refuses the two destructive cases rather than guessing:
-
-- **exit 4** — `--fresh` on a slug that already exists; nothing was written. Only pass `--force` after the Step 2 slug-collision guard has been through its chips.
-- **exit 3** — the promote/revise target has no `## Description`, so it is not a task artifact to extend; nothing was written. **Stop and ask via the slug-collision overwrite guard** — this is exactly the pre-write destructive fork the one sanctioned `AskUserQuestion` chip exists for, not a free-text exchange. State first, as message text, that `.task/task/<slug>.md` has no `## Description`, then pose the chips: **Overwrite as fresh capture** / **Pick a different target** / **Decline — stop without writing**. On decline, close with `→ Next: \`/task:to-plan <a different slug>\`.`
-
-A hand-edited target missing the `---` separator or the `## Execution` pointer is repaired by the script on the way through (`validate.sh` treats a missing separator as a hard ERROR) — do not pre-patch the file yourself.
+- **exit 4** — `--fresh` on a slug that already exists. That is the Step 2b collision case; `--force` only after its chips.
+- **exit 3** — the promote/revise target has no `## Description`, so it is not a task artifact to extend. **Stop and ask via the slug-collision overwrite guard** — this is exactly the pre-write destructive fork the one sanctioned `AskUserQuestion` chip exists for, not a free-text exchange. State first, as message text, that `.task/task/<slug>.md` has no `## Description`, then pose the chips: **Overwrite as fresh capture** / **Pick a different target** / **Decline — stop without writing**. On decline, close with `→ Next: \`/task:to-plan <a different slug>\`.`
 
 The `WROTE:` / `VALIDATE:` lines it prints are what Step 8's digest reports; only a setup-precondition failure (validate exit 2) hard-stops.
 

@@ -42,13 +42,13 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
 
 ### Step 1a: From-roadmap mode
 
-1. Resolve `<slug>` against Step 0's `ROADMAPS:` lines; no match — **stop**, name the slugs those lines do list, and close with a runnable footer (convention (a)): `→ Next: \`/task:to-task <one of those slugs>\``.
-2. Pick `<N>`: if given, use it. Otherwise take the item numbers from that roadmap's `unchecked=` list and read their titles from the file; if the list is empty — stop with "Every item in `<slug>` is already checked off." and a **runnable** footer: substitute a real item number from the file, never a literal `<N>` — `→ Next: \`/task:to-task <slug>#3\` to redo a specific item (numbers as in the roadmap), or describe new work in chat and run \`/task:to-task\`.` If more than one open item, ask via `AskUserQuestion` (chip per `#<N> — <title>`, first/lowest default); if exactly one, auto-pick it.
-3. Read the item's `**Ready description:**` blockquote — its sub-headings are quoted (`> ### Context` / `> ### Goal` / `> ### Outcomes` / `> ### Invariants` / `> ### Acceptance criteria`); strip the `> ` prefix as you read. (`validate.sh` makes both the label and the blockquote a hard ERROR, so a bare unquoted `### Context` means the roadmap is malformed, not that the shape is optional.) `### Context` becomes the Description's "why"; the rest folds into the "what". Also note any `### Spec references → [<spec-slug>](../spec/<spec-slug>.md) §N` the item carries, and the roadmap's own `Spec:` header lines — collect the distinct `<spec-slug>`s to stamp as `Spec:` headers on the task (step 5). Read a slug from the link **text**, not from the link target: the target is relative to the roadmap file's own directory and would not resolve from your cwd. A hand-edited roadmap may carry the older bare `Spec: <slug>` / `### Spec references → <slug> §N` form — read it the same way.
-4. Derive `<item-slug>` — kebab-case English from the item's own title (not the roadmap's). No task-id, no `derive-task-id` helper: the item gets its own `<item-slug>.md`, independent of the roadmap's slug.
+1. Follow `${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap-item.md` — resolve the roadmap, pick `#<N>`, read the ready description, collect the spec slugs, derive `<item-slug>` and check whose file it is. That file is the one owner of those rules; `to-plan` and the driver's plan agent read the same copy. Its footers take this skill's own command, so a stop reads `→ Next: \`/task:to-task <slug>#3\``.
 
-   **Slug collision.** If `<item-slug>` is already in Step 0's `TASKS:` list, do not assume that file is this item's — read its header first. A `Roadmap:` whose link text matches this roadmap's slug plus a matching `Source item: #<N>` means it **is** this item's earlier capture: Description-only → rewriting it in place is safe; if it already carries a `## Plan`, an overwrite would destroy that plan — run the Step 2.1 slug-collision guard instead (its chips already recommend deepening via `/task:to-plan`). Different headers, or none, mean an unrelated task that merely kebab-cases the same title: disambiguate `<item-slug>` with a short qualifier (as `to-plan` Step 2a.5 does) rather than overwriting.
-5. Write the file with `skills/_lib/write-task.sh` — no in-chat draft, no confirmation prompt; the roadmap item is the settled source. The script owns the header link forms, the `---` separator, the stamped `## Execution` pointer and the validate call ([docs/contract.md § task.md format](../../docs/contract.md#taskmd-format-tasktaskslugmd) is the shape it produces), so none of that is assembled here. One Bash call, the Description body via a **quote-delimited** heredoc (so backticks and `$` reach the file verbatim) and **without** its `## Description` heading. Write the heredoc lines flush-left in the real command — a quoted heredoc keeps whatever indentation you type:
+2. Draft the `## Description` body from the ready description — the why from `### Context`, the what from Goal / Outcomes / Invariants / Acceptance criteria. Nothing else: `## Plan` and `## Tests` are `to-plan`'s contract.
+
+3. **Slug collision.** `roadmap-item.md` step 5 separates this item's earlier capture from an unrelated task on the same kebab-case. When it *is* this item's and holds Description only, rewriting it is safe (pass `--force` below). When it already carries a `## Plan`, an overwrite would destroy that plan — run the Step 2.1 collision guard instead, whose chips already recommend deepening via `/task:to-plan`.
+
+4. Write the file with `skills/_lib/write-task.sh` — no in-chat draft, no confirmation prompt; the roadmap item is the settled source. The script owns the header link forms, the `---` separator, the stamped `## Execution` pointer and the validate call ([docs/contract.md § task.md format](../../docs/contract.md#taskmd-format-tasktaskslugmd) is the shape it produces), so none of that is assembled here. One Bash call, the Description body via a **quote-delimited** heredoc (so backticks and `$` reach the file verbatim) and **without** its `## Description` heading. Write the heredoc lines flush-left in the real command — a quoted heredoc keeps whatever indentation you type:
 
    ```bash
    d=$(mktemp)
@@ -62,7 +62,8 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
    ```
 
    No `--plan` and no `--tests`: those are `to-plan`'s contract. Exit 4 means the slug already exists and nothing was written — that is the collision case above, and `--force` is only for after its chips. The `WROTE:` / `VALIDATE:` lines it prints are what Step 3's digest reports; only a setup-precondition failure (validate exit 2) hard-stops.
-7. Continue to Step 3 (digest + footer), using `<item-slug>` as `<slug>` there.
+
+5. Continue to Step 3 (digest + footer), using `<item-slug>` as `<slug>` there.
 
 ### Step 2: Chat-draft mode
 
