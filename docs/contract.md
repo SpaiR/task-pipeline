@@ -184,6 +184,24 @@ Anyone changing the `task.md` section order or the `## Execution` pointer is cha
 
 Produced by `to-roadmap`; user-edited thereafter. The `roadmap-to-workflow` driver reads it to loop unchecked items and flips one `- [ ]` → `- [x]` per completed item (auto-mark, done by the driver — see below).
 
+Whole-file skeleton, in this order:
+
+```markdown
+# <Title>                     ← line 1, the document's own H1
+Spec: [<slug>](../spec/<slug>.md)     (0..n, directly under the title, above the intro)
+
+<intro prose: what the initiative is, in a paragraph or two>
+
+## Prerequisites              (omit rather than leave empty)
+## Phase summary              (a table: phase, what lands, which items)
+## Phase 1 — <name>           (one section per phase, each holding its items)
+## Phase 2 — <name>
+## Out of scope
+## Backlinks                  (omit rather than leave empty)
+```
+
+Item numbers run **continuously across the whole file** — never restarted per phase, since the driver's auto-mark keys on the number alone. `## Prerequisites` and `## Backlinks` hold Markdown links, never bare slugs or paths (see [§ Cross-artifact references](#cross-artifact-references)).
+
 Each item:
 
 ```markdown
