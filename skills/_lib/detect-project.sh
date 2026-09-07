@@ -51,12 +51,25 @@ fi
 # `make lint`) — inventing a runner is the one thing it cannot get wrong here.
 cmd_lines=0
 if [[ -f package.json ]]; then
+  # Keys of the `"scripts"` object only, and only until its closing brace. The
+  # scan starts at the text AFTER the opening `{` and loops within a line, so a
+  # compact `"scripts": { "test": "jest", "build": "tsc" },` reports its own two
+  # names instead of dropping them and then harvesting the next object's keys as
+  # if they were scripts — which is how a `npm run <a-dependency-name>` reached
+  # `.task/CLAUDE.md` → Build and Tests.
   scripts=$(awk '
-    /"scripts"[[:space:]]*:/ { inb = 1; next }
-    inb && /^[[:space:]]*}/  { exit }
-    inb && match($0, /"[^"]+"[[:space:]]*:/) {
-      s = substr($0, RSTART + 1, RLENGTH - 1); sub(/"[[:space:]]*:$/, "", s)
-      out = (out == "" ? s : out " " s)
+    !inb && match($0, /"scripts"[[:space:]]*:[[:space:]]*\{/) {
+      inb = 1; $0 = substr($0, RSTART + RLENGTH)
+    }
+    inb {
+      line = $0
+      if (match(line, /\}/)) { line = substr(line, 1, RSTART - 1); fin = 1 }
+      while (match(line, /"[^"]+"[[:space:]]*:/)) {
+        s = substr(line, RSTART + 1, RLENGTH - 1); sub(/"[[:space:]]*:$/, "", s)
+        out = (out == "" ? s : out " " s)
+        line = substr(line, RSTART + RLENGTH)
+      }
+      if (fin) exit
     }
     END { print out }
   ' package.json)

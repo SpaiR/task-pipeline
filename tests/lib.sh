@@ -12,7 +12,8 @@
 #   assert_exit <expected> <actual> [l]— exit-code equality (assert_eq's alias,
 #                                        kept separate so failures read right)
 #   assert_contains <haystack> <needle> [l]
-#   t_tmpdir                          — a registered temp dir, PHYSICAL path
+#   t_tmpdir                          — a temp dir under this file's own
+#                                       throwaway root, PHYSICAL path
 #   make_repo [--config]              — a git repo in a temp dir, PHYSICAL path;
 #                                       `--config` also writes .task/CLAUDE.md
 #   t_summary                         — print the file's tally, exit 0/1
@@ -31,7 +32,13 @@ T_NAME=$(basename "${0}")
 T_CHECKS=0
 T_FAILS=0
 T_CASE="(no case)"
-T_TMPDIRS=()
+
+# One throwaway root per case file, created HERE rather than accumulated by
+# `t_tmpdir`: callers capture a path with `dir=$(t_tmpdir)`, whose subshell
+# would discard any array the function appended to, leaving the cleanup trap
+# with nothing to remove and every run leaking its fixtures.
+T_TMPROOT=$(mktemp -d)
+T_TMPROOT=$(cd "$T_TMPROOT" && pwd -P)
 
 t_case() { T_CASE="$1"; }
 
@@ -64,9 +71,7 @@ $(printf '%s\n' "$1" | sed 's/^/    | /')"
 
 t_tmpdir() {
   local dir
-  dir=$(mktemp -d) || return 1
-  dir=$(cd "$dir" && pwd -P)
-  T_TMPDIRS+=("$dir")
+  dir=$(mktemp -d "$T_TMPROOT/case.XXXXXX") || return 1
   printf '%s' "$dir"
 }
 
@@ -84,12 +89,10 @@ make_repo() {
 }
 
 _t_cleanup() {
-  local d
-  for d in "${T_TMPDIRS[@]:-}"; do
-    # Belt and braces before an rm -rf: only ever a non-empty absolute path we
-    # created ourselves, never `/` and never a relative fragment.
-    [[ -n "$d" && "$d" == /* && "$d" != "/" && -d "$d" ]] && rm -rf "$d"
-  done
+  # Belt and braces before an rm -rf: only ever the non-empty absolute path
+  # `mktemp -d` handed us above, never `/` and never a relative fragment.
+  local d="${T_TMPROOT:-}"
+  [[ -n "$d" && "$d" == /* && "$d" != "/" && -d "$d" ]] && rm -rf "$d"
 }
 trap _t_cleanup EXIT
 

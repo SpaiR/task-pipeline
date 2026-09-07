@@ -46,6 +46,9 @@
 #   0 written (whatever validate.sh then said — read the VALIDATE lines, the
 #     caller decides what a WARN or an ERROR means, as it always has)
 #   2 usage error   3 no `## Description` to extend   4 file exists (no --force)
+#   5 the write itself failed (unwritable `.task/`, full disk) — nothing was
+#     written and no `WROTE:` line is printed, because a caller reports that
+#     line as a success and treats only validate exit 2 as fatal.
 set -u
 
 SRC="${BASH_SOURCE[0]}"
@@ -108,7 +111,7 @@ case "$mode" in
       echo "EXISTS: $target — pass --force to overwrite" >&2
       exit 4
     fi
-    mkdir -p "$AI_DIR/task"
+    mkdir -p "$AI_DIR/task" || die "cannot create $AI_DIR/task" 5
     {
       printf '# %s\n' "$title"
       # Cross-artifact references are Markdown links whose LABEL carries the
@@ -124,7 +127,7 @@ case "$mode" in
       if [[ -n "$plan" ]];  then printf '\n## Plan\n\n';  emit_body "$plan";  fi
       if [[ -n "$tests" ]]; then printf '\n## Tests\n\n'; emit_body "$tests"; fi
       printf '\n## Execution\n%s\n' "$EXECUTION_POINTER"
-    } >"$target"
+    } >"$target" || die "cannot write $target" 5
     ;;
 
   promote | revise)
@@ -175,9 +178,21 @@ case "$mode" in
     [[ -n "$tests" ]] && put_section '## Tests' "$tests"
 
     if [[ -s "$work.sec" ]]; then
-      if grep -qE '^## Execution[[:space:]]*$' "$work"; then
-        awk -v bf="$work.sec" '
-          /^## Execution[[:space:]]*$/ && !done {
+      # Anchor. Inserting a `## Plan` into a hand-edited target that already
+      # carries `## Tests` goes ABOVE that heading, not above `## Execution` —
+      # the section order is Description → Plan → Tests, and anchoring on the
+      # pointer alone would leave the tests sitting above the plan they belong
+      # to. Everything else still anchors on `## Execution`: a `## Tests` this
+      # run is inserting has no heading to sit above, and it belongs after the
+      # Plan anyway.
+      anchor='## Execution'
+      if grep -qE '^## Plan[[:space:]]*$' "$work.sec" \
+         && grep -qE '^## Tests[[:space:]]*$' "$work"; then
+        anchor='## Tests'
+      fi
+      if grep -qE "^${anchor}[[:space:]]*\$" "$work"; then
+        awk -v bf="$work.sec" -v a="$anchor" '
+          $0 ~ "^" a "[[:space:]]*$" && !done {
             while ((getline l < bf) > 0) print l
             close(bf); done = 1
           }
@@ -194,7 +209,7 @@ case "$mode" in
       fi
     fi
 
-    mv "$work" "$target"
+    mv "$work" "$target" || die "cannot write $target" 5
     ;;
 esac
 

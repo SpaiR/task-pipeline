@@ -40,6 +40,19 @@ assert_contains "$D_OUT" "COMMANDS: Makefile targets: lint test" "make targets"
 # Paths are relative to ROOT, which the block's first line names.
 assert_contains "$D_OUT" "COMMIT_FORMAT_DOC: CONTRIBUTING.md" "commit-format doc"
 
+t_case "a compact scripts block reports its own names, not the next object's"
+compact=$(t_tmpdir)
+cat >"$compact/package.json" <<'JSON'
+{
+  "name": "fixture",
+  "scripts": { "test": "jest", "build": "tsc" },
+  "devDependencies": { "jest": "^29", "typescript": "^5" }
+}
+JSON
+d "$compact"
+assert_contains "$D_OUT" "COMMANDS: package.json scripts: test build" "one-line scripts object"
+assert_eq "0" "$(grep -c 'typescript' <<<"$D_OUT")" "no dependency names leak in as scripts"
+
 t_case "an empty project reports 'none' on every line rather than omitting it"
 empty=$(t_tmpdir)
 d "$empty"

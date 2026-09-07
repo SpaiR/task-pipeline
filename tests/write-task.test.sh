@@ -94,6 +94,38 @@ eps=$(cat "$repo/.task/task/eps.md")
 assert_contains "$W_OUT" "OK 0 errors" "validates after repair"
 assert_contains "$eps" "## Execution" "pointer stamped"
 
+t_case "promote keeps the contract order when the target already has Tests"
+# A hand-edited target: Tests but no Plan. The plan must land ABOVE the tests.
+cat >"$repo/.task/task/zeta.md" <<'MD'
+# Zeta task
+---
+## Description
+
+Why and what.
+
+## Tests
+
+### Test 1: it works
+
+## Execution
+> Read [.task/CLAUDE.md](../CLAUDE.md) and follow its `## Executing a task` section.
+MD
+w "$repo" --promote --slug zeta --plan "$body/plan.md"
+assert_exit 0 "$W_EXIT" "promote onto a Tests-only file"
+assert_eq "## Description ## Plan ## Tests ## Execution" \
+  "$(grep '^## ' "$repo/.task/task/zeta.md" | tr '\n' ' ' | sed 's/ $//')" "section order"
+assert_contains "$W_OUT" "OK 0 errors" "still valid"
+
+t_case "a write that cannot happen exits 5 and reports no WROTE line"
+# A caller reports the `WROTE:` line as success and treats only validate exit 2
+# as fatal, so a failed write must not print one.
+chmod 500 "$repo/.task/task"
+w "$repo" --fresh --slug eta --title "Eta task" --description "$body/desc.md"
+chmod 700 "$repo/.task/task"
+assert_exit 5 "$W_EXIT" "unwritable task dir"
+assert_eq "0" "$(grep -c 'WROTE:' <<<"$W_OUT")" "no success line"
+assert_eq "no" "$([[ -f "$repo/.task/task/eta.md" ]] && echo yes || echo no)" "nothing created"
+
 t_case "a slug that is a path is a usage error"
 w "$repo" --fresh --slug ../escape --title T --description "$body/desc.md"
 assert_exit 2 "$W_EXIT" "path rejected"

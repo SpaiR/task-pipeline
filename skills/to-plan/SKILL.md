@@ -91,7 +91,7 @@ Two things Core leaves to this skill, because they need a user:
 
 `plan-driver.md` § Core step 6 is the write: `skills/_lib/write-task.sh`, one Bash call, bodies through quoted heredocs, `--fresh` / `--promote` / `--revise` per the mode Step 1 resolved. No in-chat draft and no confirmation prompt — the chat discussion (and, in promote/revise, the existing Description) was the review, and Step 8's digest lets the user judge whether to open the file.
 
-The two refusals are where this skill has a user, and both mean nothing was written:
+Three exits mean nothing was written. The first two are refusals, where this skill has a user; **exit 5** is a write that could not happen (unwritable `.task/`, full disk) — no `WROTE:` line was printed, so report the failure plainly and never print Step 8's digest for a path that does not exist.
 
 - **exit 4** — `--fresh` on a slug that already exists. That is Step 2b's collision guard; `--force` only after its **Overwrite it** chip.
 - **exit 3** — the promote/revise target has no `## Description`, so it is not a task artifact to extend. **Stop and ask via the slug-collision overwrite guard** — this is exactly the pre-write destructive fork the one sanctioned `AskUserQuestion` chip exists for, not a free-text exchange. State first, as message text, that `.task/task/<slug>.md` has no `## Description`, then pose the chips: **Overwrite as fresh capture** / **Pick a different target** / **Decline — stop without writing**. "Overwrite as fresh capture" re-enters Step 2b for a title and a Description — a promote/revise run drafted neither — and only then calls `--fresh --force`. On decline, close with `→ Next: \`/task:to-plan <a different slug>\`.`

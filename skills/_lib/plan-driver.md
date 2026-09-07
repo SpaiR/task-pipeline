@@ -99,6 +99,8 @@ Three modes, one per situation:
 
 It refuses the destructive cases rather than guessing, and writes nothing when it does: **exit 4** — `--fresh` on a slug that already exists (`--force` overrides, and is only ever earned by a caller's collision guard); **exit 3** — the promote/revise target has no `## Description`, so it is not a task artifact to extend. A hand-edited target that lost its `---` separator or its `## Execution` pointer is repaired on the way through; do not pre-patch it.
 
+**Exit 5** is the one write failure that is not a refusal — an unwritable `$AI_DIR` or a full disk. Nothing was written and no `WROTE:` line was printed: report that plainly instead of a digest, and never claim a path that does not exist.
+
 The `WROTE:` / `VALIDATE:` lines it prints are what the caller's digest reports. Only a setup-precondition failure (validate exit 2) is fatal.
 
 ## Driver mode
