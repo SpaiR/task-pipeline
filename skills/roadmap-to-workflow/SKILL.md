@@ -7,13 +7,11 @@ user-invocable: true
 allowed-tools: 'Bash(bash *skills/_lib/*.sh* *) Bash(bash *skills/validate/validate.sh* *) Bash(source *skills/_lib/*.sh*)'
 ---
 
-Drive an approved roadmap through a dynamic Workflow. This skill collects the roadmap's unchecked items, sorts them into dependency-ordered **waves**, then invokes the **plugin-shipped Workflow driver** (`skills/_lib/roadmap-driver.js`, via the Workflow tool's `scriptPath`) that, within each wave, plans all items in parallel and then implements, reviews, and ticks them off one item at a time in the shared working tree. It does **not** hand-roll that fan-out itself, and it does **not** author the Workflow script — the driver is a static file, inspectable at any time, parameterized only through `args` (Step 2). If the Workflow tool isn't available, it falls back to running items serially by hand, in the same dependency order (Step 2).
+Drive an approved roadmap through a dynamic Workflow. This skill reports the roadmap's unchecked items and the scope the user picks, then invokes the **plugin-shipped Workflow driver** (`skills/_lib/roadmap-driver.js`, via the Workflow tool's `scriptPath`). The driver sorts the items into dependency-ordered **waves** and, within each wave, plans them in parallel and then implements, reviews and ticks them off one at a time in the shared working tree. It is a static file, inspectable at any time, parameterized only through `args` (Step 2) — never hand-rolled here, never re-authored inline. If the Workflow tool is unavailable, Step 2's fallback runs the items serially by hand.
 
-**Per-item model control.** Each roadmap item may carry a `**Model:**` hint (`haiku | sonnet | opus`); the driver passes it to that item's implement agent as `opts.model`, and scales the plan stage down for lightweight items (a `haiku`-hinted item is planned by sonnet at low effort; everything else by opus). The review agent ignores it — `task:code-reviewer` pins its own model, so a `haiku` item never gets a `haiku` review.
+**Per-item execution is a four-stage split:** opus plans the item (sonnet at low effort when its `**Model:**` hint is `haiku`), the item's own model implements and commits, `task:code-reviewer` reviews and commits its fixes on top, and a cheap driver stage ticks the checkbox. The review stage ignores the hint — it pins its own model, so a `haiku` item never gets a `haiku` review.
 
-**Per-item execution is a three-agent split by default — opus plans (sonnet for `haiku`-hinted items), the item's model implements and commits, `task:code-reviewer` reviews and commits its fixes on top; a fourth, cheap driver stage then ticks the roadmap checkbox (Step 2).**
-
-**This skill *is* the opt-in** for the Workflow tool — reading it and following the Steps is the authorization; there is no magic keyword and no separate confirmation.
+**This skill *is* the opt-in** for the Workflow tool: reading it and following the Steps is the authorization. No magic keyword, no separate confirmation.
 
 **Input:** `$ARGUMENTS` — optional. A single positional `<roadmap-slug>` (or path) to skip the roadmap picker. No flags — item scope is chosen interactively (Step 0).
 
@@ -33,7 +31,7 @@ The entry state, gathered before this skill reached you — no tool call of your
 2. **`CONFIG: absent`** → hard-stop redirect (do **not** bootstrap here):
    > The project isn't set up yet. Capture something first with `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, or `/task:to-spec` — those four set the project up inline.
    > → Next: `/task:to-roadmap`
-3. **`VALIDATE:` holds `validate.sh all`'s output** — every artifact, so an error may sit on a task or roadmap unrelated to this run. Surface every `ERROR` line now and block on none of them, but **hold** the roadmap ones: once `<slug>` is resolved below, if an error was reported against **that** file, stop then — "→ Next: fix the reported error in `.task/roadmap/<slug>.md`, then rerun `/task:roadmap-to-workflow <slug>`". Errors on any other artifact never block, and `WARN` lines are informational only. (`ERROR precondition: CLAUDE.md not found` is case 2, not a validation error.)
+3. **`VALIDATE:` holds `validate.sh all`'s output** — every artifact, so an error may belong to a task or roadmap unrelated to this run. Surface every `ERROR` line, block on none of them yet, and **hold** the roadmap ones: once `<slug>` is resolved below, an error against **that** file is a stop — "→ Next: fix the reported error in `.task/roadmap/<slug>.md`, then rerun `/task:roadmap-to-workflow <slug>`". `WARN` lines are informational. (`ERROR precondition: CLAUDE.md not found` is case 2, not a validation error.)
 4. `ROADMAPS:` is the roadmap list, with progress and the open item numbers — the picker below reads it instead of listing the directory.
 
 If that block arrived as a literal `` !`bash …` `` line instead of output, the preprocessing did not fire: run that one command yourself and continue exactly as above.
@@ -67,56 +65,13 @@ No flags — always ask interactively unless there's nothing to ask. The chosen 
 
 One open item → skip the question, run it. `unchecked=none` → stop: "Every item in `<slug>` is already checked off — pick another roadmap, or capture new work with `/task:to-roadmap`. → Done."
 
-## Step 1: Collect items and sort into dependency waves
-
-Read the resolved roadmap. For each unchecked (`### - [ ] N.`) item in the chosen scope, capture `N`, title, `**Dependencies:**`, and `**Model:**` (default `sonnet` when absent or off-list). This prints one `N<TAB>deps<TAB>model<TAB>title` line per unchecked item:
+## Step 1: Report the items
 
 ```bash
-source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"    # fresh shell again — re-source both helpers
-source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap.sh"
-ROADMAP=$(resolve_artifact_path roadmap "<slug-or-path>")
-# Never let an unresolved path reach awk: `awk 'prog' ""` skips the empty
-# filename and reads STDIN instead, which comes back as zero items and reads
-# exactly like a fully-completed roadmap.
-[[ -n "$ROADMAP" && -f "$ROADMAP" ]] || { echo "roadmap not found: <slug-or-path>" >&2; exit 1; }
-awk '
-  function flush() { if (pend) { print n "\t" deps "\t" (model==""?"sonnet":model) "\t" title; pend=0 } }
-  /^### - \[[ x~>-]\] [0-9]+\. / {
-    flush()
-    if ($0 ~ /^### - \[ \] /) {                     # unchecked item — start capturing
-      n=$0;     sub(/^### - \[ \] /,"",n); sub(/\..*/,"",n)
-      title=$0; sub(/^### - \[ \] [0-9]+\. /,"",title)
-      model=""; deps=""; pend=1
-    } else {                                        # already marked — the driver
-      m=$0; sub(/^### - \[[x~>-]\] /,"",m); sub(/\..*/,"",m)   # needs these to know
-      donelist = (donelist=="" ? m : donelist "," m)             # which deps are met
-    }
-    next
-  }
-  # `### Spec references → …` is a top-level heading that lives INSIDE an item
-  # (the same tolerance validate.sh grants it), so it is NOT a terminator — it
-  # may sit above **Dependencies:**, and flushing here would drop them.
-  /^### Spec references/ { next }
-  # A heading that ATTEMPTED to be an item and drifted (`[X]`, a double space
-  # after the checkbox, `####`, a missing `- `) closes the current item.
-  # Otherwise its Dependencies/Model are attributed to the item ABOVE it — a
-  # phantom dependency, a wrong wave, or the wrong model, with no signal.
-  # Matched the same way `validate.sh` reports it, so both parsers agree on what
-  # counts as an item attempt.
-  /^#+[[:space:]]*[-*+]?[[:space:]]*\[[^]]?\]/ { flush(); next }
-  /^#+[[:space:]]*[-*+][[:space:]]*[0-9]/       { flush(); next }
-  # The section terminators `validate.sh`'s block parser uses. Deliberately NOT
-  # every `#`-prefixed line: a `#### Notes` sub-heading, or a `#` comment inside
-  # a fenced block, sits INSIDE an item — flushing on those would drop that
-  # item's Dependencies/Model on a file that validates perfectly clean.
-  /^### / { flush(); next }
-  /^## /  { flush(); next }
-  /^---[[:space:]]*$/ { flush(); next }
-  /^\*\*Dependencies:\*\*/ && pend { deps=$0; sub(/^\*\*Dependencies:\*\* */,"",deps); gsub(/[ \t]/,"",deps); if (deps=="—"||deps=="-"||tolower(deps)=="none"||tolower(deps)=="n/a") deps="" }
-  /^\*\*Model:\*\*/       && pend { model=$0; sub(/^\*\*Model:\*\* */,"",model); gsub(/[ \t]/,"",model); if (model!="haiku" && model!="sonnet" && model!="opus") model="" }
-  END { flush(); print "DONE\t" donelist }
-' "$ROADMAP"
+bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap-items.sh" "<slug-or-path>"
 ```
+
+One line per unchecked item — `N<TAB>deps<TAB>model<TAB>title`, `deps` empty for none and `model` defaulting to `sonnet` — then a trailing `DONE<TAB><n,…>` naming the already-marked numbers. Exit 1 means the roadmap did not resolve; stop there rather than running with zero items, which reads exactly like a fully-completed roadmap. [contract § Helpers](../../docs/contract.md#helpers) owns the shape.
 
 That is the whole of Step 1: **report what the roadmap says, do not sort it.** The driver computes the waves itself (`computeWaves` in `skills/_lib/roadmap-driver.js`), so pass the collector's output through as Step 2's args and nothing more:
 
@@ -174,12 +129,11 @@ What the driver does, per wave: **plans all items in parallel** — each plan ag
 
 ## Forbidden
 
-- Running setup / bootstrap on a missing `.task/CLAUDE.md` — this skill hard-stops and redirects; only `to-task` / `to-plan` / `to-roadmap` / `to-spec` are intake-capable.
-- Looping the items yourself in this session's main thread instead of invoking the shipped driver — the Workflow tool is what gives each item fresh per-item context, per-item model control, parallel planning, and driver-side auto-mark; a hand-rolled loop reintroduces the accumulation problems this skill exists to remove. (The one-at-a-time manual fallback is only for when the Workflow tool is unavailable.)
-- Authoring a Workflow script inline (via the `script` input) instead of invoking `skills/_lib/roadmap-driver.js` via `scriptPath` — the shipped driver is the contract; a re-authored copy drifts.
-- Passing `args` as a JSON-encoded string, or passing relative paths — the sandbox cannot expand env vars, and a stringified `waves` fails the driver's assertions.
-- Running items whose dependencies are still unchecked, or placing an item in an earlier wave than its `Dependencies` allow.
-- Auto-marking roadmap checkboxes from inside a per-item plan/implement/review agent — the flip belongs to the driver's own mark stage, strictly after the item's **review** returns `OK`, to avoid parallel writers racing on the roadmap file.
-- Instructing an implement agent to run `/verify` or `/code-review` — both platform commands are `disable-model-invocation`, so a subagent silently skips them and still reports `OK`; verification and review live inside `task:code-reviewer`.
-- Passing `model` (or `isolation`) to the review stage — `task:code-reviewer` pins its own model/effort, and worktree isolation would hide the very tree it must review and commit into.
-- Modifying project code yourself, or touching any file other than the roadmap (for scope reading) and, via the driver step, the roadmap's checkboxes — all implementation happens inside the per-item implement agents, run one at a time in the shared working tree, and all review fixes inside the review agent.
+- Running setup on a missing `.task/CLAUDE.md`. This skill hard-stops and redirects; only the four capture skills are intake-capable.
+- Looping the items yourself in this session's thread, or authoring a Workflow script inline via the `script` input. The shipped driver is what gives each item fresh context, per-item model control, parallel planning and driver-side auto-mark; a hand-rolled loop or a re-authored copy drifts from it. (The one-at-a-time manual fallback is only for when the Workflow tool is unavailable.)
+- Passing `args` as a JSON-encoded string, or any path relative — the sandbox expands nothing, and the driver's assertions reject both.
+- Sorting the items yourself, or narrowing `items` to the chosen scope. Both are `computeWaves`' job, and a pre-narrowed set hides the dependencies that define a wave.
+- Auto-marking a checkbox from inside a plan / implement / review agent — the flip is the driver's own stage, strictly after that item's review returns `OK`, so parallel writers never race on the roadmap file.
+- Instructing an implement agent to run `/verify` or `/code-review`: both are `disable-model-invocation`, so a subagent skips them silently and still reports `OK`. Verification and review live inside `task:code-reviewer`.
+- Passing `model` or `isolation` to the review stage — it pins its own model, and an isolated worktree would hide the very tree it must review and commit into.
+- Modifying project code yourself, or touching any file but the roadmap. Implementation happens in the per-item agents, review fixes in the review agent.
