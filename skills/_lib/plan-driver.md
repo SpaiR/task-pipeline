@@ -60,30 +60,29 @@ Self-check before writing: every step has a non-empty `**Touches:**` with real p
 
 ## 7. Write and validate
 
-Write `<AI_DIR>/task/<item-slug>.md` (creating `<AI_DIR>/task/` if needed), using the absolute `AI_DIR` from your prompt — never a cwd-relative `.task/`:
+`skills/_lib/write-task.sh` writes the file and validates it in one call. It owns the header link forms, the `---` separator, the section order and the stamped `## Execution` pointer, so none of that is assembled here — see docs/contract.md § task.md format for the shape it produces. Pass the absolute plugin root and let it resolve `AI_DIR` itself; never write a cwd-relative `.task/`.
 
-```markdown
-# {Item title}
-Roadmap: [{roadmap-slug}](../roadmap/{roadmap-slug}.md)
-Source item: #{N}
-Spec: [{spec-slug}](../spec/{spec-slug}.md)   (one line per cited + roadmap-level spec; omit if none)
----
-## Description
-{drafted body}
+Bodies go in via **quote-delimited** heredocs, written flush-left, each holding the section body **without** its `## …` heading:
 
-## Plan
-{drafted steps}
-
-## Tests
-{only if tests_required}
-
-## Execution
-> Read [.task/CLAUDE.md](../CLAUDE.md) and follow its `## Executing a task` section.
+```bash
+d=$(mktemp); p=$(mktemp); t=$(mktemp)
+cat >"$d" <<'DESC'
+{drafted Description body}
+DESC
+cat >"$p" <<'PLAN'
+{drafted ### Step N: blocks}
+PLAN
+cat >"$t" <<'TESTS'
+{drafted ### Test N: blocks — omit this heredoc and --tests unless tests_required}
+TESTS
+bash "<plugin root>/skills/_lib/write-task.sh" --fresh \
+  --slug <item-slug> --title "{Item title}" \
+  --description "$d" --plan "$p" --tests "$t" \
+  --roadmap <roadmap-slug> --item <N> --spec <spec-slug>   # repeat --spec per cited + roadmap-level spec
+rm -f "$d" "$p" "$t"
 ```
 
-Cross-artifact headers are Markdown links whose **text is the slug** and whose target is always `../<kind>/<slug>.md` — never an absolute path, never a bare slug. `Source item:` is a bare number. The `## Execution` pointer is stamped **byte-identical** as shown — never translated, never expanded.
-
-Then validate: `bash "<plugin root>/skills/validate/validate.sh" task <item-slug>` — mention WARN/ERROR lines in your digest; only a setup-precondition failure (exit 2) is fatal.
+Exit 4 means that slug already exists and nothing was written: this is a non-interactive run with nobody to ask, so do **not** pass `--force` — report `FAIL` in step 8 and name the slug. Exit 3 (target has no `## Description`) is the same story. Otherwise mention the `VALIDATE:` WARN/ERROR lines in your digest; only a setup-precondition failure (validate exit 2) is fatal.
 
 ## 8. Output — parser-stable digest
 

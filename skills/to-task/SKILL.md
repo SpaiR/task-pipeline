@@ -4,7 +4,7 @@ description: 'Capture the chat (or a roadmap item) into `.task/task/<slug>.md` �
 argument-hint: '[<roadmap-slug>[#N] | context]'
 disable-model-invocation: true
 user-invocable: true
-allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/validate/validate.sh* *) Bash(source *skills/_lib/*.sh*)'
+allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/_lib/write-task.sh* *) Bash(bash *skills/validate/validate.sh* *) Bash(source *skills/_lib/*.sh*)'
 ---
 
 Distil the chat discussion so far (or a roadmap item) into `.task/task/<slug>.md` — `## Description` only, no `## Plan`. Lightest of the three capture skills (`to-task` / `to-plan` / `to-roadmap`): use it to record the "what and why" before implementing directly, or before `to-plan` later. The written file is the handle — no active-task pointer, no separate execution skill; a fresh session implements it by reading `## Execution`.
@@ -48,24 +48,20 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
 4. Derive `<item-slug>` — kebab-case English from the item's own title (not the roadmap's). No task-id, no `derive-task-id` helper: the item gets its own `<item-slug>.md`, independent of the roadmap's slug.
 
    **Slug collision.** If `<item-slug>` is already in Step 0's `TASKS:` list, do not assume that file is this item's — read its header first. A `Roadmap:` whose link text matches this roadmap's slug plus a matching `Source item: #<N>` means it **is** this item's earlier capture: Description-only → rewriting it in place is safe; if it already carries a `## Plan`, an overwrite would destroy that plan — run the Step 2.1 slug-collision guard instead (its chips already recommend deepening via `/task:to-plan`). Different headers, or none, mean an unrelated task that merely kebab-cases the same title: disambiguate `<item-slug>` with a short qualifier (as `to-plan` Step 2a.5 does) rather than overwriting.
-5. Write `$AI_DIR/task/<item-slug>.md` directly (creating `$AI_DIR/task/` if needed) — no in-chat draft, no confirmation prompt; the roadmap item is the settled source:
+5. Write the file with `skills/_lib/write-task.sh` — no in-chat draft, no confirmation prompt; the roadmap item is the settled source. The script owns the header link forms, the `---` separator, the stamped `## Execution` pointer and the validate call ([docs/contract.md § task.md format](../../docs/contract.md#taskmd-format-tasktaskslugmd) is the shape it produces), so none of that is assembled here. One Bash call, the Description body via a **quote-delimited** heredoc (so backticks and `$` reach the file verbatim) and **without** its `## Description` heading. Write the heredoc lines flush-left in the real command — a quoted heredoc keeps whatever indentation you type:
 
-   ```markdown
-   # {Item title}
-   Roadmap: [{slug}](../roadmap/{slug}.md)
-   Source item: #{N}
-   Spec: [{spec-slug}](../spec/{spec-slug}.md)   (one line per spec the item cites; omit entirely if none)
-   ---
-   ## Description
-
+   ```bash
+   d=$(mktemp)
+   cat >"$d" <<'DESC'
    {Why: paraphrase of ### Context. What: paraphrase of ### Goal / ### Outcomes / ### Invariants / ### Acceptance criteria.}
-
-   ## Execution
-   > Read [.task/CLAUDE.md](../CLAUDE.md) and follow its `## Executing a task` section.
+   DESC
+   bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/write-task.sh" --fresh \
+     --slug <item-slug> --title "{Item title}" --description "$d" \
+     --roadmap <roadmap-slug> --item <N> --spec <spec-slug>   # repeat --spec per spec the item cites; omit if none
+   rm -f "$d"
    ```
 
-   `{braces}` in the header lines are placeholders you substitute (`{Item title}`, `{slug}`, `{N}`) — including inside the link targets, so `Roadmap: [api-v2](../roadmap/api-v2.md)`. The **Markdown-link form is the contract**: the link text is the slug that carries the identity, the target is what lets a viewer navigate. Both targets are `../<kind>/<slug>.md` because `.task/task/`, `.task/roadmap/` and `.task/spec/` are siblings — never compute a different depth. `Source item:` is a number, not a reference, and stays bare. The `## Execution` pointer is **stamped verbatim** — one line, byte-identical in every artifact, English, never translated and never expanded back into instructions. The instructions themselves live in `.task/CLAUDE.md` → `## Executing a task`, in one copy, so editing them there reaches tasks that were written earlier. The pointer still has to be in the file: the platform loads `.task/CLAUDE.md` only for file-read tools, so a session that opens the artifact with `cat` would otherwise see no instructions at all.
-6. Validate the written file: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" task <item-slug>` — surface any WARN/ERROR in Step 3's digest; only a setup-precondition failure (exit 2) hard-stops.
+   No `--plan` and no `--tests`: those are `to-plan`'s contract. Exit 4 means the slug already exists and nothing was written — that is the collision case above, and `--force` is only for after its chips. The `WROTE:` / `VALIDATE:` lines it prints are what Step 3's digest reports; only a setup-precondition failure (validate exit 2) hard-stops.
 7. Continue to Step 3 (digest + footer), using `<item-slug>` as `<slug>` there.
 
 ### Step 2: Chat-draft mode
@@ -80,22 +76,20 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
    - `## Description` — the why + what, in the user's own framing, written per `.task/CLAUDE.md` → Language (the section labels themselves stay English). Use `### Problem` / `### Outcome` / `### Scope` / `### Constraints` sub-headers where the discussion gives signal for them; omit a sub-header rather than inventing content. Do not fabricate anything not actually discussed.
    - **No `## Plan` and no `## Tests`** — both are `to-plan`'s job; run `to-plan` later to add them (Tests when Testing Policy warrants).
    - **Specs (optional).** If `.task/spec/` holds a spec the discussion clearly relies on, add a `Spec: [<slug>](../spec/<slug>.md)` header line for each (ASCII, above `---`) so the executing session reads it as a fixed anchor. Only reference specs actually relevant — never invent one, and never write the spec file here (that is `to-spec`'s job).
-4. **Write `$AI_DIR/task/<slug>.md` directly** (creating `$AI_DIR/task/` if needed) — no in-chat draft, no confirmation prompt. The chat discussion was the review; the written file is the deliverable, and the Step 3 digest lets the user judge whether to open it. (The Step 2.1 slug-collision guard still runs before this write.) No `Roadmap:` / `Source item:` lines in this mode; include a `Spec:` line per relevant spec, or none:
+4. **Write the file with `skills/_lib/write-task.sh`** — no in-chat draft, no confirmation prompt. The chat discussion was the review; the written file is the deliverable, and the Step 3 digest lets the user judge whether to open it. (The Step 2.1 slug-collision guard still runs before this write.) Same one call as Step 1a.5, minus `--roadmap` / `--item`, which this mode has no source for:
 
-   ```markdown
-   # {Short task title}
-   Spec: [{spec-slug}](../spec/{spec-slug}.md)   (one line per relevant spec; omit entirely if none)
-   ---
-   ## Description
-
-   {drafted body}
-
-   ## Execution
-   > Read [.task/CLAUDE.md](../CLAUDE.md) and follow its `## Executing a task` section.
+   ```bash
+   d=$(mktemp)
+   cat >"$d" <<'DESC'
+   {drafted Description body}
+   DESC
+   bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/write-task.sh" --fresh \
+     --slug <slug> --title "{Short task title}" --description "$d" \
+     --spec <spec-slug>                                    # one per relevant spec; omit if none
+   rm -f "$d"
    ```
 
-   The `## Execution` line is the same pointer as Step 1a's template — stamped byte-identical, never paraphrased.
-5. Validate the written file: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" task <slug>` — surface any WARN/ERROR in Step 3's digest.
+   The `## Execution` pointer is stamped by the script, byte-identical in every artifact — never write or paraphrase it by hand. Exit 4 means the file already exists and nothing was written; `--force` only after the Step 2.1 chips.
 
 ## Step 3: Output — digest
 

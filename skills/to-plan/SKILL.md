@@ -4,7 +4,7 @@ description: 'Capture the chat into `.task/task/<slug>.md` with `## Description`
 argument-hint: '[<slug> | <roadmap-slug>[#N] | context]'
 disable-model-invocation: true
 user-invocable: true
-allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/validate/validate.sh* *) Bash(source *skills/_lib/*.sh*)'
+allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/_lib/write-task.sh* *) Bash(bash *skills/validate/validate.sh* *) Bash(source *skills/_lib/*.sh*)'
 ---
 
 Distil the chat discussion so far (or a roadmap item) into `.task/task/<slug>.md` — `## Description` **and** `## Plan` (Goal/Touches/Logic steps), plus `## Tests` when the testing policy calls for it, and the `## Execution` pointer. The deepest of the three capture skills (`to-task` / `to-plan` / `to-roadmap`): use it when you know enough about the approach to hand straight to implementation, or run it again on a `to-task`-only file to add the Plan in place. The slug is the filename; the artifact path is the handle.
@@ -25,7 +25,7 @@ The entry state, gathered before this skill reached you — no tool call of your
 
 [docs/contract.md § Helpers](../../docs/contract.md#helpers) owns that block's shape. Read it, then act:
 
-1. `AI_DIR:` is the pipeline root. **Every artifact path in this skill is under it, never the cwd** — `.task/task/<slug>.md` below is shorthand for `$AI_DIR/task/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves the root itself) never sees. Step 7's write re-resolves it in bash for the same reason.
+1. `AI_DIR:` is the pipeline root. **Every artifact path in this skill is under it, never the cwd** — `.task/task/<slug>.md` below is shorthand for `$AI_DIR/task/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves the root itself) never sees. Step 7's writer resolves it the same way, on its own.
 2. **`CONFIG: absent` → inline setup.** Read `${CLAUDE_PLUGIN_ROOT}/skills/_lib/setup.md` and follow it (detect stack → write `$AI_DIR/CLAUDE.md` from its template → record `git config --local task.root` → exclude `.task` → report what was written). No confirmation chip: the file is written first and edited afterwards if a detected value was wrong. `setup.md` is the single source of truth for the sub-steps *and* for the template; do not defer to a separate setup command and do not restate the template here. Then continue to Step 1 with the original `$ARGUMENTS` unchanged. (A relative `AI_DIR: .task` appears in a project that is not a git repository and has no `.task/` yet; setup establishes `<ROOT>/.task` from there.)
 3. **`CONFIG: present` → leave it alone.** It is user-owned; only `task.root` and the `.git/info/exclude` line are restored when missing.
 4. `ROADMAPS:` / `TASKS:` / `SPECS:` are what already exists. Step 1 resolves its target against `TASKS:` and `ROADMAPS:`, and Step 2a's collision check reads `TASKS:` — neither lists a directory of its own.
@@ -159,48 +159,40 @@ Run through this checklist against the draft; fix inline before the write (Step 
 
 ## Step 7: Write
 
-Write the file directly — no in-chat draft, no confirmation prompt. The chat discussion (and, in promote/revise, the existing Description) was the review; the written file is the deliverable, and Step 8's digest lets the user judge whether to open it.
+`skills/_lib/write-task.sh` writes the file — it owns the header link forms, the `---` separator, the section order, the stamped `## Execution` pointer and the validate call, so none of that is assembled here. [docs/contract.md § task.md format](../../docs/contract.md#taskmd-format-tasktaskslugmd) is the shape it produces. No in-chat draft and no confirmation prompt: the chat discussion (and, in promote/revise, the existing Description) was the review, and Step 8's digest lets the user judge whether to open the file.
 
-**Fresh capture:**
+One Bash call does all of it. Bodies go in via heredocs — **quoted delimiters** (`<<'PLAN'`), so backticks and `$` in your prose reach the file verbatim — and each holds the section **body only**, never its `## …` heading. Write the heredoc lines flush-left — a quoted heredoc keeps whatever indentation you type:
+
 ```bash
-source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # each Bash call is a FRESH shell — AI_DIR does not carry over from Step 0
-: "${AI_DIR:?AI_DIR unresolved — re-run Step 0 before writing}"
-mkdir -p "$AI_DIR/task"
-# write $AI_DIR/task/<slug>.md — header + Description + Plan (+ Tests) + Execution
-```
-The re-source is mandatory, not decorative: sourcing `resolve-ws.sh` is idempotent (`find_ai_dir` no-ops once `AI_DIR` is set), and without it an unset `$AI_DIR` turns this into `mkdir -p /task` — the hazard Step 0 already names. `roadmap-to-workflow` re-sources in every bash block for the same reason.
-Header + body, in order:
-```markdown
-# {Title}
-Roadmap: [{slug}](../roadmap/{slug}.md)        (from-roadmap only)
-Source item: #{N}                              (from-roadmap only)
-Spec: [{spec-slug}](../spec/{spec-slug}.md)    (one line per relevant spec; omit if none)
----
-## Description
-{drafted body}
-
-## Plan
-{drafted steps}
-
-## Tests
-{drafted body, only if tests_required}
-
-## Execution
-> Read [.task/CLAUDE.md](../CLAUDE.md) and follow its `## Executing a task` section.
+d=$(mktemp); p=$(mktemp); t=$(mktemp)
+cat >"$d" <<'DESC'
+{drafted Description body}
+DESC
+cat >"$p" <<'PLAN'
+{drafted ### Step N: blocks}
+PLAN
+cat >"$t" <<'TESTS'
+{drafted ### Test N: blocks — omit this heredoc and --tests when tests_required is false}
+TESTS
+bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/write-task.sh" --fresh \
+  --slug <slug> --title "{Title}" \
+  --description "$d" --plan "$p" --tests "$t" \
+  --roadmap <roadmap-slug> --item <N> --spec <spec-slug>   # from-roadmap only; repeat --spec per cited spec
+rm -f "$d" "$p" "$t"
 ```
 
-`{braces}` in the header and body lines are placeholders you substitute (`{Title}`, `{slug}`, `{N}`, `{drafted steps}`) — including inside the link targets, so `Roadmap: [api-v2](../roadmap/api-v2.md)`. The **Markdown-link form is the contract**: the link text is the slug that carries the identity, the target is what lets a viewer navigate. Both targets are `../<kind>/<slug>.md` because `.task/task/`, `.task/roadmap/` and `.task/spec/` are siblings — never compute a different depth. `Source item:` is a number, not a reference, and stays bare. The `## Execution` pointer is **stamped verbatim** — one line, byte-identical in every artifact, English, never translated and never expanded back into instructions. Those live in `.task/CLAUDE.md` → `## Executing a task`, in a single copy, so an edit there reaches tasks written earlier. The pointer still has to be in the file: the platform loads `.task/CLAUDE.md` only for file-read tools, so a session that opens the artifact with `cat` would otherwise see no instructions at all.
+- **Fresh capture** → `--fresh`, as above. `--title` and `--description` are required; drop `--roadmap`/`--item` in chat-draft mode and `--spec` when nothing is cited.
+- **Promote** → `--promote --slug <slug> --plan "$p"` (plus `--tests "$t"` when this run adds tests). The plan lands directly above `## Execution`; the header, separator, Description and pointer are untouched.
+- **Revise** → `--revise --slug <slug> --plan "$p"`. Pass `--tests` **only** if the current chat's edit touches the tests — without it the existing `## Tests` is left byte-for-byte as it was.
 
-**Promote:** edit the existing `.task/task/<slug>.md` in place — insert the new `## Plan` block (and `## Tests`, if added) between `## Description`'s content and the existing `## Execution` pointer (a `to-task`-written file has no `## Tests`, so `## Plan` (+ new `## Tests`) is always inserted directly before `## Execution`). Do not touch the header, the `---` separator, `## Description`, or `## Execution` itself.
+The script resolves `$AI_DIR` itself, so nothing here re-sources `resolve-ws.sh`, and it refuses the two destructive cases rather than guessing:
 
-Three defensive cases, since Step 1 accepts a hand-written or hand-edited path as the target:
-- **No `## Execution` pointer to anchor on** (hand-written file) → append `## Plan` (and `## Tests`) at end of file, then stamp the `## Execution` pointer after them, exactly as a fresh capture does. Same fallback revise mode already declares below — do not guess an insert position instead.
-- **No `---` separator** (a hand-written file that has `## Description` but never split header from body) → insert a `---` line directly above `## Description`, leaving whatever header lines sit above it untouched. `validate.sh` treats a missing separator as a hard ERROR, so skipping this would make Step 7's own validate call fail on the file this very run just wrote.
-- **No `## Description`** → the file is not a task artifact this skill can promote, and treating it as a fresh capture would overwrite it. **Stop and ask via the slug-collision overwrite guard** — this is exactly the pre-write destructive fork the one sanctioned `AskUserQuestion` chip exists for, not a free-text exchange. State first, as message text, that `.task/task/<slug>.md` has no `## Description`, then pose the chips: **Overwrite as fresh capture** / **Pick a different target** / **Decline — stop without writing**. On decline, close with `→ Next: \`/task:to-plan <a different slug>\`.`
+- **exit 4** — `--fresh` on a slug that already exists; nothing was written. Only pass `--force` after the Step 2 slug-collision guard has been through its chips.
+- **exit 3** — the promote/revise target has no `## Description`, so it is not a task artifact to extend; nothing was written. **Stop and ask via the slug-collision overwrite guard** — this is exactly the pre-write destructive fork the one sanctioned `AskUserQuestion` chip exists for, not a free-text exchange. State first, as message text, that `.task/task/<slug>.md` has no `## Description`, then pose the chips: **Overwrite as fresh capture** / **Pick a different target** / **Decline — stop without writing**. On decline, close with `→ Next: \`/task:to-plan <a different slug>\`.`
 
-**Revise:** edit the existing `.task/task/<slug>.md` in place — replace the whole prior `## Plan` block with the new one (same position, still before `## Execution`). Replace `## Tests` only if the current chat's edit touched it; otherwise leave it exactly as it was. Leave `## Execution` untouched (re-stamp it only in the defensive case it's missing).
+A hand-edited target missing the `---` separator or the `## Execution` pointer is repaired by the script on the way through (`validate.sh` treats a missing separator as a hard ERROR) — do not pre-patch the file yourself.
 
-Then validate the written file: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" task <slug>` — surface any WARN/ERROR in Step 8's digest; only a setup-precondition failure (exit 2) hard-stops.
+The `WROTE:` / `VALIDATE:` lines it prints are what Step 8's digest reports; only a setup-precondition failure (validate exit 2) hard-stops.
 
 ## Step 8: Output — digest
 

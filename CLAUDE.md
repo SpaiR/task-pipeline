@@ -43,7 +43,7 @@ Full artifact shapes, producer/consumer table, and bash-layer contract: [docs/co
 ## Editing protocol — quick rules
 
 - Treat each `SKILL.md` as a prompt contract — output templates, section headers, step numbering are load-bearing.
-- Changing the `task.md` template/separator coordinates `validate/validate.sh`, the `to-task`/`to-plan` template, and `skills/_lib/plan-driver.md` (it inlines the same template for the driver's non-interactive plan agent). Changing first-run setup or the `.task/CLAUDE.md` template coordinates `skills/_lib/setup.md` — the single owner of both.
+- The `task.md` template lives in exactly one place: `skills/_lib/write-task.sh`, which every producer calls (`to-task`, `to-plan`, `plan-driver.md`). Changing the shape or the separator coordinates that script and `validate/validate.sh` — the skills carry no template of their own to keep in sync. Changing first-run setup or the `.task/CLAUDE.md` template coordinates `skills/_lib/setup.md` — the single owner of both.
 - Prefer Markdown + **bold** over XML.
 - Touching a bash helper (`skills/_lib/*.sh`, `skills/validate/validate.sh`) or the driver means updating its case file under `tests/` in the same commit, and `bash tests/run.sh` must be green before the commit.
 - Every skill change updates `README.md` and `docs/contract.md` in the same commit; when it changes user-facing behavior, also update the matching `website/` guide/reference page (the docs site — `docs(website): …`, scope `website`). The site is the single owner of user-facing usage/troubleshooting prose; `docs/usage.md` and `docs/troubleshooting.md` are now thin pointers to it.
