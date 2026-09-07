@@ -75,7 +75,7 @@ README.md                        GitHub landing page (links to the docs site)
 1. Fork the project (or branch off `main`, if you have direct push access).
 2. Make sure the artifact validator still passes against any `.task/` snapshot you used while developing: `bash skills/validate/validate.sh all`.
 3. Run the bash-layer suite: `bash tests/run.sh` (one case file per helper under `tests/`, bash + awk + git only, no bats). It must be green, and a change to a helper's behaviour comes with a case that covers it.
-4. Manually run the affected skill in a real project before opening the PR — the suite covers the bash helpers, not the prompts, so dogfooding is still the only end-to-end check.
+4. Manually run the affected skill in a real project before opening the PR. For a prompt change, the eval suite under `evals/` is the closest thing to an automated check — `claude plugin eval .`, or `--case '<name>*'` for one case; it needs the early-access `plugin eval` feature, and it is not wired into CI. See [`evals/README.md`](evals/README.md), including which graders are still unverified.
 5. Open the pull request against `main`.
 
 This project is a collection of Markdown skills plus a handful of bash helpers. There is no compile step and no linter; the automated tests are the bash-layer suite under `tests/` (`bash tests/run.sh`, also run on ubuntu and macOS by `.github/workflows/tests.yml`), which covers the helpers rather than the prompts. The bar for "it works" is: `tests/run.sh` green, skills run end-to-end, invariants in [`CLAUDE.md`](CLAUDE.md) still hold, and the `validate.sh` script accepts the new artifact shapes.
