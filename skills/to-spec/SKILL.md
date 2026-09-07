@@ -1,6 +1,7 @@
 ---
 name: to-spec
 description: 'Capture load-bearing technical decisions into a standalone `.task/spec/<slug>.md` — Decision/Rationale/Constrains sections cited via `Spec:`.'
+argument-hint: '[decision area]'
 disable-model-invocation: true
 user-invocable: true
 allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/validate/validate.sh* *) Bash(source *skills/_lib/*.sh*)'

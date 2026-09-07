@@ -396,6 +396,19 @@ All three are cheap and architecture-independent. Human-facing dialog only — p
 
 Every skill carries `disable-model-invocation: true` and `user-invocable: true`. (`validate` is a bash-only utility — `skills/validate/validate.sh`, no `SKILL.md` — so it carries no frontmatter.)
 
+Every skill also carries an `argument-hint` — the placeholder the slash-command autocomplete shows for its optional argument:
+
+| Skill | `argument-hint` |
+|-------|-----------------|
+| `grill` | `[topic]` |
+| `to-task` | `[<roadmap-slug>[#N] \| context]` |
+| `to-plan` | `[<slug> \| <roadmap-slug>[#N] \| context]` |
+| `to-roadmap` | `[initiative]` |
+| `to-spec` | `[decision area]` |
+| `roadmap-to-workflow` | `[<roadmap-slug>]` |
+
+Each mirrors that skill's own **Input:** line, and stays flag-free — there is no `--plan` / `--from` / `--phase` anywhere user-facing, so a hint must never suggest one.
+
 The five skills that call bash — `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow` — also carry `allowed-tools`, pre-approving the plugin's own helpers and nothing else:
 
 ```yaml

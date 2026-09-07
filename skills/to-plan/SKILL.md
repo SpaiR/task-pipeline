@@ -1,6 +1,7 @@
 ---
 name: to-plan
 description: 'Capture the chat into `.task/task/<slug>.md` with `## Description` plus `## Plan` (Goal/Touches/Logic) — the deepest one-task capture.'
+argument-hint: '[<slug> | <roadmap-slug>[#N] | context]'
 disable-model-invocation: true
 user-invocable: true
 allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/validate/validate.sh* *) Bash(source *skills/_lib/*.sh*)'

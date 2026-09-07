@@ -1,6 +1,7 @@
 ---
 name: to-task
 description: 'Capture the chat (or a roadmap item) into `.task/task/<slug>.md` — `## Description` only, no `## Plan`.'
+argument-hint: '[<roadmap-slug>[#N] | context]'
 disable-model-invocation: true
 user-invocable: true
 allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/validate/validate.sh* *) Bash(source *skills/_lib/*.sh*)'

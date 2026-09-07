@@ -1,6 +1,7 @@
 ---
 name: roadmap-to-workflow
 description: 'Fan an approved `.task/roadmap/<slug>.md` out to a dynamic Workflow — parallel planning, serialized implementation, dependency-ordered waves.'
+argument-hint: '[<roadmap-slug>]'
 disable-model-invocation: true
 user-invocable: true
 allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/validate/validate.sh* *) Bash(source *skills/_lib/*.sh*)'

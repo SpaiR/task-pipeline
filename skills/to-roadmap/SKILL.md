@@ -1,6 +1,7 @@
 ---
 name: to-roadmap
 description: 'Capture a multi-task initiative into `.task/roadmap/<slug>.md` — a phase-grouped backlog of ready-to-pick-up items.'
+argument-hint: '[initiative]'
 disable-model-invocation: true
 user-invocable: true
 allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/validate/validate.sh* *) Bash(source *skills/_lib/*.sh*)'

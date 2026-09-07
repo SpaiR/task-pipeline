@@ -1,16 +1,16 @@
 # Commands overview
 
-Six user-invocable skills, plus one internal utility. Depth of capture is the skill you pick — there are no flags anywhere.
+Six user-invocable skills, plus one internal utility. Depth of capture is the skill you pick — there are no flags anywhere. Every argument is optional: the autocomplete shows the hint below, and running a skill bare is the normal case (it drafts from the chat, or asks).
 
-| Command | In brief |
-|---|---|
-| [`/task:grill`](/reference/grill) | Pre-capture interrogation: stress-tests a plan one question at a time, keeps a decision-plus-rationale ledger, ends with a pre-mortem, routes to the right capture skill. Writes nothing. Needs no config. |
-| [`/task:to-task`](/reference/to-task) | Fixes the chat (or a roadmap item) into `.task/task/<slug>.md` — Description only, no Plan. The lightest capture. |
-| [`/task:to-plan`](/reference/to-plan) | Fixes the chat (or a roadmap item) into `.task/task/<slug>.md` with Description **+** Plan (and Tests when policy calls for it). The deepest one-task capture. |
-| [`/task:to-roadmap`](/reference/to-roadmap) | Fixes a multi-task initiative into `.task/roadmap/<slug>.md` — a phase-grouped backlog of ready-to-pick-up items. |
-| [`/task:to-spec`](/reference/to-spec) | Fixes load-bearing technical decisions into a standalone `.task/spec/<slug>.md`, cited by tasks/roadmaps via a `Spec:` header. |
-| [`/task:roadmap-to-workflow`](/reference/roadmap-to-workflow) | Autopilot over an approved roadmap: invokes the plugin's shipped Workflow driver, which runs unchecked items in dependency-ordered waves — parallel planning, then serialized implement-and-review per item. |
-| [`validate`](/reference/validate) *(utility)* | Optional format checker for `.task/` artifacts. Not a slash command, not a gate. |
+| Command | Argument | In brief |
+|---|---|---|
+| [`/task:grill`](/reference/grill) | `[topic]` | Pre-capture interrogation: stress-tests a plan one question at a time, keeps a decision-plus-rationale ledger, ends with a pre-mortem, routes to the right capture skill. Writes nothing. Needs no config. |
+| [`/task:to-task`](/reference/to-task) | `[<roadmap-slug>[#N] \| context]` | Fixes the chat (or a roadmap item) into `.task/task/<slug>.md` — Description only, no Plan. The lightest capture. |
+| [`/task:to-plan`](/reference/to-plan) | `[<slug> \| <roadmap-slug>[#N] \| context]` | Fixes the chat (or a roadmap item) into `.task/task/<slug>.md` with Description **+** Plan (and Tests when policy calls for it). The deepest one-task capture. |
+| [`/task:to-roadmap`](/reference/to-roadmap) | `[initiative]` | Fixes a multi-task initiative into `.task/roadmap/<slug>.md` — a phase-grouped backlog of ready-to-pick-up items. |
+| [`/task:to-spec`](/reference/to-spec) | `[decision area]` | Fixes load-bearing technical decisions into a standalone `.task/spec/<slug>.md`, cited by tasks/roadmaps via a `Spec:` header. |
+| [`/task:roadmap-to-workflow`](/reference/roadmap-to-workflow) | `[<roadmap-slug>]` | Autopilot over an approved roadmap: invokes the plugin's shipped Workflow driver, which runs unchecked items in dependency-ordered waves — parallel planning, then serialized implement-and-review per item. |
+| [`validate`](/reference/validate) *(utility)* | `task \| roadmap \| spec \| all` | Optional format checker for `.task/` artifacts. Not a slash command, not a gate. |
 
 ## The next-step footer
 
