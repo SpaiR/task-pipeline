@@ -88,13 +88,13 @@ It runs bash, edits files, and writes commits — so here is exactly what it wil
 
 - **Nothing is committed until the implementing session does so, per `## Executing a task`.** Until then every change is just working-tree edits; back them out with plain `git restore` / `git checkout`. One opt-in exception: `/task:roadmap-to-workflow` (autopilot) commits each roadmap item as it lands — it still never pushes.
 - **Commits stage only task-related files, and never push.** Nothing leaves your machine.
-- **No hidden orchestration.** The capture skills spawn nothing. The plugin ships exactly one subagent — `task:code-reviewer`, the review pass, whose whole prompt is a readable Markdown file in this repo (`agents/code-reviewer.md`) — and `/task:roadmap-to-workflow` runs a static Workflow script shipped with the plugin (`skills/_lib/roadmap-driver.js`), inspectable at any time — the skill only passes it the item waves as arguments.
+- **No hidden orchestration.** The capture skills spawn nothing. The plugin ships exactly one subagent — `task:code-reviewer`, the review pass, whose whole prompt is a readable Markdown file in this repo (`agents/code-reviewer.md`) — and `/task:roadmap-to-workflow` runs a static Workflow script shipped with the plugin (`skills/_lib/roadmap-driver.js`), inspectable at any time — the skill only passes it the roadmap's unchecked items, the already-ticked numbers and your chosen scope; the driver derives the run order itself.
 - **The pipeline leaves no trace in the repo.** `.task/` is excluded via `.git/info/exclude` (not `.gitignore`), so it never shows up in `git status`; delete it with `rm -rf .task` and the repo is exactly as before.
 
 ## Requirements
 
 - [Claude Code](https://docs.claude.com/en/docs/claude-code) — this ships as a Claude Code plugin.
-- Nothing else. Each skill's entry state — the resolved `.task/` root, whether the project is set up, the roadmaps/tasks/specs that exist — is gathered by the plugin's own `preflight.sh` and substituted into the skill before Claude reads it, so a capture starts without a single tool round-trip. The skills pre-approve that one helper via `allowed-tools`; nothing else is granted.
+- Nothing else. Every skill except `grill` opens on its entry state — the resolved `.task/` root, whether the project is set up, the roadmaps/tasks/specs that exist — gathered by the plugin's own `preflight.sh` and substituted into the skill before Claude reads it, so a capture starts without a single tool round-trip. (`grill` reads nothing under `.task/` and runs no bash at all.) Those skills pre-approve the plugin's own helpers under `skills/_lib/` and `validate.sh` via `allowed-tools` — nothing outside the plugin's own directory.
 - The review pass is the plugin's own agent (`task:code-reviewer`), so no platform slash command has to be available — it just needs the plugin enabled. Verification uses whatever build/test command your project declares in `.task/CLAUDE.md` → Build and Tests; when there is none, the reviewer says so instead of implying a green run.
 
 ## Installation

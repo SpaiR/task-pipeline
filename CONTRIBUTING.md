@@ -27,11 +27,21 @@ We use [GitHub](https://github.com/SpaiR/task-pipeline) to host code, track issu
   .audit-baseline.json           gitignored ratchet metrics for self-audit
   .improve-baseline.json         gitignored ratchet metrics for self-improve
 skills/                          SKILL.md per skill + shared bash helpers
-  _lib/                          shared helpers:
+  _lib/                          shared helpers (roles: docs/contract.md § Helpers):
                                    resolve-ws.sh (pure .task/-root finder, exports AI_DIR),
                                    roadmap.sh (artifact-path resolution + roadmap progress counts),
-                                   roadmap-driver.js (the static Workflow script roadmap-to-workflow invokes),
-                                   plan-driver.md (non-interactive to-plan mirror for the driver's plan agents),
+                                   preflight.sh (a skill's whole Step 0 entry state in one block,
+                                     substituted into the skill body by !-preprocessing),
+                                   write-task.sh (the single task.md writer: fresh/promote/revise),
+                                   detect-project.sh (the facts first-run setup picks from),
+                                   roadmap-items.sh (a roadmap's unchecked items, for the driver args),
+                                   roadmap-driver.js (the static Workflow script roadmap-to-workflow
+                                     invokes; computes the dependency waves in computeWaves),
+                                   plan-driver.md (the plan pipeline: § Core, followed by both
+                                     to-plan Steps 3-7 and the driver's plan agent, plus
+                                     § Driver mode for the non-interactive deltas),
+                                   roadmap-item.md (the shared from-roadmap block: pick the item,
+                                     read its ready description, derive the slug),
                                    setup.md (first-run setup sub-steps + the .task/CLAUDE.md template);
                                    templates/conventional-commits.md (commit-format fallback)
   grill/                         SKILL.md — pre-capture interrogation; writes nothing,
@@ -43,8 +53,9 @@ skills/                          SKILL.md per skill + shared bash helpers
   to-roadmap/                    SKILL.md — multi-task initiative → .task/roadmap/<slug>.md
   to-spec/                       SKILL.md — load-bearing technical decisions →
                                    .task/spec/<slug>.md, referenced via `Spec:` headers
-  roadmap-to-workflow/           SKILL.md — the one launcher; computes dependency waves and
-                                   invokes _lib/roadmap-driver.js over a roadmap's unchecked items
+  roadmap-to-workflow/           SKILL.md — the one launcher; reports a roadmap's unchecked items
+                                   and the chosen scope, and invokes _lib/roadmap-driver.js,
+                                   which computes the dependency waves itself
   validate/                      validate.sh — optional self-check; bash-only utility, no SKILL.md
 agents/                          the plugin's subagent definitions (auto-loaded by the
                                    plugin loader; agent type = `task:<name>`)
@@ -52,6 +63,12 @@ agents/                          the plugin's subagent definitions (auto-loaded 
                                    prove each finding, fix the confirmed ones within the
                                    plan's Touches, run .task/CLAUDE.md → Build and Tests, commit
                                    the fixes on top of the implementation's commit
+tests/                           the bash-layer test suite — run.sh + lib.sh + one *.test.sh
+                                   per helper; `bash tests/run.sh`, bash/awk/git only, run on
+                                   ubuntu and macOS by .github/workflows/tests.yml
+evals/                           prompt-level `claude plugin eval` cases (prompt.md + graders/
+                                   per case) — a quality signal for the skills, NOT in CI;
+                                   see evals/README.md for status
 CLAUDE.md                        invariants + maintainer guidance
 docs/
   README.md                      docs index (table of the files below)
@@ -200,8 +217,10 @@ Must be one of the following:
 * **A skill name** (no `task:` prefix): `grill`, `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`, `validate`.
 * **`skills`** — cross-cutting change that touches several skills at once. Also covers the repo-local meta-skills under `.claude/skills/` (`self-audit`, `self-improve`), which ship with no plugin scope of their own.
 * **`agents`** — the plugin's subagent definitions under `agents/` (currently only `code-reviewer.md`), and the repo-local lens agents under `.claude/agents/`.
-* **`lib`** — the shared helpers under `skills/_lib/` (`resolve-ws.sh`, `roadmap.sh`, `roadmap-driver.js`, `plan-driver.md`, `setup.md`) and `skills/validate/validate.sh`, plus their templates.
+* **`lib`** — every shared helper under `skills/_lib/` (see the repository structure above) and `skills/validate/validate.sh`, plus their templates.
 * **`plugin`** — `.claude-plugin/plugin.json` and install-path concerns.
+* **`tests`** — the bash-layer suite under `tests/` and its CI workflow.
+* **`evals`** — the prompt-level eval cases under `evals/`.
 * **`github`** — files under `.github/` (PR/issue templates, any repo automation).
 * **`website`** — the VitePress docs site under `website/` (landing, guide, reference pages, theme, config).
 * **`readme` / `claudemd` / `changelog` / `contributing` / `contract`** — single-doc edits (use `docs:` as the type for these; `contract` = `docs/contract.md`).

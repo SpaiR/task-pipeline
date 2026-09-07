@@ -4,7 +4,7 @@ Guidance for Claude Code when editing **this repository**. User-facing documenta
 
 ## Quick orient
 
-A collection of user-invocable Claude Code skills implementing a chat-first "context serialization protocol", not an orchestration engine: discuss freely in chat, then fix the discussion into a fixed-format Markdown artifact under `.task/` with one short skill. Depth of capture is the skill name, never a flag. Skills in `skills/<name>/SKILL.md`; the plugin ships exactly one agent, `agents/code-reviewer.md` (the review pass — see the invariants below), and no phase companions, no lock protocol, no hook gate. No build step and no linter; the bash layer has a test suite (`bash tests/run.sh`). Work here is editing markdown (occasional bash) and reasoning about pipeline semantics.
+A collection of user-invocable Claude Code skills implementing a chat-first "context serialization protocol", not an orchestration engine: discuss freely in chat, then fix the discussion into a fixed-format Markdown artifact under `.task/` with one short skill. Depth of capture is the skill name, never a flag. Skills in `skills/<name>/SKILL.md`; the plugin ships exactly one agent, `agents/code-reviewer.md` (the review pass — see the invariants below), and no phase companions, no lock protocol, no hook gate. No build step and no linter; the bash layer has a test suite (`bash tests/run.sh`) and the prompts have eval cases under `evals/` (`claude plugin eval .`, early access, not in CI). Work here is editing markdown (occasional bash) and reasoning about pipeline semantics.
 
 ```
 discuss freely in chat
@@ -46,6 +46,7 @@ Full artifact shapes, producer/consumer table, and bash-layer contract: [docs/co
 - The `task.md` template lives in exactly one place: `skills/_lib/write-task.sh`, which every producer calls (`to-task`, `to-plan`, `plan-driver.md`). Changing the shape or the separator coordinates that script and `validate/validate.sh` — the skills carry no template of their own to keep in sync. Changing first-run setup or the `.task/CLAUDE.md` template coordinates `skills/_lib/setup.md` — the single owner of both. The plan pipeline has one owner too: `skills/_lib/plan-driver.md` § Core (`to-plan` Steps 3–7 point into it, the driver's plan agent follows it), and the from-roadmap block another: `skills/_lib/roadmap-item.md` (read by `to-task`, `to-plan` and that same agent).
 - Prefer Markdown + **bold** over XML.
 - Touching a bash helper (`skills/_lib/*.sh`, `skills/validate/validate.sh`) or the driver means updating its case file under `tests/` in the same commit, and `bash tests/run.sh` must be green before the commit.
+- Changing a skill's prompt has no unit test to catch it; the nearest check is the eval suite (`evals/`, `claude plugin eval .`). It needs the early-access feature and is not wired into CI, so treat a run as a signal, not a gate.
 - Every skill change updates `README.md` and `docs/contract.md` in the same commit; when it changes user-facing behavior, also update the matching `website/` guide/reference page (the docs site — `docs(website): …`, scope `website`). The site is the single owner of user-facing usage/troubleshooting prose; `docs/usage.md` and `docs/troubleshooting.md` are now thin pointers to it.
 - **Never** update `CHANGELOG.md` autonomously. Edit it only when the user explicitly requests it.
 - **Never change `.claude-plugin/plugin.json`'s `version` without explicit user confirmation.** Same rule for cutting `## [Unreleased]` into a numbered release.
@@ -56,7 +57,7 @@ Source of truth: [`CONTRIBUTING.md`](CONTRIBUTING.md). Summary:
 
 - Header: `<type>(<scope>): <short summary>` — under 72 chars, imperative, lowercase first letter, no trailing period.
 - Types: `feat | fix | refactor | perf | docs | test | chore | revert`. **Do not invent types.**
-- Scopes (optional but strongly preferred): skill names (`grill`, `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`, `validate`), or cross-cutting keys (`skills`, `agents`, `lib`, `plugin`, `github`, `readme`, `claudemd`, `changelog`, `contributing`, `contract`, `website`). **Do not invent scopes.**
+- Scopes (optional but strongly preferred): skill names (`grill`, `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`, `validate`), or cross-cutting keys (`skills`, `agents`, `lib`, `plugin`, `github`, `readme`, `claudemd`, `changelog`, `contributing`, `contract`, `website`, `tests`, `evals`). **Do not invent scopes.**
 - Body: mandatory for all non-trivial commits; explain **why**, not what; 2–5 bullet list, imperative tense.
 - Footer: `BREAKING CHANGE:` when header carries `!`; `Fixes #N` / `Closes #N` for issues/PRs.
 - AI attribution: every Claude-assisted commit must carry `Co-Authored-By: Claude <noreply@anthropic.com>` as the last footer line.

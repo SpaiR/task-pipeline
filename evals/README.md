@@ -1,7 +1,7 @@
 # Eval suite
 
-Prompt-level cases for the six skills, run with `claude plugin eval` (early
-access — see below). They cover what `tests/` cannot: the bash layer has unit
+Prompt-level cases for five of the six skills — `to-roadmap` is not covered yet —
+run with `claude plugin eval` (early access, see below). They cover what `tests/` cannot: the bash layer has unit
 tests, but whether a *skill* actually fires, writes the artifact it promises and
 prints the conventions is a property of the prompt, and only a real run shows it.
 
@@ -34,6 +34,10 @@ the suite is unverified end to end. Two things to re-check once it is enabled:
   dedicated "no such file" grader;
 - whether `target: {source: file, path: …}` accepts a glob, which the file-content
   graders rely on to find the artifact without knowing the slug the run chose.
+
+Still missing a case: `to-roadmap`. Its output is a multi-phase file whose items
+each need a `**Ready description:**` blockquote, so a useful grader there is a
+larger piece of work than the five above.
 
 A red case here is not a build break — the suite is a quality signal for the
 prompts, and it is not wired into CI.
