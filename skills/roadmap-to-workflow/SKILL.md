@@ -62,7 +62,7 @@ Read the roadmap's `Spec:` header lines, if any — each is a Markdown link, `Sp
 No flags — always ask interactively unless there's nothing to ask. The chosen roadmap's open item numbers are its `unchecked=` list. When there is **more than one**, present a single `AskUserQuestion` (convention (c)) — *"How much of `<slug>` should this run cover?"*:
 
 - **All remaining** (default) — every unchecked item.
-- **Only next wave** — just the first dependency-wave of unchecked items (see Step 1). **This one inverts Step 1's order:** compute the waves over *all* unchecked items first, then narrow the run to wave 1. Filtering before sorting would hide the dependencies that define the wave, and would trip Step 1's out-of-scope hard stop on items you yourself excluded; wave 1 computed over the full set has no unmet dependency by construction, so that stop cannot fire.
+- **Only next wave** — just the first dependency-wave of unchecked items. Pass it through as `scope: 'next-wave'`; the driver sorts every unchecked item and then keeps wave 1, so nothing has to be filtered or reordered here.
 - **Pick range** — collect a range via the `AskUserQuestion` free-text ("Other") option, e.g. `1,3-5,8`; validate each number exists and is unchecked. On a bad entry, **name the valid set** rather than just refusing — that is what turns a rejection into a second attempt that works: "#9 isn't a runnable item in `<slug>` (it's already checked / doesn't exist). Unchecked right now: #2, #3, #5, #7. → Next: rerun `/task:roadmap-to-workflow <slug>` and pick from those."
 
 One open item → skip the question, run it. `unchecked=none` → stop: "Every item in `<slug>` is already checked off — pick another roadmap, or capture new work with `/task:to-roadmap`. → Done."
@@ -87,6 +87,9 @@ awk '
       n=$0;     sub(/^### - \[ \] /,"",n); sub(/\..*/,"",n)
       title=$0; sub(/^### - \[ \] [0-9]+\. /,"",title)
       model=""; deps=""; pend=1
+    } else {                                        # already marked — the driver
+      m=$0; sub(/^### - \[[x~>-]\] /,"",m); sub(/\..*/,"",m)   # needs these to know
+      donelist = (donelist=="" ? m : donelist "," m)             # which deps are met
     }
     next
   }
@@ -111,18 +114,19 @@ awk '
   /^---[[:space:]]*$/ { flush(); next }
   /^\*\*Dependencies:\*\*/ && pend { deps=$0; sub(/^\*\*Dependencies:\*\* */,"",deps); gsub(/[ \t]/,"",deps); if (deps=="—"||deps=="-"||tolower(deps)=="none"||tolower(deps)=="n/a") deps="" }
   /^\*\*Model:\*\*/       && pend { model=$0; sub(/^\*\*Model:\*\* */,"",model); gsub(/[ \t]/,"",model); if (model!="haiku" && model!="sonnet" && model!="opus") model="" }
-  END { flush() }
+  END { flush(); print "DONE\t" donelist }
 ' "$ROADMAP"
 ```
 
-Filter that list to the Step 0 scope, then **topologically sort into waves**, computed by you (not by bash — the item set is small and this is reasoning, not parsing). **Exception — the "Only next wave" scope:** sort *before* filtering (sort all unchecked items, then keep wave 1), per Step 0's note on that option.
+That is the whole of Step 1: **report what the roadmap says, do not sort it.** The driver computes the waves itself (`computeWaves` in `skills/_lib/roadmap-driver.js`), so pass the collector's output through as Step 2's args and nothing more:
 
-- Wave 1 = every filtered item whose `Dependencies` are empty, or whose dependencies are all *already checked* (`[x]`/`[~]`/`[>]`/`[-]`) in the roadmap file — i.e. nothing left in this run blocks it.
-- Wave 2 = every remaining filtered item whose dependencies are all satisfied by Wave 1 (already-checked items, or items landing in Wave 1).
-- Continue until every filtered item is placed. A dependency on an item **outside** the filtered/scoped set that is still unchecked is a hard stop — surface which item depends on which, and ask the user to widen the scope or drop the item: "→ Next: rerun `/task:roadmap-to-workflow <slug>` with a scope that includes #N".
-- If a round places **no** new item while items remain unplaced, the scoped items form a dependency **cycle** (e.g. #1 depends on #2 and #2 on #1). Hard stop — report the cycle and ask the user to break it; never guess an order that would run an item before its dependency lands: "→ Next: edit `.task/roadmap/<slug>.md` to break the cycle, then rerun `/task:roadmap-to-workflow <slug>`". (Roadmaps are user-edited and `to-roadmap`'s cyclic-deps check is report-only, so a cycle can reach this skill.)
+- every `N<TAB>deps<TAB>model<TAB>title` line → one `items` entry `{n, title, model, deps: [<numbers>]}`, with `deps: []` for an em dash or an empty value;
+- the trailing `DONE<TAB><n,…>` line → `done: [<numbers>]` (`[]` when nothing is marked yet);
+- the Step 0 scope pick → `scope`: `'all'`, `'next-wave'`, or the picked numbers as an array.
 
-The result is a `waves` structure — an array of waves, each an array of `{n, title, model}` items — passed as Step 2's `waves` arg.
+`items` carries **every** unchecked item, not the scoped subset — narrowing is `scope`'s job, and the driver needs the full set to see the dependencies that define a wave. That is also what makes "Only next wave" correct without any special handling here: the driver sorts everything, then keeps wave 1.
+
+The driver hard-stops before spawning a single agent, with a message naming the items, when the scope leaves a dependency unmet ("out of scope: #4 depends on #2, …") or when the scoped items form a cycle ("dependency cycle among #1, #2 …"). Relay it as-is and close with `→ Next: rerun \`/task:roadmap-to-workflow <slug>\` with a scope that includes #N` for the first case, or `→ Next: edit \`.task/roadmap/<slug>.md\` to break the cycle, then rerun \`/task:roadmap-to-workflow <slug>\`` for the second. (Roadmaps are user-edited and `to-roadmap`'s cyclic-deps check is report-only, so a cycle can reach here.)
 
 ## Step 2: Invoke the Workflow driver
 
@@ -136,15 +140,18 @@ Workflow({
     aiDir: "<absolute value of $AI_DIR>",                    // echoed in Step 0
     pluginRoot: "<absolute value of $CLAUDE_PLUGIN_ROOT>",   // echoed in Step 0
     specPaths: ["<absolute $AI_DIR/spec/<slug>.md>"],        // from Step 0 — [] when the roadmap has no Spec: headers
-    waves: [                                                 // from Step 1 — dependency order
-      [ { n: 1, title: "…", model: "sonnet" }, { n: 2, title: "…", model: "haiku" } ],
-      [ { n: 3, title: "…", model: "opus" } ],
+    items: [                                                 // from Step 1 — EVERY unchecked item, unsorted
+      { n: 1, title: "…", model: "sonnet", deps: [] },
+      { n: 2, title: "…", model: "haiku",  deps: [1] },
+      { n: 3, title: "…", model: "opus",   deps: [1] },
     ],
+    done: [],                                                // from Step 1's DONE line — already-marked numbers
+    scope: "all",                                            // from Step 0 — "all" | "next-wave" | [2, 3]
   },
 })
 ```
 
-**Args are real JSON values, every path absolute.** `waves` is an actual array of arrays of `{n, title, model}` objects — never a JSON-encoded string — and the sandbox cannot expand `$AI_DIR` or `$CLAUDE_PLUGIN_ROOT`, so the echoed absolute values go in verbatim. The driver asserts all of this up front and returns a `bad args` line instead of launching an agent against a garbage path.
+**Args are real JSON values, every path absolute.** `items` is an actual array of `{n, title, model, deps}` objects and `done` an actual array of numbers — never JSON-encoded strings — and the sandbox cannot expand `$AI_DIR` or `$CLAUDE_PLUGIN_ROOT`, so the values from Step 0's block go in verbatim. The driver asserts all of this up front, computes the waves itself, and returns a single explanatory line instead of launching an agent against garbage.
 
 What the driver does, per wave: **plans all items in parallel** — each plan agent reads `skills/_lib/plan-driver.md` (the non-interactive counterpart of `to-plan`) and writes only its own `.task/task/<item-slug>.md`, never the working tree; the planner model is opus, or sonnet at low effort for a `haiku`-hinted item — then runs **implement → review → mark strictly one item at a time**: the item's own model implements and commits, `task:code-reviewer` reviews, fixes within **Touches**, runs Build and Tests, and commits its fixes as a second commit on top of the implementation's (no `model`/`isolation` opts), and a cheap serial mark agent flips item N's checkbox in the roadmap (the flip is idempotent — an already-ticked item reports OK — but a missing, renumbered or duplicated `### - [ ] N.` heading FAILs the wave rather than passing silently, since the commit is already in the tree and a silent miss would make the next run redo landed work). A `FAIL` digest from any stage stops the run; a barrier separates waves, so each implement sees its already-landed wave-mates' reviewed commits.
 

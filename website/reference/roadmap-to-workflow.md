@@ -1,6 +1,6 @@
 # roadmap-to-workflow
 
-The one launcher. Fans an approved `.task/roadmap/<slug>.md` out to a dynamic Workflow running the plugin's shipped driver script (`skills/_lib/roadmap-driver.js`) — parallel planning, serialized implementation, dependency-ordered waves, ticking off the roadmap as items land. The skill computes the waves and passes them as arguments; the script itself never changes between runs.
+The one launcher. Fans an approved `.task/roadmap/<slug>.md` out to a dynamic Workflow running the plugin's shipped driver script (`skills/_lib/roadmap-driver.js`) — parallel planning, serialized implementation, dependency-ordered waves, ticking off the roadmap as items land. The skill reports the roadmap's unchecked items and your chosen scope; the driver sorts them into waves itself, and the script never changes between runs.
 
 See the [autopilot guide](/guide/autopilot) for the full walkthrough.
 
@@ -15,7 +15,7 @@ See the [autopilot guide](/guide/autopilot) for the full walkthrough.
 ## What it does
 
 1. **Scope** — asks (via chips) how much to run: all remaining items, just the next dependency-wave, or a picked range like `1,3-5,8`.
-2. **Waves** — topologically sorts the unchecked items on `**Dependencies:**` into waves. A dependency cycle among scoped items is a hard stop.
+2. **Waves** — the driver topologically sorts the unchecked items on `**Dependencies:**` into waves, before it spawns anything. A dependency cycle among scoped items is a hard stop, and so is a scope that leaves a dependency neither ticked nor included; both come back as one line naming the items.
 3. **Per item, three agents** — the default shape is **opus-plans / sonnet-implements / reviewer-reviews**: a first agent plans the item (per `skills/_lib/plan-driver.md`, on sonnet at low effort when the item's `**Model:**` hint is `haiku`); a second implements and commits, using the item's `**Model:**` hint if present; a third is `task:code-reviewer`, which reviews that commit, proves each finding, fixes the confirmed ones inside the plan's `Touches`, runs `.task/CLAUDE.md` → Build and Tests, and commits those fixes on top. Context passes via the on-disk task file, not chat. The reviewer pins its own model, so the item's `**Model:**` hint never downgrades the review.
 4. **Parallel plans, serialized implement-then-review** — within a wave, all items are planned in parallel (plan agents only write their own task files), then each item is implemented and reviewed strictly one at a time in the shared working tree, both inside the same serial loop. A barrier separates waves, so each implement sees its already-landed wave-mates' reviewed commits.
 5. **Driver auto-marks** — after an item's *review* returns OK, the **driver** ticks its checkbox — never the per-item agent, so parallel wave-mates never race on the roadmap file. The flip is idempotent: an already-ticked item is the desired end state, not a failure. It stops the wave only when the roadmap holds no unique `### - [ ] N.` heading for that item — renumbered, retitled, or duplicated.
