@@ -392,7 +392,15 @@ All three are cheap and architecture-independent. Human-facing dialog only — p
 
 ### Frontmatter
 
-Every skill carries `disable-model-invocation: true` and `user-invocable: true`. (`validate` is a bash-only utility — `skills/validate/validate.sh`, no `SKILL.md` — so it carries no frontmatter.) Artifacts and user dialog follow `.task/CLAUDE.md` → Language — except `grill`, which by design reads nothing under `.task/` and so mirrors the chat's own language instead; parser-stable strings (header keys, section labels, commit trailers, the `## Execution` pointer, cross-artifact link labels, driver return strings) stay English.
+Every skill carries `disable-model-invocation: true` and `user-invocable: true`. (`validate` is a bash-only utility — `skills/validate/validate.sh`, no `SKILL.md` — so it carries no frontmatter.)
+
+The five skills that call bash — `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow` — also carry `allowed-tools`, pre-approving the plugin's own helpers and nothing else:
+
+```yaml
+allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/validate/validate.sh* *) Bash(source *skills/_lib/*.sh*)'
+```
+
+This is **load-bearing, not a convenience**: a `!`-preprocessed command (Step 0's `preflight.sh` call) never raises a permission prompt — an unmatched one aborts the whole skill invocation — so without the first pattern those skills cannot start. The wildcards sit around the script path rather than at a fixed offset because the command is written with the path quoted (`bash "${CLAUDE_PLUGIN_ROOT}/…/preflight.sh" task`, so project roots containing spaces still work) and the pattern is matched against that literal string. `grill` carries no `allowed-tools` — it runs no bash at all. Artifacts and user dialog follow `.task/CLAUDE.md` → Language — except `grill`, which by design reads nothing under `.task/` and so mirrors the chat's own language instead; parser-stable strings (header keys, section labels, commit trailers, the `## Execution` pointer, cross-artifact link labels, driver return strings) stay English.
 
 ### `roadmap-to-workflow` execution shape (driver contract)
 

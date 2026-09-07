@@ -3,6 +3,7 @@ name: to-roadmap
 description: 'Capture a multi-task initiative into `.task/roadmap/<slug>.md` — a phase-grouped backlog of ready-to-pick-up items.'
 disable-model-invocation: true
 user-invocable: true
+allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/validate/validate.sh* *) Bash(source *skills/_lib/*.sh*)'
 ---
 
 Fix a **multi-task initiative** (phases, dependencies, or more than a couple of atomic steps) into `.task/roadmap/<slug>.md`. Multi-task counterpart to `/task:to-task` / `/task:to-plan` (which each fix one task). Depth is fixed: one roadmap file, flag-free.

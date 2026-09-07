@@ -3,6 +3,7 @@ name: to-plan
 description: 'Capture the chat into `.task/task/<slug>.md` with `## Description` plus `## Plan` (Goal/Touches/Logic) — the deepest one-task capture.'
 disable-model-invocation: true
 user-invocable: true
+allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/validate/validate.sh* *) Bash(source *skills/_lib/*.sh*)'
 ---
 
 Distil the chat discussion so far (or a roadmap item) into `.task/task/<slug>.md` — `## Description` **and** `## Plan` (Goal/Touches/Logic steps), plus `## Tests` when the testing policy calls for it, and the `## Execution` pointer. The deepest of the three capture skills (`to-task` / `to-plan` / `to-roadmap`): use it when you know enough about the approach to hand straight to implementation, or run it again on a `to-task`-only file to add the Plan in place. The slug is the filename; the artifact path is the handle.

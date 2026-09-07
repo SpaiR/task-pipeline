@@ -3,6 +3,7 @@ name: roadmap-to-workflow
 description: 'Fan an approved `.task/roadmap/<slug>.md` out to a dynamic Workflow — parallel planning, serialized implementation, dependency-ordered waves.'
 disable-model-invocation: true
 user-invocable: true
+allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/validate/validate.sh* *) Bash(source *skills/_lib/*.sh*)'
 ---
 
 Drive an approved roadmap through a dynamic Workflow. This skill collects the roadmap's unchecked items, sorts them into dependency-ordered **waves**, then invokes the **plugin-shipped Workflow driver** (`skills/_lib/roadmap-driver.js`, via the Workflow tool's `scriptPath`) that, within each wave, plans all items in parallel and then implements, reviews, and ticks them off one item at a time in the shared working tree. It does **not** hand-roll that fan-out itself, and it does **not** author the Workflow script — the driver is a static file, inspectable at any time, parameterized only through `args` (Step 2). If the Workflow tool isn't available, it falls back to running items serially by hand, in the same dependency order (Step 2).
