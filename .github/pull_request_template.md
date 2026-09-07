@@ -20,6 +20,7 @@ See CONTRIBUTING.md § Pull Request Title / § Pull Request Body. Delete any sec
 ## Verification
 
 <!-- Which skill(s) you ran end-to-end in a real project, plus the result of:
+     bash tests/run.sh
      bash skills/validate/validate.sh all -->
 
 ## Notes for reviewer
