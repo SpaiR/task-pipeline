@@ -23,33 +23,33 @@ The entry state, gathered before this skill reached you — no tool call of your
 
 [docs/contract.md § Helpers](../../docs/contract.md#helpers) owns that block's shape. Read it, then act:
 
-1. `AI_DIR:` is the pipeline root. **Every artifact path in this skill is under it, never the cwd** — `.task/spec/<slug>.md` below is shorthand for `$AI_DIR/spec/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves the root itself) never sees.
-2. **`CONFIG: absent`** → this skill is intake-capable: read `${CLAUDE_PLUGIN_ROOT}/skills/_lib/setup.md` and follow it (detect stack → write `$AI_DIR/CLAUDE.md` from its template → record `git config --local task.root` → exclude `.task` → report what was written), then continue. No confirmation chip — the file is written first and edited afterwards if a detected value was wrong. `setup.md` owns the sub-steps and the template; do not restate either here.
+1. `AI_DIR:` is the pipeline root: `.task/spec/<slug>.md` below means `$AI_DIR/spec/<slug>.md`, **never a cwd-relative path** ([contract § Setup-gate categories](../../docs/contract.md#setup-gate-categories)).
+2. **`CONFIG: absent`** → this skill is intake-capable: read `${CLAUDE_PLUGIN_ROOT}/skills/_lib/setup.md` and follow it — it owns the sub-steps and the `.task/CLAUDE.md` template — then continue. No confirmation chip; a wrong detected value is fixed by editing the file.
 3. **`CONFIG: present`** → leave the file untouched: it is user-owned, and only `task.root` and the `.git/info/exclude` line are restored when missing.
 4. `SPECS:` lists the specs that already exist — Step 1 matches structural style against them and avoids re-pinning a decision one of them already carries; Step 4's slug-collision check reads the same list. Neither needs a listing call of its own.
 
 If that block arrived as a literal `` !`bash …` `` line instead of output, the preprocessing did not fire: run that one command yourself and continue exactly as above.
 
-There is no full-scan validate call here — the file this run writes is validated after the save (Step 4.5), and pre-existing artifacts are checked on demand with `validate.sh all`, never as an entry gate.
+There is no full-scan validate call here: Step 4 validates the one file it writes, and pre-existing artifacts are checked on demand with `validate.sh all`, never as an entry gate.
 
 ### Preconditions
 
-- **No real decision to pin.** If the discussion settled no load-bearing technical decision — only behavioral outcomes, or details local to one task → **stop and suggest** `/task:to-task` or `/task:to-plan` instead. Say plainly that nothing was written, and carry **both** options in the footer with the reason: "Nothing here is a cross-task technical anchor — these are outcomes local to one task. Nothing was written. `→ Next: \`/task:to-plan\` to capture it with a plan, or \`/task:to-task\` for the what-and-why only.`"
+- **No real decision to pin** — only behavioral outcomes, or details local to one task → **stop and suggest** `/task:to-task` or `/task:to-plan`. Say plainly that nothing was written, and carry **both** options with the reason: "Nothing here is a cross-task technical anchor — these are outcomes local to one task. Nothing was written. `→ Next: \`/task:to-plan\` to capture it with a plan, or \`/task:to-task\` for the what-and-why only.`"
 
 (The slug-collision check runs at save time, once the slug is derived — see Step 4.)
 
 ### Step 1: Load context
 
-Read `.task/CLAUDE.md` (Language, conventions) and `CLAUDE.md` if present; the specs to match structural style against are Step 0's `SPECS:` list — read one only when this decision area may overlap it, so a decision it already pins is not duplicated. List the `docs/` top level and skim entry points if any exist. Open source files only as far as needed to state a decision accurately — this is decision capture, not implementation.
+Read `.task/CLAUDE.md` (Language, conventions), the project's `CLAUDE.md` if present, and the `docs/` top level. Structural style comes from Step 0's `SPECS:` list — open one only when this decision area may overlap it, so a decision it already pins is not duplicated. Open source files only as far as stating a decision accurately requires: this is decision capture, not implementation.
 
 ### Step 2: Cold start or harvest
 
-**Branch first.** The file is written from decisions settled here — where they come from matters:
+**Branch first**, since the file is written from decisions settled somewhere:
 
-- **Harvest** — the conversation, *before* this call, already settled concrete technical decisions. Tells: "write a spec from what we settled", or `$ARGUMENTS` reads as a handle for prior discussion. → Go to Step 2H.
-- **Cold start** — a rough decision area with no prior discussion. → Go to Step 2C.
+- **Harvest** — this conversation already settled concrete technical decisions. Tells: "write a spec from what we settled", or `$ARGUMENTS` reading as a handle for prior discussion. → Step 2H.
+- **Cold start** — a rough decision area, no prior discussion. → Step 2C.
 
-On the fence, prefer harvest — a false positive costs one extra recap the user skims; a false negative silently drops reasoning.
+On the fence, prefer harvest: a false positive costs one recap the user skims, a false negative silently drops reasoning.
 
 #### Step 2H: Harvest — Decision Inventory
 
@@ -72,7 +72,7 @@ I captured with its load-bearing reasoning. Say so if a line is wrong.}
 {Only if part of the discussion is out of context. Omit otherwise.}
 ```
 
-This inventory is a **recap** of decisions (with their reasoning) the user already reached in the discussion: print it, no confirmation chip. Then proceed — if open forks remain, resolve them first, then go to Step 3 (draft). If the recap misreads, drops, or misstates a decision or its rationale, the user says so in chat — correct it and reprint before drafting.
+It is a **recap** of decisions and their reasoning, already reached: print it, no confirmation chip. Open forks left → resolve them first, then draft. A misread decision or rationale arrives as chat: correct it and reprint before drafting.
 
 #### Step 2C: Cold start — decide the forks
 
@@ -95,13 +95,11 @@ For a decision area with no prior discussion, work each fork with the user befor
 {One focused question on the most load-bearing fork.}
 ```
 
-Offer ≥2 options per fork (or justify why only one is viable). A round is **content dialogue, not a path fork** — print it as message text and close with the open question; convention (c)'s chips are for choosing a path through the skill, and would flatten the pros/cons the round exists to show. Iterate (`Round N`) until decisions are settled, then reprint the full list **as message text** — a recap: print it, no confirmation chip. If a decision or its rationale is wrong, the user corrects it in chat before drafting.
-
-Topics the user explicitly said to skip stay skipped.
+Two options per fork at least, or a stated reason why only one is viable. A round is **content dialogue, not a path fork**: print it as message text and close on the open question, because convention (c)'s chips would flatten the pros and cons the round exists to show. Iterate as `Round N` until the decisions are settled, then reprint the full list as message text — a recap, no confirmation chip. Topics the user said to skip stay skipped.
 
 ### Step 3: Draft the spec
 
-Once you have **printed** the Step 2H inventory (or the Step 2C recap) — no user reply is required and none is awaited; a correction, if the user makes one, arrives as chat and you reprint before drafting — draft per [docs/contract.md § Spec file format](../../docs/contract.md#spec-file-format-taskspecslugmd): a `# Spec: <Title>` line, a blockquote purpose header, then one numbered `## N. <title>` section per decision:
+Once the Step 2H inventory (or the Step 2C recap) is **printed** — no reply is awaited; a correction arrives as chat, and you reprint before drafting — draft per [contract § Spec file format](../../docs/contract.md#spec-file-format-taskspecslugmd), which owns the file shape. Each `## N. <title>` section carries three parts:
 
 - **Decision:** what was chosen — concrete, technical, specific (naming real symbols/protocols/shapes is expected here, unlike a roadmap item).
 - **Rationale:** the reasoning that must survive, so a later plan or executing session doesn't re-litigate it.
@@ -109,24 +107,23 @@ Once you have **printed** the Step 2H inventory (or the Step 2C recap) — no us
 
 Keep one decision per section. Before saving, a quick self-check, fixed inline:
 
-1. Every decision is load-bearing (would distort work if re-derived differently) — no local, single-task details, no restating behavioral outcomes.
+1. Every decision is load-bearing: work would come out different if it were re-derived. No single-task details, no restated behavioral outcomes.
 2. Each `## N.` section stands alone — a reader who hasn't seen this chat understands the decision and why.
 3. No placeholders (`TBD`, `TODO`, `???`, `fill in`).
-4. Section numbers are contiguous from 1 — `### Spec references → [<slug>](../spec/<slug>.md) §N` citations depend on stable numbering.
+4. Section numbers contiguous from 1 — the `### Spec references → [<slug>](../spec/<slug>.md) §N` citations that other artifacts carry depend on stable numbering.
 
 ### Step 4: Save
 
-Write the file directly — no in-chat preview, no confirmation prompt; the chat discussion (recapped in Step 2) was the review, and Step 5's digest lets the user judge whether to open the file.
+Write the file directly — no in-chat preview, no confirmation prompt. Step 2's recap was the review, and Step 5's digest lets the user judge whether to open it.
 
-1. Slug: kebab-case from the decision-area topic, ≤ 50 chars (e.g. `event-envelope`, `auth-token-model`). Its own identity — independent of any roadmap.
-2. **Slug collision (soft).** Create `$AI_DIR/spec/` if missing. If `$AI_DIR/spec/<slug>.md` already exists → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). Never silently overwrite.
-3. Write `$AI_DIR/spec/<slug>.md` with the full content.
-4. Do not modify any other file — wiring a `Spec:` header into a task or roadmap is the job of `to-task` / `to-plan` / `to-roadmap` when they reference this spec.
-5. Validate the written file: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" spec <slug>` — surface any WARN/ERROR in the Step 5 digest; only a setup-precondition failure (exit 2) hard-stops.
+1. Slug: kebab-case from the decision-area topic, ≤ 50 chars (`event-envelope`, `auth-token-model`). Its own identity, independent of any roadmap.
+2. **Slug collision.** If that slug is already in Step 0's `SPECS:` list → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). Never silently overwrite. That list is a snapshot taken before the rounds and no writer script guards this path, so when the slug is *absent* from it, confirm with a file read that nothing is there before writing.
+3. Write `$AI_DIR/spec/<slug>.md` (creating the directory if needed), and nothing else — wiring a `Spec:` header into a task or roadmap is `to-task` / `to-plan` / `to-roadmap`'s job when they reference this spec.
+4. Validate it: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" spec <slug>` — surface any WARN/ERROR in the Step 5 digest; only a setup-precondition failure (exit 2) hard-stops.
 
 ### Step 5: Output — digest
 
-Print the structural digest of what was written (convention (b)) as message text. A spec is read by the executing session as a **fixed anchor**, so list **every** pin in full — this is the user's one glance to catch a misstated decision:
+Print the structural digest (convention (b)) as message text. A spec is read by the executing session as a **fixed anchor**, so list **every** pin — this is the user's one glance to catch a misstated decision:
 
 ```
 Wrote `.task/spec/<slug>.md`
@@ -137,15 +134,14 @@ Pins:
 validate: {OK — 0 errors, N warning(s) | the FAIL lines}
 ```
 
-When the validate result is **not** clean (any WARN or FAIL), append `re-check after editing: bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" spec <slug>` — `validate` is not a slash command, so the invocation is worth spelling out. Omit it on a clean result.
+On a result that is **not** clean, append `re-check after editing: bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" spec <slug>` — `validate` is not a slash command, so it is worth spelling out. Omit it on a clean result.
 
-The file is already written — to change any pin, just say so. Then close with the handoff footer (convention (a), flag-free), leading with the path it just wrote and keeping the command itself pasteable: `→ Next: \`/task:to-plan\` for a task that leans on \`.task/spec/<slug>.md\` — or attach it by hand with the line \`Spec: [<slug>](../spec/<slug>.md)\`, above the \`---\` in a task or directly under a roadmap's \`# <Title>\`.`
+The file is already written — to change any pin, just say so. Then the handoff footer (convention (a)): `→ Next: \`/task:to-plan\` for a task that leans on \`.task/spec/<slug>.md\` — or attach it by hand with the line \`Spec: [<slug>](../spec/<slug>.md)\`, above the \`---\` in a task or directly under a roadmap's \`# <Title>\`.`
 
 ## Forbidden
 
-- Writing a `## Plan`, a step list, file paths with line numbers, or implementation code — a spec pins decisions, it does not plan or implement.
-- Capturing behavioral outcomes or single-task details that belong in a task's `### Outcomes` / `### Acceptance criteria` — those are not spec material.
-- Modifying any file other than `.task/spec/<slug>.md` — stamping a `Spec:` header onto a task or roadmap is the referencing skill's job, never this one's.
-- Silently overwriting an existing `.task/spec/<slug>.md` — surface the collision and let the user choose.
-- Writing an empty or filler spec when no load-bearing decision was actually settled — stop and redirect instead.
-- Placeholders anywhere; persisting topics the user asked to skip.
+- Writing a `## Plan`, a step list, paths with line numbers, or implementation code. A spec pins decisions; it neither plans nor implements.
+- Capturing behavioral outcomes or single-task details — those belong in a task's `### Outcomes` / `### Acceptance criteria`.
+- Modifying any file but `.task/spec/<slug>.md`, or overwriting one silently. Stamping a `Spec:` header onto a task or roadmap is the referencing skill's job.
+- Writing a filler spec when no load-bearing decision was settled — stop and redirect instead.
+- Placeholders anywhere; re-raising topics the user asked to skip.
