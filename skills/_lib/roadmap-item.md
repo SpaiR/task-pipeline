@@ -61,8 +61,11 @@ If it is already in the caller's `TASKS:` list, do not assume that file is this
 item's. Read its header:
 
 - `Roadmap:` label matches this roadmap's slug **and** `Source item: #N` matches
-  this item → it **is** this item's earlier capture. Extend it in place
-  (promote / revise), never as a fresh write.
+  this item → it **is** this item's earlier capture. A caller that writes a
+  `## Plan` extends it in place (`write-task.sh --promote` / `--revise`); a
+  Description-only caller has no plan to insert, so it rewrites the file with
+  `--force` — but only when the existing file is Description-only too. An
+  existing `## Plan` is never overwritten by a Description-only capture.
 - Different headers, or none → an unrelated task that merely kebab-cases the same
   title. Disambiguate `<item-slug>` with a short qualifier — append a second
   distinguishing word — and **never** overwrite it.
