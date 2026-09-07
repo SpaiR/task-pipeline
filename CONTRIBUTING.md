@@ -206,7 +206,7 @@ Must be one of the following:
 * **refactor** — Internal change that does not add a feature or fix a bug (rename, restructure, extract).
 * **perf** — A change whose primary goal is to shrink a skill/agent's token or context footprint (or its latency) **without** changing behavior. Distinct from `refactor`: the win is measured in tokens/context, not readability.
 * **docs** — Documentation only: `README.md`, `CLAUDE.md`, `CHANGELOG.md`, `docs/`, this file, or prose inside skills.
-* **test** — Changes to the project's only executable QA surface: the artifact validator (`skills/validate/validate.sh`).
+* **test** — Changes to an executable QA surface: the bash-layer suite under `tests/`, the prompt eval cases under `evals/`, or the artifact validator (`skills/validate/validate.sh`).
 * **chore** — Tooling, repo housekeeping, plugin manifest fields that do not affect users (keywords, description tweaks), and repo automation under `.github/`.
 * **revert** — Reverts a previous commit. The body must name the reverted commit (`Reverts <sha>`) and say why.
 

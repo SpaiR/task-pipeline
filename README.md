@@ -94,7 +94,7 @@ It runs bash, edits files, and writes commits — so here is exactly what it wil
 ## Requirements
 
 - [Claude Code](https://docs.claude.com/en/docs/claude-code) — this ships as a Claude Code plugin.
-- Nothing else. Every skill except `grill` opens on its entry state — the resolved `.task/` root, whether the project is set up, the roadmaps/tasks/specs that exist — gathered by the plugin's own `preflight.sh` and substituted into the skill before Claude reads it, so a capture starts without a single tool round-trip. (`grill` reads nothing under `.task/` and runs no bash at all.) Those skills pre-approve the plugin's own helpers under `skills/_lib/` and `validate.sh` via `allowed-tools` — nothing outside the plugin's own directory.
+- Nothing else. Every skill except `grill` opens on its entry state — the resolved `.task/` root, whether the project is set up, the roadmaps/tasks/specs that exist — gathered by the plugin's own `preflight.sh` and substituted into the skill before Claude reads it, so a capture starts without a single tool round-trip. (`grill` reads nothing under `.task/` and runs no bash at all.) Those skills pre-approve the plugin's own helpers via `allowed-tools`, one rule per script they actually invoke — never a blanket grant over a directory.
 - The review pass is the plugin's own agent (`task:code-reviewer`), so no platform slash command has to be available — it just needs the plugin enabled. Verification uses whatever build/test command your project declares in `.task/CLAUDE.md` → Build and Tests; when there is none, the reviewer says so instead of implying a green run.
 
 ## Installation

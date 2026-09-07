@@ -4,7 +4,7 @@ description: 'Capture the chat (or a roadmap item) into `.task/task/<slug>.md` â
 argument-hint: '[<roadmap-slug>[#N] | context]'
 disable-model-invocation: true
 user-invocable: true
-allowed-tools: 'Bash(bash *skills/_lib/*.sh* *) Bash(bash *skills/validate/validate.sh* *) Bash(source *skills/_lib/*.sh*)'
+allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/_lib/write-task.sh* *) Bash(bash *skills/_lib/roadmap-items.sh* *) Bash(bash *skills/_lib/detect-project.sh* *) Bash(bash *skills/validate/validate.sh* *)'
 ---
 
 Distil the chat discussion so far (or a roadmap item) into `.task/task/<slug>.md` â€” `## Description` only, no `## Plan`. The lightest capture: the "what and why", recorded before implementing directly or before `to-plan` later. The written file is the handle, and a fresh session implements it by reading `## Execution`.

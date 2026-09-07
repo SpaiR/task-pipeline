@@ -4,20 +4,22 @@
 #
 #   source "$SCRIPT_DIR/../_lib/roadmap.sh"
 #
-# Not auto-sourced anywhere. Today's callers: `validate.sh` and `roadmap-to-workflow`.
+# Not auto-sourced anywhere. Today's callers: `validate.sh`, `roadmap-items.sh`
+# and `preflight.sh` — the last two on `roadmap-to-workflow`'s behalf, which
+# sources nothing itself.
 #
 # Exposed API:
 #   resolve_artifact_path <kind> <arg>  — slug-or-path → absolute path under
 #                                         $AI_DIR/<kind> (task | roadmap | spec).
-#                                         Callers: validate.sh + roadmap-to-workflow.
+#                                         Callers: validate.sh + roadmap-items.sh.
 #   roadmap_progress_counts <path>      — prints three lines: total / done / unchecked.
-#                                         Sole caller: roadmap-to-workflow.
+#                                         Sole caller: preflight.sh.
 #
 # Conventions:
 #   - $AI_DIR must already be resolved by the caller via `find_ai_dir` before
-#     sourcing this file — every caller (validate.sh, roadmap-to-workflow Step 0)
-#     sources resolve-ws.sh first, which exports AI_DIR. This file does no
-#     resolution of its own.
+#     sourcing this file — every caller (validate.sh, preflight.sh,
+#     roadmap-items.sh) sources resolve-ws.sh first, which exports AI_DIR. This
+#     file does no resolution of its own.
 #   - Task heading shape: `### - [ x~>-] N. <title>`. The 5-state checkbox
 #     class is the contract `roadmap-to-workflow`'s driver-side auto-mark and
 #     `to-task <slug>#N` item-pick both depend on; do not narrow it to `[ x]` only.

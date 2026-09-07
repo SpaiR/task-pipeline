@@ -4,7 +4,7 @@ description: 'Capture the chat into `.task/task/<slug>.md` with `## Description`
 argument-hint: '[<slug> | <roadmap-slug>[#N] | context]'
 disable-model-invocation: true
 user-invocable: true
-allowed-tools: 'Bash(bash *skills/_lib/*.sh* *) Bash(bash *skills/validate/validate.sh* *) Bash(source *skills/_lib/*.sh*)'
+allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/_lib/write-task.sh* *) Bash(bash *skills/_lib/roadmap-items.sh* *) Bash(bash *skills/_lib/detect-project.sh* *) Bash(bash *skills/validate/validate.sh* *)'
 ---
 
 Distil the chat discussion so far (or a roadmap item) into `.task/task/<slug>.md` — `## Description` **and** `## Plan` (Goal/Touches/Logic steps), plus `## Tests` when the testing policy calls for it, and the `## Execution` pointer. The deepest of the three capture skills (`to-task` / `to-plan` / `to-roadmap`): use it when you know enough about the approach to hand straight to implementation, or run it again on a `to-task`-only file to add the Plan in place. The slug is the filename; the artifact path is the handle.
@@ -53,19 +53,21 @@ For cases 1 and 3, branch on whether the target file exists:
 
 Both modes read the existing `## Description` as context and go straight to Steps 3–6.
 
-**Case 2 always continues at Step 2a**, existing file or not: the slug is only derived there, and `roadmap-item.md` step 5 is what decides whether a file already carrying it is *this item's* earlier capture (promote / revise, per the branch above) or an unrelated namesake (disambiguate and write fresh, never overwrite).
+**Case 2 always continues at Step 2a**, existing file or not: the slug is only derived there, and `roadmap-item.md` step 5 is what decides whether a file already carrying it is *this item's* earlier capture (promote / revise, per the branch above) or an unrelated namesake (disambiguate and write fresh, never overwrite). This is the one way into Step 2 that promote / revise take, and they take **only** its slug and header metadata — never its Description draft; see Step 2a.
 
 Case 4 has three sub-cases, in order: some `ROADMAPS:` line carries an `unchecked=` list other than `none` **and** there is nothing in the chat or `$ARGUMENTS` to draft from → `AskUserQuestion` (convention (c)), "How do you want to start this task?" — **Draft from this chat** / **Open from a roadmap**, the latter chipping the roadmap slugs and proceeding as Step 2a. There **is** chat discussion or free-form `$ARGUMENTS` (either alone is enough) → Step 2b. Neither → **stop**, rather than drafting from nothing: "nothing to capture yet — describe the task in chat, or name it directly. → Next: `/task:to-plan <what to capture>`"
 
 ## Step 2: Fresh capture — Title and Description
 
-Only for fresh capture (skip entirely for promote/revise — see Step 1).
+Only for fresh capture (skip entirely for promote/revise — see Step 1). The one exception is Step 2a, which promote/revise enter for the slug and header metadata alone.
 
 ### Step 2a: From-roadmap
 
 Follow `${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap-item.md` — resolve the roadmap, pick `#<N>`, read the ready description, collect the spec slugs, derive `<item-slug>` and check whose file it is. That file is the one owner of those rules; `to-task` and the driver's plan agent read the same copy. Its footers take this skill's own command, so a stop reads `→ Next: \`/task:to-plan <slug>#3\``.
 
-Hold what it produces for Step 7's write — the item title, the roadmap slug, `#<N>`, the distinct spec slugs, and the Description drafted from the ready description (why from Context, what from Goal / Outcomes / Invariants / Acceptance criteria). Do not write the file yet: Description, Plan and Tests are assembled and written once, together, in Step 7.
+Hold what it produces for Step 7's write — the item title, the roadmap slug, `#<N>`, the distinct spec slugs, and, **in fresh capture only**, the Description drafted from the ready description (why from Context, what from Goal / Outcomes / Invariants / Acceptance criteria). Do not write the file yet: Description, Plan and Tests are assembled and written once, together, in Step 7.
+
+In **promote / revise** — the file already exists and is this item's — stop here and go to Steps 3–6. Draft no Description: the existing one is inherited untouched, and `--promote` / `--revise` ignore a `--description` anyway.
 
 ### Step 2b: Chat-draft
 
