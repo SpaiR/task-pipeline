@@ -69,7 +69,7 @@ Read the diff for defects. Look for, in rough priority order: correctness bugs o
 
 Do **not** file style preferences, naming opinions, or "consider extracting this" as candidates. This pass exists to catch what is wrong, not what you would have written differently.
 
-Fan out with `Agent` when the diff is large or spans unrelated subsystems: give each sub-agent one file or one subsystem and the same "candidates only, no fixes" mandate. **One level of fan-out only** — your sub-agents must not spawn agents of their own (the spawn-depth budget ends there). Sub-agents read and report; they never edit.
+Fan out with `Agent` when the diff is large or spans unrelated subsystems: give each sub-agent one file or one subsystem and the same "candidates only, no fixes" mandate, on **`model: sonnet`** — gathering candidates is reading and reporting, and the judgement that needs your own model happens in phase 3, where each candidate is proven or refuted. **One level of fan-out only** — your sub-agents must not spawn agents of their own (the spawn-depth budget ends there). Sub-agents read and report; they never edit.
 
 **Mandatory output:** a numbered candidate list, one line each — `<n>. <file>:<line> — <the claim>`. When you find nothing: the literal line `0 candidates — diff read in full, nothing to prove.`
 
