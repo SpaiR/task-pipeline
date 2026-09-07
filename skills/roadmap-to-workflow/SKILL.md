@@ -22,50 +22,34 @@ Drive an approved roadmap through a dynamic Workflow. This skill collects the ro
 
 `roadmap-to-workflow` is **not** an intake skill — it never runs setup itself (a roadmap can't exist without `.task/CLAUDE.md`, so an absent one means something upstream is broken).
 
-```bash
-echo "$CLAUDE_PLUGIN_ROOT"                                 # note this absolute path — pass it as `pluginRoot` in Step 2's args
-source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # sourcing runs find_ai_dir → sets AI_DIR
-echo "$AI_DIR"                                             # note this one too — pass it as `aiDir` in Step 2's args
-[[ -f "$AI_DIR/CLAUDE.md" ]] || echo "CLAUDE.md not found"
-bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all
-```
+The entry state, gathered before this skill reached you — no tool call of your own:
 
-- **`CLAUDE.md not found`** (the guard above echoes it; `validate.sh all` also exits 2 with the same message) → hard-stop redirect (do **not** bootstrap here):
-  > The project isn't set up yet. Capture something first with `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, or `/task:to-spec` — those four set the project up inline.
-  > → Next: `/task:to-roadmap`
-- **Any other non-zero exit from `validate.sh`** → `validate.sh all` checks every artifact, so an error may sit on a task or roadmap unrelated to this run. **Mind the timing:** at this point the roadmap has not been picked yet (that happens in the *Roadmap* sub-step below), so do not try to judge here which errors are "yours". Surface every reported error now, block on none of them, and **hold** the roadmap ones. Once `<slug>` is resolved below, check the held list: if an error was reported against **that** file, stop then — "→ Next: fix the reported error in `.task/roadmap/<slug>.md`, then rerun `/task:roadmap-to-workflow <slug>`". Errors on any other artifact never block. (The one case where the roadmap *is* already known at gate time is a positional `<roadmap-slug>` in `$ARGUMENTS`; there you may apply the check immediately.) WARN lines never set a non-zero exit; they are informational only.
+!`bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/preflight.sh" workflow`
+
+[docs/contract.md § Helpers](../../docs/contract.md#helpers) owns that block's shape. Read it, then act:
+
+1. `PLUGIN_ROOT:` and `AI_DIR:` are Step 2's `pluginRoot` and `aiDir` args — use them verbatim; the JS sandbox cannot expand either.
+2. **`CONFIG: absent`** → hard-stop redirect (do **not** bootstrap here):
+   > The project isn't set up yet. Capture something first with `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, or `/task:to-spec` — those four set the project up inline.
+   > → Next: `/task:to-roadmap`
+3. **`VALIDATE:` holds `validate.sh all`'s output** — every artifact, so an error may sit on a task or roadmap unrelated to this run. Surface every `ERROR` line now and block on none of them, but **hold** the roadmap ones: once `<slug>` is resolved below, if an error was reported against **that** file, stop then — "→ Next: fix the reported error in `.task/roadmap/<slug>.md`, then rerun `/task:roadmap-to-workflow <slug>`". Errors on any other artifact never block, and `WARN` lines are informational only. (`ERROR precondition: CLAUDE.md not found` is case 2, not a validation error.)
+4. `ROADMAPS:` is the roadmap list, with progress and the open item numbers — the picker below reads it instead of listing the directory.
+
+If that block arrived as a literal `` !`bash …` `` line instead of output, the preprocessing did not fire: run that one command yourself and continue exactly as above.
 
 ### Roadmap
 
-If `$ARGUMENTS` gives a positional `<roadmap-slug>`/path, resolve it and skip the picker — **but source the helpers first, and check the result before using it.** Each bash call is a fresh shell, and the only other block that sources `roadmap.sh` is the picker query below, which this branch skips: without its own source, `resolve_artifact_path` is an undefined command whose empty output reads as "no such roadmap" for a slug that is perfectly valid.
-
-```bash
-source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # exports AI_DIR
-source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap.sh"      # defines resolve_artifact_path
-resolve_artifact_path roadmap "<arg>"
-```
-
-An empty return means no such roadmap (a typo is the common case); do **not** fall through to the item scan with an unresolved path, because an empty filename makes the Step 1 `awk` read stdin, come back with zero items, and report the roadmap as fully done. Stop instead, and list what is actually there (the picker query below already produces the list):
+If `$ARGUMENTS` gives a positional `<roadmap-slug>`, match it against the `ROADMAPS:` slugs; a positional **path** (contains `/`) is used as given. No match means no such roadmap (a typo is the common case) — stop, and list what is actually there:
 
 > no roadmap `<arg>` under `$AI_DIR/roadmap/`. Available: `<slug>` (2/7), `<slug>` (0/4).
 > → Next: `/task:roadmap-to-workflow <one of those slugs>`
 
-Otherwise list the available roadmaps with progress (uses the `roadmap.sh` helpers):
+Do **not** fall through to the item scan with an unresolved path: an empty filename makes the Step 1 `awk` read stdin, come back with zero items, and report the roadmap as fully done.
 
-```bash
-source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # re-source: each bash block is a fresh shell, AI_DIR does not carry over from Step 0
-source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap.sh"      # resolve_artifact_path, roadmap_progress_counts
-shopt -s nullglob
-for f in "$AI_DIR"/roadmap/*.md; do
-  counts=$(roadmap_progress_counts "$f")
-  total=$(awk -F': ' '/^total/{print $2}'     <<<"$counts")
-  done_n=$(awk -F': ' '/^done/{print $2}'      <<<"$counts")
-  printf '%s\t%s/%s\t%s\n' "$(basename "$f" .md)" "$done_n" "$total" "$f"
-done
-```
+With no positional argument, pick from the `ROADMAPS:` lines:
 
-- **No roadmap files** → stop: "no roadmaps found — create one with `/task:to-roadmap`. → Next: `/task:to-roadmap`"
-- **Exactly one** → use it (still refuse if it's fully complete, `done == total > 0`).
+- **`ROADMAPS: none`** → stop: "no roadmaps found — create one with `/task:to-roadmap`. → Next: `/task:to-roadmap`"
+- **Exactly one line** → use it (still refuse if it is fully complete, `unchecked=none`).
 - **More than one** → `AskUserQuestion` (convention (c)), one chip per roadmap labelled `<slug>  (<done>/<total>)`; sort partial roadmaps first, complete ones last with a `(complete)` suffix, and refuse to proceed on a complete pick.
 
 Every refusal on a complete roadmap ends the same way, in the wording the capture skills also use: "Every item in `<slug>` is already checked off — nothing left to run. → Next: `/task:to-roadmap` for a new initiative, or uncheck the items you want rerun."
@@ -74,13 +58,13 @@ Read the roadmap's `Spec:` header lines, if any — each is a Markdown link, `Sp
 
 ### Item scope
 
-No flags — always ask interactively unless there's nothing to ask. When the chosen roadmap has **more than one** unchecked item, present a single `AskUserQuestion` (convention (c)) — *"How much of `<slug>` should this run cover?"*:
+No flags — always ask interactively unless there's nothing to ask. The chosen roadmap's open item numbers are its `unchecked=` list. When there is **more than one**, present a single `AskUserQuestion` (convention (c)) — *"How much of `<slug>` should this run cover?"*:
 
 - **All remaining** (default) — every unchecked item.
 - **Only next wave** — just the first dependency-wave of unchecked items (see Step 1). **This one inverts Step 1's order:** compute the waves over *all* unchecked items first, then narrow the run to wave 1. Filtering before sorting would hide the dependencies that define the wave, and would trip Step 1's out-of-scope hard stop on items you yourself excluded; wave 1 computed over the full set has no unmet dependency by construction, so that stop cannot fire.
 - **Pick range** — collect a range via the `AskUserQuestion` free-text ("Other") option, e.g. `1,3-5,8`; validate each number exists and is unchecked. On a bad entry, **name the valid set** rather than just refusing — that is what turns a rejection into a second attempt that works: "#9 isn't a runnable item in `<slug>` (it's already checked / doesn't exist). Unchecked right now: #2, #3, #5, #7. → Next: rerun `/task:roadmap-to-workflow <slug>` and pick from those."
 
-One unchecked item → skip the question, run it. Zero unchecked → stop: "Every item in `<slug>` is already checked off — pick another roadmap, or capture new work with `/task:to-roadmap`. → Done."
+One open item → skip the question, run it. `unchecked=none` → stop: "Every item in `<slug>` is already checked off — pick another roadmap, or capture new work with `/task:to-roadmap`. → Done."
 
 ## Step 1: Collect items and sort into dependency waves
 

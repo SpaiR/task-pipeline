@@ -284,6 +284,8 @@ The executing session writes no separate pipeline artifacts — its implementati
 
 ### Setup-gate categories
 
+Every skill except `grill` opens on the same fixed block, substituted into its body by `!`-preprocessing over `skills/_lib/preflight.sh` (see [§ Helpers](#helpers)) — the gate costs no tool call, and `CONFIG: present|absent` is what the three categories below branch on. `AI_DIR:` from that block is the root every artifact path in the skill is relative to.
+
 Three categories, not two:
 
 - **Capture skills** (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) — the *intake-capable* four, in the skills' own wording — auto-run setup in a fresh project by following `skills/_lib/setup.md`: they write `.task/CLAUDE.md` on first use, without a confirmation chip, and never rewrite one that already exists.
@@ -328,7 +330,7 @@ Keeps the `.task/CLAUDE.md` precondition and English parser-stable strings. **No
 
 | Script | Role |
 |--------|------|
-| `preflight.sh` | one-call entry state for a skill's Step 0, substituted into the skill body by `!`-preprocessing rather than run as a tool call. `bash preflight.sh <task\|plan\|roadmap\|spec\|workflow>` prints a fixed block: `AI_DIR: <abs>`, `CONFIG: present\|absent`, one `ROADMAPS: <slug> <done>/<total> unchecked=<n,n>` line per roadmap (or `ROADMAPS: none`), `TASKS:` / `SPECS:` slug lists, and for kind `workflow` a `VALIDATE:` section holding `validate.sh all`'s output. Exit 0 whenever the block printed — an absent config is reported in `CONFIG:`, never as a status — and 2 only on a bad kind. The line prefixes are the contract; skills branch on them |
+| `preflight.sh` | one-call entry state for a skill's Step 0, substituted into the skill body by `!`-preprocessing rather than run as a tool call. `bash preflight.sh <task\|plan\|roadmap\|spec\|workflow>` prints a fixed block: `PLUGIN_ROOT: <abs>` (the plugin root, which the Workflow driver cannot expand for itself), `AI_DIR: <abs>`, `CONFIG: present\|absent`, one `ROADMAPS: <slug> <done>/<total> unchecked=<n,n>` line per roadmap (`unchecked=none` when it is fully ticked; `ROADMAPS: none` when there are no roadmaps at all), `TASKS:` / `SPECS:` slug lists, and for kind `workflow` a `VALIDATE:` section holding `validate.sh all`'s output. Exit 0 whenever the block printed — an absent config is reported in `CONFIG:`, never as a status — and 2 only on a bad kind. The line prefixes are the contract; skills branch on them |
 | `roadmap.sh` | artifact-path + roadmap parsing helpers: `resolve_artifact_path` (called by `roadmap-to-workflow` and `validate.sh`) and `roadmap_progress_counts` (called by `roadmap-to-workflow` only). The driver's per-item checkbox flip is its mark stage (see [§ execution shape](#roadmap-to-workflow-execution-shape-driver-contract)), **not** a helper here. |
 | `roadmap-driver.js` | the static Workflow script `roadmap-to-workflow` invokes via `scriptPath` — dependency waves in, parallel plan / serial implement → review → mark per item; parameterized only through `args` (see [§ execution shape](#roadmap-to-workflow-execution-shape-driver-contract)) |
 | `plan-driver.md` | the non-interactive mirror of `to-plan` that the driver's plan agents read instead of the full skill; mirrors [§ task.md format](#taskmd-format-tasktaskslugmd) — a change to that format or to `to-plan` Steps 3–7 changes this file in the same commit |

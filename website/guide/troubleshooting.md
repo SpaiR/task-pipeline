@@ -33,6 +33,24 @@ If you'd rather not run it at all, nothing is gated: the commit stands as it is,
 Claude Code's own `/verify` and `/code-review` are marked `disable-model-invocation`, which means a subagent — and a session that was merely *told* `implement …` rather than typing the command itself — cannot run them, and the failure is silent: an unlisted command is skipped, not refused, so the run would still report success. The pipeline names its own agent instead, so a missing reviewer fails loudly.
 :::
 
+### A skill aborts with a permission error before doing anything {#preflight-permission}
+
+**Symptom** — `/task:to-task` (or any capture skill, or `/task:roadmap-to-workflow`) stops immediately with a permission error naming a `preflight.sh` command, and nothing is written.
+
+**Cause** — each of those skills opens by having Claude Code run the plugin's own `preflight.sh` and substitute its output into the skill text, so the resolved `.task/` root, whether the project is set up, and the existing roadmaps/tasks/specs all arrive without a single tool call. Such an injected command never raises an approval prompt: if it matches no permission rule, the whole invocation aborts. The rule ships with the skill (`allowed-tools` in its frontmatter), so this only shows up when a local `deny` rule, an enterprise-managed setting, or a fork's edited frontmatter blocks it.
+
+**Fix** — allow the plugin's own helpers in your settings, or drop the `deny` rule that covers them:
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(bash *skills/_lib/preflight.sh* *)"]
+  }
+}
+```
+
+Nothing was written when this fires, so re-running the command after fixing the rule is safe.
+
 ### "CLAUDE.md not found"
 
 **Symptom** — a skill stops with `.task/CLAUDE.md not found`.

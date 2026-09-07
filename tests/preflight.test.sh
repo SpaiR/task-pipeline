@@ -35,10 +35,16 @@ printf '# S\n' >"$repo/.task/spec/event-envelope.md"
 p "$repo" plan
 assert_exit 0 "$P_EXIT" "configured project"
 assert_contains "$P_OUT" "AI_DIR: $repo/.task" "resolved root"
+assert_contains "$P_OUT" "PLUGIN_ROOT: $T_REPO_ROOT" "plugin root for the driver args"
 assert_contains "$P_OUT" "CONFIG: present" "config state"
 assert_contains "$P_OUT" "ROADMAPS: api-v2 1/2 unchecked=2" "progress and open item numbers"
 assert_contains "$P_OUT" "TASKS: some-task" "task slugs"
 assert_contains "$P_OUT" "SPECS: event-envelope" "spec slugs"
+
+t_case "a fully ticked roadmap reports unchecked=none"
+sed 's/^### - \[ \] 2\./### - [x] 2./' "$repo/.task/roadmap/api-v2.md" >"$repo/.task/roadmap/shipped.md"
+p "$repo" roadmap
+assert_contains "$P_OUT" "ROADMAPS: shipped 2/2 unchecked=none" "no open items"
 
 t_case "kind 'workflow' folds in the full validate sweep"
 p "$repo" workflow

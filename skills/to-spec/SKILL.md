@@ -16,17 +16,18 @@ Fix **load-bearing technical decisions** — a protocol, a cross-cutting data sh
 
 ### Step 0: Setup gate
 
-Resolve the pipeline root, then check whether its `CLAUDE.md` exists:
+The entry state, gathered before this skill reached you — no tool call of your own:
 
-```bash
-source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # exports AI_DIR
-echo "$AI_DIR"                                             # the resolved root — use this value verbatim in every artifact path below
-[[ -f "$AI_DIR/CLAUDE.md" ]] || echo "CLAUDE.md not found"
-```
+!`bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/preflight.sh" spec`
 
-**Every artifact path in this skill is under that resolved `$AI_DIR`, never the cwd** — `.task/spec/<slug>.md` below is shorthand for `$AI_DIR/spec/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves `$AI_DIR` itself) never sees.
+[docs/contract.md § Helpers](../../docs/contract.md#helpers) owns that block's shape. Read it, then act:
 
-- **`CLAUDE.md not found`** → `/task:to-spec` is intake-capable: read `${CLAUDE_PLUGIN_ROOT}/skills/_lib/setup.md` and follow it (detect stack → write `$AI_DIR/CLAUDE.md` from its template → record `git config --local task.root` → exclude `.task` → report what was written), then continue. No confirmation chip — the file is written first and edited afterwards if a detected value was wrong. `setup.md` owns the sub-steps and the template; do not restate either here. If `.task/CLAUDE.md` already exists, leave it untouched: it is user-owned, and only `task.root` and the `.git/info/exclude` line are restored when missing.
+1. `AI_DIR:` is the pipeline root. **Every artifact path in this skill is under it, never the cwd** — `.task/spec/<slug>.md` below is shorthand for `$AI_DIR/spec/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves the root itself) never sees.
+2. **`CONFIG: absent`** → this skill is intake-capable: read `${CLAUDE_PLUGIN_ROOT}/skills/_lib/setup.md` and follow it (detect stack → write `$AI_DIR/CLAUDE.md` from its template → record `git config --local task.root` → exclude `.task` → report what was written), then continue. No confirmation chip — the file is written first and edited afterwards if a detected value was wrong. `setup.md` owns the sub-steps and the template; do not restate either here.
+3. **`CONFIG: present`** → leave the file untouched: it is user-owned, and only `task.root` and the `.git/info/exclude` line are restored when missing.
+4. `SPECS:` lists the specs that already exist — Step 1 matches structural style against them and avoids re-pinning a decision one of them already carries; Step 4's slug-collision check reads the same list. Neither needs a listing call of its own.
+
+If that block arrived as a literal `` !`bash …` `` line instead of output, the preprocessing did not fire: run that one command yourself and continue exactly as above.
 
 There is no full-scan validate call here — the file this run writes is validated after the save (Step 4.5), and pre-existing artifacts are checked on demand with `validate.sh all`, never as an entry gate.
 
@@ -38,7 +39,7 @@ There is no full-scan validate call here — the file this run writes is validat
 
 ### Step 1: Load context
 
-Read `.task/CLAUDE.md` (Language, conventions), `CLAUDE.md` if present, and list `.task/spec/*` — match existing structural style and avoid duplicating a decision an existing spec already pins. List the `docs/` top level and skim entry points if any exist. Open source files only as far as needed to state a decision accurately — this is decision capture, not implementation.
+Read `.task/CLAUDE.md` (Language, conventions) and `CLAUDE.md` if present; the specs to match structural style against are Step 0's `SPECS:` list — read one only when this decision area may overlap it, so a decision it already pins is not duplicated. List the `docs/` top level and skim entry points if any exist. Open source files only as far as needed to state a decision accurately — this is decision capture, not implementation.
 
 ### Step 2: Cold start or harvest
 

@@ -12,9 +12,10 @@
 # Output (always these lines, in this order; English and fixed-shape, so a skill
 # can branch on them):
 #
+#   PLUGIN_ROOT: /abs/path/to/the/plugin
 #   AI_DIR: /abs/path/.task
 #   CONFIG: present | absent
-#   ROADMAPS: <slug> <done>/<total> unchecked=<n,n>     (one line per roadmap)
+#   ROADMAPS: <slug> <done>/<total> unchecked=<n,n>|none  (one line per roadmap)
 #   ROADMAPS: none                                      (when there are none)
 #   TASKS: <slug> <slug> … | none
 #   SPECS: <slug> <slug> … | none
@@ -46,6 +47,9 @@ source "$SCRIPT_DIR/resolve-ws.sh"     # sourcing runs find_ai_dir → exports A
 # shellcheck source=./roadmap.sh
 source "$SCRIPT_DIR/roadmap.sh"        # roadmap_progress_counts
 
+# The plugin root is two levels above this script; `roadmap-to-workflow` passes
+# it to the Workflow driver, which cannot expand a shell variable itself.
+echo "PLUGIN_ROOT: $(cd "$SCRIPT_DIR/../.." && pwd)"
 echo "AI_DIR: $AI_DIR"
 if [[ -f "$AI_DIR/CLAUDE.md" ]]; then
   echo "CONFIG: present"
@@ -74,7 +78,7 @@ else
       END { print out }
     ' "$f")
     printf 'ROADMAPS: %s %s/%s unchecked=%s\n' \
-      "$(basename "$f" .md)" "$done_n" "$total" "${open:---}"
+      "$(basename "$f" .md)" "$done_n" "$total" "${open:-none}"
   done
 fi
 
