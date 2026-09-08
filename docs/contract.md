@@ -304,6 +304,8 @@ The executing session writes no separate pipeline artifacts — its implementati
 
 Every skill except `grill` opens on the same fixed block, substituted into its body by `!`-preprocessing over `skills/_lib/preflight.sh` (see [§ Helpers](#helpers)) — the gate costs no tool call, and `CONFIG: present|absent` is what the three categories below branch on. `AI_DIR:` from that block is the root every artifact path in the skill is relative to.
 
+**Nothing else in a skill body may look like that injection.** The scan is positional — a `!` at line start or after whitespace, followed by a backticked command — and it runs over the raw body, so prose that merely *shows* the syntax is executed too: the platform runs every injection it finds and aborts the whole skill invocation when one fails. Quoting does not save it, because the pass that blanks ordinary code spans exempts a span whose preceding character is a backtick or a `!` — which is exactly what wrapping the example in double backticks produces. Each of the five skills therefore holds exactly one injection, its own Step 0 call, and `tests/skill-injections.test.sh` pins that count; `grill` holds none. Describe the unexpanded-line case in words instead of reproducing it.
+
 Three categories, not two:
 
 - **Capture skills** (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) — the *intake-capable* four, in the skills' own wording — auto-run setup in a fresh project by following `skills/_lib/setup.md`: they write `.task/CLAUDE.md` on first use, without a confirmation chip, and never rewrite one that already exists.

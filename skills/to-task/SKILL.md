@@ -27,7 +27,7 @@ The entry state, gathered before this skill reached you — no tool call of your
 3. **`CONFIG: present` → leave the file alone.** It is user-owned: never rewrite it, never re-detect its values, never "repair" a missing section. Only `task.root` and the `.git/info/exclude` line are restored when absent. Regenerating it is the user's move — delete, then re-run any capture.
 4. `ROADMAPS:` / `TASKS:` / `SPECS:` are what already exists. Step 1 branches on the roadmap lines and Step 2's slug-collision guard checks `TASKS:` — neither lists a directory of its own.
 
-If that block arrived as a literal `` !`bash …` `` line instead of output, the preprocessing did not fire: run that one command yourself and continue exactly as above.
+If that block arrived unexpanded — the command line itself rather than its output — the preprocessing did not fire: run that command yourself and continue exactly as above.
 
 There is no full-scan validate call here: the writer validates the one file it writes, and pre-existing artifacts are checked on demand with `validate.sh all`, never as an entry gate.
 

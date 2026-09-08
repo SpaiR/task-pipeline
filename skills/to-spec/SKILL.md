@@ -28,7 +28,7 @@ The entry state, gathered before this skill reached you — no tool call of your
 3. **`CONFIG: present`** → leave the file untouched: it is user-owned, and only `task.root` and the `.git/info/exclude` line are restored when missing.
 4. `SPECS:` lists the specs that already exist — Step 1 matches structural style against them and avoids re-pinning a decision one of them already carries; Step 4's slug-collision check reads the same list. Neither needs a listing call of its own.
 
-If that block arrived as a literal `` !`bash …` `` line instead of output, the preprocessing did not fire: run that one command yourself and continue exactly as above.
+If that block arrived unexpanded — the command line itself rather than its output — the preprocessing did not fire: run that command yourself and continue exactly as above.
 
 There is no full-scan validate call here: Step 4 validates the one file it writes, and pre-existing artifacts are checked on demand with `validate.sh all`, never as an entry gate.
 
