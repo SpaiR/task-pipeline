@@ -23,8 +23,10 @@ DRIVER_REL="skills/_lib/roadmap-driver.js"
 # Top-level manifest keys sit at exactly two spaces, so this cannot pick up the
 # nested `author.name` (four).
 manifest_name=$(awk -F'"' '/^  "name":/ {print $4; exit}' "$MANIFEST")
-# The `"workflows"` value, whether it stays on one line or gets reflowed.
+# The `"workflows"` value, whether it stays on one line or gets reflowed, and
+# the path it declares exactly as written.
 workflows=$(awk '/^  "workflows"/,/\]/' "$MANIFEST")
+declared=$(printf '%s\n' "$workflows" | tr ',' '\n' | sed -n 's/.*"\([^"]*\.js\)".*/\1/p' | head -1)
 # `meta.name` out of the `export const meta = {` block, either quote style.
 meta_name=$(awk '/^export const meta = \{/,/^\}/' "$DRIVER" |
   sed -n -E "s/^  name: ['\"]([^'\"]+)['\"],?[[:space:]]*\$/\1/p")
@@ -33,7 +35,11 @@ call=$(sed -n '/^Workflow({$/,/^  args: {$/p' "$SKILL")
 invoked=$(printf '%s\n' "$call" | sed -n -E 's/^  name: "([^"]+)",?[[:space:]]*$/\1/p')
 
 t_case "the manifest declares the driver as a plugin workflow"
-assert_contains "$workflows" "$DRIVER_REL" "\"workflows\" entry"
+# Compared whole, `./` included: the manifest schema requires every declared
+# path to start with `./`, and a bare relative path does not just skip the
+# driver — the manifest fails validation and the entire plugin refuses to
+# load, skills and agent with it.
+assert_eq "./$DRIVER_REL" "$declared" "the declared path, ./-prefixed"
 [[ -f "$DRIVER" ]] && declared_exists=yes || declared_exists=no
 assert_eq "yes" "$declared_exists" "the declared path exists on disk"
 
