@@ -1,15 +1,19 @@
 export const meta = {
-  name: 'task-pipeline-roadmap',
+  name: 'roadmap-driver',
   description: "Run a roadmap's unchecked items in dependency-ordered waves: parallel planning, strictly serial implement → review → mark per item, stop on FAIL",
-  whenToUse: "Invoked by the task-pipeline plugin's roadmap-to-workflow skill with {slug, aiDir, pluginRoot, specPaths, items, done, scope} args — not meant to be run by hand.",
+  whenToUse: "Do not call this directly. Only the task-pipeline plugin's /task:roadmap-to-workflow skill invokes it, building {slug, aiDir, pluginRoot, specPaths, items, done, scope} from a validated roadmap file and a scope the user confirmed — hand-assembled args skip that and can commit work against a stale item list. To run a roadmap, invoke that skill instead.",
 }
 
 // The task-pipeline roadmap driver. The roadmap-to-workflow skill reports what
 // the roadmap SAYS — the unchecked items with their dependencies, the numbers
 // already marked, and the user's chosen scope — and this script derives the
-// dependency waves itself (computeWaves below). Invoked via
-// Workflow({scriptPath, args}); the script never changes between runs, so
-// resumeFromRunId replays completed stages from cache. Contract:
+// dependency waves itself (computeWaves below). Invoked as
+// Workflow({name: 'task:roadmap-driver', args}): the plugin manifest declares
+// this file under "workflows", so the platform registers it and reads it
+// itself. A scriptPath into the plugin cannot work — the tool checks it for
+// read permission against the session's cwd, and a plugin never sits inside
+// it. The script never changes between runs, so resumeFromRunId replays
+// completed stages from cache. Contract:
 // docs/contract.md § roadmap-to-workflow execution shape (driver contract).
 //
 // The Workflow sandbox has no filesystem access — every write (the task files,

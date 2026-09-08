@@ -15,7 +15,9 @@ We use [GitHub](https://github.com/SpaiR/task-pipeline) to host code, track issu
 ## Repository structure
 
 ```
-.claude-plugin/plugin.json       plugin manifest (name `task`, version, metadata)
+.claude-plugin/plugin.json       plugin manifest (name `task`, version, metadata; declares
+                                   roadmap-driver.js under `workflows`, which is what registers
+                                   it as `task:roadmap-driver`)
 .claude-plugin/marketplace.json  catalog for the `task-pipeline` marketplace
 .claude/                         repo-local maintainer tooling — NOT shipped with the plugin:
   skills/self-audit/             meta-skill: audits this repo for invariant / contract /

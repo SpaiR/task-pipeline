@@ -4,15 +4,19 @@ on:
   push:
     branches: [main]
     paths:
+      # Wider than the helpers: the suite also reads every SKILL.md (injection
+      # count, the driver's registered name) and the plugin manifest.
       - 'tests/**'
-      - 'skills/_lib/**'
-      - 'skills/validate/**'
+      - 'skills/**'
+      - '.claude-plugin/**'
       - '.github/workflows/tests.yml'
   pull_request:
     paths:
+      # Wider than the helpers: the suite also reads every SKILL.md (injection
+      # count, the driver's registered name) and the plugin manifest.
       - 'tests/**'
-      - 'skills/_lib/**'
-      - 'skills/validate/**'
+      - 'skills/**'
+      - '.claude-plugin/**'
       - '.github/workflows/tests.yml'
   workflow_dispatch:
 
