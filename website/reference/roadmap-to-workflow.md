@@ -55,6 +55,8 @@ Stopped at #3 <item-slug> in wave 2. Its work is left in the working tree —
 
 If the Workflow tool isn't available, it falls back to running items one at a time by hand, in the same wave order — `to-plan` then a plain `implement` session, ticking the checkbox before moving on.
 
+A driver that doesn't resolve is a different case and does **not** fall back. The driver ships with the plugin and is registered as `task:roadmap-driver`, so a name that fails to resolve means a stale or unreloaded plugin, not an environment without automation — the skill stops and says to update the plugin and restart, rather than putting you through the slow path for an install defect. See [Troubleshooting](/guide/troubleshooting#roadmap-driver-not-registered).
+
 ## Does not
 
 - Run setup on a missing `.task/CLAUDE.md` — it hard-stops and redirects.
