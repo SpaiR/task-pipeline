@@ -72,9 +72,27 @@ t_case "prose language is reported as evidence, ascii vs non-ascii"
 printf '# Проект\n\nЭто описание на русском языке.\n' >"$empty/README.md"
 d "$empty"
 assert_contains "$D_OUT" "README_LANG: non-ascii" "non-latin prose"
+# The whole line, not just the prefix: verdict, separator and sample. The
+# verdict used to go missing while the rest of the line stayed intact, and a
+# check that reads only the prefix takes that for success.
+assert_eq "README_LANG: non-ascii — Это описание на русском языке." \
+  "$(printf '%s\n' "$D_OUT" | grep '^README_LANG:' | sed 's/[[:space:]]*$//')" "the whole line"
 printf '# Project\n\nA plain english description.\n' >"$empty/README.md"
 d "$empty"
 assert_contains "$D_OUT" "README_LANG: ascii" "latin prose"
+
+t_case "the verdict is there on every run, not on most of them"
+# It vanished on roughly one run in twenty: `lang_of` fed a here-string to a
+# `grep -q` that exits at the first match, and bash 5.x killed the
+# command-substitution subshell often enough to fail this file about once per
+# twenty suite runs. One call cannot see that — fifty make a recurrence fail
+# here instead of somewhere a user is watching.
+printf '# Проект\n\nЭто описание на русском языке.\n' >"$empty/README.md"
+lost=0
+for _ in $(seq 1 50); do
+  [[ "$(bash "$DETECT" "$empty" | grep -c '^README_LANG: non-ascii — ')" == 1 ]] || lost=$((lost + 1))
+done
+assert_eq "0" "$lost" "runs out of 50 that lost the verdict"
 
 t_case "outside a git repository the commit-language line says so"
 d "$empty"

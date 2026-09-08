@@ -110,7 +110,12 @@ echo "TEST_CONVENTION: $conv"
 
 # --- language evidence, not a verdict ----------------------------------------
 lang_of() { # <text> → "ascii" | "non-ascii"
-  LC_ALL=C grep -q '[^[:print:][:space:]]' <<<"$1" && echo "non-ascii" || echo "ascii"
+  # Piped, not a here-string. With `<<<` feeding a `grep -q` that exits at the
+  # first match, bash 5.x intermittently kills the command-substitution
+  # subshell (signal 11, ~5% of runs measured here, either grep) — the caller's
+  # line then prints with no verdict at all, silently. A pipe puts the writer
+  # in its own process and the crash goes away.
+  printf '%s' "$1" | LC_ALL=C grep -q '[^[:print:][:space:]]' && echo "non-ascii" || echo "ascii"
 }
 readme_sample=""
 for f in README.md readme.md; do
