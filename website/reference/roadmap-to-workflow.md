@@ -16,7 +16,7 @@ See the [autopilot guide](/guide/autopilot) for the full walkthrough.
 
 1. **Scope** — asks (via chips) how much to run: all remaining items, just the next dependency-wave, or a picked range like `1,3-5,8`.
 2. **Waves** — the driver topologically sorts the unchecked items on `**Dependencies:**` into waves, before it spawns anything. A dependency cycle among scoped items is a hard stop, and so is a scope that leaves a dependency neither ticked nor included; both come back as one line naming the items.
-3. **Per item, three agents** — the default shape is **opus-plans / sonnet-implements / reviewer-reviews**: a first agent plans the item (per `skills/_lib/plan-driver.md`, on sonnet at low effort when the item's `**Model:**` hint is `haiku`); a second implements and commits, using the item's `**Model:**` hint if present; a third is `task:code-reviewer`, which reviews that commit, proves each finding, fixes the confirmed ones inside the plan's `Touches`, runs `.task/CLAUDE.md` → Build and Tests, and commits those fixes on top. Context passes via the on-disk task file, not chat. The reviewer pins its own model, so the item's `**Model:**` hint never downgrades the review.
+3. **Per item, four stages** — three agents plus the driver's own mark stage (step 5). The default shape is **opus-plans / sonnet-implements / reviewer-reviews**: a first agent plans the item (per `skills/_lib/plan-driver.md`, on sonnet at low effort when the item's `**Model:**` hint is `haiku`); a second implements and commits, using the item's `**Model:**` hint if present; a third is `task:code-reviewer`, which reviews that commit, proves each finding, fixes the confirmed ones inside the plan's `Touches`, runs `.task/CLAUDE.md` → Build and Tests, and commits those fixes on top. Context passes via the on-disk task file, not chat. The reviewer pins its own model, so the item's `**Model:**` hint never downgrades the review.
 4. **Parallel plans, serialized implement-then-review** — within a wave, all items are planned in parallel (plan agents only write their own task files), then each item is implemented and reviewed strictly one at a time in the shared working tree, both inside the same serial loop. A barrier separates waves, so each implement sees its already-landed wave-mates' reviewed commits.
 5. **Driver auto-marks** — after an item's *review* returns OK, the **driver** ticks its checkbox — never the per-item agent, so parallel wave-mates never race on the roadmap file. The flip is idempotent: an already-ticked item is the desired end state, not a failure. It stops the wave only when the roadmap holds no unique `### - [ ] N.` heading for that item — renumbered, retitled, or duplicated.
 
@@ -29,10 +29,14 @@ See the [autopilot guide](/guide/autopilot) for the full walkthrough.
 One digest line per stage as each wave lands; stop-on-FAIL (an implement *or* a review `FAIL` stops the run):
 
 ```text
+OK #1 migrate-auth-endpoints planned
+OK #2 update-client-sdk planned
 OK #1 migrate-auth-endpoints implemented, committed
 OK #1 migrate-auth-endpoints reviewed — 2 fixes, tests green, fixes committed
+OK #1 migrate-auth-endpoints marked
 OK #2 update-client-sdk implemented, committed
 OK #2 update-client-sdk reviewed — 0 findings, tests green
+OK #2 update-client-sdk marked
 Ran `api-v2-migration`: 2 of 2 items landed and ticked, 0 still unchecked.
   Commits: a1b2c3d..e4f5a6b.
 → Done. Roadmap complete — `.task/roadmap/api-v2-migration.md` fully checked.
@@ -51,16 +55,16 @@ Stopped at #3 <item-slug> in wave 2. Its work is left in the working tree —
   only the unchecked remainder reruns.
 ```
 
-## Fallback
+## No Workflow tool
 
-If the Workflow tool isn't available, it falls back to running items one at a time by hand, in the same wave order — `to-plan` then a plain `implement` session, ticking the checkbox before moving on.
+If the Workflow tool isn't available in your environment, the skill hard-stops instead of running anything itself — it prints the unchecked items and a by-hand recipe: run `/task:to-plan <slug>#<N>` for one item in this chat, then say `implement .task/task/<item-slug>.md` in a fresh session. That session's `## Execution` pointer carries plan → commit → `task:code-reviewer` on its own and ticks the roadmap checkbox itself, so there's nothing further to do per item — just repeat for the next one, in dependency order.
 
-A driver that doesn't resolve is a different case and does **not** fall back. The driver ships with the plugin and is registered as `task:roadmap-driver`, so a name that fails to resolve means a stale or unreloaded plugin, not an environment without automation — the skill stops and says to update the plugin and restart, rather than putting you through the slow path for an install defect. See [Troubleshooting](/guide/troubleshooting#roadmap-driver-not-registered).
+A driver that doesn't resolve is a different case and does **not** get this treatment. The driver ships with the plugin and is registered as `task:roadmap-driver`, so a name that fails to resolve means a stale or unreloaded plugin, not an environment without automation — the skill stops and says to update the plugin and restart, rather than putting you through the by-hand path for an install defect. See [Troubleshooting](/guide/troubleshooting#roadmap-driver-not-registered).
 
 ## Does not
 
 - Run setup on a missing `.task/CLAUDE.md` — it hard-stops and redirects.
-- Loop items in the main session, or re-author the Workflow script inline, instead of invoking the shipped driver (except the documented serial fallback).
+- Loop items in the main session, or re-author the Workflow script inline, instead of invoking the shipped driver — including when the Workflow tool is unavailable, which is a hard stop, not a cue to run the items itself.
 - Run an item whose dependencies are still unchecked.
 - Auto-mark a checkbox from inside a per-item agent — strictly the driver's job.
-- Modify project code itself — all implementation happens inside the per-item implement agents, run one at a time in the shared working tree.
+- Modify project code or any file itself — all implementation happens inside the per-item implement agents, run one at a time in the shared working tree.

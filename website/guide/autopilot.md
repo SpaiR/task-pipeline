@@ -22,10 +22,14 @@ Launched with no argument, it asks which roadmap and how much to cover.
 Output is one digest line per stage as each wave lands:
 
 ```text
+OK #1 migrate-auth-endpoints planned
+OK #2 update-client-sdk planned
 OK #1 migrate-auth-endpoints implemented, committed
 OK #1 migrate-auth-endpoints reviewed — 2 fixes, tests green, fixes committed
+OK #1 migrate-auth-endpoints marked
 OK #2 update-client-sdk implemented, committed
 OK #2 update-client-sdk reviewed — 0 findings, tests green
+OK #2 update-client-sdk marked
 → Done. Roadmap complete — .task/roadmap/api-v2-migration.md fully checked.
 ```
 
@@ -61,6 +65,6 @@ Fix the failing item (edit its task file, or re-implement it by hand), tick its 
 
 ## No Workflow tool?
 
-If the Workflow tool isn't available in your environment, `roadmap-to-workflow` falls back to the same hand-picked pattern: `to-plan` on one item at a time, then a plain `implement` session, ticking the checkbox before moving on. Same order, same result — just serial.
+If the Workflow tool isn't available in your environment, `roadmap-to-workflow` hard-stops instead of running anything itself — it prints the unchecked items and tells you to run them by hand, in dependency order: `to-plan` on one item in this chat, then `implement .task/task/<item-slug>.md` in a fresh session. That session's `## Execution` pointer already carries plan → commit → `task:code-reviewer`, and it ticks the roadmap checkbox itself — so this is exactly the "mixing hand-picked items" pattern above, just for every item instead of the first one.
 
 → Next: [Specs](/guide/specs) — pinning the technical decisions a roadmap leans on.
