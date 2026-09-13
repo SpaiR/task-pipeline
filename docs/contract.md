@@ -15,6 +15,9 @@ to-task | to-plan | to-roadmap        ← capture depth is the skill, not a flag
 to-spec                               ← pins technical decisions, cited via Spec:
   ↓                       ↓
 implement session   roadmap-to-workflow   ← the launcher fans items out to sessions
+  ↓                       ↓
+task:code-reviewer                    ← the plugin's own review pass, spawned by both:
+                                        prove → fix within Touches → Build and Tests → commit the fixes
 ```
 
 - `grill` — **pre-capture, produces no artifact.** Interrogates a plan/decision one question at a time, keeps an in-chat decision-plus-rationale ledger, ends with a pre-mortem (skipped when it would change nothing), and routes to the right capture skill. Depth is an outcome, not a target — it stops when no unanswered fork would change the capture, offering a wrap-up-or-keep-going checkpoint when only secondary forks remain. Touches nothing under `.task/`; its output is a hardened discussion the `to-*` skills then serialize.
