@@ -7,7 +7,7 @@ user-invocable: true
 allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/_lib/write-task.sh* *) Bash(bash *skills/_lib/roadmap-items.sh* *) Bash(bash *skills/_lib/detect-project.sh* *) Bash(bash *skills/validate/validate.sh* *)'
 ---
 
-Drive an approved roadmap through a dynamic Workflow. This skill reports the roadmap's unchecked items and the scope the user picks; the **plugin-shipped driver** (`skills/_lib/roadmap-driver.js`, invoked by name as `task:roadmap-driver`) sorts them into dependency-ordered **waves** and, per wave, plans in parallel then implements, reviews and ticks off one item at a time in the shared working tree. The driver is a static file, inspectable at any time and parameterized only through `args` (Step 2) — never hand-rolled here, never re-authored inline. Without the Workflow tool, Step 2's fallback runs the items serially by hand.
+Drive an approved roadmap through a dynamic Workflow. This skill reports the roadmap's unchecked items and the scope the user picks; the **plugin-shipped driver** (`skills/_lib/roadmap-driver.js`, invoked by name as `task:roadmap-driver`) sorts them into dependency-ordered **waves** and, per wave, plans in parallel then implements, reviews and ticks off one item at a time in the shared working tree. The driver is a static file, inspectable at any time and parameterized only through `args` (Step 2) — never hand-rolled here, never re-authored inline. Without the Workflow tool, Step 2 hard-stops instead of running the items itself.
 
 **Per-item execution is a four-stage split:** opus plans it (sonnet at low effort when the item's `**Model:**` hint is `haiku`), the item's own model implements and commits, `task:code-reviewer` reviews and commits its fixes on top, and a cheap driver stage ticks the checkbox. The review stage ignores the hint, pinning its own model — a `haiku` item never gets a `haiku` review.
 
@@ -109,14 +109,19 @@ Per wave the driver plans every item in `parallel()` — each plan agent follows
 
 **Rerun / resume.** The workflow name and args are static, so `resumeFromRunId` replays completed stages from cache — prefer it after a stop in the same session. A plain rerun is equivalent in effect: Step 1 reports only unchecked items, and ticked ones never rerun.
 
-**Driver not registered** — the Workflow tool is there, but `task:roadmap-driver` does not resolve; the tool's error names the workflow and lists what is registered. The driver ships with the plugin, so this is an install fact rather than an environment one: a stale plugin snapshot, an update this session never reloaded, or a CLI build that does not load plugin-shipped workflows yet. Do not retry by path, and do not slide into the manual fallback below — that would hide a broken install behind the slowest available path. Stop, quoting the tool's own error:
+**Driver not registered** — the Workflow tool is there, but `task:roadmap-driver` does not resolve; the tool's error names the workflow and lists what is registered. The driver ships with the plugin, so this is an install fact rather than an environment one: a stale plugin snapshot, an update this session never reloaded, or a CLI build that does not load plugin-shipped workflows yet. Do not retry by path, and do not treat it as the no-Workflow-tool case below — that would hide a broken install behind the slowest available path. Stop, quoting the tool's own error:
 
 ```
 `task:roadmap-driver` is not registered in this session, so autopilot cannot start — the `task` plugin is stale, or was updated without a restart. The Workflow tool reported: "<its error, verbatim>". The items can still be run by hand, but the fix is the reinstall.
 → Next: update or reinstall the `task` plugin, restart Claude Code, then rerun `/task:roadmap-to-workflow <slug>`.
 ```
 
-**Graceful fallback** — no Workflow tool at all in this environment, which is not the case above. Run the items one at a time, in dependency order, and for each: run `/task:to-plan <slug>#<N>`, then take the written path from **its own digest** rather than reconstructing `<item-slug>` from the title (a collision may have disambiguated it). Say `implement <that path>` in a plain session — its `## Execution` pointer already carries plan → commit → `task:code-reviewer`, so the review happens there. Tell that session **not** to tick the checkbox (despite `## Executing a task` step 5), and tick it yourself once its review came back OK, before the next item. Auto-mark stays the driver's job either way.
+**No Workflow tool** — the Workflow tool itself is absent from this environment, which is a different case from the one above (there, the tool is present but the driver's name fails to resolve). Autopilot cannot run without it, so this skill stops rather than looping the items itself. Stop, with this message:
+
+```
+Autopilot needs the Workflow tool, and it isn't available in this environment, so `/task:roadmap-to-workflow` can't run. The items can still be run by hand, one at a time, in dependency order: in this chat, run `/task:to-plan <slug>#<N>` for one unchecked item, then start a fresh session and say `implement .task/task/<item-slug>.md`. That session's `## Execution` pointer carries plan → commit → `task:code-reviewer` on its own, and ticks the roadmap checkbox itself via `## Executing a task` step 5 — nothing further to do per item.
+→ Next: run `/task:to-plan <slug>#<N>` for the first unchecked item.
+```
 
 ## Output
 
@@ -134,11 +139,11 @@ Per wave the driver plans every item in `parallel()` — each plan agent follows
 ## Forbidden
 
 - Running setup on a missing `.task/CLAUDE.md`. This skill hard-stops and redirects; only the four capture skills are intake-capable.
-- Looping the items yourself in this session's thread, or authoring a Workflow script inline via the `script` input. The shipped driver is what gives each item fresh context, per-item model control, parallel planning and driver-side auto-mark; a hand-rolled loop or a re-authored copy drifts from it. (The one-at-a-time manual fallback is only for when the Workflow tool is unavailable.)
+- Looping the items yourself in this session's thread, or authoring a Workflow script inline via the `script` input. The shipped driver is what gives each item fresh context, per-item model control, parallel planning and driver-side auto-mark; a hand-rolled loop or a re-authored copy drifts from it — including when the Workflow tool is unavailable, which is a hard stop, not a cue to loop the items yourself.
 - Reaching the driver by path instead of by its registered name. The Workflow tool checks a `scriptPath` for read permission against this session's working directory, and a plugin's own directory is never inside it — so the run dies before the first agent, everywhere except a checkout of the plugin itself. A name that does not resolve gets the hard-stop above, never a path retry.
 - Passing `args` as a JSON-encoded string, or any path relative — the sandbox expands nothing, and the driver's assertions reject both.
 - Sorting the items yourself, or narrowing `items` to the chosen scope. Both are `computeWaves`' job, and a pre-narrowed set hides the dependencies that define a wave.
 - Auto-marking a checkbox from inside a plan / implement / review agent — the flip is the driver's own stage, strictly after that item's review returns `OK`, so parallel writers never race on the roadmap file.
 - Instructing an implement agent to run `/verify` or `/code-review`: both are `disable-model-invocation`, so a subagent skips them silently and still reports `OK`. Verification and review live inside `task:code-reviewer`.
 - Passing `model` or `isolation` to the review stage — it pins its own model, and an isolated worktree would hide the very tree it must review and commit into.
-- Modifying project code yourself, or touching any file but the roadmap. Implementation happens in the per-item agents, review fixes in the review agent.
+- Modifying project code or any file yourself — including the roadmap. Implementation happens in the per-item agents, review fixes in the review agent, the checkbox flip in the driver's mark stage.

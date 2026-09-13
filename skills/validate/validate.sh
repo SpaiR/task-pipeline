@@ -319,11 +319,12 @@ validate_roadmap() {
   # Item numbers are the driver's auto-mark key — the driver's inline awk flip
   # keys on N and requires exactly one heading for it, so a duplicate N makes the
   # mark stage FAIL the wave outright. Flag any number that appears on more than
-  # one item heading.
+  # one item heading. Compare numerically — `1.` and `01.` are the same item to
+  # every other consumer (the Dependencies check below, the driver's `0*` match).
   local dup
   dup=$(awk '
     match($0, /^### - \[[ x~>-]\] [0-9]+\./) {
-      s = substr($0, RSTART, RLENGTH); gsub(/[^0-9]/, "", s); cnt[s]++
+      s = substr($0, RSTART, RLENGTH); gsub(/[^0-9]/, "", s); cnt[s + 0]++
     }
     END { for (n in cnt) if (cnt[n] > 1) print n }
   ' "$file")

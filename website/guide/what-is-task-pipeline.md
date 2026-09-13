@@ -47,6 +47,9 @@ to-task | to-plan | to-roadmap        ← capture depth is the skill, not a flag
 to-spec                               ← pins technical decisions, cited via Spec:
   ↓                       ↓
 implement session   roadmap-to-workflow   ← the launcher fans items out to sessions
+  ↓                       ↓
+task:code-reviewer                    ← the plugin's own review pass, spawned by both:
+                                        prove → fix within Touches → Build and Tests → commit the fixes
 ```
 
 A few things to notice, because they're the load-bearing design choices:

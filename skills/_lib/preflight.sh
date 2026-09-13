@@ -71,7 +71,7 @@ else
     # owned by `roadmap.sh` (see its header) — an unchecked item is the one
     # state that is NOT in the done class.
     open=$(awk '
-      match($0, /^### - \[ \] [0-9]+\./) {
+      match($0, /^### - \[ \] [0-9]+\. /) {
         s = substr($0, RSTART, RLENGTH); gsub(/[^0-9]/, "", s)
         out = (out == "" ? s : out "," s)
       }

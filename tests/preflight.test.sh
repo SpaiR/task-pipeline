@@ -54,6 +54,28 @@ assert_contains "$P_OUT" "VALIDATE:" "sweep section"
 # report errors — and preflight must still exit 0, leaving the call to the skill.
 assert_contains "$P_OUT" "ERROR" "sweep output is passed through"
 
+t_case "a heading with no space after the item dot is not counted as unchecked"
+# Same heading grammar `roadmap_progress_counts` (roadmap.sh), roadmap-items.sh
+# and validate.sh's item regex all require: `### - [ ] N. ` (dot THEN space).
+# A heading missing that space is not a valid item to any of them, so it must
+# not surface here either — else the picker offers an item no other parser sees.
+cat >"$repo/.task/roadmap/nospace.md" <<'MD'
+# No space
+
+### - [ ] 3.Title with no space after the dot
+MD
+p "$repo" roadmap
+assert_contains "$P_OUT" "ROADMAPS: nospace 0/0 unchecked=none" "malformed heading counts as zero items, not an open one"
+
+t_case "a well-formed heading with the required space is counted as unchecked"
+cat >"$repo/.task/roadmap/withspace.md" <<'MD'
+# With space
+
+### - [ ] 3. Title with the required space
+MD
+p "$repo" roadmap
+assert_contains "$P_OUT" "ROADMAPS: withspace 0/1 unchecked=3" "well-formed heading is offered as open item 3"
+
 t_case "an unknown kind is a usage error"
 p "$repo" nonsense
 assert_exit 2 "$P_EXIT" "bad kind"

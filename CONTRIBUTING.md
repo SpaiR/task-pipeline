@@ -66,7 +66,9 @@ agents/                          the plugin's subagent definitions (auto-loaded 
                                    plan's Touches, run .task/CLAUDE.md → Build and Tests, commit
                                    the fixes on top of the implementation's commit
 tests/                           the bash-layer test suite — run.sh + lib.sh + one *.test.sh
-                                   per helper; `bash tests/run.sh`, bash/awk/git only, run on
+                                   per helper; `bash tests/run.sh`, bash, awk and git — plus node
+                                   for the driver-wave case, which skips with a SKIP line when
+                                   node is absent — run on
                                    ubuntu and macOS by .github/workflows/tests.yml
 evals/                           prompt-level `claude plugin eval` cases (prompt.md + graders/
                                    per case) — a quality signal for the skills, NOT in CI;
@@ -93,7 +95,7 @@ README.md                        GitHub landing page (links to the docs site)
 
 1. Fork the project (or branch off `main`, if you have direct push access).
 2. Make sure the artifact validator still passes against any `.task/` snapshot you used while developing: `bash skills/validate/validate.sh all`.
-3. Run the bash-layer suite: `bash tests/run.sh` (one case file per helper under `tests/`, bash + awk + git only, no bats). It must be green, and a change to a helper's behaviour comes with a case that covers it.
+3. Run the bash-layer suite: `bash tests/run.sh` (one case file per helper under `tests/`, bash, awk and git — plus node for the driver-wave case, which skips with a SKIP line when node is absent — no bats). It must be green, and a change to a helper's behaviour comes with a case that covers it.
 4. Manually run the affected skill in a real project before opening the PR. For a prompt change, the eval suite under `evals/` is the closest thing to an automated check — `claude plugin eval .`, or `--case '<name>*'` for one case; it needs the early-access `plugin eval` feature, and it is not wired into CI. See [`evals/README.md`](evals/README.md), including which graders are still unverified.
 5. Open the pull request against `main`.
 
@@ -192,7 +194,7 @@ The `footer` is optional. The [Commit Message Footer](#commit-message-footer) fo
   │       │             │
   │       │             └─⫸ Summary in imperative, present tense. Not capitalized. No period at the end.
   │       │
-  │       └─⫸ Commit Scope: skill name | skills | agents | lib | plugin | github | website | readme | claudemd | contract | changelog | contributing
+  │       └─⫸ Commit Scope: skill name | skills | agents | lib | plugin | github | website | readme | claudemd | contract | changelog | contributing | tests | evals
   │
   └─⫸ Commit Type: feat | fix | refactor | perf | docs | test | chore | revert
 ```
