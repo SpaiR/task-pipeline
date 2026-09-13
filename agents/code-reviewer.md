@@ -31,20 +31,38 @@ You are spawned with: the task artifact's path, and a reference string to echo i
 
 ## Phase 1 — Gather the diff
 
-The implementation is already committed. Establish exactly what you are reviewing:
+The implementation is already committed — **possibly as several commits.** A plan implemented per Conventional Commits often lands one commit per step, so reviewing only `HEAD` would review the last step and miss the rest. Find the base first, then diff against it:
 
 ```bash
-git log --oneline -5
+git log --oneline -12
 git status --porcelain
-git diff HEAD~1 HEAD --stat     # the implementation commit (git show --stat HEAD if HEAD has no parent)
-git diff HEAD                   # anything the implementation left uncommitted
 ```
 
-The **diff under review** is `HEAD`'s commit plus any uncommitted working-tree changes. Read the full patch, not only the stat — `git diff HEAD~1 HEAD` and `git diff HEAD` in full, per file. Record `HEAD`'s sha — phase 6 commits on top of it.
+Walk back from `HEAD` one commit at a time, checking each commit's files against the **Touches set** from phase 0:
 
-Check one thing here, because phase 6 depends on it: does `HEAD` actually contain part of the change under review? Compare `git diff HEAD~1 HEAD --name-only` against the Touches set and the working-tree changes. If `HEAD` is unrelated (the implementation was never committed, and the whole change sits uncommitted), record **`implementation commit: none`** and carry that to phase 6 — you must not sweep an uncommitted implementation into a commit of your own.
+```bash
+git show --name-only --format='%h %an %s' <sha>
+```
 
-**Mandatory output:** the reviewed sha and its subject line; the changed-file list with line counts; the uncommitted-changes list (or `none`); and either `implementation commit: <sha>` or `implementation commit: none — the change is uncommitted`.
+Include a commit while its files intersect the Touches set, and stop at the first one that does not. The base is the parent of the oldest included commit; with only `HEAD` included, the base is `HEAD~1` (`git show --stat HEAD` when `HEAD` has no parent). Three bounds on the walk, so it cannot swallow unrelated history:
+
+- **Cap it at 10 commits.** A longer run of touching commits means the tree holds more than this task's work; take the 10 and say so.
+- **Stop at a commit that is plainly not this task's** — a different author, or a subject describing unrelated work — even when its files intersect.
+- **Touches set empty** (no `## Plan`) → do not walk at all: the base is `HEAD~1`, exactly as before, since there is no scope to match commits against.
+- **`HEAD` itself does not intersect** → nothing is included and there is no oldest commit to take a parent of. The base is `HEAD~1` and `<K>` is `0`, which is precisely the `implementation commit: none` case the check below records — the change is uncommitted, so the working tree is the whole diff.
+
+Then read the **full patch**, not only the stat — per file, both of:
+
+```bash
+git diff <base> HEAD          # the implementation's commits
+git diff HEAD                 # anything the implementation left uncommitted
+```
+
+The **diff under review** is `<base>..HEAD` plus any uncommitted working-tree changes. Record `HEAD`'s sha — phase 6 commits on top of it, and every later phase diffs against `<base>`, never `HEAD~1`.
+
+Check one thing here, because phase 6 depends on it: does `HEAD` actually contain part of the change under review? Compare `git diff <base> HEAD --name-only` against the Touches set and the working-tree changes. If `HEAD` is unrelated (the implementation was never committed, and the whole change sits uncommitted), record **`implementation commit: none`** and carry that to phase 6 — you must not sweep an uncommitted implementation into a commit of your own.
+
+**Mandatory output:** the literal line `reviewed range: <base>..HEAD (<K> commits)`; each reviewed commit's sha and subject; the changed-file list with line counts; the uncommitted-changes list (or `none`); and either `implementation commit: <sha>` or `implementation commit: none — the change is uncommitted`.
 
 ## Phase 2 — Find candidates
 
@@ -52,7 +70,7 @@ Read the diff for defects. Look for, in rough priority order: correctness bugs o
 
 Do **not** file style preferences, naming opinions, or "consider extracting this" as candidates. This pass exists to catch what is wrong, not what you would have written differently.
 
-Fan out with `Agent` when the diff is large or spans unrelated subsystems: give each sub-agent one file or one subsystem and the same "candidates only, no fixes" mandate. **One level of fan-out only** — your sub-agents must not spawn agents of their own (the spawn-depth budget ends there). Sub-agents read and report; they never edit.
+Fan out with `Agent` when the diff is large or spans unrelated subsystems: give each sub-agent one file or one subsystem and the same "candidates only, no fixes" mandate, on **`model: sonnet`** — gathering candidates is reading and reporting, and the judgement that needs your own model happens in phase 3, where each candidate is proven or refuted. **One level of fan-out only** — your sub-agents must not spawn agents of their own (the spawn-depth budget ends there). Sub-agents read and report; they never edit.
 
 **Mandatory output:** a numbered candidate list, one line each — `<n>. <file>:<line> — <the claim>`. When you find nothing: the literal line `0 candidates — diff read in full, nothing to prove.`
 

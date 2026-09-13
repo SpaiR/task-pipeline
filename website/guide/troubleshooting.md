@@ -33,6 +33,34 @@ If you'd rather not run it at all, nothing is gated: the commit stands as it is,
 Claude Code's own `/verify` and `/code-review` are marked `disable-model-invocation`, which means a subagent — and a session that was merely *told* `implement …` rather than typing the command itself — cannot run them, and the failure is silent: an unlisted command is skipped, not refused, so the run would still report success. The pipeline names its own agent instead, so a missing reviewer fails loudly.
 :::
 
+### The roadmap driver doesn't resolve {#roadmap-driver-not-registered}
+
+**Symptom** — `/task:roadmap-to-workflow` stops before the first item. Either it reports that `task:roadmap-driver` isn't registered, or — on an older plugin — it fails with `scriptPath must be a script path this tool returned, or a file you can already read (the working directory or a directory you have added)`, naming a path inside the plugin.
+
+**Cause** — autopilot runs a driver script the plugin ships, and the plugin has to *register* that script for the Workflow tool to accept it by name. Older versions instead passed the driver's absolute path, and the Workflow tool permission-checks a path against your session's working directory — a plugin never lives inside it, so the run died everywhere except a checkout of the plugin repository itself. Current versions declare the driver in the plugin manifest and call it by name, so an unresolved name means this session is holding a stale copy of the plugin, or the plugin was updated without a restart.
+
+**Fix** — update or reinstall the `task` plugin, restart Claude Code, then rerun `/task:roadmap-to-workflow <slug>`. The stop costs you nothing: items already ticked stay ticked, and a rerun picks up only the unchecked remainder.
+
+If you are stuck on an older plugin and can't update it, starting Claude Code with the plugin's own directory added — `claude --add-dir <path to the plugin>` — makes the old path-based call pass the permission check. That is a workaround for the old skill, not something the current one needs.
+
+### A skill aborts with a permission error before doing anything {#preflight-permission}
+
+**Symptom** — `/task:to-task` (or any capture skill, or `/task:roadmap-to-workflow`) stops immediately with a permission error naming a `preflight.sh` command, and nothing is written.
+
+**Cause** — each of those skills opens by having Claude Code run the plugin's own `preflight.sh` and substitute its output into the skill text, so the resolved `.task/` root, whether the project is set up, and the existing roadmaps/tasks/specs all arrive without a single tool call. Such an injected command never raises an approval prompt: if it matches no permission rule, the whole invocation aborts. The rule ships with the skill (`allowed-tools` in its frontmatter), so this only shows up when a local `deny` rule, an enterprise-managed setting, or a fork's edited frontmatter blocks it.
+
+**Fix** — allow the plugin's own helpers in your settings, or drop the `deny` rule that covers them:
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(bash *skills/_lib/preflight.sh* *)"]
+  }
+}
+```
+
+Nothing was written when this fires, so re-running the command after fixing the rule is safe.
+
 ### "CLAUDE.md not found"
 
 **Symptom** — a skill stops with `.task/CLAUDE.md not found`.

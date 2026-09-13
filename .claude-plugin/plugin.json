@@ -8,5 +8,6 @@
     "email": "klimbetoo@gmail.com"
   },
   "license": "MIT",
+  "workflows": ["./skills/_lib/roadmap-driver.js"],
   "keywords": ["workflow", "task", "pipeline"]
 }

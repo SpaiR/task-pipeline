@@ -1,6 +1,7 @@
 ---
 name: grill
 description: Interrogate a plan or decision one question at a time before capture, keeping a decision-plus-rationale ledger, then route to the right capture skill.
+argument-hint: '[topic]'
 disable-model-invocation: true
 user-invocable: true
 ---

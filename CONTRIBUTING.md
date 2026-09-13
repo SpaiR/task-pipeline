@@ -15,7 +15,9 @@ We use [GitHub](https://github.com/SpaiR/task-pipeline) to host code, track issu
 ## Repository structure
 
 ```
-.claude-plugin/plugin.json       plugin manifest (name `task`, version, metadata)
+.claude-plugin/plugin.json       plugin manifest (name `task`, version, metadata; declares
+                                   roadmap-driver.js under `workflows`, which is what registers
+                                   it as `task:roadmap-driver`)
 .claude-plugin/marketplace.json  catalog for the `task-pipeline` marketplace
 .claude/                         repo-local maintainer tooling — NOT shipped with the plugin:
   skills/self-audit/             meta-skill: audits this repo for invariant / contract /
@@ -27,11 +29,21 @@ We use [GitHub](https://github.com/SpaiR/task-pipeline) to host code, track issu
   .audit-baseline.json           gitignored ratchet metrics for self-audit
   .improve-baseline.json         gitignored ratchet metrics for self-improve
 skills/                          SKILL.md per skill + shared bash helpers
-  _lib/                          shared helpers:
+  _lib/                          shared helpers (roles: docs/contract.md § Helpers):
                                    resolve-ws.sh (pure .task/-root finder, exports AI_DIR),
                                    roadmap.sh (artifact-path resolution + roadmap progress counts),
-                                   roadmap-driver.js (the static Workflow script roadmap-to-workflow invokes),
-                                   plan-driver.md (non-interactive to-plan mirror for the driver's plan agents),
+                                   preflight.sh (a skill's whole Step 0 entry state in one block,
+                                     substituted into the skill body by !-preprocessing),
+                                   write-task.sh (the single task.md writer: fresh/promote/revise),
+                                   detect-project.sh (the facts first-run setup picks from),
+                                   roadmap-items.sh (a roadmap's unchecked items, for the driver args),
+                                   roadmap-driver.js (the static Workflow script roadmap-to-workflow
+                                     invokes; computes the dependency waves in computeWaves),
+                                   plan-driver.md (the plan pipeline: § Core, followed by both
+                                     to-plan Steps 3-7 and the driver's plan agent, plus
+                                     § Driver mode for the non-interactive deltas),
+                                   roadmap-item.md (the shared from-roadmap block: pick the item,
+                                     read its ready description, derive the slug),
                                    setup.md (first-run setup sub-steps + the .task/CLAUDE.md template);
                                    templates/conventional-commits.md (commit-format fallback)
   grill/                         SKILL.md — pre-capture interrogation; writes nothing,
@@ -43,8 +55,9 @@ skills/                          SKILL.md per skill + shared bash helpers
   to-roadmap/                    SKILL.md — multi-task initiative → .task/roadmap/<slug>.md
   to-spec/                       SKILL.md — load-bearing technical decisions →
                                    .task/spec/<slug>.md, referenced via `Spec:` headers
-  roadmap-to-workflow/           SKILL.md — the one launcher; computes dependency waves and
-                                   invokes _lib/roadmap-driver.js over a roadmap's unchecked items
+  roadmap-to-workflow/           SKILL.md — the one launcher; reports a roadmap's unchecked items
+                                   and the chosen scope, and invokes _lib/roadmap-driver.js,
+                                   which computes the dependency waves itself
   validate/                      validate.sh — optional self-check; bash-only utility, no SKILL.md
 agents/                          the plugin's subagent definitions (auto-loaded by the
                                    plugin loader; agent type = `task:<name>`)
@@ -52,6 +65,12 @@ agents/                          the plugin's subagent definitions (auto-loaded 
                                    prove each finding, fix the confirmed ones within the
                                    plan's Touches, run .task/CLAUDE.md → Build and Tests, commit
                                    the fixes on top of the implementation's commit
+tests/                           the bash-layer test suite — run.sh + lib.sh + one *.test.sh
+                                   per helper; `bash tests/run.sh`, bash/awk/git only, run on
+                                   ubuntu and macOS by .github/workflows/tests.yml
+evals/                           prompt-level `claude plugin eval` cases (prompt.md + graders/
+                                   per case) — a quality signal for the skills, NOT in CI;
+                                   see evals/README.md for status
 CLAUDE.md                        invariants + maintainer guidance
 docs/
   README.md                      docs index (table of the files below)
@@ -74,10 +93,11 @@ README.md                        GitHub landing page (links to the docs site)
 
 1. Fork the project (or branch off `main`, if you have direct push access).
 2. Make sure the artifact validator still passes against any `.task/` snapshot you used while developing: `bash skills/validate/validate.sh all`.
-3. Manually run the affected skill in a real project before opening the PR — the repo has no build/test/lint, so dogfooding is the only smoke test.
-4. Open the pull request against `main`.
+3. Run the bash-layer suite: `bash tests/run.sh` (one case file per helper under `tests/`, bash + awk + git only, no bats). It must be green, and a change to a helper's behaviour comes with a case that covers it.
+4. Manually run the affected skill in a real project before opening the PR. For a prompt change, the eval suite under `evals/` is the closest thing to an automated check — `claude plugin eval .`, or `--case '<name>*'` for one case; it needs the early-access `plugin eval` feature, and it is not wired into CI. See [`evals/README.md`](evals/README.md), including which graders are still unverified.
+5. Open the pull request against `main`.
 
-This project is a collection of Markdown skills plus a handful of bash helpers. There is no compile step, no unit-test suite, and no linter. The bar for "it works" is: skills run end-to-end, invariants in [`CLAUDE.md`](CLAUDE.md) still hold, and the `validate.sh` script accepts the new artifact shapes.
+This project is a collection of Markdown skills plus a handful of bash helpers. There is no compile step and no linter; the automated tests are the bash-layer suite under `tests/` (`bash tests/run.sh`, also run on ubuntu and macOS by `.github/workflows/tests.yml`), which covers the helpers rather than the prompts. The bar for "it works" is: `tests/run.sh` green, skills run end-to-end, invariants in [`CLAUDE.md`](CLAUDE.md) still hold, and the `validate.sh` script accepts the new artifact shapes.
 
 ### Pull Request Title
 
@@ -110,9 +130,10 @@ Examples — `feat(to-spec): add standalone spec artifact and Spec: header` (com
 
 ## Verification
 
-<How you dogfooded it — which skill(s) you ran end-to-end in a real project,
- and the `bash skills/validate/validate.sh all` result. The repo has no
- automated tests, so this section is how a reviewer trusts the change.>
+<The `bash tests/run.sh` result, the `bash skills/validate/validate.sh all`
+ result, and which skill(s) you ran end-to-end in a real project. The suite
+ covers the bash layer only, so this section is how a reviewer trusts a
+ prompt change.>
 
 ## Notes for reviewer
 
@@ -187,7 +208,7 @@ Must be one of the following:
 * **refactor** — Internal change that does not add a feature or fix a bug (rename, restructure, extract).
 * **perf** — A change whose primary goal is to shrink a skill/agent's token or context footprint (or its latency) **without** changing behavior. Distinct from `refactor`: the win is measured in tokens/context, not readability.
 * **docs** — Documentation only: `README.md`, `CLAUDE.md`, `CHANGELOG.md`, `docs/`, this file, or prose inside skills.
-* **test** — Changes to the project's only executable QA surface: the artifact validator (`skills/validate/validate.sh`).
+* **test** — Changes to an executable QA surface: the bash-layer suite under `tests/`, the prompt eval cases under `evals/`, or the artifact validator (`skills/validate/validate.sh`).
 * **chore** — Tooling, repo housekeeping, plugin manifest fields that do not affect users (keywords, description tweaks), and repo automation under `.github/`.
 * **revert** — Reverts a previous commit. The body must name the reverted commit (`Reverts <sha>`) and say why.
 
@@ -198,8 +219,10 @@ Must be one of the following:
 * **A skill name** (no `task:` prefix): `grill`, `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`, `validate`.
 * **`skills`** — cross-cutting change that touches several skills at once. Also covers the repo-local meta-skills under `.claude/skills/` (`self-audit`, `self-improve`), which ship with no plugin scope of their own.
 * **`agents`** — the plugin's subagent definitions under `agents/` (currently only `code-reviewer.md`), and the repo-local lens agents under `.claude/agents/`.
-* **`lib`** — the shared helpers under `skills/_lib/` (`resolve-ws.sh`, `roadmap.sh`, `roadmap-driver.js`, `plan-driver.md`, `setup.md`) and `skills/validate/validate.sh`, plus their templates.
+* **`lib`** — every shared helper under `skills/_lib/` (see the repository structure above) and `skills/validate/validate.sh`, plus their templates.
 * **`plugin`** — `.claude-plugin/plugin.json` and install-path concerns.
+* **`tests`** — the bash-layer suite under `tests/` and its CI workflow.
+* **`evals`** — the prompt-level eval cases under `evals/`.
 * **`github`** — files under `.github/` (PR/issue templates, any repo automation).
 * **`website`** — the VitePress docs site under `website/` (landing, guide, reference pages, theme, config).
 * **`readme` / `claudemd` / `changelog` / `contributing` / `contract`** — single-doc edits (use `docs:` as the type for these; `contract` = `docs/contract.md`).

@@ -1,8 +1,10 @@
 ---
 name: to-roadmap
 description: 'Capture a multi-task initiative into `.task/roadmap/<slug>.md` — a phase-grouped backlog of ready-to-pick-up items.'
+argument-hint: '[initiative]'
 disable-model-invocation: true
 user-invocable: true
+allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/_lib/write-task.sh* *) Bash(bash *skills/_lib/roadmap-items.sh* *) Bash(bash *skills/_lib/detect-project.sh* *) Bash(bash *skills/validate/validate.sh* *)'
 ---
 
 Fix a **multi-task initiative** (phases, dependencies, or more than a couple of atomic steps) into `.task/roadmap/<slug>.md`. Multi-task counterpart to `/task:to-task` / `/task:to-plan` (which each fix one task). Depth is fixed: one roadmap file, flag-free.
@@ -15,38 +17,39 @@ Fix a **multi-task initiative** (phases, dependencies, or more than a couple of 
 
 ### Step 0: Setup gate
 
-Resolve the pipeline root, then check whether its `CLAUDE.md` exists:
+The entry state, gathered before this skill reached you — no tool call of your own:
 
-```bash
-source "${CLAUDE_PLUGIN_ROOT}/skills/_lib/resolve-ws.sh"   # exports AI_DIR
-echo "$AI_DIR"                                             # the resolved root — use this value verbatim in every artifact path below
-[[ -f "$AI_DIR/CLAUDE.md" ]] || echo "CLAUDE.md not found"
-```
+!`bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/preflight.sh" roadmap`
 
-**Every artifact path in this skill is under that resolved `$AI_DIR`, never the cwd** — `.task/roadmap/<slug>.md` below is shorthand for `$AI_DIR/roadmap/<slug>.md`. A cwd-relative write from a subdirectory or a linked worktree would create a second `.task/` that `validate.sh` (which resolves `$AI_DIR` itself) never sees.
+[docs/contract.md § Helpers](../../docs/contract.md#helpers) owns that block's shape. Read it, then act:
 
-- **`CLAUDE.md not found`** → `/task:to-roadmap` is intake-capable: read `${CLAUDE_PLUGIN_ROOT}/skills/_lib/setup.md` and follow it (detect stack → write `$AI_DIR/CLAUDE.md` from its template → record `git config --local task.root` → exclude `.task` → report what was written), then continue. No confirmation chip — the file is written first and edited afterwards if a detected value was wrong. `setup.md` owns the sub-steps and the template; do not restate either here. If `.task/CLAUDE.md` already exists, leave it untouched: it is user-owned, and only `task.root` and the `.git/info/exclude` line are restored when missing.
+1. `AI_DIR:` is the pipeline root: `.task/roadmap/<slug>.md` below means `$AI_DIR/roadmap/<slug>.md`, **never a cwd-relative path** ([contract § Setup-gate categories](../../docs/contract.md#setup-gate-categories)).
+2. **`CONFIG: absent`** → this skill is intake-capable: read `${CLAUDE_PLUGIN_ROOT}/skills/_lib/setup.md` and follow it — it owns the sub-steps and the `.task/CLAUDE.md` template — then continue. No confirmation chip; a wrong detected value is fixed by editing the file.
+3. **`CONFIG: present`** → leave the file untouched: it is user-owned, and only `task.root` and the `.git/info/exclude` line are restored when missing.
+4. `ROADMAPS:` lists the roadmaps that already exist, with progress — Step 1 matches structural style against them and Step 4's slug-collision check reads the same list, so neither needs a listing call of its own.
 
-There is no full-scan validate call here — the file this run writes is validated after the save (Step 4.5), and pre-existing artifacts are checked on demand with `validate.sh all`, never as an entry gate.
+If that block arrived unexpanded — the command line itself rather than its output — the preprocessing did not fire: run that command yourself and continue exactly as above.
+
+There is no full-scan validate call here: Step 4 validates the one file it writes, and pre-existing artifacts are checked on demand with `validate.sh all`, never as an entry gate.
 
 ### Preconditions
 
-- **Too small for a roadmap.** If the initiative has no obvious phases, no inter-task dependencies, and fewer than ~3 atomic steps → **stop and suggest** `/task:to-task` or `/task:to-plan` instead. Say plainly that nothing was written (after several brainstorm rounds the user cannot otherwise tell whether a half-roadmap now exists), and carry **both** options in the footer with the reason: "This is one task, not an initiative — no phases, no cross-item dependencies. Nothing was written. `→ Next: \`/task:to-plan\` to capture it with a plan, or \`/task:to-task\` for the what-and-why only.`"
+- **Too small for a roadmap** — no obvious phases, no inter-task dependencies, fewer than ~3 atomic steps → **stop and suggest** `/task:to-task` or `/task:to-plan`. Say plainly that nothing was written; after several brainstorm rounds the user cannot otherwise tell whether a half-roadmap now exists. Carry **both** options with the reason: "This is one task, not an initiative — no phases, no cross-item dependencies. Nothing was written. `→ Next: \`/task:to-plan\` to capture it with a plan, or \`/task:to-task\` for the what-and-why only.`"
 
 (The slug-collision check runs at save time, once the slug is derived — see Step 4.)
 
 ### Step 1: Load context
 
-Issue these independent reads and listings as one parallel batch — none depends on another. Read `.task/CLAUDE.md` (Language, conventions), `CLAUDE.md` if present, and list `.task/roadmap/*` — match existing structural style and declare any in-flight related roadmap as a Prerequisite. List the `docs/` top level and skim entry points if any exist. Do not open source files — this is a shallow scan, not investigation.
+One parallel batch, since none of these depends on another: `.task/CLAUDE.md` (Language, conventions), the project's `CLAUDE.md` if present, and the `docs/` top level. Structural style comes from Step 0's `ROADMAPS:` list — open one only when this initiative may overlap it, and declare that one as a Prerequisite. No source files: this is a shallow scan, not investigation.
 
 ### Step 2: Cold start or harvest
 
 **Branch first** — where the decisions come from matters:
 
-- **Harvest** — the conversation, *before* this call, already settled concrete decisions about **this same initiative** (multiple exchanges, small details included). Tells: "build a roadmap from what we discussed", or `$ARGUMENTS` reads as a handle for prior discussion rather than a fresh idea. → Go to Step 2H.
-- **Cold start** — a rough one-to-few-line description with no prior initiative-specific discussion. → Go to Step 2C.
+- **Harvest** — this conversation already settled concrete decisions about **this same initiative**, small details included. Tells: "build a roadmap from what we discussed", or `$ARGUMENTS` reading as a handle for prior discussion. → Step 2H.
+- **Cold start** — a rough few-line description, no prior initiative-specific discussion. → Step 2C.
 
-On the fence, prefer harvest — a false positive costs one extra recap the user skims; a false negative silently drops details.
+On the fence, prefer harvest: a false positive costs one recap the user skims, a false negative silently drops details.
 
 #### Step 2H: Harvest — Decision Inventory
 
@@ -71,7 +74,7 @@ captured. Say so if a line is wrong.}
 erodes trust. Omit the heading otherwise.}
 ```
 
-This inventory is a **recap** of decisions the user already reached in the discussion: print it, no confirmation chip. Then proceed — if open forks remain, resolve them first (a focused round as in Step 2C), then go to Step 3 (draft). If the recap misreads or drops something, the user says so in chat — correct it and reprint before drafting.
+It is a **recap** of decisions the user already reached: print it, no confirmation chip. Open forks left → resolve them in one focused round (Step 2C's shape) first, then draft. A misread arrives as chat: correct it and reprint before drafting.
 
 #### Step 2C: Cold start — brainstorm round
 
@@ -100,66 +103,61 @@ This inventory is a **recap** of decisions the user already reached in the discu
 {One focused question on the most load-bearing fork.}
 ```
 
-Always propose **2–3 decomposition options** with different phase boundaries (behavioral milestones — observable state changes — not technical layers like "substrate" vs "UI"). Iterate with the user (`Round N`, same structure, narrowed to the fork in focus). A round is **content dialogue, not a path fork** — print it as message text and close with the open question; convention (c)'s chips are for choosing a path through the skill, and would flatten the pros/cons the round exists to show. Typical depth 3–6 rounds; past 6, say the initiative is too big and suggest splitting. Stop when the user signals "write it" / "that's enough", or a new round would only restate prior conclusions.
+Always **2–3 decomposition options** with different phase boundaries — behavioral milestones, observable state changes, not technical layers like "substrate" vs "UI". Iterate as `Round N`, same structure, narrowed to the fork in focus. A round is **content dialogue, not a path fork**: print it as message text and close on the open question, because convention (c)'s chips would flatten the pros and cons the round exists to show. Typical depth 3–6 rounds; past 6, say the initiative is too big and suggest splitting. Stop when the user says "write it", or when another round would only restate conclusions.
 
-**Track decisions as you go, not in your head.** Two kinds surface:
+**Track decisions as you go, not in your head.** Two kinds surface: **behavioral** ones, observable properties the user locked in, which land in an item's `### Outcomes` / `### Acceptance criteria`; and **technical anchors** — a protocol, a cross-cutting data shape, a "we picked X over Y because…" whose reasoning would not survive re-derivation — which belong in a standalone spec, never in an item body. Step 3 routes both.
 
-- **Behavioral decisions** — observable properties the user locked in (including small details). These land in an item's `### Outcomes` / `### Acceptance criteria`.
-- **Technical anchors** — load-bearing technical decisions (a protocol, a cross-cutting data shape, a "we picked X over Y because…" whose reasoning wouldn't survive re-derivation). These belong in a standalone spec, never in item bodies — route at draft time (Step 3).
-
-Before drafting, reprint the full list (behavioral + anchors) **as message text** — the cold-start twin of Step 2H's inventory, a recap of the decisions the user reached across the rounds: print it, no confirmation chip. If a line is wrong, the user corrects it in chat before drafting.
-
-Topics the user explicitly said to skip stay skipped — do not raise them again.
+Before drafting, reprint the full list as message text — the cold-start twin of Step 2H's inventory, no confirmation chip. Topics the user said to skip stay skipped.
 
 ### Step 3: Draft the file
 
-Once you have **printed** the Step 2H inventory (or the Step 2C recap) — no user reply is required and none is awaited; a correction, if the user makes one, arrives as chat and you reprint before drafting — draft the full roadmap per [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd): `# <Title>` on line 1, any `Spec:` header lines directly under it, then the intro, `## Prerequisites`, `## Phase summary` table, one `## Phase X` section per phase with `### - [ ] N. <title>` items (`**Dependencies:**` — emit an em dash `—` when the item has none, otherwise a comma-separated list of item numbers; `roadmap-to-workflow`'s wave sorter also tolerates `-` / `none` / `n/a` on hand-edited files, but reads any other word as a dependency on a missing item and hard-stops — optional `**Model:**`, `**Ready description:**` blockquote with `### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria`), `## Out of scope`, `## Backlinks`. Item numbers `N` run continuously across the whole file — never restart the numbering per phase.
+Once the Step 2H inventory (or the Step 2C recap) is **printed** — no reply is awaited; a correction arrives as chat, and you reprint before drafting — draft the whole file per [contract § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd), which owns the section skeleton, the item grammar and the link rules. Two things it is easy to get wrong:
 
-`## Prerequisites` and `## Backlinks` are the file's two pointing-elsewhere sections, and both hold **Markdown links**, never bare slugs or bare paths — a related roadmap is `[<slug>](<slug>.md)` (same directory), a spec `[<slug>](../spec/<slug>.md)`, anything outside `.task/` a repo-relative or absolute link. Omit either section rather than leaving it empty.
+- `**Dependencies:**` is an em dash `—` for none, otherwise a comma-separated list of item numbers. Any other word reads as a dependency on a missing item and hard-stops the autopilot.
+- A `**Ready description:**` blockquote must stand alone, and its sub-headings are **quoted** (`> ### Context`, …). `validate.sh` treats a bare unquoted one as a hard error, because `to-plan` strips the `> ` prefix to find the body.
 
 **Route every confirmed decision to a home:**
 
 - Observable behavior / user-facing effect → the item's `### Outcomes`, or `### Acceptance criteria` when it's a testable assertion.
-- Cross-item technical decision → a standalone spec. If a `.task/spec/<spec-slug>.md` already covers it, add a `Spec: [<spec-slug>](../spec/<spec-slug>.md)` header line to the roadmap — ASCII, **directly under `# <Title>` and above the intro prose**, so line 1 stays the document's own H1 — and cite it from each steered item as `### Spec references → [<spec-slug>](../spec/<spec-slug>.md) §N`. The link text is the slug that carries the identity; the target is what lets a Markdown viewer navigate, and is always `../spec/<spec-slug>.md` since `.task/roadmap/` and `.task/spec/` are siblings. If no spec exists yet, **do not write one here** — surface the decision with a one-line recommendation to capture it via `/task:to-spec`, then reference it on a later run.
+- Cross-item technical decision → a standalone spec. One that already exists gets a `Spec:` header line **directly under `# <Title>`**, above the intro, plus a `### Spec references → [<spec-slug>](../spec/<spec-slug>.md) §N` citation in each steered item. One that does not exist is **not written here**: surface the decision with a one-line recommendation to capture it via `/task:to-spec`, and reference it on a later run.
 - Scope exclusion → `## Out of scope`, with the reason.
 - Anything else → drop it, but say so to the user with a one-line reason — never a silent omission.
 
-A local, single-item detail decision never goes in a spec — it belongs in that item's `### Outcomes` / `### Acceptance criteria`. Reserve specs for choices that would break cross-item consistency if a later `/task:to-plan` (or the executing session) re-derived them differently.
+Reserve specs for choices that would break cross-item consistency if a later `/task:to-plan` re-derived them differently. A single-item detail is that item's `### Outcomes` / `### Acceptance criteria`, never a spec.
 
-**`**Model:**` is optional** — set it only when you have a real basis to suggest one (e.g. the item is pure content/vocabulary editing → `haiku`; a new subsystem or cross-module change → `sonnet`; leave it off rather than guessing).
+**`**Model:**` is optional** — only with a real basis: pure content editing → `haiku`, a new subsystem or cross-module change → `sonnet`. Leave it off rather than guess.
 
-Behavioral discipline: `### Outcomes` / `### Goal` / `### Invariants` describe observable properties only — no project-specific file/symbol names (normative names from spec/CLAUDE.md are fine). If design work would be free to pick a different symbol, the name doesn't belong here — that's `/task:to-plan`'s call, not this file's.
+Behavioral discipline: `### Outcomes` / `### Goal` / `### Invariants` state observable properties only, with no project-specific file or symbol names (normative names from a spec or `CLAUDE.md` are fine). If design work would be free to pick a different symbol, the name is `/task:to-plan`'s call, not this file's.
 
-Before saving, self-check and fix inline (drafting hygiene, distinct from Step 5's post-save pass):
+Before saving, self-check and fix inline (drafting hygiene; Step 5 is the post-save pass):
 
 1. Every fork raised in the brainstorm has a home in some phase, or an explicit `## Out of scope` mention.
 2. Each `**Ready description:**` stands alone — a reader who hasn't seen the roadmap could pick it up in `/task:to-plan` from the blockquote alone.
 3. No placeholders (`TBD`, `TODO`, `???`, `fill in`).
 4. Every `**Dependencies:**` cites a task number that exists in this file.
 5. Every item heading produces a unique kebab-case slug.
-6. Item numbers are unique across the whole file (numbering does not restart per phase) — a duplicate `N` is a `validate.sh` error, and the `roadmap-to-workflow` driver's auto-mark keys on the number, so two items sharing one would be ticked together.
-7. Every confirmed decision (Step 2) resolved to a concrete home — `### Outcomes`/`### Acceptance criteria`, `## Out of scope`, a spec `### Spec references → [<spec-slug>](../spec/<spec-slug>.md) §N` citation (or a decision flagged for a `/task:to-spec` follow-up) — or was explicitly dropped with a stated reason.
-8. Every cross-artifact reference is a Markdown link — the `Spec:` headers, the `### Spec references` citations, and everything under `## Prerequisites` / `## Backlinks`.
+6. Item numbers unique across the whole file — the driver's auto-mark keys on the number, so two items sharing one would be ticked together.
+7. Every confirmed decision (Step 2) has a concrete home, or was explicitly dropped with a stated reason.
+8. Every cross-artifact reference is a Markdown link — `Spec:` headers, `### Spec references` citations, `## Prerequisites`, `## Backlinks`.
 
 ### Step 4: Save
 
 Write the file directly — no in-chat preview, no confirmation prompt.
 
-1. Slug: kebab-case from the initiative title, ≤ 50 chars (e.g. `add-auth-flow`, `migrate-to-vite`).
-2. **Slug collision (soft).** Create `$AI_DIR/roadmap/` if missing. If `$AI_DIR/roadmap/<slug>.md` already exists → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). Never silently overwrite.
-3. Write `$AI_DIR/roadmap/<slug>.md` with the full content, including any `Spec: [<spec-slug>](../spec/<spec-slug>.md)` header lines for specs referenced in Step 3 — directly under `# <Title>`, above the intro.
-4. Modify no file other than `$AI_DIR/roadmap/<slug>.md` (spec authorship is `to-spec`'s job — see Forbidden).
-5. Validate the written file: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" roadmap <slug>` — surface any WARN/ERROR in the Step 6 digest; only a setup-precondition failure (exit 2) hard-stops.
+1. Slug: kebab-case from the initiative title, ≤ 50 chars (`add-auth-flow`, `migrate-to-vite`).
+2. **Slug collision.** If that slug is already in Step 0's `ROADMAPS:` list → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). Never silently overwrite. That list is a snapshot taken before the brainstorm rounds, and unlike the task captures there is no writer script to refuse a collision here — so when the slug is *absent* from it, confirm with a file read that nothing is there before writing.
+3. Write `$AI_DIR/roadmap/<slug>.md` (creating the directory if needed) with the full content, `Spec:` headers included. Nothing else is written — spec authorship is `to-spec`'s.
+4. Validate it: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" roadmap <slug>` — surface any WARN/ERROR in the Step 6 digest; only a setup-precondition failure (exit 2) hard-stops.
 
 ### Step 5: Light self-check (report-only)
 
-After Save, skim the just-saved file (not the in-chat draft) against three lenses yourself — **not** a subagent fanout, no lens-audit machinery.
+Skim the **saved file** (not the in-chat draft) yourself — no subagent fanout, no lens-audit machinery — against three lenses:
 
-- **Coverage** — phase/fork coverage, dependency integrity (dangling or cyclic `**Dependencies:**`).
-- **Decomposition** — any item that reads as compound (spans ≥ 2 unrelated concerns, or has far more outcomes than the rest) and should be split.
-- **Clarity** — behavioral discipline held, descriptions self-contained, every `### Spec references → [<spec-slug>](../spec/<spec-slug>.md) §N` citation names a `Spec:`-referenced `.task/spec/<spec-slug>.md` that actually contains that `§N`, and every link target matches its link text (a copied citation whose target still points at the previous spec resolves for the agent and misleads the human).
+- **Coverage** — phase and fork coverage, dependency integrity (dangling or cyclic).
+- **Decomposition** — any item reading as compound: two unrelated concerns, or far more outcomes than its neighbours.
+- **Clarity** — behavioral discipline held, descriptions self-contained, and each `### Spec references` citation naming a `Spec:`-referenced `$AI_DIR/spec/<spec-slug>.md` that really has that `§N`, with a target matching its label (a copied citation pointing at the previous spec still resolves for an agent and misleads the human).
 
-Report a compact findings summary — a count per lens plus the obvious issues, a few lines. **Never rewrite the saved file** — anything found here is surfaced for the user to fix by hand or discuss further in chat; there is no inline auto-apply and no `--refine` mode to escalate to.
+Report a count per lens plus the obvious issues, a few lines. **Never rewrite the saved file** — findings are for the user to fix or discuss; there is no auto-apply.
 
 ### Step 6: Output — digest
 
@@ -175,10 +173,10 @@ Specs referenced: {slug, …}   (or "none"; plus any decision flagged for a `/ta
 validate: {OK — 0 errors, N warning(s) | the FAIL lines}
 ```
 
-- When the validate result is **not** clean (any WARN or FAIL), append `re-check after editing: bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" roadmap <slug>` — `validate` is not a slash command, so the invocation is worth spelling out. Omit it on a clean result.
+- On a result that is **not** clean, append `re-check after editing: bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" roadmap <slug>` — `validate` is not a slash command, so it is worth spelling out. Omit it on a clean result.
 - Print the Step 5 findings summary (or "clean / minor only").
 - The file is already written — to change anything, just say so.
-- End with the canonical next-step footer, naming the slug in **both** halves so either half is pasteable as-is (`roadmap-to-workflow` accepts a positional slug and skips its picker): `→ Next: \`/task:roadmap-to-workflow <slug>\` (run the whole roadmap) or \`/task:to-task <slug>#1\` (pick up the first item by hand — any item number works).` Flag-free.
+- End with the next-step footer, naming the slug in **both** halves so either is pasteable as-is: `→ Next: \`/task:roadmap-to-workflow <slug>\` (run the whole roadmap) or \`/task:to-task <slug>#1\` (pick up the first item by hand — any item number works).`
 
 ## Forbidden
 

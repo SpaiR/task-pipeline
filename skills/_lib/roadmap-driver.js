@@ -1,14 +1,20 @@
 export const meta = {
-  name: 'task-pipeline-roadmap',
+  name: 'roadmap-driver',
   description: "Run a roadmap's unchecked items in dependency-ordered waves: parallel planning, strictly serial implement → review → mark per item, stop on FAIL",
-  whenToUse: "Invoked by the task-pipeline plugin's roadmap-to-workflow skill with {slug, aiDir, pluginRoot, specPaths, waves} args — not meant to be run by hand.",
+  whenToUse: "Do not call this directly. Only the task-pipeline plugin's /task:roadmap-to-workflow skill invokes it, building {slug, aiDir, pluginRoot, specPaths, items, done, scope} from a validated roadmap file and a scope the user confirmed — hand-assembled args skip that and can commit work against a stale item list. To run a roadmap, invoke that skill instead.",
 }
 
-// The task-pipeline roadmap driver. The roadmap-to-workflow skill computes the
-// dependency waves and invokes this script via Workflow({scriptPath, args}); the
-// script itself never changes between runs, so resumeFromRunId replays completed
-// stages from cache. Contract: docs/contract.md § roadmap-to-workflow execution
-// shape (driver contract).
+// The task-pipeline roadmap driver. The roadmap-to-workflow skill reports what
+// the roadmap SAYS — the unchecked items with their dependencies, the numbers
+// already marked, and the user's chosen scope — and this script derives the
+// dependency waves itself (computeWaves below). Invoked as
+// Workflow({name: 'task:roadmap-driver', args}): the plugin manifest declares
+// this file under "workflows", so the platform registers it and reads it
+// itself. A scriptPath into the plugin cannot work — the tool checks it for
+// read permission against the session's cwd, and a plugin never sits inside
+// it. The script never changes between runs, so resumeFromRunId replays
+// completed stages from cache. Contract:
+// docs/contract.md § roadmap-to-workflow execution shape (driver contract).
 //
 // The Workflow sandbox has no filesystem access — every write (the task files,
 // the code, the roadmap checkbox) happens inside an agent() stage. Auto-mark is
@@ -18,23 +24,74 @@ export const meta = {
 // ---- args (real JSON values, absolute paths — asserted, not trusted) ----
 const bad = (msg) => `roadmap-to-workflow: bad args — ${msg}`
 if (!args || typeof args !== 'object' || Array.isArray(args)) return bad(`args must be an object, got ${Array.isArray(args) ? 'array' : typeof args}`)
-const { slug, aiDir, pluginRoot, specPaths, waves } = args
+const { slug, aiDir, pluginRoot, specPaths, items, done, scope } = args
 if (typeof slug !== 'string' || !slug) return bad('slug must be a non-empty string')
 if (typeof aiDir !== 'string' || !aiDir.startsWith('/')) return bad('aiDir must be an absolute path')
 if (typeof pluginRoot !== 'string' || !pluginRoot.startsWith('/')) return bad('pluginRoot must be an absolute path')
 if (!Array.isArray(specPaths) || specPaths.some((p) => typeof p !== 'string' || !p.startsWith('/')))
   return bad('specPaths must be an array of absolute paths ([] when the roadmap has no Spec: headers)')
-if (!Array.isArray(waves) || waves.length === 0 || waves.some((w) => !Array.isArray(w) || w.length === 0))
-  return bad('waves must be a non-empty array of non-empty item arrays — was it passed as a JSON string instead of a real array?')
+if (!Array.isArray(items) || items.length === 0)
+  return bad('items must be a non-empty array of {n, title, model, deps} objects — was it passed as a JSON string instead of a real array?')
 const MODELS = ['haiku', 'sonnet', 'opus']
-for (const wave of waves) {
-  for (const it of wave) {
-    if (!it || typeof it !== 'object') return bad('every wave entry must be an {n, title, model} object')
-    if (!Number.isInteger(it.n) || it.n < 1) return bad('every item needs an integer n >= 1')
-    if (typeof it.title !== 'string' || !it.title) return bad(`item #${it.n} needs a non-empty title`)
-    if (!MODELS.includes(it.model)) return bad(`item #${it.n} model must be haiku|sonnet|opus, got ${JSON.stringify(it.model)}`)
-  }
+const isItemNo = (v) => Number.isInteger(v) && v >= 1
+for (const it of items) {
+  if (!it || typeof it !== 'object' || Array.isArray(it)) return bad('every entry of items must be an {n, title, model, deps} object')
+  if (!isItemNo(it.n)) return bad('every item needs an integer n >= 1')
+  if (typeof it.title !== 'string' || !it.title) return bad(`item #${it.n} needs a non-empty title`)
+  if (!MODELS.includes(it.model)) return bad(`item #${it.n} model must be haiku|sonnet|opus, got ${JSON.stringify(it.model)}`)
+  if (!Array.isArray(it.deps) || it.deps.some((d) => !isItemNo(d))) return bad(`item #${it.n} deps must be an array of item numbers ([] for none)`)
 }
+if (items.length !== new Set(items.map((it) => it.n)).size) return bad('items contains the same n twice')
+if (!Array.isArray(done) || done.some((n) => !isItemNo(n)))
+  return bad('done must be an array of already-marked item numbers ([] when none are)')
+if (!(scope === 'all' || scope === 'next-wave' || (Array.isArray(scope) && scope.length > 0 && scope.every(isItemNo))))
+  return bad("scope must be 'all', 'next-wave', or a non-empty array of item numbers")
+
+// --- computeWaves (pure; extracted verbatim by tests/driver-waves.test.sh) ---
+// items are the roadmap's UNCHECKED items, done the numbers already marked, and
+// scope the user's pick. Returns { waves } — an array of arrays of items — or
+// { error } with a message meant for the operator.
+//
+// 'next-wave' is why the sort cannot be done on a pre-filtered set: waves are
+// computed over every unchecked item and only then narrowed to the first one.
+// Filtering first would hide the dependencies that define wave 1 and trip the
+// out-of-scope check on items the user never excluded by hand.
+function computeWaves(items, done, scope) {
+  const byN = new Map(items.map((it) => [it.n, it]))
+  const doneSet = new Set(done)
+  let scoped = items
+  if (Array.isArray(scope)) {
+    const want = new Set(scope)
+    const unknown = [...want].filter((n) => !byN.has(n))
+    if (unknown.length)
+      return { error: `not runnable in this roadmap (already marked, or no such item): #${unknown.join(', #')}` }
+    scoped = items.filter((it) => want.has(it.n))
+  }
+  const scopedSet = new Set(scoped.map((it) => it.n))
+  for (const it of scoped)
+    for (const d of it.deps)
+      if (!doneSet.has(d) && !scopedSet.has(d))
+        return { error: `out of scope: #${it.n} depends on #${d}, which is neither marked nor in this run` }
+
+  const placed = new Set(doneSet)
+  const remaining = new Map(scoped.map((it) => [it.n, it]))
+  const waves = []
+  while (remaining.size) {
+    const wave = [...remaining.values()].filter((it) => it.deps.every((d) => placed.has(d)))
+    if (wave.length === 0)
+      return { error: `dependency cycle among #${[...remaining.keys()].join(', #')} — no item is runnable` }
+    for (const it of wave) remaining.delete(it.n)
+    for (const it of wave) placed.add(it.n)
+    waves.push(wave)
+  }
+  return { waves: scope === 'next-wave' ? waves.slice(0, 1) : waves }
+}
+// --- end computeWaves -------------------------------------------------------
+
+const sorted = computeWaves(items, done, scope)
+if (sorted.error) return `roadmap-to-workflow: ${sorted.error}`
+const waves = sorted.waves
+if (waves.length === 0) return 'roadmap-to-workflow: nothing to run — every item in scope is already marked.'
 
 const ROADMAP = `${aiDir}/roadmap/${slug}.md`
 const SPEC_SLUGS = specPaths.map((p) => p.split('/').pop().replace(/\.md$/, ''))

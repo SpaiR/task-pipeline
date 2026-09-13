@@ -1,0 +1,40 @@
+name: Bash layer tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      # Wider than the helpers: the suite also reads every SKILL.md (injection
+      # count, the driver's registered name) and the plugin manifest.
+      - 'tests/**'
+      - 'skills/**'
+      - '.claude-plugin/**'
+      - '.github/workflows/tests.yml'
+  pull_request:
+    paths:
+      # Wider than the helpers: the suite also reads every SKILL.md (injection
+      # count, the driver's registered name) and the plugin manifest.
+      - 'tests/**'
+      - 'skills/**'
+      - '.claude-plugin/**'
+      - '.github/workflows/tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    # Both runners on purpose: the helpers are macOS-first (no `realpath`, no
+    # GNU-only flags) and ubuntu is what CI defaults to, so a divergence has to
+    # show up here rather than on a contributor's laptop.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run the suite
+        run: bash tests/run.sh
