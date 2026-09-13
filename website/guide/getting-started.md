@@ -47,7 +47,16 @@ Talk a task through in chat — say, an HTTP retry system with backoff and a dea
 On a fresh project this will:
 
 1. **Detect and write the settings.** It reads `CLAUDE.md` and your commit conventions, writes `.task/CLAUDE.md`, records `git config task.root`, excludes `.task` from git, and reports what it wrote:
-   > Wrote `.task/CLAUDE.md` — Language: follow task.md Description; Testing Policy: on-demand.
+
+   ```text
+   Wrote `.task/CLAUDE.md`
+   Language: follow task.md Description
+   Testing Policy: on-demand
+   Build and Tests: npm test
+   Commit Format: derived from git log
+   Loaded automatically whenever a session reads a file under `.task/`.
+   To change any of it, edit the file — setup never rewrites it.
+   ```
 
    There is no confirmation to click: if a detected value is wrong, edit the file. Setup writes it once and never rewrites it.
 

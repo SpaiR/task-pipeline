@@ -12,7 +12,15 @@ On a fresh project, the first `to-task` / `to-plan` / `to-roadmap` / `to-spec`:
 2. writes `.task/CLAUDE.md`, records `git config --local task.root`, and excludes `.task` via `.git/info/exclude`;
 3. reports what it wrote, then continues into the capture you asked for:
 
-   > Wrote `.task/CLAUDE.md` — Language: follow task.md Description; Testing Policy: on-demand.
+   ```text
+   Wrote `.task/CLAUDE.md`
+   Language: follow task.md Description
+   Testing Policy: on-demand
+   Build and Tests: npm test
+   Commit Format: derived from git log
+   Loaded automatically whenever a session reads a file under `.task/`.
+   To change any of it, edit the file — setup never rewrites it.
+   ```
 
 There is nothing to confirm. If a detected value came out wrong, edit the file — which is also the answer to every later change.
 

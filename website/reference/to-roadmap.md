@@ -62,6 +62,6 @@ validate: OK — 0 errors, 0 warnings
 
 - Name project-specific files/symbols in `### Outcomes` / `### Goal` / `### Invariants`.
 - Plan implementation details — that's [`to-plan`](/reference/to-plan)'s job when the item is picked up.
-- Auto-check / auto-uncheck item checkboxes — that's the [`roadmap-to-workflow`](/reference/roadmap-to-workflow) driver's exclusive job.
+- Auto-check / auto-uncheck item checkboxes — that happens in the executing session (or the [`roadmap-to-workflow`](/reference/roadmap-to-workflow) driver in an autopilot run), never here.
 - Modify any file other than the roadmap — specs are authored only by `to-spec`.
 - Hold more than one initiative per file.
