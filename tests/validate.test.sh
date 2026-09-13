@@ -100,6 +100,13 @@ v "$repo" roadmap dup
 assert_exit 1 "$V_EXIT" "duplicate number"
 assert_contains "$V_OUT" "duplicate item number 1" "names the number"
 
+t_case "item numbers compare numerically — 1. and 01. are a duplicate"
+sed 's/^### - \[ \] 1\. Also first/### - [ ] 01. Also first/' \
+  "$repo/.task/roadmap/dup.md" >"$repo/.task/roadmap/dup01.md"
+v "$repo" roadmap dup01
+assert_exit 1 "$V_EXIT" "leading-zero duplicate"
+assert_contains "$V_OUT" "duplicate item number 1" "names the number once"
+
 t_case "a dependency on a number with no item heading is an error"
 sed 's/^### - \[ \] 1\. Also first/### - [ ] 2. Second/; s/^\*\*Dependencies:\*\* —$/**Dependencies:** 9/' \
   "$repo/.task/roadmap/dup.md" >"$repo/.task/roadmap/dangling.md"
