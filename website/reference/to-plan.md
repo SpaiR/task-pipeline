@@ -7,7 +7,7 @@ See the [single-task guide](/guide/single-task) for how promote/revise work in p
 ## Usage
 
 ```text
-/task:to-plan [<context>]
+/task:to-plan [<slug> | <roadmap-slug>[#N] | context]
 ```
 
 **Input** — `$ARGUMENTS`, optional. Recognized forms:

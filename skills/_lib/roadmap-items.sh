@@ -9,7 +9,8 @@
 #   DONE\t<n,n,…>                       the already-marked numbers ("" if none)
 #
 # `roadmap-to-workflow` Step 1 turns those lines into the driver's `items` and
-# `done` args verbatim. Nothing here sorts or filters: the driver's own
+# `done` args verbatim; `to-architecture` Step 2 reads the same lines beside its
+# full roadmap read. Nothing here sorts or filters: the driver's own
 # computeWaves() decides the order and the scope.
 #
 # Exit codes: 0 printed, 1 no such roadmap, 2 usage.

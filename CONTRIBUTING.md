@@ -25,6 +25,10 @@ We use [GitHub](https://github.com/SpaiR/task-pipeline) to host code, track issu
   agents/self-*.md               the lens agents self-audit fans out to
                                    (read-only: Read, Grep, Glob, Bash — no Edit/Write)
   .audit-baseline.json           gitignored ratchet metrics for self-audit
+.github/                         repo automation — NOT shipped with the plugin:
+  pull_request_template.md       the PR body template (see § Pull request title)
+  workflows/tests.yml            CI: runs the bash-layer suite (tests/run.sh)
+  workflows/docs.yml             builds and deploys website/ to GitHub Pages
 skills/                          SKILL.md per skill + shared bash helpers
   _lib/                          shared helpers (roles: docs/contract.md § Helpers):
                                    resolve-ws.sh (pure .task/-root finder, exports AI_DIR),
@@ -35,7 +39,8 @@ skills/                          SKILL.md per skill + shared bash helpers
                                    detect-project.sh (the facts first-run setup picks from),
                                    roadmap-items.sh (a roadmap's unchecked items, for the driver args),
                                    roadmap-driver.js (the static Workflow script roadmap-to-workflow
-                                     invokes; computes the dependency waves in computeWaves),
+                                     invokes; computes the dependency waves in computeWaves and
+                                     gates each implement/review digest in digestPassed),
                                    plan-driver.md (the plan pipeline: § Core, followed by both
                                      to-plan Steps 3-7 and the driver's plan agent, plus
                                      § Driver mode for the non-interactive deltas),
@@ -96,7 +101,7 @@ README.md                        GitHub landing page (links to the docs site)
 
 1. Fork the project (or branch off `main`, if you have direct push access).
 2. Make sure the artifact validator still passes against any `.task/` snapshot you used while developing: `bash skills/validate/validate.sh all`.
-3. Run the bash-layer suite: `bash tests/run.sh` (one case file per helper under `tests/`, bash, awk and git — plus node for the driver-wave case, which skips with a SKIP line when node is absent — no bats). It must be green, and a change to a helper's behaviour comes with a case that covers it.
+3. Run the bash-layer suite: `bash tests/run.sh` (one case file per helper under `tests/`, bash, awk and git — plus node for the driver's wave and digest cases, which skip with a SKIP line when node is absent — no bats). It must be green, and a change to a helper's behaviour comes with a case that covers it.
 4. Manually run the affected skill in a real project before opening the PR. For a prompt change, the eval suite under `evals/` is the closest thing to an automated check — `claude plugin eval .`, or `--case '<name>*'` for one case; it needs the early-access `plugin eval` feature, and it is not wired into CI. See [`evals/README.md`](evals/README.md), including which graders are still unverified.
 5. Open the pull request against `main`.
 

@@ -7,7 +7,7 @@
 
 # Task pipeline working artifacts.
 # Dogfooding exception: in consumer projects the intake skills' inline Step 0 setup
-# (to-task/to-plan/to-roadmap/to-spec) makes `.task/` ignore itself with a
+# (to-task/to-plan/to-roadmap/to-architecture/to-spec) makes `.task/` ignore itself with a
 # `.task/.gitignore` holding `*` — see the "invisibility" invariant in CLAUDE.md.
 # Here, in the plugin's own repo, we ignore it through shared .gitignore so every
 # contributor inherits the exclusion even before any skill has written that file.

@@ -56,9 +56,10 @@ require_config() {
   # is idempotent (no-op once AI_DIR is set).
   find_ai_dir
   if [[ ! -f "$AI_DIR/CLAUDE.md" ]]; then
-    # Keep the literal substring `CLAUDE.md not found` — to-roadmap, to-spec and
-    # roadmap-to-workflow all branch on it. Everything after it is for the human
-    # who ran this script by hand, which is the only way to reach this line.
+    # Keep the literal substring `CLAUDE.md not found` — roadmap-to-workflow
+    # Step 0 matches it in the VALIDATE: block; the capture skills key on exit 2.
+    # Everything after it is for the human who ran this script by hand, which
+    # is the only way to reach this line.
     echo "ERROR precondition: CLAUDE.md not found at $AI_DIR/CLAUDE.md" >&2
     echo "  The project isn't set up yet. Run /task:to-task, /task:to-plan, /task:to-roadmap," >&2
     echo "  /task:to-architecture or /task:to-spec once — those five write .task/CLAUDE.md" >&2
@@ -279,7 +280,7 @@ validate_roadmap() {
   # Dangling `Spec:` header references → WARN (advisory, not an error).
   check_spec_refs "$file" "$label"
 
-  # CRLF. The parsers strip different whitespace classes — the driver's collector
+  # CRLF. The parsers strip different whitespace classes — roadmap-items.sh
   # strips `[ \t]`, this file strips `[[:space:]]` — so a trailing CR survives
   # into the driver's `**Dependencies:**` / `**Model:**` values, where it becomes
   # a phantom dependency on a missing item and silently drops the model hint.
@@ -294,11 +295,12 @@ validate_roadmap() {
   # tell the operator WHY the file looks itemless.
   #
   # A heading that ATTEMPTED to be an item and missed the canonical anchor is not
-  # an item to ANY consumer — `roadmap_progress_counts` under-counts it, the
-  # driver's Step 1 collector skips it, and the block parser opens no block for
-  # it, so its missing sub-headings go unreported too. Unflagged, the file
-  # validates clean while an item silently vanishes and the autopilot reports
-  # "all items shipped" having never run it. Two shapes count as an attempt:
+  # an item to ANY consumer — `roadmap_progress_counts` under-counts it,
+  # roadmap-items.sh (the driver's item source) skips it, and the block parser
+  # opens no block for it, so its missing sub-headings go unreported too.
+  # Unflagged, the file validates clean while an item silently vanishes and the
+  # autopilot reports "all items shipped" having never run it. Two shapes count
+  # as an attempt:
   #   - a checkbox-ish bracket (`[ ]`, `[X]`, `[]`) anywhere a checkbox belongs.
   #     The bracket body is capped at ONE character so a legitimate heading that
   #     opens with a Markdown link (`### [text](url)`) is not swept up;
@@ -345,6 +347,17 @@ validate_roadmap() {
     done <<< "$dup"
   fi
 
+  # Item numbers start at 1: the driver asserts `n >= 1` on every item it is
+  # handed, so an item `0.` (or `00.`) that validated clean would still make the
+  # launch fail with `bad args`. The Dependencies check below rejects a `0`
+  # dependency for the same reason.
+  awk_report '
+    match($0, /^### - \[[ x~>-]\] [0-9]+\./) {
+      s = substr($0, RSTART, RLENGTH); gsub(/[^0-9]/, "", s)
+      if (s + 0 == 0) print "ERROR " label ": item number " s " — item numbers start at 1 (the roadmap-to-workflow driver rejects 0): " $0
+    }
+  ' "$file"
+
   # --- `**Dependencies:**` values, checked against this same file -------------
   # Only UNCHECKED items are checked: the driver reads dependencies while
   # collecting runnable items, so a shipped `[x]` item's dependency is history
@@ -382,6 +395,10 @@ validate_roadmap() {
       }
       k = split(v, d, ",")
       for (i = 1; i <= k; i++) {
+        if (d[i] + 0 == 0) {
+          print "ERROR " label ": Task " item " depends on item " d[i] " — item numbers start at 1 (the roadmap-to-workflow driver rejects 0)"
+          continue
+        }
         if (d[i] + 0 == item + 0) {
           print "ERROR " label ": Task " item " lists itself in **Dependencies:** — the driver reads that as an unsatisfiable cycle and hard-stops the run"
           continue

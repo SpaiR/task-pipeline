@@ -48,6 +48,6 @@ When a session implements a task carrying a `Spec:` header, its `## Execution` p
 
 ## Where specs live
 
-Specs are standalone files under `.task/spec/`, independent of any roadmap. A spec is authored **only** by `to-spec` — `to-task` / `to-plan` / `to-roadmap` can reference a spec via a header, but never write or edit the spec file itself.
+Specs are standalone files under `.task/spec/`, independent of any roadmap. A spec is authored **only** by `to-spec` — `to-task` / `to-plan` / `to-roadmap` / `to-architecture` can reference a spec via a header, but never write or edit the spec file itself.
 
 → Next: [Returning to a task later](/guide/returning-later).

@@ -7,7 +7,7 @@ See the [roadmaps guide](/guide/roadmaps) for when to run it and how planners us
 ## Usage
 
 ```text
-/task:to-architecture [<roadmap-slug> | <idea>]
+/task:to-architecture [<roadmap-slug> | initiative]
 ```
 
 **Input** — `$ARGUMENTS`, optional. Recognized forms:

@@ -7,7 +7,7 @@ See the [roadmaps guide](/guide/roadmaps) for the end-to-end flow.
 ## Usage
 
 ```text
-/task:to-roadmap <idea>
+/task:to-roadmap [initiative]
 ```
 
 **Input** — `$ARGUMENTS`: a rough description of the initiative, or a reference back to a prior discussion (`"build a roadmap from what we discussed"`).

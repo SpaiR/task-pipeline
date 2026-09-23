@@ -58,8 +58,9 @@ as a fixed anchor before drafting.
 `<item-slug>` is kebab-case English, 2–4 words, from the **item's** title (not the
 roadmap's). It is the filename and the identity — no task-id, no bracket.
 
-If it is already in the caller's `TASKS:` list, do not assume that file is this
-item's. Read its header:
+If it is already in the caller's `TASKS:` list — or, for a caller that has no
+`TASKS:` list (the driver's plan agent), if `$AI_DIR/task/<item-slug>.md`
+exists — do not assume that file is this item's. Read its header:
 
 - `Roadmap:` label matches this roadmap's slug **and** `Source item: #N` matches
   this item → it **is** this item's earlier capture. A caller that writes a

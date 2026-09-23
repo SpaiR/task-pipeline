@@ -52,7 +52,7 @@ Take the **first** case that matches:
 One parallel batch where the reads are independent:
 
 - The target roadmap, in full — its intro, `Spec:` headers, phases, every item's ready description, and the existing `## Architecture` in revise mode.
-- `bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap-items.sh" <slug>` — each item's number, dependencies and title, and which are still open; the sketches and the ordering key on these numbers.
+- `bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap-items.sh" <slug>` — number, dependencies and title for each **unchecked** item, plus a `DONE` line listing the already-ticked numbers (their dependencies and titles come from the full roadmap read above); the sketches and the ordering key on these numbers.
 - Every spec the roadmap's `Spec:` headers name, plus any from `SPECS:` the discussion leaned on. Their decisions are **fixed anchors**: the section may cite them and must never contradict them.
 - `.task/CLAUDE.md` with a **file-read tool** — Language, and Code Navigation if declared — and the project's `CLAUDE.md` if present.
 
@@ -97,7 +97,7 @@ technical shape I captured. Say so if a line is wrong.}
 {Only if part of the discussion is out of context. Omit otherwise.}
 ```
 
-In **revise**, mark each line against the baseline — `+` added, `~` changed, `−` removed — and list every removed line explicitly: `.task/` is git-excluded, so a line dropped here is not recoverable from history.
+In **revise**, mark each line against the baseline — `+` added, `~` changed, `−` removed — and list every removed line explicitly: `.task/` is ignored by its own `.task/.gitignore` and never committed, so a line dropped here is not recoverable from history.
 
 It is a **recap**, printed without a confirmation chip. Open forks left → resolve them in one 3C round first, then draft. A misread arrives as chat: correct it and reprint before drafting.
 
@@ -150,7 +150,7 @@ Before saving, self-check and fix inline:
 Edit the roadmap in place — no in-chat preview, no confirmation prompt; Step 3's inventory was the review. Three edits, and nothing else in the file changes:
 
 1. **The section.** Enrich: insert it directly above the first `## Phase <N> — …` heading (after `## Phase summary`); in a file without numbered phases, above the `## ` section holding the first item. Revise: replace everything from `## Architecture` up to the next `## ` heading.
-2. **Dependencies**, for each `### Technical ordering` line whose dependency is missing — on **unchecked** target items only, **adding, never removing**. A no-dependency value (`—`, `-`, `none`, `n/a`) is **replaced** by the list; an existing list gains `, <N>`; ASCII digits, comma-separated. An item with no `**Dependencies:**` line gets one, directly above its `**Model:**` line, or above `**Ready description:**` when there is no model hint.
+2. **Dependencies**, for each `### Technical ordering` line whose dependency is missing — on **unchecked** target items only, **adding, never removing**. A no-dependency value (`—`, `-`, `none`, `n/a`, or an empty value) is **replaced** by the list — appending to an empty one would leave `, <N>`, which `validate.sh` rejects; an existing list gains `, <N>`; ASCII digits, comma-separated. An item with no `**Dependencies:**` line gets one, directly above its `**Model:**` line, or above `**Ready description:**` when there is no model hint.
 3. **`Spec:` headers**, for each spec the section cites that the roadmap's header does not name yet: add `Spec: [<slug>](../spec/<slug>.md)` directly under `# <Title>`, beside any existing ones. A spec reaches the driver's plan agents only through those header lines, so a citation without one would be invisible to them.
 
 Then validate: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" roadmap <slug>` — surface any WARN/ERROR in the Step 6 digest; only a setup-precondition failure (exit 2) hard-stops.

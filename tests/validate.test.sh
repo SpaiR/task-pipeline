@@ -107,6 +107,20 @@ v "$repo" roadmap dup01
 assert_exit 1 "$V_EXIT" "leading-zero duplicate"
 assert_contains "$V_OUT" "duplicate item number 1" "names the number once"
 
+t_case "an item numbered 0 is an error — item numbers start at 1"
+sed 's/^### - \[ \] 1\. Also first/### - [ ] 0. Zeroth/' \
+  "$repo/.task/roadmap/dup.md" >"$repo/.task/roadmap/zero.md"
+v "$repo" roadmap zero
+assert_exit 1 "$V_EXIT" "item 0"
+assert_contains "$V_OUT" "item numbers start at 1" "names the rule"
+
+t_case "a dependency on item 0 is an error"
+sed 's/^### - \[ \] 1\. Also first/### - [ ] 2. Second/; s/^\*\*Dependencies:\*\* —$/**Dependencies:** 0/' \
+  "$repo/.task/roadmap/dup.md" >"$repo/.task/roadmap/zerodep.md"
+v "$repo" roadmap zerodep
+assert_exit 1 "$V_EXIT" "dependency 0"
+assert_contains "$V_OUT" "depends on item 0 — item numbers start at 1" "names the dependency"
+
 t_case "a dependency on a number with no item heading is an error"
 sed 's/^### - \[ \] 1\. Also first/### - [ ] 2. Second/; s/^\*\*Dependencies:\*\* —$/**Dependencies:** 9/' \
   "$repo/.task/roadmap/dup.md" >"$repo/.task/roadmap/dangling.md"

@@ -82,6 +82,8 @@ The checkbox is the progress marker; `**Dependencies:**` drives the wave orderin
 
 An item that leans on a spec decision cites it as `### Spec references → [<slug>](../spec/<slug>.md) §N`. `## Prerequisites` and `## Backlinks` hold Markdown links too — a sibling roadmap is `[<slug>](<slug>.md)`, a spec `[<slug>](../spec/<slug>.md)`.
 
+A roadmap may also carry one optional `## Architecture` section — components, interfaces between items, a sketch per item, technical ordering — written by [`to-architecture`](/reference/to-architecture). No parser reads it; planners follow it as the intended shape.
+
 ## spec.md
 
 ```markdown

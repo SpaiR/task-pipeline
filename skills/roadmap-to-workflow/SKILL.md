@@ -79,6 +79,7 @@ The driver's `computeWaves` sorts them and hard-stops **before spawning anything
 - `dependency cycle among #1, #2 …` → `→ Next: edit \`.task/roadmap/<slug>.md\` to break the cycle, then rerun \`/task:roadmap-to-workflow <slug>\``
 - `not runnable in this roadmap …: #9` → name the valid set, as Step 0's bad-range pick does: `Unchecked right now: #2, #3. → Next: rerun \`/task:roadmap-to-workflow <slug>\` and pick from those`
 - `nothing to run — every item in scope is already marked.` → `→ Done.`
+- `bad args — …` → this skill built the args wrong, not the user: `→ Next: rerun \`/task:roadmap-to-workflow <slug>\` (the args are rebuilt from the roadmap file)`
 
 ## Step 2: Invoke the Workflow driver
 

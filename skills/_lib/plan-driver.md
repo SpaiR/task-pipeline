@@ -120,7 +120,7 @@ Follow `skills/_lib/roadmap-item.md` — steps 3 to 6 (read the ready descriptio
 
 ### D2. Slug collision, without anyone to ask
 
-`roadmap-item.md` step 5 already separates the two cases. In driver mode:
+`roadmap-item.md` step 5 already separates the two cases. Your prompt carries no `TASKS:` list, so check whether `$AI_DIR/task/<item-slug>.md` exists before choosing a mode — a rerun after a failed implement finds this item's own file there, and `--fresh` on it would exit 4. In driver mode:
 
 - **This item's earlier capture** → `--promote` it (no `## Plan` yet) or `--revise` it (one already present).
 - **An unrelated task on the same kebab-case** → disambiguate the slug and write fresh. Never overwrite, never `--force`.
