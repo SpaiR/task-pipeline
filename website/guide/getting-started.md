@@ -23,7 +23,7 @@ From then on, updates are a single command:
 
 After installation, Claude Code gains these commands:
 
-`/task:grill` · `/task:to-task` · `/task:to-plan` · `/task:to-roadmap` · `/task:to-spec` · `/task:roadmap-to-workflow`
+`/task:grill` · `/task:to-task` · `/task:to-plan` · `/task:to-roadmap` · `/task:to-architecture` · `/task:to-spec` · `/task:roadmap-to-workflow`
 
 There is no hook — enforcement is by convention, not a gate. (If the commands don't show up, see [Troubleshooting](/guide/troubleshooting#commands-appear).)
 

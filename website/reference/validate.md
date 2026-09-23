@@ -38,7 +38,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" [ all | task <slug> | r
 
 - An `ERROR` marks a genuine structural problem worth fixing before you hand a file to an implementing session.
 - A `WARN` (e.g. a dangling `Spec:` reference — the pipeline's one cross-file check) never blocks anything.
-- A missing `.task/CLAUDE.md` exits 2 — the one precondition failure that stops a run. The message names the path it looked at and points you at the four capture skills, each of which writes `.task/CLAUDE.md` inline on first use.
+- A missing `.task/CLAUDE.md` exits 2 — the one precondition failure that stops a run. The message names the path it looked at and points you at the five intake-capable capture skills (`to-task` / `to-plan` / `to-roadmap` / `to-architecture` / `to-spec`), each of which writes `.task/CLAUDE.md` inline on first use.
 
 Because it's advisory, nothing forces you to run it *directly*. One caveat: `/task:roadmap-to-workflow` runs `validate.sh all` in its own setup gate and refuses to start when an `ERROR` is reported against the roadmap you picked — so for that command a roadmap `ERROR` is effectively blocking, and fixing it is the way forward. Errors on any other artifact never stop it. Its whole purpose is to catch a hand-edit that drifted from the format. See [Troubleshooting](/guide/troubleshooting#validate-fail) for reading the output.
 

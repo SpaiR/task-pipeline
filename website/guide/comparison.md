@@ -3,7 +3,7 @@
 ## What task-pipeline optimizes for
 
 - **An argued plan.** The model tends to agree and start coding before the plan is examined; `grill` interrogates the decision first — one question at a time, recommendations allowed to disagree with you, closing on a pre-mortem — so what gets frozen is what survived the questioning, not the first idea that sounded good.
-- **Proportional depth.** The pattern elsewhere is to fix shaky understanding with volume — more templates, more artifacts, the same ceremony for a rename and a rewrite. Here depth is the skill you pick (`to-task` / `to-plan` / `to-roadmap` / `to-spec`), never a template you're made to fill: a two-file fix and a month-long migration don't carry the same paperwork.
+- **Proportional depth.** The pattern elsewhere is to fix shaky understanding with volume — more templates, more artifacts, the same ceremony for a rename and a rewrite. Here depth is the skill you pick (`to-task` / `to-plan` / `to-roadmap` / `to-architecture` / `to-spec`), never a template you're made to fill: a two-file fix and a month-long migration don't carry the same paperwork.
 - **A fixed, checkable plan contract.** Steps are `### Step N` with `Goal` / `Touches` / optional `Logic` — a format a validator (`validate.sh`) checks and reports on every write, not free text. The check is informational; it gates nothing.
 - **Rails, not a generator.** You work out the plan in chat and stay its author; the capture skill serializes that decision to disk and keeps the implementing session on it. It does not invent a plan from a one-line prompt. Autopilot exists (`roadmap-to-workflow` fans a roadmap out to sessions) but it is an explicit opt-in over a roadmap you already approved.
 - **Attachable per-decision specs.** After a chat discussion you can pin one or several load-bearing decisions into `.task/spec/<slug>.md` and cite them from any task, plan, or roadmap via a `Spec:` header; the implementing session reads them as fixed anchors.
@@ -77,7 +77,7 @@ task-pipeline's `grill` is openly inspired by Matt Pocock's grilling skill, and 
 |---|---|---|
 | **Paradigm** | Chat-first capture; no forms, no fixed phase sequence | Form-first, spec-driven ceremony |
 | **Who authors the plan** | You in chat; the skill serializes it | Driven through a command sequence you fill in and refine |
-| **Workflow** | One short capture skill (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) | `/speckit.constitution` → `/speckit.specify` → `/speckit.plan` → `/speckit.tasks` → `/speckit.implement` |
+| **Workflow** | One short capture skill (`to-task` / `to-plan` / `to-roadmap` / `to-architecture` / `to-spec`) | `/speckit.constitution` → `/speckit.specify` → `/speckit.plan` → `/speckit.tasks` → `/speckit.implement` |
 | **Moving parts** | Flat Markdown under `.task/`; nothing to install | A `specify` CLI (installed via `uv`) plus per-agent integrations |
 | **Trace in the repo** | Invisible — git-excluded | A `.specify/` artifact tree committed to the repo |
 | **Platforms** | Claude Code only | 30+ AI coding agents, cross-agent |

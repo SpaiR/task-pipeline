@@ -65,9 +65,9 @@ Nothing was written when this fires, so re-running the command after fixing the 
 
 **Symptom** — a skill stops with `.task/CLAUDE.md not found`.
 
-**Cause** — `/task:roadmap-to-workflow` and `validate` require `.task/CLAUDE.md`, and it hasn't been written in this project yet. The four capture skills (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) write it inline on first use instead of stopping, and `/task:grill` needs no setup at all. There is no separate setup command — setup is folded inline into those four capture skills.
+**Cause** — `/task:roadmap-to-workflow` and `validate` require `.task/CLAUDE.md`, and it hasn't been written in this project yet. The five intake-capable capture skills (`to-task` / `to-plan` / `to-roadmap` / `to-architecture` / `to-spec`) write it inline on first use instead of stopping, and `/task:grill` needs no setup at all. There is no separate setup command — setup is folded inline into those five capture skills.
 
-**Fix** — run any of `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, or `/task:to-spec`. Each detects language and test policy, writes `.task/CLAUDE.md`, records `git config task.root`, reports what it wrote, and continues into the capture. `/task:roadmap-to-workflow` is *not* setup-capable by design — if you hit this there, run a capture skill first, then retry.
+**Fix** — run any of `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, `/task:to-architecture`, or `/task:to-spec`. Each detects language and test policy, writes `.task/CLAUDE.md`, records `git config task.root`, reports what it wrote, and continues into the capture. `/task:roadmap-to-workflow` is *not* setup-capable by design — if you hit this there, run a capture skill first, then retry.
 
 ### .task/ shows up in git status
 

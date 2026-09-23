@@ -38,6 +38,10 @@ See the [single-task guide](/guide/single-task) for how promote/revise work in p
 
 `Touches` lists real full paths — and also scopes which review fixes get applied: `task:code-reviewer` fixes confirmed defects inside these files, plus a regression the same diff caused outside them, and reports everything else instead of widening the change. `Logic` appears only where Goal + Touches leave genuine ambiguity.
 
+## Roadmap architecture
+
+When the task comes from a roadmap item, `to-plan` also reads that roadmap's `## Architecture` section, if it has one — see [`to-architecture`](/reference/to-architecture). It's read as **intended shape, not a fixed anchor**: the Plan's `Touches` and `Goal`s follow its components and interfaces by default, and a step is free to depart when the actual code disagrees, as long as its `Goal` states why in one clause.
+
 ## Tests
 
 Governed by `.task/CLAUDE.md` → Testing Policy: `always` writes Tests every time; `on-demand` (default) only when the discussion asks; `never` omits them. Each `## Plan` step that satisfies a test references it by number.
@@ -51,6 +55,7 @@ Sections: Description, Plan (3 steps), Execution
 Plan:
 - Step 1: {short title}
 - Step 2: …
+architecture: followed | deviated in step N — {reason} | none
 validate: OK — 0 errors, 0 warnings
 
 → Next: implement it now, or in a fresh session run:

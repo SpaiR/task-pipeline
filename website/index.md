@@ -29,7 +29,7 @@ features:
     details: An optional grill step interrogates the plan one question at a time and ends on a pre-mortem. It's allowed to disagree with you.
   - icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg>'
     title: You pick the depth, not a flag
-    details: A quick fix and a month-long migration don't deserve the same paperwork. Capture is the skill you reach for — to-task, to-plan, to-roadmap, to-spec — not a template to fill out.
+    details: A quick fix and a month-long migration don't deserve the same paperwork. Capture is the skill you reach for — to-task, to-plan, to-roadmap, to-architecture, to-spec — not a template to fill out.
   - icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>'
     title: Any session can run it
     details: Tell any session `implement &lt;path&gt;`. It reads the file, works the plan, runs your project's own checks, and commits. Just a chat instruction — you already know how.

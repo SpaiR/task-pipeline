@@ -44,6 +44,7 @@ discuss freely in chat
 grill                                 ← pre-capture: interrogate the decision, no artifact
   ↓
 to-task | to-plan | to-roadmap        ← capture depth is the skill, not a flag
+to-architecture                       ← a roadmap's technical layer: ## Architecture
 to-spec                               ← pins technical decisions, cited via Spec:
   ↓                       ↓
 implement session   roadmap-to-workflow   ← the launcher fans items out to sessions
@@ -57,6 +58,7 @@ A few things to notice, because they're the load-bearing design choices:
 - **Depth of capture is the skill you pick, not a flag.** [`to-task`](/reference/to-task) records just the "what and why". [`to-plan`](/reference/to-plan) adds a step-by-step Plan. [`to-roadmap`](/reference/to-roadmap) captures a whole multi-task initiative. There is no `--plan` or `--deep` switch anywhere.
 - **There is no execution skill.** Every artifact ends with a one-line `## Execution` pointer into `.task/CLAUDE.md` → `## Executing a task`, and any ordinary session told `implement .task/task/<slug>.md` follows it.
 - **[`grill`](/reference/grill) sits before capture.** It interrogates a plan one question at a time and hands off to the right capture skill — it writes nothing itself.
+- **[`to-architecture`](/reference/to-architecture) is a roadmap's technical layer.** It adds a `## Architecture` section — components, interfaces between items, per-item sketches — that planners follow as intended shape, writing the roadmap through the same flow as `to-roadmap` when none exists yet.
 - **[`to-spec`](/reference/to-spec) is orthogonal.** It pins load-bearing technical decisions into their own file, which tasks and roadmaps point at with a `Spec:` header.
 
 ## When to use it (and when not to)
