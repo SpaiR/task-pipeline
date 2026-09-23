@@ -22,9 +22,10 @@ See the [roadmaps guide](/guide/roadmaps) for when to run it and how planners us
 
 Run it once a roadmap's items exist and their technical shape is worth pinning — right after `to-roadmap` in the same chat, or standalone against a roadmap captured earlier. It's the initiative-level counterpart to `to-plan`: as `to-plan` adds `## Plan` to one task, this adds `## Architecture` to a roadmap.
 
-Two stops worth knowing:
+Three stops worth knowing:
 
 - **Too small for a roadmap** — with no roadmap yet, a discussion that is really one task (no phases, no cross-item dependencies) → it **stops without writing** and points you at [`to-plan`](/reference/to-plan) or [`to-task`](/reference/to-task): one task's technical shape is a `## Plan`, not this section.
+- **Nothing left to plan** — every item on the target roadmap is already checked off → it **stops without writing**; no planner would read the section.
 - **A `/task:roadmap-to-workflow` run is active on the target roadmap** → it **stops without writing**. The run's mark stage rewrites the file as items land and would drop the edit, and its waves were already computed at launch, so an added dependency wouldn't apply anyway.
 
 ## What it writes

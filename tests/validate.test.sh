@@ -199,6 +199,31 @@ assert_exit 0 "$V_EXIT" "WARN only"
 assert_contains "$V_OUT" "cites #9, which has no item heading" "names the reference"
 assert_contains "$V_OUT" "OK 0 errors, 1 warning(s)" "the awk WARN is counted in the summary"
 
+t_case "a heading with trailing text is still the section, and '#N' after an arrow counts"
+arch_roadmap "$repo/.task/roadmap/arch-suffix.md" '## Architecture — draft
+
+### Components
+- `Bus` — new · `src/bus` — events.
+
+### Item sketches
+- #1 — adds it.
+- #2→#9 — a reference glued to an arrow.
+'
+v "$repo" roadmap arch-suffix
+assert_exit 0 "$V_EXIT" "WARN only"
+assert_contains "$V_OUT" "cites #9, which has no item heading" "suffixed heading is scanned, glued ref counted"
+
+t_case "a finished roadmap does not need '### Item sketches'"
+arch_roadmap "$repo/.task/roadmap/arch-done.md" '## Architecture
+
+### Components
+- `Bus` — new · `src/bus` — events.
+'
+sed -i.bak 's/^### - \[ \] /### - [x] /' "$repo/.task/roadmap/arch-done.md" && rm -f "$repo/.task/roadmap/arch-done.md.bak"
+v "$repo" roadmap arch-done
+assert_exit 0 "$V_EXIT" "all items checked"
+assert_contains "$V_OUT" "OK 0 errors, 0 warning(s)" "no sketches WARN once nothing is left to plan"
+
 t_case "two '## Architecture' sections are a WARN"
 arch_roadmap "$repo/.task/roadmap/arch-twice.md" "$ARCH_OK
 $ARCH_OK"
@@ -236,6 +261,7 @@ bare=$(make_repo)
 v "$bare" task whatever
 assert_exit 2 "$V_EXIT" "no .task/CLAUDE.md"
 assert_contains "$V_OUT" "CLAUDE.md not found" "the substring the skills branch on"
+assert_contains "$V_OUT" "/task:to-architecture" "the roster names every intake-capable capture skill"
 
 t_case "a missing slug argument is a usage error (exit 2)"
 v "$repo" task

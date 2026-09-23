@@ -421,7 +421,7 @@ validate_roadmap() {
     # Track `## Architecture` without consuming the line — the `## ` flush rule
     # below must still see it. Only the message of the numbered-heading rule
     # depends on it: the heading is an error either way.
-    /^## / { in_arch = ($0 ~ /^## Architecture[[:space:]]*$/) }
+    /^## / { in_arch = ($0 ~ /^## Architecture([[:space:]]|$)/) }
 
     /^### [0-9]+\. / {
       flush_block()
@@ -486,11 +486,14 @@ validate_roadmap() {
   #   - a required sub-heading missing (`### Item sketches` only while unchecked
   #     items remain — a finished roadmap has nothing left to sketch);
   #   - an `#N` item reference with no item heading, e.g. after a renumbering.
+  # The section is any `## Architecture` heading, trailing text included
+  # (`## Architecture — draft`), since a planner reads it all the same.
   # The `#N` scan is scoped to the section, drops code spans first (`#333`,
-  # `C#`), and counts a match only when preceded by whitespace, `,` or `(` (or
-  # at line start) and not followed by a word character — so a link anchor like
-  # `contract.md#2-decision` never reads as item 2. POSIX awk has no `\b`, hence
-  # the match() loop. Items may sit below the section, so refs resolve at END.
+  # `C#`), and skips a match glued to a word, path or entity character (`.md#2-x`,
+  # `page#2`, `&#39;`) or followed by a word character — so a link anchor never
+  # reads as item 2, while `#2→#4` without spaces still counts both. POSIX awk
+  # has no `\b`, hence the match() loop. Items may sit below the section, so
+  # refs resolve at END.
   awk_report '
     /^### - \[[ x~>-]\] [0-9]+\. / {
       m = $0; sub(/^### - \[[ x~>-]\] /, "", m); sub(/\..*$/, "", m)
@@ -499,7 +502,7 @@ validate_roadmap() {
       next
     }
     /^## / {
-      in_arch = ($0 ~ /^## Architecture[[:space:]]*$/)
+      in_arch = ($0 ~ /^## Architecture([[:space:]]|$)/)
       if (in_arch) narch++
       next
     }
@@ -514,7 +517,7 @@ validate_roadmap() {
         p = off + RSTART
         prev = (p == 1) ? " " : substr(line, p - 1, 1)
         nxt = substr(line, p + RLENGTH, 1)
-        if (prev ~ /[[:space:],(]/ && nxt !~ /[[:alnum:]_]/) {
+        if (prev !~ /[[:alnum:]_.&#\/-]/ && nxt !~ /[[:alnum:]_]/) {
           n = substr(line, p + 1, RLENGTH - 1) + 0
           if (!(n in seen)) { seen[n] = 1; nref++; ref_num[nref] = n }
         }
