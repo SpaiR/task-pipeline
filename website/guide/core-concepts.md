@@ -44,7 +44,7 @@ See [Configuration](/reference/configuration) for the details.
 
 ## 6. The pipeline is invisible to your repo
 
-`.task/` is excluded through `.git/info/exclude` (not `.gitignore`), so it never shows up in `git status` and never touches a tracked file. It's a personal tool — a teammate cloning the repo sees nothing. Delete `.task/` and the repo is exactly as it was. The only markers the pipeline leaves are the git-exclude entry and a `git config task.root` value so parallel worktrees share one `.task/`.
+`.task/` ignores itself through its own `.task/.gitignore` (a single `*`), so it never shows up in `git status` and never touches a tracked file. It's a personal tool — a teammate cloning the repo sees nothing. Delete `.task/` and the repo is exactly as it was. The only markers the pipeline leaves are that `.task/.gitignore` and a `git config task.root` value so parallel worktrees share one `.task/`.
 
 ## The interaction conventions
 

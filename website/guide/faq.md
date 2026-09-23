@@ -24,6 +24,6 @@ Yes. Descriptions and the dialogue follow `.task/CLAUDE.md` → Language, so you
 
 ## How do I uninstall cleanly?
 
-Two independent parts. Remove the artifacts with `rm -rf .task` — since `.task/` was never tracked (it lives in `.git/info/exclude`, not `.gitignore`), the repo is left exactly as it was. Remove the plugin itself through `/plugin` (uninstall `task@task-pipeline`). If you want to erase the last traces, drop the `.task` line from `.git/info/exclude` and run `git config --unset task.root`. See [Why you can trust this](/guide/trust#the-pipeline-leaves-no-trace-in-your-repo).
+Two independent parts. Remove the artifacts with `rm -rf .task` — since `.task/` was never tracked (it ignores itself through its own `.task/.gitignore`), the repo is left exactly as it was. Remove the plugin itself through `/plugin` (uninstall `task@task-pipeline`). If you want to erase the last trace, run `git config --unset task.root`. Projects set up by an earlier version may also carry a `.task` line in `.git/info/exclude` — harmless, and yours to delete by hand. See [Why you can trust this](/guide/trust#the-pipeline-leaves-no-trace-in-your-repo).
 
 → Next: [Troubleshooting](/guide/troubleshooting) — symptoms and fixes for the first run and the edge cases.
