@@ -92,7 +92,10 @@ p "$owned" plan
 assert_eq "$(printf 'CLAUDE.md\ntask/')" "$(cat "$owned/.task/.gitignore")" "untouched"
 
 t_case "an unconfigured root gets no .gitignore — setup owns first run"
+# The folder must exist, or a wrongful write would fail anyway and prove nothing.
+mkdir -p "$bare/.task"
 p "$bare" task
+assert_contains "$P_OUT" "CONFIG: absent" "still unconfigured"
 assert_eq "no" "$([[ -e "$bare/.task/.gitignore" ]] && echo yes || echo no)" "nothing written before setup"
 
 t_case "an unwritable .task/ still prints the block and exits 0"
