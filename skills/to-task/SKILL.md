@@ -76,7 +76,7 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
    rm -f "$d"
    ```
 
-   No `--plan` and no `--tests`: both are `to-plan`'s contract. Exit 4 means the file already exists and nothing was written; **exit 5** means the write itself failed (unwritable `.task/`, full disk) — no `WROTE:` line was printed, so say that plainly instead of printing Step 3's digest. `--force` is earned by the collision chips above — or, in from-roadmap mode, by Step 1a.3 having identified the file as this item's own Description-only capture. The `WROTE:` / `VALIDATE:` lines it prints are what Step 3 reports; only a setup-precondition failure (validate exit 2) hard-stops.
+   No `--plan` and no `--tests`: both are `to-plan`'s contract. Exit 4 means the file already exists and nothing was written; **exit 5** means the write itself failed (unwritable `.task/`, full disk) — no `WROTE:` line was printed, so say that plainly instead of printing Step 3's digest, and close with `→ Next: fix the write failure (permissions or free space under \`$AI_DIR\`), then rerun \`/task:to-task\`.` `--force` is earned by the collision chips above — or, in from-roadmap mode, by Step 1a.3 having identified the file as this item's own Description-only capture. The `WROTE:` / `VALIDATE:` lines it prints are what Step 3 reports; only a setup-precondition failure (validate exit 2) hard-stops.
 
 ## Step 3: Output — digest
 
