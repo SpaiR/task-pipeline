@@ -60,23 +60,33 @@ require_config() {
     # roadmap-to-workflow all branch on it. Everything after it is for the human
     # who ran this script by hand, which is the only way to reach this line.
     echo "ERROR precondition: CLAUDE.md not found at $AI_DIR/CLAUDE.md" >&2
-    echo "  The project isn't set up yet. Run /task:to-task, /task:to-plan, /task:to-roadmap" >&2
-    echo "  or /task:to-spec once — those four write .task/CLAUDE.md inline on first use." >&2
+    echo "  The project isn't set up yet. Run /task:to-task, /task:to-plan, /task:to-roadmap," >&2
+    echo "  /task:to-architecture or /task:to-spec once — those five write .task/CLAUDE.md" >&2
+    echo "  inline on first use." >&2
     exit 2
   fi
 }
 
 # --- awk_report <awk-program> <file> ---
-# Runs an awk check whose output is `ERROR <label>: …` lines, echoes each to
-# stderr and counts it. Called via process substitution so the counting loop runs
-# in THIS shell and can bump ERRORS directly — the same reason `err`/`warn` are
-# plain functions. `$label` is read from the caller's scope, as those two do.
+# Runs an awk check whose output is `ERROR <label>: …` / `WARN <label>: …` lines,
+# echoes each to stderr and counts it by severity. Called via process
+# substitution so the counting loop runs in THIS shell and can bump ERRORS /
+# WARNS directly — the same reason `err`/`warn` are plain functions. `$label` is
+# read from the caller's scope, as those two do.
+#
+# The awk runs under LC_ALL=C, byte-wise. In a UTF-8 locale macOS awk decodes
+# characters, and a match()/substr() walk across a multibyte character such as
+# the `→` of an `## Architecture` interface line aborts the whole pass with
+# "towc: multibyte conversion failure" — silently dropping every finding it would
+# have printed. Every pattern here is ASCII and every non-ASCII comparison (the
+# `—` no-dependency token) is an exact string match, so bytes lose nothing.
 awk_report() {
   local line
   while IFS= read -r line; do
     echo "$line" >&2
     [[ "$line" == ERROR* ]] && ERRORS=$((ERRORS + 1))
-  done < <(awk -v label="$label" "$1" "$2")
+    [[ "$line" == WARN* ]] && WARNS=$((WARNS + 1))
+  done < <(LC_ALL=C awk -v label="$label" "$1" "$2")
 }
 
 # Task and spec path resolution reuse `resolve_artifact_path <kind> <arg>` from
@@ -415,12 +425,20 @@ validate_roadmap() {
       next
     }
 
+    # Track `## Architecture` without consuming the line — the `## ` flush rule
+    # below must still see it. Only the message of the numbered-heading rule
+    # depends on it: the heading is an error either way.
+    /^## / { in_arch = ($0 ~ /^## Architecture([[:space:]]|$)/) }
+
     /^### [0-9]+\. / {
       flush_block()
       m = $0
       sub(/^### /, "", m)
       sub(/\..*$/, "", m)
-      print "ERROR " label ": Task " m " missing checkbox prefix '\''- [ ]'\''; roadmap-to-workflow auto-mark and item selection require every item to carry a checkbox"
+      if (in_arch)
+        print "ERROR " label ": numbered sub-heading in ## Architecture reads as item " m " missing its checkbox — write a `- #" m " — …` bullet instead: " $0
+      else
+        print "ERROR " label ": Task " m " missing checkbox prefix '\''- [ ]'\''; roadmap-to-workflow auto-mark and item selection require every item to carry a checkbox"
       next
     }
 
@@ -465,6 +483,67 @@ validate_roadmap() {
     }
 
     END { flush_block() }
+  ' "$file"
+
+  # --- `## Architecture` (optional; written by to-architecture) ---------------
+  # WARN only, never ERROR: no parser consumes this section — planners read it as
+  # the intended shape — and any roadmap ERROR stops roadmap-to-workflow from
+  # launching, which a stale sketch must not do. Three checks:
+  #   - more than one section: a planner reads one and silently misses the rest;
+  #   - a required sub-heading missing (`### Item sketches` only while unchecked
+  #     items remain — a finished roadmap has nothing left to sketch);
+  #   - an `#N` item reference with no item heading, e.g. after a renumbering.
+  # The section is any `## Architecture` heading, trailing text included
+  # (`## Architecture — draft`), since a planner reads it all the same.
+  # The `#N` scan is scoped to the section, drops code spans first (`#333`,
+  # `C#`), and skips a match glued to a word, path or entity character (`.md#2-x`,
+  # `page#2`, `&#39;`) or followed by a word character — so a link anchor never
+  # reads as item 2, while `#2→#4` without spaces still counts both. POSIX awk
+  # has no `\b`, hence the match() loop. Items may sit below the section, so
+  # refs resolve at END.
+  awk_report '
+    /^### - \[[ x~>-]\] [0-9]+\. / {
+      m = $0; sub(/^### - \[[ x~>-]\] /, "", m); sub(/\..*$/, "", m)
+      items[m + 0] = 1
+      if ($0 ~ /^### - \[ \] /) open++
+      next
+    }
+    /^## / {
+      in_arch = ($0 ~ /^## Architecture([[:space:]]|$)/)
+      if (in_arch) narch++
+      next
+    }
+    !in_arch { next }
+    /^### Components[[:space:]]*$/    { has_comp = 1; next }
+    /^### Item sketches[[:space:]]*$/ { has_sketch = 1; next }
+    {
+      line = $0
+      gsub(/`[^`]*`/, "", line)
+      s = line; off = 0
+      while (match(s, /#[0-9]+/)) {
+        p = off + RSTART
+        prev = (p == 1) ? " " : substr(line, p - 1, 1)
+        nxt = substr(line, p + RLENGTH, 1)
+        if (prev !~ /[[:alnum:]_.&#\/-]/ && nxt !~ /[[:alnum:]_]/) {
+          n = substr(line, p + 1, RLENGTH - 1) + 0
+          if (!(n in seen)) { seen[n] = 1; nref++; ref_num[nref] = n }
+        }
+        off = p + RLENGTH - 1
+        s = substr(line, off + 1)
+      }
+    }
+    END {
+      if (narch == 0) exit
+      if (narch > 1)
+        print "WARN " label ": " narch " `## Architecture` sections — planners read one; merge them into a single section"
+      if (!has_comp)
+        print "WARN " label ": `## Architecture` has no `### Components` sub-heading"
+      if (!has_sketch && open > 0)
+        print "WARN " label ": `## Architecture` has no `### Item sketches` sub-heading while unchecked items remain"
+      for (i = 1; i <= nref; i++)
+        if (!(ref_num[i] in items))
+          print "WARN " label ": `## Architecture` cites #" ref_num[i] ", which has no item heading in this file"
+    }
   ' "$file"
 }
 

@@ -19,6 +19,22 @@ Each item is written so a reader who hasn't seen the discussion could pick it up
 
 If a load-bearing technical decision surfaces during the discussion, capture it separately with [`/task:to-spec`](/guide/specs) and reference it from the roadmap via a `Spec: [<slug>](../spec/<slug>.md)` header, directly under the roadmap's `# <Title>` — roadmaps don't inline cross-item technical decisions.
 
+## Add the technical layer
+
+Once the items exist, the initiative usually has a technical shape too: which components it builds or changes, what one item hands another, a module-level sketch per item, and a technical ordering between them. That's neither an item (items stay behavioral, no project names) nor a spec (a spec pins a decision's *reasoning*, not a layout) — it's a roadmap's own `## Architecture` section, and [`/task:to-architecture`](/reference/to-architecture) is what writes it:
+
+```text
+/task:to-architecture api-v2-migration
+# → adds ## Architecture to .task/roadmap/api-v2-migration.md: components with
+#   real module paths, interfaces between items (#2 → #4), one module-level
+#   sketch per unchecked item, and a technical ordering mirrored into the
+#   dependent items' **Dependencies:**
+```
+
+Run it right after `to-roadmap`, in the same chat, or on its own against a roadmap you captured earlier. With no roadmap yet, it captures one first — through the same flow `to-roadmap` uses — and then adds the section, so one command covers both. From then on, `to-plan` on an item — interactive or through `roadmap-to-workflow`'s per-item plan agent — reads the section as the **intended shape**: its Plan follows the named components and interfaces by default, and a step is free to depart when the real code disagrees, as long as it says why. The executing session and `task:code-reviewer` never read it directly; by the time they run, the shape is already embodied in the Plan.
+
+**Specs vs. architecture** — the two divide cleanly. A spec says *why this form over that one*: a protocol, a data shape, a "we picked X over Y because…" whose reasoning would otherwise be re-litigated. The architecture section says *what goes where*: which module owns which behavior, and what crosses the boundary between two items. A component map that drifts into a spec is really architecture wearing the wrong hat; the section cites a spec inline wherever a shape it describes is pinned by one.
+
 ## Pick up items by hand
 
 `to-task` / `to-plan` can open a roadmap item directly as their input:

@@ -6,7 +6,7 @@ It is a **nested `CLAUDE.md`**, not a bespoke config format. Claude Code loads a
 
 ## First-run setup
 
-On a fresh project, the first `to-task` / `to-plan` / `to-roadmap` / `to-spec`:
+On a fresh project, the first `to-task` / `to-plan` / `to-roadmap` / `to-architecture` / `to-spec`:
 
 1. reads `CLAUDE.md` and your commit conventions, detects language/stack, build/test commands, and a testing policy;
 2. writes `.task/CLAUDE.md`, records `git config --local task.root`, and writes `.task/.gitignore` (a single `*`) so the folder ignores itself;

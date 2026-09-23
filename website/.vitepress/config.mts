@@ -5,7 +5,7 @@ const gh = 'https://github.com/SpaiR/task-pipeline'
 // Absolute URL for the social card — link unfurlers can't resolve a relative path.
 const ogImage = 'https://spair.github.io/task-pipeline/og-image.png'
 const description =
-  'A Claude Code plugin that freezes a chat into a Markdown plan file any session can implement. Grill the plan, pick the capture depth — task, plan, roadmap, or spec.'
+  'A Claude Code plugin that freezes a chat into a Markdown plan file any session can implement. Grill the plan, pick the capture depth — task, plan, roadmap, architecture, or spec.'
 
 export default defineConfig({
   title: 'task-pipeline',
@@ -101,6 +101,7 @@ export default defineConfig({
             { text: 'to-task', link: '/reference/to-task' },
             { text: 'to-plan', link: '/reference/to-plan' },
             { text: 'to-roadmap', link: '/reference/to-roadmap' },
+            { text: 'to-architecture', link: '/reference/to-architecture' },
             { text: 'to-spec', link: '/reference/to-spec' },
             { text: 'roadmap-to-workflow', link: '/reference/roadmap-to-workflow' },
             { text: 'validate', link: '/reference/validate' },

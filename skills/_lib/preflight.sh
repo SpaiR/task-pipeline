@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # preflight.sh — print a capture skill's entry state as one parser-stable block.
 #
-# Usage: bash preflight.sh <task|plan|roadmap|spec|workflow>
+# Usage: bash preflight.sh <task|plan|roadmap|architecture|spec|workflow>
 #
 # Exists so a skill's Step 0 costs zero tool round-trips: the block is
 # substituted into the skill body by SKILL.md's `!`-preprocessing, before the
@@ -42,9 +42,9 @@ SCRIPT_DIR=$(cd "$(dirname "$SRC")" && pwd)
 
 kind="${1:-}"
 case "$kind" in
-  task | plan | roadmap | spec | workflow) ;;
+  task | plan | roadmap | architecture | spec | workflow) ;;
   *)
-    echo "ERROR usage: preflight.sh <task|plan|roadmap|spec|workflow>" >&2
+    echo "ERROR usage: preflight.sh <task|plan|roadmap|architecture|spec|workflow>" >&2
     exit 2
     ;;
 esac

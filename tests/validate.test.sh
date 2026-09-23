@@ -121,6 +121,136 @@ v "$repo" roadmap crlf
 assert_exit 1 "$V_EXIT" "CRLF"
 assert_contains "$V_OUT" "CRLF line endings" "names the line endings"
 
+# --- `## Architecture` (optional, WARN-only) ---------------------------------
+# A two-item roadmap; `arch_roadmap <file> <section>` writes it with <section>
+# placed above the first phase, the position to-architecture inserts it at.
+arch_roadmap() {
+  {
+    printf '# Arch roadmap\n\nIntro.\n\n## Phase summary\n\n| Phase | Items |\n|---|---|\n| 1 | 1, 2 |\n\n'
+    printf '%s\n' "$2"
+    cat <<'MD'
+## Phase 1 — Core
+
+### - [ ] 1. First
+**Dependencies:** —
+**Ready description:**
+> ### Context
+> c
+> ### Goal
+> g
+> ### Outcomes
+> o
+> ### Acceptance criteria
+> a
+
+### - [ ] 2. Second
+**Dependencies:** 1
+**Ready description:**
+> ### Context
+> c
+> ### Goal
+> g
+> ### Outcomes
+> o
+> ### Acceptance criteria
+> a
+
+## Out of scope
+
+- nothing
+MD
+  } >"$1"
+}
+ARCH_OK='## Architecture
+
+> Intended technical shape.
+
+### Components
+- `EventBus` — new · `src/bus` — carries events; colour `#333` stays prose.
+
+### Interfaces between items
+- #1 → #2 — `Envelope`: the event shape; see [spec](../spec/x.md#2-decision), (#2 again).
+
+### Item sketches
+- #1 — adds the bus.
+- #2 — subscribes to it.
+
+### Technical ordering
+- #1 before #2 — the bus must exist first.
+'
+
+t_case "a roadmap with a well-formed '## Architecture' validates clean"
+arch_roadmap "$repo/.task/roadmap/arch-ok.md" "$ARCH_OK"
+v "$repo" roadmap arch-ok
+assert_exit 0 "$V_EXIT" "clean architecture"
+assert_contains "$V_OUT" "OK 0 errors, 0 warning(s)" "no false positive on #333, a link anchor or (#2)"
+
+t_case "the section does not change what the item collector sees"
+arch_roadmap "$repo/.task/roadmap/arch-none.md" ""
+with=$(bash "$T_REPO_ROOT/skills/_lib/roadmap-items.sh" "$repo/.task/roadmap/arch-ok.md" 2>&1)
+without=$(bash "$T_REPO_ROOT/skills/_lib/roadmap-items.sh" "$repo/.task/roadmap/arch-none.md" 2>&1)
+assert_eq "$without" "$with" "roadmap-items.sh output identical with and without the section"
+
+t_case "an '#N' in '## Architecture' with no item heading is a WARN, not an error"
+arch_roadmap "$repo/.task/roadmap/arch-dangling.md" "${ARCH_OK}- #9 — a sketch for an item that was renumbered away.
+"
+v "$repo" roadmap arch-dangling
+assert_exit 0 "$V_EXIT" "WARN only"
+assert_contains "$V_OUT" "cites #9, which has no item heading" "names the reference"
+assert_contains "$V_OUT" "OK 0 errors, 1 warning(s)" "the awk WARN is counted in the summary"
+
+# Runs under a UTF-8 locale on purpose: that is where macOS awk decodes the `→`
+# and, before the checks ran byte-wise, aborted the pass on it.
+t_case "a heading with trailing text is still the section, and '#N' after an arrow counts"
+arch_roadmap "$repo/.task/roadmap/arch-suffix.md" '## Architecture — draft
+
+### Components
+- `Bus` — new · `src/bus` — events.
+
+### Item sketches
+- #1 — adds it.
+- #2→#9 — a reference glued to an arrow.
+'
+LC_ALL=en_US.UTF-8 v "$repo" roadmap arch-suffix
+assert_exit 0 "$V_EXIT" "WARN only"
+assert_contains "$V_OUT" "cites #9, which has no item heading" "suffixed heading is scanned, glued ref counted"
+
+t_case "a finished roadmap does not need '### Item sketches'"
+arch_roadmap "$repo/.task/roadmap/arch-done.md" '## Architecture
+
+### Components
+- `Bus` — new · `src/bus` — events.
+'
+sed -i.bak 's/^### - \[ \] /### - [x] /' "$repo/.task/roadmap/arch-done.md" && rm -f "$repo/.task/roadmap/arch-done.md.bak"
+v "$repo" roadmap arch-done
+assert_exit 0 "$V_EXIT" "all items checked"
+assert_contains "$V_OUT" "OK 0 errors, 0 warning(s)" "no sketches WARN once nothing is left to plan"
+
+t_case "two '## Architecture' sections are a WARN"
+arch_roadmap "$repo/.task/roadmap/arch-twice.md" "$ARCH_OK
+$ARCH_OK"
+v "$repo" roadmap arch-twice
+assert_exit 0 "$V_EXIT" "WARN only"
+assert_contains "$V_OUT" "2 \`## Architecture\` sections" "names the count"
+
+t_case "missing required sub-headings are WARNs"
+arch_roadmap "$repo/.task/roadmap/arch-bare.md" '## Architecture
+
+Prose only.
+'
+v "$repo" roadmap arch-bare
+assert_exit 0 "$V_EXIT" "WARN only"
+assert_contains "$V_OUT" "no \`### Components\` sub-heading" "components"
+assert_contains "$V_OUT" "no \`### Item sketches\` sub-heading" "item sketches"
+
+t_case "a numbered sub-heading inside '## Architecture' is an error with its own message"
+arch_roadmap "$repo/.task/roadmap/arch-numbered.md" "${ARCH_OK}
+### 2. Second item sketch
+"
+v "$repo" roadmap arch-numbered
+assert_exit 1 "$V_EXIT" "reads as an item"
+assert_contains "$V_OUT" "numbered sub-heading in ## Architecture reads as item 2" "section-aware message"
+
 t_case "a spec with no '## N.' decision section is an error"
 mkdir -p "$repo/.task/spec"
 printf '# Spec: nothing pinned\n\nProse only.\n' >"$repo/.task/spec/bare.md"
@@ -133,6 +263,7 @@ bare=$(make_repo)
 v "$bare" task whatever
 assert_exit 2 "$V_EXIT" "no .task/CLAUDE.md"
 assert_contains "$V_OUT" "CLAUDE.md not found" "the substring the skills branch on"
+assert_contains "$V_OUT" "/task:to-architecture" "the roster names every intake-capable capture skill"
 
 t_case "a missing slug argument is a usage error (exit 2)"
 v "$repo" task

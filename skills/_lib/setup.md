@@ -1,6 +1,6 @@
 # First-run setup — write `.task/CLAUDE.md`
 
-Read and followed by a capture skill's Step 0 (`to-task` / `to-plan` / `to-roadmap` / `to-spec` — the intake-capable four) when the resolved `$AI_DIR/CLAUDE.md` does not exist yet. Run it inline, do not defer to another command. **No confirmation chip:** write the file, then report what it says. Detection that came out wrong is fixed by editing the file, not by re-running setup — same grammar as every capture (convention (b)).
+Read and followed by a capture skill's Step 0 (`to-task` / `to-plan` / `to-roadmap` / `to-architecture` / `to-spec` — the intake-capable five) when the resolved `$AI_DIR/CLAUDE.md` does not exist yet. Run it inline, do not defer to another command. **No confirmation chip:** write the file, then report what it says. Detection that came out wrong is fixed by editing the file, not by re-running setup — same grammar as every capture (convention (b)).
 
 1. Determine the pipeline root `ROOT` (main worktree root; `pwd` for a non-git dir; for a bare repo the default is a best-effort guess — name it in the Step 0 report so the user can move it).
 2. Gather the facts, then choose from them — do not go looking for what a script already reports:

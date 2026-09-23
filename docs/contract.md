@@ -12,6 +12,7 @@ discuss freely in chat
 grill                                 ← pre-capture: interrogate the decision, no artifact
   ↓
 to-task | to-plan | to-roadmap        ← capture depth is the skill, not a flag
+to-architecture                       ← a roadmap's technical layer: ## Architecture
 to-spec                               ← pins technical decisions, cited via Spec:
   ↓                       ↓
 implement session   roadmap-to-workflow   ← the launcher fans items out to sessions
@@ -20,10 +21,11 @@ task:code-reviewer                    ← the plugin's own review pass, spawned 
                                         prove → fix within Touches → Build and Tests → commit the fixes
 ```
 
-- `grill` — **pre-capture, produces no artifact.** Interrogates a plan/decision one question at a time, keeps an in-chat decision-plus-rationale ledger, ends with a pre-mortem (skipped when it would change nothing), and routes to the right capture skill. Depth is an outcome, not a target — it stops when no unanswered fork would change the capture, offering a wrap-up-or-keep-going checkpoint when only secondary forks remain. Touches nothing under `.task/`; its output is a hardened discussion the `to-*` skills then serialize.
+- `grill` — **pre-capture, produces no artifact.** Interrogates a plan/decision one question at a time, keeps an in-chat decision-plus-rationale ledger, ends with a pre-mortem (skipped when it would change nothing), and routes to the right capture skill — an initiative whose technical shape it settled goes to `to-architecture`, a decision with a rejected alternative to `to-spec`. Depth is an outcome, not a target — it stops when no unanswered fork would change the capture, offering a wrap-up-or-keep-going checkpoint when only secondary forks remain. Touches nothing under `.task/`; its output is a hardened discussion the `to-*` skills then serialize.
 - `to-task` — capture chat → `.task/task/<slug>.md`, `## Description` only, no `## Plan`.
 - `to-plan` — same, **with** a `## Plan` section (Goal / Touches / Logic).
 - `to-roadmap` — capture an initiative → `.task/roadmap/<slug>.md`.
+- `to-architecture` — capture an initiative's technical shape → the `## Architecture` section of `.task/roadmap/<slug>.md` (components, interfaces between items, per-item sketches, technical ordering); writes the roadmap itself first, through the same capture flow as `to-roadmap`, when none exists. Planners follow it as the intended shape.
 - `to-spec` — capture load-bearing technical decisions → `.task/spec/<slug>.md`; referenced by tasks/roadmaps via `Spec:` headers, and read by the executing session as a fixed anchor.
 - `roadmap-to-workflow` — the one launcher. Reports the roadmap's unchecked items and the user's scope, and invokes the plugin-shipped Workflow driver (`skills/_lib/roadmap-driver.js`, registered as `task:roadmap-driver` and invoked by name with `args`), which computes the dependency waves itself.
 
@@ -111,11 +113,12 @@ Every reference from one `.task/` artifact to another is written as a **Markdown
 | `task.md` header | `Spec: [<slug>](../spec/<slug>.md)` |
 | roadmap header | `Spec: [<slug>](../spec/<slug>.md)` |
 | roadmap item citation | `### Spec references → [<slug>](../spec/<slug>.md) §N` |
+| roadmap `## Architecture` citation | `[<slug>](../spec/<slug>.md) §N`, inline in a bullet |
 | `## Execution` pointer | `> Read [.task/CLAUDE.md](../CLAUDE.md) and follow its …` |
 
 Hrefs are relative to the **artifact's own directory**, which is what a Markdown viewer resolves against. `.task/task/`, `.task/roadmap/` and `.task/spec/` all sit one level under `.task/`, so a sibling-kind reference is always `../<kind>/<slug>.md` and `.task/CLAUDE.md` is always `../CLAUDE.md` — no per-file depth arithmetic.
 
-**The label carries the identity; the href is for viewers.** A consumer takes the slug from the link **label** and rebuilds the canonical `$AI_DIR/<kind>/<slug>.md` itself. It must never follow the relative href literally: an agent's cwd is the project root, not `.task/task/`, so `../spec/x.md` would resolve to a sibling of the repository. Every consumer that resolves one of these headers — `## Executing a task`, `agents/code-reviewer.md` phase 0, `to-task` Step 1a, `to-plan` Step 1/2a, `roadmap-to-workflow` Step 0 (roadmap-level header) and the driver's plan stage via `skills/_lib/plan-driver.md` (per-item citation), `validate.sh:check_spec_refs` — is written that way.
+**The label carries the identity; the href is for viewers.** A consumer takes the slug from the link **label** and rebuilds the canonical `$AI_DIR/<kind>/<slug>.md` itself. It must never follow the relative href literally: an agent's cwd is the project root, not `.task/task/`, so `../spec/x.md` would resolve to a sibling of the repository. Every consumer that resolves one of these headers — `## Executing a task`, `agents/code-reviewer.md` phase 0, `to-task` Step 1a, `to-plan` Step 1/2a, `roadmap-to-workflow` Step 0 (roadmap-level header) and the driver's plan stage via `skills/_lib/plan-driver.md` (per-item citation, and the task's `Roadmap:` label when Core step 1 looks up the roadmap's `## Architecture`), `validate.sh:check_spec_refs` — is written that way.
 
 **The bare form stays readable.** `Spec: <slug>` (and `Roadmap: <slug>`) is what earlier versions wrote, and `.task/` artifacts are hand-edited. Producers emit the link form; consumers accept either, and `validate.sh` unwraps the label — tolerating backticks and trailing text around it — before checking the reference. A bare slug is never re-flagged as malformed, only as dangling if the spec genuinely does not exist.
 
@@ -186,7 +189,7 @@ Anyone changing the `task.md` section order or the `## Execution` pointer is cha
 
 ## Roadmap file format (`.task/roadmap/<slug>.md`)
 
-Produced by `to-roadmap`; user-edited thereafter. The `roadmap-to-workflow` driver reads it to loop unchecked items and flips one `- [ ]` → `- [x]` per completed item (auto-mark, done by the driver — see below).
+Produced by `to-roadmap` — or by `to-architecture`, which runs the same capture flow when no roadmap exists yet and then adds the optional `## Architecture` section; user-edited thereafter. The `roadmap-to-workflow` driver reads it to loop unchecked items and flips one `- [ ]` → `- [x]` per completed item (auto-mark, done by the driver — see below).
 
 Whole-file skeleton, in this order:
 
@@ -198,6 +201,7 @@ Spec: [<slug>](../spec/<slug>.md)     (0..n, directly under the title, above the
 
 ## Prerequisites              (omit rather than leave empty)
 ## Phase summary              (a table: phase, what lands, which items)
+## Architecture               (optional — the technical layer, see § Roadmap architecture section)
 ## Phase 1 — <name>           (one section per phase, each holding its items)
 ## Phase 2 — <name>
 ## Out of scope
@@ -259,6 +263,36 @@ Items cite specific decisions as `### Spec references → [<slug>](../spec/<slug
 
 When `roadmap-to-workflow` runs the roadmap, it passes these spec paths to each item's plan agent; when `to-plan`/`to-task` open an item by hand, they carry the relevant `Spec:` headers onto the task file so the executing session reads them per `## Executing a task`.
 
+### Roadmap architecture section
+
+A roadmap may carry one optional `## Architecture` section: the **technical shape** of the initiative — which components it builds or changes, what crosses between items, a module-level sketch per item, and technical ordering. It fills the gap between the items (behavioral by design, no project names) and a spec (decisions with rationale, no layout): a component map is neither, and without a home of its own it drifts into specs as restated roadmap items. It sits directly above the first `## Phase <N> — …` heading — after `## Phase summary` — or, in a file without numbered phases, above the `## ` section holding the first item.
+
+```markdown
+## Architecture
+
+> Intended technical shape of this initiative — planners follow it and state a
+> reason where the code forces a deviation. Decisions with rationale live in specs.
+
+### Components                       (required)
+- `<name>` — new | existing · `<module path>` — role in this initiative.
+
+### Interfaces between items         (optional — omit when none)
+- #2 → #4, #5 — `<name>`: what crosses the boundary; form pinned in [<slug>](../spec/<slug>.md) §N.
+
+### Item sketches                    (required while unchecked items remain — one bullet per item)
+- #1 — module-level sketch: which components it touches and how.
+
+### Technical ordering               (optional)
+- #3 before #6 — reason. Mirrored in item #6's `**Dependencies:**`.
+```
+
+- **Real names are expected here** — the behavioral rule binds only an item's `### Outcomes` / `### Goal` / `### Invariants`. What stays out is plan-level detail: no `file:line`, no step lists, no code block over 5 lines. A choice whose *reasoning* must survive re-derivation belongs in a spec, which the section then cites.
+- **Items are referenced as `#N` inside bullets, never as headings.** A `### <digits>.` sub-heading reads as an item missing its checkbox, and a repeated `### - [ ] N.` heading breaks the driver's one-heading-per-item mark gate.
+- **It is intended shape, not a fixed anchor.** A spec is honored verbatim; this section is what the planner follows unless the code forces otherwise, and a deviation carries its reason in the plan.
+- **Who reads it:** the planners — `to-plan` on an item and the driver's per-item plan agent, both through `skills/_lib/plan-driver.md` § Core step 1, which locates the roadmap via `roadmap-item.md` or the task's `Roadmap:` label. The executing session and `task:code-reviewer` do not: by then the section is embodied in the Plan's `Touches` and `Goal`s, and the reviewer's fixed anchors stay the specs. `to-task` ignores it — a Description stays behavioral.
+- Headings (`## Architecture`, `### Components`, `### Interfaces between items`, `### Item sketches`, `### Technical ordering`) stay English; prose, the intro blockquote included, follows `.task/CLAUDE.md` → Language.
+- No parser consumes the section: item counting, the driver's collector and its mark stage all key on `### - [ ] N.` headings and pass it by, wherever it sits. `validate.sh` checks it advisory-only (see [§ validate.sh](#validatesh-optional-self-check-not-a-gate)).
+
 ### Roadmap link sections
 
 Two roadmap sections exist to point elsewhere, and both hold **Markdown links**, never bare slugs or paths:
@@ -288,6 +322,8 @@ Produced by `to-spec`; user-edited thereafter. A **standalone** home for load-be
 ## 2. ...
 ```
 
+**The decision test.** Every section's **Decision** names a concrete technical artifact — a type, a format, a protocol, a boundary rule — and its **Rationale** names at least one rejected alternative. A section that fails it is not a decision: a restated roadmap item or a component layout is an initiative's technical shape, which lives in the roadmap's `## Architecture` section ([§ Roadmap architecture section](#roadmap-architecture-section)) and is written by `to-architecture`, never by `to-spec`. The two divide cleanly — the section says *what goes where*, the spec says *why this form over that one* — and the section cites the spec where a shape it describes is pinned.
+
 Section labels (`## N.`, `**Decision:**` / `**Rationale:**` / `**Constrains:**`) and the `Spec:` header key stay English; prose follows `.task/CLAUDE.md` → Language.
 
 ---
@@ -299,7 +335,7 @@ Section labels (`## N.`, `**Decision:**` / `**Rationale:**` / `**Constrains:**`)
 | *(none — chat only)* | `grill` — an in-chat decision ledger, never a file | the `to-*` capture skill the user runs next |
 | `.task/CLAUDE.md` | capture skills' Step 0 setup, per `skills/_lib/setup.md` (once; never rewritten afterwards) + **the user**, by hand | every skill **except `grill`** + every executing session + `task:code-reviewer` — Language, Testing Policy, Build and Tests, Commit Format, tool priority, `## Executing a task`. Reaches consumers two ways: the platform auto-loads it when a session reads a file under `.task/`, and the `## Execution` pointer names it explicitly |
 | `.task/task/<slug>.md` | `skills/_lib/write-task.sh`, on behalf of `to-task` (header + `## Description` + `## Execution`), `to-plan` (same + `## Plan`, optional `## Tests`) and the driver's plan agent — `to-plan`'s promote / revise modes **edit an existing file in place**, see § *promote / revise* above. No caller assembles the file itself | **the executing session** (reads `## Description`, `## Plan` and `## Tests` if present, follows `## Execution` to `.task/CLAUDE.md`, reads `Spec:` for anchors and `Roadmap:` + `Source item:` for auto-mark); `roadmap-to-workflow` per-item implement agent; **`task:code-reviewer`** (reads `Touches` as fix scope + `Spec:` as fixed anchors — read-only); `validate.sh` (read-only format check) |
-| `.task/roadmap/<slug>.md` | `to-roadmap` (initial); user-edited; `roadmap-to-workflow` **driver** flips `- [ ]` → `- [x]` after an item's agent returns OK | `roadmap-to-workflow` driver (loops unchecked items, reads `**Dependencies:**` + `**Model:**` + `Spec:`); `to-plan` / `to-task` (when picking up an item); `validate.sh` (read-only format check) |
+| `.task/roadmap/<slug>.md` | `to-roadmap` (initial); `to-architecture` (initial in its fresh mode; otherwise only the `## Architecture` section, additions to unchecked items' `**Dependencies:**`, and missing `Spec:` header lines for the specs that section cites); user-edited; `roadmap-to-workflow` **driver** flips `- [ ]` → `- [x]` after an item's agent returns OK | `roadmap-to-workflow` driver (loops unchecked items, reads `**Dependencies:**` + `**Model:**` + `Spec:`); `to-plan` / `to-task` (when picking up an item); `to-plan` and the driver's per-item plan agent also read `## Architecture` as the intended shape, via `plan-driver.md` § Core step 1; `validate.sh` (read-only format check) |
 | `.task/spec/<slug>.md` | `to-spec` or user | **the executing session** (via a task's `Spec:` header) + `to-plan` (technical-decision anchor) + `roadmap-to-workflow` per-item plan agent; **`task:code-reviewer`** (phase 0 — reads each cited spec as a fixed anchor, read-only); `validate.sh` (read-only format check) |
 
 The executing session writes no separate pipeline artifacts — its implementation lands in the working tree, then in the commit, and `task:code-reviewer` reviews that diff. Auto-mark inside a single-task execution is done by the executing session itself (per `## Executing a task`, after the review returns OK); auto-mark during a roadmap run is done by the **driver**, not the per-item agent, so parallel item agents never race on the roadmap file.
@@ -308,11 +344,11 @@ The executing session writes no separate pipeline artifacts — its implementati
 
 Every skill except `grill` opens on the same fixed block, substituted into its body by `!`-preprocessing over `skills/_lib/preflight.sh` (see [§ Helpers](#helpers)) — the gate costs no tool call, and `CONFIG: present|absent` is what the three categories below branch on. `AI_DIR:` from that block is the root every artifact path in the skill is relative to.
 
-**Nothing else in a skill body may look like that injection.** The scan is positional — a `!` at line start or after whitespace, followed by a backticked command — and it runs over the raw body, so prose that merely *shows* the syntax is executed too: the platform runs every injection it finds and aborts the whole skill invocation when one fails. Quoting does not save it, because the pass that blanks ordinary code spans exempts a span whose preceding character is a backtick or a `!` — which is exactly what wrapping the example in double backticks produces. Each of the five skills therefore holds exactly one injection, its own Step 0 call, and `tests/skill-injections.test.sh` pins that count; `grill` holds none. Describe the unexpanded-line case in words instead of reproducing it.
+**Nothing else in a skill body may look like that injection.** The scan is positional — a `!` at line start or after whitespace, followed by a backticked command — and it runs over the raw body, so prose that merely *shows* the syntax is executed too: the platform runs every injection it finds and aborts the whole skill invocation when one fails. Quoting does not save it, because the pass that blanks ordinary code spans exempts a span whose preceding character is a backtick or a `!` — which is exactly what wrapping the example in double backticks produces. Each of the six skills therefore holds exactly one injection, its own Step 0 call, and `tests/skill-injections.test.sh` pins that count; `grill` holds none. Describe the unexpanded-line case in words instead of reproducing it.
 
 Three categories, not two:
 
-- **Capture skills** (`to-task` / `to-plan` / `to-roadmap` / `to-spec`) — the *intake-capable* four, in the skills' own wording — auto-run setup in a fresh project by following `skills/_lib/setup.md`: they write `.task/CLAUDE.md` on first use, without a confirmation chip, and never rewrite one that already exists.
+- **Capture skills** (`to-task` / `to-plan` / `to-roadmap` / `to-architecture` / `to-spec`) — the *intake-capable* five, in the skills' own wording — auto-run setup in a fresh project by following `skills/_lib/setup.md`: they write `.task/CLAUDE.md` on first use, without a confirmation chip, and never rewrite one that already exists.
 - **Consumer skills** (`roadmap-to-workflow`, `validate`) check `.task/CLAUDE.md` and hard-stop if it is absent.
 - **`grill`** is exempt from both: it neither checks nor creates `.task/CLAUDE.md`, so it can run at the discussion stage before any setup or capture exists. It never reads or writes anything under `.task/`; dialog mirrors the chat's language.
 
@@ -344,7 +380,8 @@ Keeps the `.task/CLAUDE.md` precondition and English parser-stable strings. **No
   - **CRLF line endings** are an error: the driver's collector strips only `[ \t]`, so a trailing CR survives into its `**Dependencies:**` / `**Model:**` values, becoming a phantom dependency and a dropped model hint. Flagged once per file rather than normalized in every parser;
   - item numbers are unique, since the driver's auto-mark keys on the number — numbering runs continuously across the whole file and never restarts per phase;
   - each item block carries the `**Ready description:**` label (required — `to-plan` and the executing session key on it to find the item body) and, inside its blockquote, the sub-headings `### Context`, `### Goal`, `### Outcomes`, `### Acceptance criteria` (matched as `> ### <name>`); `### Invariants` is **optional** and not required;
-  - dangling `Spec:` headers `WARN` as for `task`.
+  - dangling `Spec:` headers `WARN` as for `task`;
+  - an optional `## Architecture` section is checked **advisory-only** — every finding is a `WARN`, since no parser consumes the section and any roadmap `ERROR` stops `roadmap-to-workflow` from launching: more than one such section; a missing `### Components`, or a missing `### Item sketches` while unchecked items remain; an `#N` reference with no item heading (scanned inside the section only, code spans dropped, skipped when glued to a word, path or entity character so a link anchor like `.md#2-x` never reads as item 2, while `#2→#4` counts both). Any `## Architecture` heading counts as the section, trailing text included. The one `ERROR` inside it is the existing bare-`### N.` check, whose message there names the section and points at a `- #N —` bullet instead. `WARN` lines from these awk checks count toward the summary's warning total.
 - **`spec <slug>`** — validate `.task/spec/<slug>.md`: line 1 matches `^# .+`; ≥1 `## N.` numbered decision section. (No `---` separator check — a spec has no parser-stable header block above a body, so there is nothing to separate.)
 - **`all`** — validate every `.task/task/*.md`, every `.task/roadmap/*.md`, plus every `.task/spec/*.md`.
 
@@ -354,13 +391,14 @@ Keeps the `.task/CLAUDE.md` precondition and English parser-stable strings. **No
 
 | Script | Role |
 |--------|------|
-| `preflight.sh` | one-call entry state for a skill's Step 0, substituted into the skill body by `!`-preprocessing rather than run as a tool call. `bash preflight.sh <task\|plan\|roadmap\|spec\|workflow>` prints a fixed block: `PLUGIN_ROOT: <abs>` (the plugin root, which the Workflow driver cannot expand for itself), `AI_DIR: <abs>`, `CONFIG: present\|absent`, one `ROADMAPS: <slug> <done>/<total> unchecked=<n,n>` line per roadmap (`unchecked=none` when it is fully ticked; `ROADMAPS: none` when there are no roadmaps at all), `TASKS:` / `SPECS:` slug lists, and for kind `workflow` a `VALIDATE:` section holding `validate.sh all`'s output. Exit 0 whenever the block printed — an absent config is reported in `CONFIG:`, never as a status — and 2 only on a bad kind. The line prefixes are the contract; skills branch on them. Its one side effect: on `CONFIG: present` it recreates a missing `$AI_DIR/.gitignore` (the self-ignoring `*`, see [§ Marker inventory](#marker-inventory)) — never rewriting an existing one, never writing on `CONFIG: absent` (first-run setup owns that), and swallowing a failed write so the block still prints |
+| `preflight.sh` | one-call entry state for a skill's Step 0, substituted into the skill body by `!`-preprocessing rather than run as a tool call. `bash preflight.sh <task\|plan\|roadmap\|architecture\|spec\|workflow>` prints a fixed block: `PLUGIN_ROOT: <abs>` (the plugin root, which the Workflow driver cannot expand for itself), `AI_DIR: <abs>`, `CONFIG: present\|absent`, one `ROADMAPS: <slug> <done>/<total> unchecked=<n,n>` line per roadmap (`unchecked=none` when it is fully ticked; `ROADMAPS: none` when there are no roadmaps at all), `TASKS:` / `SPECS:` slug lists, and for kind `workflow` a `VALIDATE:` section holding `validate.sh all`'s output. Exit 0 whenever the block printed — an absent config is reported in `CONFIG:`, never as a status — and 2 only on a bad kind. The line prefixes are the contract; skills branch on them. Its one side effect: on `CONFIG: present` it recreates a missing `$AI_DIR/.gitignore` (the self-ignoring `*`, see [§ Marker inventory](#marker-inventory)) — never rewriting an existing one, never writing on `CONFIG: absent` (first-run setup owns that), and swallowing a failed write so the block still prints |
 | `roadmap.sh` | artifact-path + roadmap parsing helpers: `resolve_artifact_path` (called by `roadmap-items.sh` and `validate.sh`) and `roadmap_progress_counts` (called by `preflight.sh` only). Both reach `roadmap-to-workflow` indirectly, through those two scripts — the skill itself sources nothing. The driver's per-item checkbox flip is its mark stage (see [§ execution shape](#roadmap-to-workflow-execution-shape-driver-contract)), **not** a helper here. |
 | `write-task.sh` | the single owner of `task.md` assembly: `bash write-task.sh --fresh\|--promote\|--revise --slug <slug> …` writes `$AI_DIR/task/<slug>.md`, then validates it. Owns the header link forms, the `---` separator, the section order and the one copy of the `## Execution` pointer; section bodies arrive as `--description` / `--plan` / `--tests` files (body only, no heading). Refuses rather than guessing: exit 4 on an existing slug without `--force`, exit 3 when a promote/revise target has no `## Description`, exit 5 when the write itself fails (unwritable `.task/`, full disk) — and repairs a hand-edited target that lost its separator or pointer, inserting a promoted `## Plan` above an existing `## Tests` rather than below it. Prints `WROTE:` + `VALIDATE:`; exit 0 whenever the write happened, so the caller judges WARN/ERROR from the lines. A `WROTE:` line therefore means the file is on disk: on exit 5 none is printed, since callers report that line as success and treat only validate exit 2 as fatal. Callers: `to-task`, `to-plan`, `plan-driver.md` |
 | `roadmap-items.sh` | the roadmap's items as data, for the driver's args: `bash roadmap-items.sh <slug-or-path>` prints one `N<TAB>deps<TAB>model<TAB>title` line per **unchecked** item (`deps` empty for none, `model` defaulting to `sonnet`) plus a trailing `DONE<TAB><n,…>` of the already-marked numbers. Sorts nothing and filters nothing — order and scope are `computeWaves`' job. Exit 1 when the roadmap does not resolve, so an unresolved path can never read as a completed roadmap. Sole caller: `roadmap-to-workflow` Step 1 |
 | `roadmap-driver.js` | the static Workflow script `roadmap-to-workflow` invokes by name as `task:roadmap-driver` — the roadmap's unchecked items in, parallel plan / serial implement → review → mark per item out. It computes the dependency waves itself, in the pure `computeWaves(items, done, scope)` (marker-delimited, so `tests/driver-waves.test.sh` can extract it); parameterized only through `args` (see [§ execution shape](#roadmap-to-workflow-execution-shape-driver-contract)) |
-| `plan-driver.md` | **the plan pipeline itself**, in two parts. `## Core` — anchors, ascending-cost codebase analysis, `tests_required`, the three-layer `### Step N:` draft, the self-check, the write via `write-task.sh` — is followed by `to-plan` (its Steps 3–7 are pointers into it) *and* by the driver's per-item plan agent, so the interactive and non-interactive paths cannot drift. `## Driver mode` holds only what that agent does differently: its prompt inputs, its non-interactive rules, and the parser-stable `OK #N <slug> planned` / `FAIL …` digest the driver parses. There is no sync obligation left — nothing mirrors anything |
-| `roadmap-item.md` | the from-roadmap block, one copy: resolve the roadmap, pick `#N`, read the `**Ready description:**` blockquote, collect the cited + roadmap-level spec slugs, derive `<item-slug>` and decide whether an existing file with that slug is this item's earlier capture or an unrelated namesake. Read by `to-task` Step 1a, `to-plan` Step 2a and `plan-driver.md` § Driver mode |
+| `plan-driver.md` | **the plan pipeline itself**, in two parts. `## Core` — anchors (specs as fixed ones, plus the source roadmap's `## Architecture` as the intended shape a step may depart from with a stated reason), ascending-cost codebase analysis, `tests_required`, the three-layer `### Step N:` draft, the self-check, the write via `write-task.sh` — is followed by `to-plan` (its Steps 3–7 are pointers into it) *and* by the driver's per-item plan agent, so the interactive and non-interactive paths cannot drift. `## Driver mode` holds only what that agent does differently: its prompt inputs, its non-interactive rules, and the parser-stable `OK #N <slug> planned` / `FAIL …` digest the driver parses. There is no sync obligation left — nothing mirrors anything |
+| `roadmap-capture.md` | **the roadmap capture flow**, one copy, for two callers: the too-small precondition, context load, harvest-or-brainstorm branch, decision routing, drafting self-check, slug-collision guard, write, validate call and the report-only post-save self-check, plus the `## Forbidden` list binding every roadmap it writes. `to-roadmap` keeps only its Step 0 setup gate and its digest; its Steps 1–5 are a pointer into this file's `## Core`. `to-architecture` runs the same Core in its fresh mode, then adds the `## Architecture` section; where the callers differ — technical shape is a follow-up recommendation for `to-roadmap` and this run's section for `to-architecture`, whose slug-collision chip also offers **Enrich existing** — the step says so |
+| `roadmap-item.md` | the from-roadmap block, one copy: resolve the roadmap, pick `#N`, read the `**Ready description:**` blockquote, collect the cited + roadmap-level spec slugs, derive `<item-slug>` and decide whether an existing file with that slug is this item's earlier capture or an unrelated namesake, and — for the planners only — note the roadmap's `## Architecture` and the item's sketch. Read by `to-task` Step 1a (steps 1–5), `to-plan` Step 2a and `plan-driver.md` § Driver mode |
 | `detect-project.sh` | the facts first-run setup picks from: `bash detect-project.sh [dir]` prints `ROOT:`, `MANIFEST:`, one `COMMANDS: <source>: <names>` line per manifest that declares any (`package.json` scripts, `Makefile` targets), `COMMIT_FORMAT_DOC:`, `TEST_CONVENTION:` (a documented TDD rule, with file and line), `README_LANG:` / `COMMIT_LANG:` (ASCII vs non-ASCII prose, with a sample — evidence, not a verdict), and `PROJECT_CLAUDE_MD:`. Every line always prints, `none` included. Exit 0 unless the argument is not a directory. Sole caller: `setup.md` step 2 |
 | `setup.md` | first-run setup: the sub-steps and the `.task/CLAUDE.md` authoring template, read by a capture skill's Step 0 when the file is absent (see [§ `.task/CLAUDE.md` format](#taskclaudemd-format)) |
 | `templates/conventional-commits.md` | commit-format fallback: the capture skills' Step 0 setup points `.task/CLAUDE.md` → Commit Format at it when the project declares no convention of its own (no commit-format doc, nothing usable in `git log`) |
@@ -434,12 +472,13 @@ Every skill also carries an `argument-hint` — the placeholder the slash-comman
 | `to-task` | `[<roadmap-slug>[#N] \| context]` |
 | `to-plan` | `[<slug> \| <roadmap-slug>[#N] \| context]` |
 | `to-roadmap` | `[initiative]` |
+| `to-architecture` | `[<roadmap-slug> \| initiative]` |
 | `to-spec` | `[decision area]` |
 | `roadmap-to-workflow` | `[<roadmap-slug>]` |
 
 Each mirrors that skill's own **Input:** line, and stays flag-free — there is no `--plan` / `--from` / `--phase` anywhere user-facing, so a hint must never suggest one.
 
-The five skills that call bash — `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow` — also carry `allowed-tools`, pre-approving the plugin's own helpers one script at a time:
+The six skills that call bash — `to-task`, `to-plan`, `to-roadmap`, `to-architecture`, `to-spec`, `roadmap-to-workflow` — also carry `allowed-tools`, pre-approving the plugin's own helpers one script at a time:
 
 ```yaml
 allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/_lib/write-task.sh* *) Bash(bash *skills/_lib/roadmap-items.sh* *) Bash(bash *skills/_lib/detect-project.sh* *) Bash(bash *skills/validate/validate.sh* *)'
@@ -447,7 +486,7 @@ allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/_lib/w
 
 `allowed-tools` **adds** permission, it never restricts: every other tool stays callable under the session's normal rules, and the grant is scoped to the turn that invoked the skill — a later bash call, after the user has answered a chip, prompts as usual. That is fine for everything except the injected command, which must be covered, and always runs on the invoking turn.
 
-One line, identical in all five, and **one rule per script the model actually invokes** — `preflight.sh`, `write-task.sh`, `roadmap-items.sh`, `detect-project.sh`, `validate.sh`. A single `*skills/_lib/*.sh*` rule would be shorter and would not need re-editing when a helper is added, but a Bash rule matches raw command text, so its wildcards make it fire for *any* script under *any* directory named `skills/_lib/` — including one outside the plugin. `resolve-ws.sh` and `roadmap.sh` get no rule: they are only ever `source`d by the scripts above, never run as a Bash call of the model's own.
+One line, identical in all six, and **one rule per script the model actually invokes** — `preflight.sh`, `write-task.sh`, `roadmap-items.sh`, `detect-project.sh`, `validate.sh`. A single `*skills/_lib/*.sh*` rule would be shorter and would not need re-editing when a helper is added, but a Bash rule matches raw command text, so its wildcards make it fire for *any* script under *any* directory named `skills/_lib/` — including one outside the plugin. `resolve-ws.sh` and `roadmap.sh` get no rule: they are only ever `source`d by the scripts above, never run as a Bash call of the model's own.
 
 Every rule here still opens with `*` to absorb the unknown install prefix, which the platform reports as a wildcard-before-the-command warning. `${CLAUDE_PLUGIN_ROOT}` is substituted inside `allowed-tools` Bash rules and would anchor them properly; switching to it is unverified against the quoting these commands use (`bash "…/preflight.sh" task`), and a rule that stops matching takes the skill down rather than prompting — so it needs one live check before it lands.
 

@@ -76,6 +76,12 @@ MD
 p "$repo" roadmap
 assert_contains "$P_OUT" "ROADMAPS: withspace 0/1 unchecked=3" "well-formed heading is offered as open item 3"
 
+t_case "kind architecture prints the same block as the other capture kinds"
+p "$repo" architecture
+assert_exit 0 "$P_EXIT" "architecture is a known kind"
+assert_contains "$P_OUT" "CONFIG: present" "config state"
+assert_contains "$P_OUT" "ROADMAPS: api-v2 1/2 unchecked=2" "roadmap list the skill picks its target from"
+
 t_case "a configured root missing its .gitignore gets the self-ignoring one back"
 fresh=$(make_repo --config)
 p "$fresh" task

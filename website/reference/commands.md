@@ -1,6 +1,6 @@
 # Commands overview
 
-Six user-invocable skills, plus one internal utility. Depth of capture is the skill you pick — there are no flags anywhere. Every argument is optional: the autocomplete shows the hint below, and running a skill bare is the normal case (it drafts from the chat, or asks).
+Seven user-invocable skills, plus one internal utility. Depth of capture is the skill you pick — there are no flags anywhere. Every argument is optional: the autocomplete shows the hint below, and running a skill bare is the normal case (it drafts from the chat, or asks).
 
 | Command | Argument | In brief |
 |---|---|---|
@@ -8,6 +8,7 @@ Six user-invocable skills, plus one internal utility. Depth of capture is the sk
 | [`/task:to-task`](/reference/to-task) | `[<roadmap-slug>[#N] \| context]` | Fixes the chat (or a roadmap item) into `.task/task/<slug>.md` — Description only, no Plan. The lightest capture. |
 | [`/task:to-plan`](/reference/to-plan) | `[<slug> \| <roadmap-slug>[#N] \| context]` | Fixes the chat (or a roadmap item) into `.task/task/<slug>.md` with Description **+** Plan (and Tests when policy calls for it). The deepest one-task capture. |
 | [`/task:to-roadmap`](/reference/to-roadmap) | `[initiative]` | Fixes a multi-task initiative into `.task/roadmap/<slug>.md` — a phase-grouped backlog of ready-to-pick-up items. |
+| [`/task:to-architecture`](/reference/to-architecture) | `[<roadmap-slug> \| initiative]` | Fixes an initiative's technical shape — components, interfaces between items, per-item sketches — into a roadmap's `## Architecture` section, writing the roadmap too when none exists yet. |
 | [`/task:to-spec`](/reference/to-spec) | `[decision area]` | Fixes load-bearing technical decisions into a standalone `.task/spec/<slug>.md`, cited by tasks/roadmaps via a `Spec:` header. |
 | [`/task:roadmap-to-workflow`](/reference/roadmap-to-workflow) | `[<roadmap-slug>]` | Autopilot over an approved roadmap: invokes the plugin's shipped Workflow driver, which runs unchecked items in dependency-ordered waves — parallel planning, then serialized implement-and-review per item. |
 | [`validate`](/reference/validate) *(utility)* | `task \| roadmap \| spec \| all` | Optional format checker for `.task/` artifacts. Not a slash command, not a gate. |
