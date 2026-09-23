@@ -25,6 +25,10 @@ We use [GitHub](https://github.com/SpaiR/task-pipeline) to host code, track issu
   agents/self-*.md               the lens agents self-audit fans out to
                                    (read-only: Read, Grep, Glob, Bash — no Edit/Write)
   .audit-baseline.json           gitignored ratchet metrics for self-audit
+.github/                         repo automation — NOT shipped with the plugin:
+  pull_request_template.md       the PR body template (see § Pull request title)
+  workflows/tests.yml            CI: runs the bash-layer suite (tests/run.sh)
+  workflows/docs.yml             builds and deploys website/ to GitHub Pages
 skills/                          SKILL.md per skill + shared bash helpers
   _lib/                          shared helpers (roles: docs/contract.md § Helpers):
                                    resolve-ws.sh (pure .task/-root finder, exports AI_DIR),
@@ -35,7 +39,8 @@ skills/                          SKILL.md per skill + shared bash helpers
                                    detect-project.sh (the facts first-run setup picks from),
                                    roadmap-items.sh (a roadmap's unchecked items, for the driver args),
                                    roadmap-driver.js (the static Workflow script roadmap-to-workflow
-                                     invokes; computes the dependency waves in computeWaves),
+                                     invokes; computes the dependency waves in computeWaves and
+                                     gates each implement/review digest in digestPassed),
                                    plan-driver.md (the plan pipeline: § Core, followed by both
                                      to-plan Steps 3-7 and the driver's plan agent, plus
                                      § Driver mode for the non-interactive deltas),
