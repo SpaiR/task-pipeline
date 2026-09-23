@@ -44,6 +44,8 @@ skills/                          SKILL.md per skill + shared bash helpers
                                      § Driver mode for the non-interactive deltas),
                                    roadmap-item.md (the shared from-roadmap block: pick the item,
                                      read its ready description, derive the slug),
+                                   roadmap-capture.md (the roadmap capture flow: § Core, followed by
+                                     to-roadmap Steps 1-5 and to-architecture's fresh mode),
                                    setup.md (first-run setup sub-steps + the .task/CLAUDE.md template);
                                    templates/conventional-commits.md (commit-format fallback)
   grill/                         SKILL.md — pre-capture interrogation; writes nothing,
