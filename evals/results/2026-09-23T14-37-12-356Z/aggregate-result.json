@@ -1,0 +1,228 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.280",
+  "startedAt": "2026-09-23T14:37:12.356Z",
+  "durationSeconds": 38,
+  "costUsd": 0.247181,
+  "partial": false,
+  "suite": {
+    "root": "/Users/ilya.prymshyts/Personal/task-pipeline/.claude/worktrees/to-spec-roadmap-roles-97e2a2",
+    "ablation": "with-without",
+    "caseFilter": "to-architecture*",
+    "threshold": 1,
+    "concurrency": 1,
+    "plugins": [
+      {
+        "name": "task",
+        "version": "3.6.0",
+        "path": "/Users/ilya.prymshyts/Personal/task-pipeline/.claude/worktrees/to-spec-roadmap-roles-97e2a2"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "to-architecture-fresh",
+      "dir": "evals/to-architecture-fresh",
+      "source": "prose",
+      "promptMarkdown": "We're replacing the CLI's ad-hoc logging with structured logs, in three steps.\nFirst a logger core that every command gets through a shared context object,\nemitting JSON lines. Then each command migrates from console.log to that\nlogger, one command group at a time. Last, a `--log-level` flag and a redaction\nfilter that strips tokens before anything is written.\n\nTechnically: the logger core is a new `src/log/` module; the context object is\nthe existing `src/cli/context.ts`, which gains a `log` field. The migration\nitems depend on the core landing first, and the redaction filter plugs into the\ncore's write path, so it needs the core too. Commands never import the logger\ndirectly — they only see it through the context.\n\n/task:to-architecture capture the roadmap with its architecture",
+      "runsPerCase": 2,
+      "timeoutSeconds": 300,
+      "maxTurns": 30,
+      "graders": [
+        {
+          "name": "digest-line",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "(?m)^Architecture: \\d+ components?",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "section-written",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": {
+              "source": "file",
+              "path": "**/.task/roadmap/*.md"
+            },
+            "pattern": "(?m)^## Architecture\\s*$[\\s\\S]*^### Components\\s*$",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "\"skill\"\\s*:\\s*\"(?:[\\w-]+:)?to-architecture\""
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.061224600000000004,
+            "judgeCostUsd": 0,
+            "durationSeconds": 9,
+            "startedAt": "2026-09-23T14:37:12.372Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-rWV4x9/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "digest-line",
+                "passed": false,
+                "weight": 1,
+                "explanation": "grader threw: Invalid regular expression: unrecognized character after (?",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "section-written",
+                "passed": false,
+                "weight": 1,
+                "explanation": "grader threw: case \"to-architecture-fresh\" grader focus file \"**/.task/roadmap/*.md\": path \"**/.task/roadmap/*.md\" does not exist",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "skill-fired",
+                "passed": false,
+                "weight": 1,
+                "explanation": "Skill called 0x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.057108599999999995,
+            "judgeCostUsd": 0,
+            "durationSeconds": 7,
+            "startedAt": "2026-09-23T14:37:21.770Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-Fvvh5i/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "digest-line",
+                "passed": false,
+                "weight": 1,
+                "explanation": "grader threw: Invalid regular expression: unrecognized character after (?",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "section-written",
+                "passed": false,
+                "weight": 1,
+                "explanation": "grader threw: case \"to-architecture-fresh\" grader focus file \"**/.task/roadmap/*.md\": path \"**/.task/roadmap/*.md\" does not exist",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "skill-fired",
+                "passed": false,
+                "weight": 1,
+                "explanation": "Skill called 0x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.0587806,
+            "judgeCostUsd": 0,
+            "durationSeconds": 9,
+            "startedAt": "2026-09-23T14:37:28.934Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-tZGNGx/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "digest-line",
+                "passed": false,
+                "weight": 1,
+                "explanation": "grader threw: Invalid regular expression: unrecognized character after (?",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "section-written",
+                "passed": false,
+                "weight": 1,
+                "explanation": "grader threw: case \"to-architecture-fresh\" grader focus file \"**/.task/roadmap/*.md\": path \"**/.task/roadmap/*.md\" does not exist",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.0700672,
+            "judgeCostUsd": 0,
+            "durationSeconds": 12,
+            "startedAt": "2026-09-23T14:37:37.911Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-Z2pQXl/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "digest-line",
+                "passed": false,
+                "weight": 1,
+                "explanation": "grader threw: Invalid regular expression: unrecognized character after (?",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "section-written",
+                "passed": false,
+                "weight": 1,
+                "explanation": "grader threw: case \"to-architecture-fresh\" grader focus file \"**/.task/roadmap/*.md\": path \"**/.task/roadmap/*.md\" does not exist",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "advisories": [
+        "grader \"section-written\" cannot pass with the granted tools: it checks a file the run creates, but no tool the run may use can create one (a plugin hook still could; a skill's own allowed-tools does not count inside a run) — add Write (or Edit / Bash) to the case's allowed_tools and grant it with --allow-tools"
+      ],
+      "aggregates": {
+        "score": 0,
+        "passRate": 0,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 1,
+    "casesPassed": 0,
+    "overallScore": 0,
+    "overallPassRate": 0,
+    "meanDelta": 0
+  }
+}
