@@ -321,6 +321,8 @@ Produced by `to-spec`; user-edited thereafter. A **standalone** home for load-be
 ## 2. ...
 ```
 
+**The decision test.** Every section's **Decision** names a concrete technical artifact — a type, a format, a protocol, a boundary rule — and its **Rationale** names at least one rejected alternative. A section that fails it is not a decision: a restated roadmap item or a component layout is an initiative's technical shape, which lives in the roadmap's `## Architecture` section ([§ Roadmap architecture section](#roadmap-architecture-section)) and is written by `to-architecture`, never by `to-spec`. The two divide cleanly — the section says *what goes where*, the spec says *why this form over that one* — and the section cites the spec where a shape it describes is pinned.
+
 Section labels (`## N.`, `**Decision:**` / `**Rationale:**` / `**Constrains:**`) and the `Spec:` header key stay English; prose follows `.task/CLAUDE.md` → Language.
 
 ---

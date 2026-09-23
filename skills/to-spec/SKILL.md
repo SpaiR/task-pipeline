@@ -35,6 +35,7 @@ There is no full-scan validate call here: Step 4 validates the one file it write
 ### Preconditions
 
 - **No real decision to pin** — only behavioral outcomes, or details local to one task → **stop and suggest** `/task:to-task` or `/task:to-plan`. Say plainly that nothing was written, and carry **both** options with the reason: "Nothing here is a cross-task technical anchor — these are outcomes local to one task. Nothing was written. `→ Next: \`/task:to-plan\` to capture it with a plan, or \`/task:to-task\` for the what-and-why only.`"
+- **Only an initiative's technical shape** — which components it builds, how its items connect, a module layout — with no choice whose reasoning must survive → **stop and suggest** `/task:to-architecture`. That is a roadmap's `## Architecture` section, not a spec; captured here it would restate the roadmap's items in technical dress. Say plainly that nothing was written: "This is the initiative's technical shape, not a decision with a rationale to pin. Nothing was written. `→ Next: \`/task:to-architecture\` to add it to the roadmap as its technical layer.`" When the discussion holds both, pin the real decisions here and name `/task:to-architecture` for the rest in the digest.
 
 (The slug-collision check runs at save time, once the slug is derived — see Step 4.)
 
@@ -108,9 +109,10 @@ Once the Step 2H inventory (or the Step 2C recap) is **printed** — no reply is
 Keep one decision per section. Before saving, a quick self-check, fixed inline:
 
 1. Every decision is load-bearing: work would come out different if it were re-derived. No single-task details, no restated behavioral outcomes.
-2. Each `## N.` section stands alone — a reader who hasn't seen this chat understands the decision and why.
-3. No placeholders (`TBD`, `TODO`, `???`, `fill in`).
-4. Section numbers contiguous from 1 — the `### Spec references → [<slug>](../spec/<slug>.md) §N` citations that other artifacts carry depend on stable numbering.
+2. **Every section passes the decision test.** Its **Decision** names a concrete technical artifact — a type, a format, a protocol, a boundary rule — and its **Rationale** names at least one alternative that was rejected, with why. A section that fails it is not a decision: one that restates a roadmap item ("a module will handle X") or lays out components and how items connect belongs in that roadmap's `## Architecture` section via `/task:to-architecture` — drop it here and name it in the digest.
+3. Each `## N.` section stands alone — a reader who hasn't seen this chat understands the decision and why.
+4. No placeholders (`TBD`, `TODO`, `???`, `fill in`).
+5. Section numbers contiguous from 1 — the `### Spec references → [<slug>](../spec/<slug>.md) §N` citations that other artifacts carry depend on stable numbering.
 
 ### Step 4: Save
 
@@ -118,7 +120,7 @@ Write the file directly — no in-chat preview, no confirmation prompt. Step 2's
 
 1. Slug: kebab-case from the decision-area topic, ≤ 50 chars (`event-envelope`, `auth-token-model`). Its own identity, independent of any roadmap.
 2. **Slug collision.** If that slug is already in Step 0's `SPECS:` list → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). Never silently overwrite. That list is a snapshot taken before the rounds and no writer script guards this path, so when the slug is *absent* from it, confirm with a file read that nothing is there before writing.
-3. Write `$AI_DIR/spec/<slug>.md` (creating the directory if needed), and nothing else — wiring a `Spec:` header into a task or roadmap is `to-task` / `to-plan` / `to-roadmap`'s job when they reference this spec.
+3. Write `$AI_DIR/spec/<slug>.md` (creating the directory if needed), and nothing else — wiring a `Spec:` header into a task or roadmap is `to-task` / `to-plan` / `to-roadmap` / `to-architecture`'s job when they reference this spec.
 4. Validate it: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" spec <slug>` — surface any WARN/ERROR in the Step 5 digest; only a setup-precondition failure (exit 2) hard-stops.
 
 ### Step 5: Output — digest
@@ -131,6 +133,7 @@ Wrote `.task/spec/<slug>.md`
 Pins:
 - 1. {decision, one line}
 - 2. {…}
+Left for /task:to-architecture: {technical shape dropped by the decision test, one line | omit when none}
 validate: {OK — 0 errors, N warning(s) | the FAIL lines}
 ```
 
@@ -142,6 +145,7 @@ The file is already written — to change any pin, just say so. Then the handoff
 
 - Writing a `## Plan`, a step list, paths with line numbers, or implementation code. A spec pins decisions; it neither plans nor implements.
 - Capturing behavioral outcomes or single-task details — those belong in a task's `### Outcomes` / `### Acceptance criteria`.
+- Capturing a component map, a module layout, or how an initiative's items connect — that is a roadmap's `## Architecture` section, written by `to-architecture`.
 - Modifying any file but `.task/spec/<slug>.md`, or overwriting one silently. Stamping a `Spec:` header onto a task or roadmap is the referencing skill's job.
 - Writing a filler spec when no load-bearing decision was settled — stop and redirect instead.
 - Placeholders anywhere; re-raising topics the user asked to skip.
