@@ -89,7 +89,7 @@ It runs bash, edits files, and writes commits — so here is exactly what it wil
 - **Nothing is committed until the implementing session does so, per `## Executing a task`.** Until then every change is just working-tree edits; back them out with plain `git restore` / `git checkout`. One opt-in exception: `/task:roadmap-to-workflow` (autopilot) commits each roadmap item as it lands — it still never pushes.
 - **Commits stage only task-related files, and never push.** Nothing leaves your machine.
 - **No hidden orchestration.** The capture skills spawn nothing. The plugin ships exactly one subagent — `task:code-reviewer`, the review pass, whose whole prompt is a readable Markdown file in this repo (`agents/code-reviewer.md`) — and `/task:roadmap-to-workflow` runs a static Workflow script shipped with the plugin (`skills/_lib/roadmap-driver.js`), inspectable at any time — the skill only passes it the roadmap's unchecked items, the already-ticked numbers and your chosen scope; the driver derives the run order itself.
-- **The pipeline leaves no trace in the repo.** `.task/` is excluded via `.git/info/exclude` (not `.gitignore`), so it never shows up in `git status`; delete it with `rm -rf .task` and the repo is exactly as before.
+- **The pipeline leaves no trace in the repo.** `.task/` ignores itself through its own `.task/.gitignore` (a single `*`), so it never shows up in `git status` and no tracked file is touched; delete it with `rm -rf .task` and the ignore rule goes with it — the repo is exactly as before.
 
 ## Requirements
 

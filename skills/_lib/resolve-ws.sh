@@ -16,10 +16,13 @@
 #
 # Resolution order (first hit wins):
 #   1. `git config --local task.root` — the anchor recorded by the capture
-#      skills' inline Step 0 setup, accepted only when it ALREADY holds a
-#      `CLAUDE.md` (evidence, as in step 4: a stale anchor left by a
-#      moved or copied repo is ignored, not trusted). Lives in the repo-local
-#      (common) git config, so it is shared by EVERY worktree of the repo: all
+#      skills' inline Step 0 setup, accepted only on evidence, as in step 4:
+#      the path ALREADY holds a `CLAUDE.md`, and it belongs to THIS repo — its
+#      git common dir is ours, or it is exactly `dirname(our common dir)` (a
+#      bare repo's container). A stale anchor left by a moved repo (path gone)
+#      or a copied one (path is the original repo) is ignored, not trusted.
+#      Lives in the repo-local (common) git config, so it is shared by EVERY
+#      worktree of the repo: all
 #      worktrees resolve the same `.task/` with zero setup — no symlink, no
 #      join mode.
 #      `--local --get` scopes to the repo config so a stray global `task.root`
@@ -55,21 +58,46 @@ find_ai_dir() {
   local root="" have_git=0
   command -v git >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1 && have_git=1
 
+  # `common_root` is computed by step 1 when an anchor has to be checked, else
+  # by step 2 (it is one of the walk's ceiling candidates), and REUSED by the
+  # steps after it, so the git fork is paid at most once.
+  local common_root=""
+
   # 1. Anchor recorded by the inline Step 0 setup (shared across all worktrees).
   #    Claimed on EVIDENCE, exactly like step 4: the anchor is an absolute path
   #    baked into `.git/config`, which travels with the repo when it is moved or
-  #    copied. A stale anchor pointing at a vanished path would resolve to an
-  #    AI_DIR with no CLAUDE.md, the gate would report the project unconfigured,
-  #    and capture setup would regenerate CLAUDE.md over the real one that moved
-  #    with the repo. Fall through to the ancestor walk instead.
+  #    copied. Two checks, one per way it goes stale:
+  #      - MOVED: the path is gone, so it holds no CLAUDE.md. Trusting it would
+  #        report the project unconfigured, and capture setup would regenerate
+  #        CLAUDE.md over the real one that moved with the repo.
+  #      - COPIED: the path is still there — it is the ORIGINAL repo — so the
+  #        CLAUDE.md check passes, and the copy would read and write the
+  #        original's artifacts. The anchor must belong to THIS repo: its own git
+  #        common dir must be ours (main root, subdir-hosted `.task/`, any linked
+  #        worktree, a `--separate-git-dir` checkout), or it must be exactly
+  #        `dirname(our common dir)` — the container of a bare repo, which is no
+  #        repository itself. Both sides come from `--path-format=absolute`,
+  #        which git canonicalises, so they compare as plain strings.
+  #    A rejected anchor falls through to the ancestor walk. A submodule anchored
+  #    at its superproject fails the identity check too, and the walk — whose
+  #    ceiling includes the superproject — finds the same `.task/`.
   if [[ "$have_git" -eq 1 ]]; then
     root=$(git config --local --get task.root 2>/dev/null) || root=""
     [[ -n "$root" && ! -f "$root/.task/CLAUDE.md" ]] && root=""
+    if [[ -n "$root" ]]; then
+      local own_common="" anchor_common="" anchor_phys=""
+      own_common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || own_common=""
+      [[ -n "$own_common" ]] && common_root=${own_common%/*}
+      anchor_common=$(git -C "$root" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) \
+        || anchor_common=""
+      if [[ -z "$own_common" ]]; then
+        root=""                                  # nothing to prove it against
+      elif [[ "$anchor_common" != "$own_common" ]]; then
+        anchor_phys=$(cd "$root" 2>/dev/null && pwd -P) || anchor_phys=""
+        [[ -n "$anchor_phys" && "$anchor_phys" == "$common_root" ]] || root=""
+      fi
+    fi
   fi
-
-  # `common_root` is computed in step 2 (it is one of the walk's ceiling
-  # candidates) and REUSED by step 3, so the git fork is paid at most once.
-  local common_root=""
 
   # 2. Upward walk for a `.task/CLAUDE.md` ancestor (pre-anchor repos),
   #    CEILINGED so it cannot climb out of this project and claim a
@@ -107,7 +135,8 @@ find_ai_dir() {
     if [[ "$have_git" -eq 1 && "$dir" == "$phys" ]]; then
       top=$(git rev-parse --path-format=absolute --show-toplevel 2>/dev/null) || top=""
       local common
-      if common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) \
+      if [[ -z "$common_root" ]] \
+         && common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) \
          && [[ -n "$common" ]]; then
         common_root=$(dirname "$common")
       fi

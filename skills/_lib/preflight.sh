@@ -27,6 +27,13 @@
 # Exit status is 0 whenever the block was printed, including for an unconfigured
 # project: the skill decides what to do from `CONFIG:`, not from an exit code.
 # Only a usage error (bad or missing kind) exits 2.
+#
+# One side effect, and only on a configured root: a missing `.task/.gitignore`
+# (the self-ignoring `*` that keeps `.task/` out of git) is recreated. First-run
+# setup writes it; this is the one place every skill but `grill` passes through
+# on an existing root, so a deleted marker comes back on the next run instead of
+# `.task/` surfacing in `git status`. An existing file is never touched — it is
+# the user's — and a failed write is swallowed: the block still prints.
 set -u
 
 SRC="${BASH_SOURCE[0]}"
@@ -53,6 +60,12 @@ echo "PLUGIN_ROOT: $(cd "$SCRIPT_DIR/../.." && pwd)"
 echo "AI_DIR: $AI_DIR"
 if [[ -f "$AI_DIR/CLAUDE.md" ]]; then
   echo "CONFIG: present"
+  # Absent-only, never a rewrite: `-e` plus `-L` so a user's own non-regular
+  # `.gitignore` (a symlink, even a dangling one) also counts as present. The
+  # braces matter — a failed `>` reports before a trailing `2>` would apply.
+  if [[ ! -e "$AI_DIR/.gitignore" && ! -L "$AI_DIR/.gitignore" ]]; then
+    { printf '# task-pipeline: keeps .task/ out of git\n*\n' >"$AI_DIR/.gitignore"; } 2>/dev/null || true
+  fi
 else
   echo "CONFIG: absent"
 fi

@@ -82,6 +82,37 @@ assert_exit 0 "$P_EXIT" "architecture is a known kind"
 assert_contains "$P_OUT" "CONFIG: present" "config state"
 assert_contains "$P_OUT" "ROADMAPS: api-v2 1/2 unchecked=2" "roadmap list the skill picks its target from"
 
+t_case "a configured root missing its .gitignore gets the self-ignoring one back"
+fresh=$(make_repo --config)
+p "$fresh" task
+assert_exit 0 "$P_EXIT" "restoring is not a failure"
+assert_eq "# task-pipeline: keeps .task/ out of git
+*" "$(cat "$fresh/.task/.gitignore" 2>/dev/null)" "restored contents"
+# The whole point: the folder, the marker itself included, stays out of git.
+assert_eq "" "$(git -C "$fresh" status --porcelain --untracked-files=all)" ".task/ invisible to git status"
+
+t_case "an existing .gitignore is the user's and is left byte-for-byte"
+owned=$(make_repo --config)
+printf 'CLAUDE.md\ntask/\n' >"$owned/.task/.gitignore"
+p "$owned" plan
+assert_eq "$(printf 'CLAUDE.md\ntask/')" "$(cat "$owned/.task/.gitignore")" "untouched"
+
+t_case "an unconfigured root gets no .gitignore — setup owns first run"
+# The folder must exist, or a wrongful write would fail anyway and prove nothing.
+mkdir -p "$bare/.task"
+p "$bare" task
+assert_contains "$P_OUT" "CONFIG: absent" "still unconfigured"
+assert_eq "no" "$([[ -e "$bare/.task/.gitignore" ]] && echo yes || echo no)" "nothing written before setup"
+
+t_case "an unwritable .task/ still prints the block and exits 0"
+locked=$(make_repo --config)
+chmod a-w "$locked/.task"
+p "$locked" task
+chmod u+w "$locked/.task"
+assert_exit 0 "$P_EXIT" "a failed restore is swallowed"
+assert_contains "$P_OUT" "CONFIG: present" "block still printed"
+assert_eq "no" "$([[ "$P_OUT" == *ermission* ]] && echo yes || echo no)" "no write error leaks into the block"
+
 t_case "an unknown kind is a usage error"
 p "$repo" nonsense
 assert_exit 2 "$P_EXIT" "bad kind"

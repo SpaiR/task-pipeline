@@ -73,9 +73,17 @@ Nothing was written when this fires, so re-running the command after fixing the 
 
 **Symptom** — `.task/` appears as untracked in `git status`.
 
-**Cause** — the local git exclusion wasn't written (e.g. `.task/` was created before setup ran, or setup ran outside a git repo).
+**Cause** — `.task/.gitignore`, the self-ignoring `*` that keeps the folder out of git, is missing — deleted by hand, or `.task/` was created before setup ran.
 
-**Fix** — run any capture skill again; the inline setup is idempotent and re-adds `.task` to `.git/info/exclude`. This uses `.git/info/exclude`, not `.gitignore`, on purpose — the pipeline stays invisible to teammates and never touches a tracked file.
+**Fix** — run any `/task:` skill except `grill`; its entry check recreates a missing `.task/.gitignore` on a configured project. Or write it yourself: `printf '*\n' > .task/.gitignore`. The rule lives inside `.task/` on purpose — the pipeline never touches a tracked file or `.git/info/exclude`, and the rule leaves with the folder.
+
+### Searching inside .task/ finds nothing {#search-in-task}
+
+**Symptom** — a search scoped to `.task/` comes back empty although the files are there: `rg <pattern> .task`, Claude Code's Grep with path `.task`, or your editor's search restricted to that folder.
+
+**Cause** — ripgrep, which all three use, applies `.task/.gitignore`'s `*` to the folder's own files. A search from the repo root skipping `.task/` is expected; this is the same rule seen from inside.
+
+**Fix** — list or open the files directly (`ls .task/task`, a Glob, or reading the path), or search with `rg --no-ignore <pattern> .task`. The pipeline itself is unaffected: its helpers enumerate files with shell globs, and every skill hands an explicit artifact path to the session that reads it.
 
 ### validate.sh ends with "FAIL N error(s)" {#validate-fail}
 
@@ -119,11 +127,11 @@ One digest is worth reading closely: a stop from the **mark** stage means the it
 
 ### A worktree can't find .task/
 
-**Cause** — worktrees resolve the shared `.task/` through `git config --local task.root` (fallbacks: an upward walk, then `dirname(git-common-dir)`). The anchor can be missing (repo set up by an older version) or wrong.
+**Cause** — worktrees resolve the shared `.task/` through `git config --local task.root` (fallbacks: an upward walk, then `dirname(git-common-dir)`, the main worktree root). That last fallback already covers every worktree of a repo whose `.task/` sits at the main worktree root, anchor or not. A worktree gets lost when `.task/` lives somewhere else — a subdirectory, as older versions allowed, or a spot you moved it to — and the anchor is missing or wrong. The anchor is written only by first-run setup; nothing records or repairs it on later runs.
 
-A **moved or copied repo** is the common way it goes wrong: `task.root` is an absolute path stored in `.git/config`, so it travels with the directory and then points at where the repo used to live. The resolver only trusts the anchor when that path actually holds a `.task/CLAUDE.md`, so a stale one is ignored and the upward walk finds the real `.task/` that moved with the repo — but the anchor stays stale until a capture skill rewrites it.
+A **moved or copied repo** leaves the anchor stale: `task.root` is an absolute path stored in `.git/config`, so it travels with the directory and keeps pointing at where the repo used to live. After a move that path is gone; after a copy it is the original repo, with its own `.task/`. The resolver trusts the anchor only when that path holds a `.task/CLAUDE.md` **and** belongs to the same git repository as the current checkout, so either kind of stale anchor is ignored, and the upward walk finds the checkout's own `.task/`. A copy never reads or writes the original's artifacts. The stale value stays in `.git/config`, ignored on every run, until you reset it.
 
-**Fix** — run any capture skill from the stuck worktree; its inline setup records `task.root` and every worktree then resolves the same `.task/`. To point it at an existing `.task/` yourself: `git config --local task.root /abs/path/containing/dot-task` (the directory that *contains* `.task`, not `.task` itself).
+**Fix** — set the anchor by hand: `git config --local task.root /abs/path/containing/dot-task` (the directory that *contains* `.task`, not `.task` itself). It lives in the repo-common config, so one command fixes every worktree. The path must belong to this repository (inside its working tree or one of its worktrees, or the directory that holds a bare repo); an anchor naming another repository is ignored. To clear a stale anchor left by a move or copy, run `git config --local --unset task.root`. Don't run a capture skill from the stuck worktree to fix it: that worktree resolves to a root with no `.task/CLAUDE.md`, so the skill's first-run setup writes a second `.task/` there instead of finding yours.
 
 ## Finding your own state
 

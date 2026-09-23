@@ -6,6 +6,7 @@
 .task/
 ├── CLAUDE.md                  project policy + how to execute a task; auto-loaded
 │                              by any session that reads a file under .task/
+├── .gitignore                 a single *: ignores the folder itself
 ├── task/
 │   ├── http-retry-backoff.md  one file per task; slug = filename = identity
 │   └── migrate-auth-endpoints.md
@@ -16,7 +17,7 @@
 ```
 
 ::: tip Invisible to your repo
-`.task/` is excluded through `.git/info/exclude` (not `.gitignore`), so it never shows in `git status` and never touches a tracked file. Delete it with `rm -rf .task` and the repo is exactly as before.
+`.task/` ignores itself through its own `.task/.gitignore` (a single `*`, which covers that file too), so it never shows in `git status` and never touches a tracked file or `.git/info/exclude`. Delete it with `rm -rf .task` and the repo is exactly as before. One side effect: a search scoped to `.task/` finds nothing — see [Troubleshooting](/guide/troubleshooting#search-in-task).
 :::
 
 ## task.md
