@@ -9,7 +9,7 @@ It is a **nested `CLAUDE.md`**, not a bespoke config format. Claude Code loads a
 On a fresh project, the first `to-task` / `to-plan` / `to-roadmap` / `to-spec`:
 
 1. reads `CLAUDE.md` and your commit conventions, detects language/stack, build/test commands, and a testing policy;
-2. writes `.task/CLAUDE.md`, records `git config --local task.root`, and excludes `.task` via `.git/info/exclude`;
+2. writes `.task/CLAUDE.md`, records `git config --local task.root`, and writes `.task/.gitignore` (a single `*`) so the folder ignores itself;
 3. reports what it wrote, then continues into the capture you asked for:
 
    ```text
@@ -26,7 +26,7 @@ There is nothing to confirm. If a detected value came out wrong, edit the file â
 
 ## The file is yours
 
-Setup writes `.task/CLAUDE.md` **once** and never rewrites it. An existing file is left untouched even when a section is missing or a value has gone stale, so hand edits survive every later capture. Only two things are repaired silently when they go missing: the `git config task.root` anchor and the `.task` line in `.git/info/exclude`.
+Setup writes `.task/CLAUDE.md` **once** and never rewrites it. An existing file is left untouched even when a section is missing or a value has gone stale, so hand edits survive every later capture. Only one thing is repaired silently when it goes missing: `.task/.gitignore`, recreated by every skill's entry check (`grill` aside). An existing `.task/.gitignore` is never rewritten either.
 
 To regenerate the file from scratch, delete it and run any capture skill again.
 
