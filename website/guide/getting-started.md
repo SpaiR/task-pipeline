@@ -86,6 +86,7 @@ Nothing is committed until this step runs. Until then, every change is just work
 ```text
 .task/
 ├── CLAUDE.md                        ← written once, on first capture; yours to edit
+├── .gitignore                       ← a single *: the folder ignores itself
 └── task/
     └── http-retry-backoff.md        ← your task; the slug is its identity
 ```
