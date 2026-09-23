@@ -110,6 +110,7 @@ Every reference from one `.task/` artifact to another is written as a **Markdown
 | `task.md` header | `Spec: [<slug>](../spec/<slug>.md)` |
 | roadmap header | `Spec: [<slug>](../spec/<slug>.md)` |
 | roadmap item citation | `### Spec references → [<slug>](../spec/<slug>.md) §N` |
+| roadmap `## Architecture` citation | `[<slug>](../spec/<slug>.md) §N`, inline in a bullet |
 | `## Execution` pointer | `> Read [.task/CLAUDE.md](../CLAUDE.md) and follow its …` |
 
 Hrefs are relative to the **artifact's own directory**, which is what a Markdown viewer resolves against. `.task/task/`, `.task/roadmap/` and `.task/spec/` all sit one level under `.task/`, so a sibling-kind reference is always `../<kind>/<slug>.md` and `.task/CLAUDE.md` is always `../CLAUDE.md` — no per-file depth arithmetic.
@@ -197,6 +198,7 @@ Spec: [<slug>](../spec/<slug>.md)     (0..n, directly under the title, above the
 
 ## Prerequisites              (omit rather than leave empty)
 ## Phase summary              (a table: phase, what lands, which items)
+## Architecture               (optional — the technical layer, see § Roadmap architecture section)
 ## Phase 1 — <name>           (one section per phase, each holding its items)
 ## Phase 2 — <name>
 ## Out of scope
@@ -257,6 +259,35 @@ Line 1 of a roadmap is therefore always its `# <Title>`, as in every other artif
 Items cite specific decisions as `### Spec references → [<slug>](../spec/<slug>.md) §N` — the slug qualifier is required, since several specs may be reachable. Both the header and the citation follow [§ Cross-artifact references](#cross-artifact-references): the label is the identity, the href is for viewers.
 
 When `roadmap-to-workflow` runs the roadmap, it passes these spec paths to each item's plan agent; when `to-plan`/`to-task` open an item by hand, they carry the relevant `Spec:` headers onto the task file so the executing session reads them per `## Executing a task`.
+
+### Roadmap architecture section
+
+A roadmap may carry one optional `## Architecture` section: the **technical shape** of the initiative — which components it builds or changes, what crosses between items, a module-level sketch per item, and technical ordering. It fills the gap between the items (behavioral by design, no project names) and a spec (decisions with rationale, no layout): a component map is neither, and without a home of its own it drifts into specs as restated roadmap items. It sits directly above the first `## Phase <N> — …` heading — after `## Phase summary` — or, in a file without numbered phases, above the `## ` section holding the first item.
+
+```markdown
+## Architecture
+
+> Intended technical shape of this initiative — planners follow it and state a
+> reason where the code forces a deviation. Decisions with rationale live in specs.
+
+### Components                       (required)
+- `<name>` — new | existing · `<module path>` — role in this initiative.
+
+### Interfaces between items         (optional — omit when none)
+- #2 → #4, #5 — `<name>`: what crosses the boundary; form pinned in [<slug>](../spec/<slug>.md) §N.
+
+### Item sketches                    (required while unchecked items remain — one bullet per item)
+- #1 — module-level sketch: which components it touches and how.
+
+### Technical ordering               (optional)
+- #3 before #6 — reason. Mirrored in item #6's `**Dependencies:**`.
+```
+
+- **Real names are expected here** — the behavioral rule binds only an item's `### Outcomes` / `### Goal` / `### Invariants`. What stays out is plan-level detail: no `file:line`, no step lists, no code block over 5 lines. A choice whose *reasoning* must survive re-derivation belongs in a spec, which the section then cites.
+- **Items are referenced as `#N` inside bullets, never as headings.** A `### <digits>.` sub-heading reads as an item missing its checkbox, and a repeated `### - [ ] N.` heading breaks the driver's one-heading-per-item mark gate.
+- **It is intended shape, not a fixed anchor.** A spec is honored verbatim; this section is what the planner follows unless the code forces otherwise, and a deviation carries its reason in the plan.
+- Headings (`## Architecture`, `### Components`, `### Interfaces between items`, `### Item sketches`, `### Technical ordering`) stay English; prose, the intro blockquote included, follows `.task/CLAUDE.md` → Language.
+- No parser consumes the section: item counting, the driver's collector and its mark stage all key on `### - [ ] N.` headings and pass it by, wherever it sits. `validate.sh` checks it advisory-only (see [§ validate.sh](#validatesh-optional-self-check-not-a-gate)).
 
 ### Roadmap link sections
 
@@ -343,7 +374,8 @@ Keeps the `.task/CLAUDE.md` precondition and English parser-stable strings. **No
   - **CRLF line endings** are an error: the driver's collector strips only `[ \t]`, so a trailing CR survives into its `**Dependencies:**` / `**Model:**` values, becoming a phantom dependency and a dropped model hint. Flagged once per file rather than normalized in every parser;
   - item numbers are unique, since the driver's auto-mark keys on the number — numbering runs continuously across the whole file and never restarts per phase;
   - each item block carries the `**Ready description:**` label (required — `to-plan` and the executing session key on it to find the item body) and, inside its blockquote, the sub-headings `### Context`, `### Goal`, `### Outcomes`, `### Acceptance criteria` (matched as `> ### <name>`); `### Invariants` is **optional** and not required;
-  - dangling `Spec:` headers `WARN` as for `task`.
+  - dangling `Spec:` headers `WARN` as for `task`;
+  - an optional `## Architecture` section is checked **advisory-only** — every finding is a `WARN`, since no parser consumes the section and any roadmap `ERROR` stops `roadmap-to-workflow` from launching: more than one such section; a missing `### Components`, or a missing `### Item sketches` while unchecked items remain; an `#N` reference with no item heading (scanned inside the section only, code spans dropped, counted only after whitespace, `,` or `(` so a link anchor like `.md#2-x` never reads as item 2). The one `ERROR` inside it is the existing bare-`### N.` check, whose message there names the section and points at a `- #N —` bullet instead. `WARN` lines from these awk checks count toward the summary's warning total.
 - **`spec <slug>`** — validate `.task/spec/<slug>.md`: line 1 matches `^# .+`; ≥1 `## N.` numbered decision section. (No `---` separator check — a spec has no parser-stable header block above a body, so there is nothing to separate.)
 - **`all`** — validate every `.task/task/*.md`, every `.task/roadmap/*.md`, plus every `.task/spec/*.md`.
 

@@ -27,7 +27,8 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" [ all | task <slug> | r
 - `**Dependencies:**` on an *unchecked* item is a no-dependency token (`—`, `-`, `none`, `n/a`) or a comma-separated list of item numbers; each number must name an item in the same file, and an item may not list itself. A space-separated `1 2` is reported as such, rather than being read as item `12`;
 - the file uses LF line endings — with CRLF the driver keeps the trailing CR and loses `**Model:**` hints;
 - each item carries `### Context` / `### Goal` / `### Outcomes` / `### Acceptance criteria` (Invariants optional);
-- dangling `Spec:` headers `WARN`.
+- dangling `Spec:` headers `WARN`;
+- an optional `## Architecture` section only ever `WARN`s, so it never blocks `/task:roadmap-to-workflow`: two such sections, a missing `### Components` (or `### Item sketches` while unchecked items remain), and an `#N` that names no item — what a renumbering leaves behind. A numbered `### 2. …` sub-heading inside it is still an `ERROR`, because it reads as an item without a checkbox; write `- #2 — …` instead.
 
 **`spec <slug>`** — `.task/spec/<slug>.md`: line 1 is a `# <Title>`; ≥1 `## N.` numbered section.
 
