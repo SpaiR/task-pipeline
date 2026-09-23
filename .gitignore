@@ -16,9 +16,6 @@
 # self-audit ratchet baseline (runtime metrics, per-clone)
 .claude/.audit-baseline.json
 
-# self-improve ratchet baseline (runtime metrics, per-clone)
-.claude/.improve-baseline.json
-
 # Docs site (VitePress) build artifacts and deps
 website/node_modules/
 website/.vitepress/dist/

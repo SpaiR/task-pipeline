@@ -22,12 +22,9 @@ We use [GitHub](https://github.com/SpaiR/task-pipeline) to host code, track issu
 .claude/                         repo-local maintainer tooling — NOT shipped with the plugin:
   skills/self-audit/             meta-skill: audits this repo for invariant / contract /
                                    docs drift (three read-only lens agents)
-  skills/self-improve/           meta-skill: raises quality where nothing is broken yet
-                                   (four read-only lens agents)
-  agents/self-*.md               the lens agents both meta-skills fan out to
+  agents/self-*.md               the lens agents self-audit fans out to
                                    (read-only: Read, Grep, Glob, Bash — no Edit/Write)
   .audit-baseline.json           gitignored ratchet metrics for self-audit
-  .improve-baseline.json         gitignored ratchet metrics for self-improve
 skills/                          SKILL.md per skill + shared bash helpers
   _lib/                          shared helpers (roles: docs/contract.md § Helpers):
                                    resolve-ws.sh (pure .task/-root finder, exports AI_DIR),
@@ -223,7 +220,7 @@ Must be one of the following:
 **Do NOT invent new scopes.** Pick from the list below; if none fits, omit the scope entirely.
 
 * **A skill name** (no `task:` prefix): `grill`, `to-task`, `to-plan`, `to-roadmap`, `to-architecture`, `to-spec`, `roadmap-to-workflow`, `validate`.
-* **`skills`** — cross-cutting change that touches several skills at once. Also covers the repo-local meta-skills under `.claude/skills/` (`self-audit`, `self-improve`), which ship with no plugin scope of their own.
+* **`skills`** — cross-cutting change that touches several skills at once. Also covers the repo-local meta-skill under `.claude/skills/` (`self-audit`), which ships with no plugin scope of its own.
 * **`agents`** — the plugin's subagent definitions under `agents/` (currently only `code-reviewer.md`), and the repo-local lens agents under `.claude/agents/`.
 * **`lib`** — every shared helper under `skills/_lib/` (see the repository structure above) and `skills/validate/validate.sh`, plus their templates.
 * **`plugin`** — `.claude-plugin/plugin.json` and install-path concerns.
