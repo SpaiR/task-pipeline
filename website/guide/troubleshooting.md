@@ -121,9 +121,9 @@ One digest is worth reading closely: a stop from the **mark** stage means the it
 
 **Cause** — worktrees resolve the shared `.task/` through `git config --local task.root` (fallbacks: an upward walk, then `dirname(git-common-dir)`). The anchor can be missing (repo set up by an older version) or wrong.
 
-A **moved or copied repo** is the common way it goes wrong: `task.root` is an absolute path stored in `.git/config`, so it travels with the directory and then points at where the repo used to live. The resolver only trusts the anchor when that path actually holds a `.task/CLAUDE.md`, so a stale one is ignored and the upward walk finds the real `.task/` that moved with the repo — but the anchor stays stale until a capture skill rewrites it.
+A **moved or copied repo** is the common way it goes wrong: `task.root` is an absolute path stored in `.git/config`, so it travels with the directory and keeps pointing at the old location. After a move that path is gone; after a copy it is the original repo, with its own `.task/`. The resolver trusts the anchor only when that path holds a `.task/CLAUDE.md` **and** belongs to the same git repository as the current checkout, so either kind of stale anchor is ignored, and the upward walk finds the checkout's own `.task/`. A copy never reads or writes the original's artifacts. The stale value stays in `.git/config`, ignored on every run, until you reset it (see below).
 
-**Fix** — run any capture skill from the stuck worktree; its inline setup records `task.root` and every worktree then resolves the same `.task/`. To point it at an existing `.task/` yourself: `git config --local task.root /abs/path/containing/dot-task` (the directory that *contains* `.task`, not `.task` itself).
+**Fix** — run any capture skill from the stuck worktree; its inline setup records `task.root` and every worktree then resolves the same `.task/`. To point it at an existing `.task/` yourself: `git config --local task.root /abs/path/containing/dot-task` (the directory that *contains* `.task`, not `.task` itself). The path must belong to this repository (inside its working tree or one of its worktrees, or the directory that holds a bare repo); an anchor naming another repository is ignored. To clear a stale anchor left by a move or copy, run `git config --local --unset task.root` from the checkout.
 
 ## Finding your own state
 
