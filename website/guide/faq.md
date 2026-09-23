@@ -12,7 +12,7 @@ Then it won't. The capture skills only ever write Markdown under `.task/` — no
 
 ## Does it work in a monorepo or with git worktrees?
 
-Yes. There's one `.task/` per repo, and every worktree resolves the same one through `git config task.root` (with an upward-walk fallback). If a worktree can't find `.task/`, run any capture skill from it once to record the anchor, or set it by hand with `git config --local task.root /path/that/contains/dot-task`. See [worktree can't find .task/](/guide/troubleshooting#a-worktree-cant-find-task).
+Yes. There's one `.task/` per repo, and every worktree resolves the same one through `git config task.root` (with an upward-walk fallback). Only first-run setup writes that anchor, and a worktree rarely needs it: the resolver finds a `.task/` at the main worktree root on its own. If a worktree still can't find `.task/`, set the anchor by hand with `git config --local task.root /path/that/contains/dot-task`. See [worktree can't find .task/](/guide/troubleshooting#a-worktree-cant-find-task).
 
 ## What if I just read the file myself and ignore the Execution pointer?
 

@@ -26,7 +26,7 @@ There is nothing to confirm. If a detected value came out wrong, edit the file â
 
 ## The file is yours
 
-Setup writes `.task/CLAUDE.md` **once** and never rewrites it. An existing file is left untouched even when a section is missing or a value has gone stale, so hand edits survive every later capture. Only two things are repaired silently when they go missing: the `git config task.root` anchor and the `.task` line in `.git/info/exclude`.
+Setup writes `.task/CLAUDE.md` **once** and never rewrites it. An existing file is left untouched even when a section is missing or a value has gone stale, so hand edits survive every later capture. The same goes for the two git markers: the `git config task.root` anchor and the `.task` line in `.git/info/exclude` are written on that first run and never checked again. If one goes missing, see [.task/ shows up in git status](/guide/troubleshooting#task-shows-up-in-git-status) and [A worktree can't find .task/](/guide/troubleshooting#a-worktree-cant-find-task).
 
 To regenerate the file from scratch, delete it and run any capture skill again.
 
