@@ -88,6 +88,18 @@ function computeWaves(items, done, scope) {
 }
 // --- end computeWaves -------------------------------------------------------
 
+// --- digestPassed (pure; extracted verbatim by tests/driver-digest.test.sh) --
+// The implement and review stages end on `OK|FAIL #N <item-slug> <summary>`.
+// Only an exact `OK #N <item-slug>` head counts as a pass. Anything else — a
+// FAIL, an empty line, or a drifted one (`**FAIL** #3 …`, a closing code fence,
+// `Review: FAIL`) — is a stop: a bare startsWith('FAIL') test would read those
+// drifted lines as passes and let the mark stage tick an item whose review failed.
+function digestPassed(line, n, itemSlug) {
+  const head = `OK #${n} ${itemSlug}`
+  return line === head || (line || '').startsWith(`${head} `)
+}
+// --- end digestPassed -------------------------------------------------------
+
 const sorted = computeWaves(items, done, scope)
 if (sorted.error) return `roadmap-to-workflow: ${sorted.error}`
 const waves = sorted.waves
@@ -239,13 +251,15 @@ for (const [wIdx, items] of waves.entries()) {
 
     const status = await runImplement(n, itemSlug, model, w)
     log(status || `FAIL #${n} ${itemSlug} implement agent returned nothing`)
-    if (!status || status.startsWith('FAIL'))
-      return `roadmap-to-workflow stopped in wave ${w}, item #${n}: ${status || 'implement agent returned nothing'}`
+    if (!digestPassed(status, n, itemSlug))
+      return `roadmap-to-workflow stopped in wave ${w}, item #${n}: ${
+        !status ? 'implement agent returned nothing' : status.startsWith('FAIL') ? status : `unparsable implement digest: ${status}`}`
 
     const review = await runReview(n, itemSlug, w)
     log(review || `FAIL #${n} ${itemSlug} review agent returned nothing`)
-    if (!review || review.startsWith('FAIL'))
-      return `roadmap-to-workflow stopped in wave ${w} (review), item #${n}: ${review || 'review agent returned nothing'}`
+    if (!digestPassed(review, n, itemSlug))
+      return `roadmap-to-workflow stopped in wave ${w} (review), item #${n}: ${
+        !review ? 'review agent returned nothing' : review.startsWith('FAIL') ? review : `unparsable review digest: ${review}`}`
 
     const marked = await runMark(n, itemSlug, w)
     log(marked || `FAIL #${n} ${itemSlug} mark agent returned nothing`)
