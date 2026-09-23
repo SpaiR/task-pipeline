@@ -63,7 +63,7 @@ Only for fresh capture (skip entirely for promote/revise — see Step 1). The on
 
 ### Step 2a: From-roadmap
 
-Follow `${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap-item.md` — resolve the roadmap, pick `#<N>`, read the ready description, collect the spec slugs, derive `<item-slug>` and check whose file it is. That file is the one owner of those rules; `to-task` and the driver's plan agent read the same copy. Its footers take this skill's own command, so a stop reads `→ Next: \`/task:to-plan <slug>#3\``.
+Follow `${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap-item.md` — resolve the roadmap, pick `#<N>`, read the ready description, collect the spec slugs, derive `<item-slug>`, check whose file it is, and note the roadmap's `## Architecture` if it has one. That file is the one owner of those rules; `to-task` and the driver's plan agent read the same copy. Its footers take this skill's own command, so a stop reads `→ Next: \`/task:to-plan <slug>#3\``.
 
 Hold what it produces for Step 7's write — the item title, the roadmap slug, `#<N>`, the distinct spec slugs, and, **in fresh capture only**, the Description drafted from the ready description (why from Context, what from Goal / Outcomes / Invariants / Acceptance criteria). Do not write the file yet: Description, Plan and Tests are assembled and written once, together, in Step 7.
 
@@ -109,8 +109,11 @@ Sections: Description, Plan ({N} steps)[, Tests ({N})], Execution
 Plan:
 - Step 1: {short title}
 - Step 2: {…}
+architecture: {followed | deviated in step N — {reason} | none}
 validate: {OK — 0 errors, N warning(s) | the FAIL lines}
 ```
+
+The `architecture:` line reports how the Plan relates to the source roadmap's `## Architecture` (`plan-driver.md` § Core step 1); `none` when the task has no roadmap or the roadmap has no such section.
 
 When the validate result is **not** clean (any WARN or FAIL), append one more line so the user can re-check after editing the file by hand — `validate` is not a slash command, so the invocation is worth spelling out. Omit it entirely on a clean result:
 

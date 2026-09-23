@@ -15,6 +15,8 @@ Read `$AI_DIR/CLAUDE.md` with a **file-read tool**, not `cat` — the platform's
 
 Then read every spec the task cites (`Spec:` headers, or the slugs collected from a roadmap item). Their decisions are **fixed anchors**: the Plan honors them and never re-derives a different technical choice. No `Spec:` at all → no anchors, proceed on the Description alone.
 
+Then the **roadmap architecture**, when the task comes from a roadmap item. The roadmap is the one `roadmap-item.md` resolved (`to-plan` Step 2a, or the path in your driver-mode prompt); for an existing target reached without it, it is the one the file's `Roadmap:` header names, with `#N` from `Source item:` — take the slug from the link **label** and read `$AI_DIR/roadmap/<slug>.md`, never the href. If that roadmap carries an `## Architecture` section, read its `### Components`, its `### Interfaces between items` involving `#N`, this item's bullet under `### Item sketches`, and any `### Technical ordering` line naming `#N`. It is the **intended shape, not a fixed anchor**: the Plan's `Touches` and `Goal`s follow its components and interfaces by default, and where the code you analyze in step 2 contradicts it — a module that does not exist, a boundary that sits elsewhere — the Plan deviates, and the `Goal` of the step that deviates says why in one clause. No such section, or no roadmap → nothing to follow.
+
 ### 2. Analyze the codebase
 
 `## Plan` steps need real paths, not paraphrase. Read code in ascending cost order per `.task/CLAUDE.md` → Code Navigation (its MCP tools first when declared, built-ins as fallback):
@@ -66,6 +68,7 @@ Against the draft, before writing — fix inline rather than writing something a
 - [ ] `tests_required` true → is `## Tests` present, and does every step that satisfies a test name it by number?
 - [ ] `tests_required` false → is `## Tests` fully absent, with no empty heading?
 - [ ] Are the pinned spec decisions honored rather than silently overridden?
+- [ ] When the roadmap has `## Architecture`: does the Plan follow it, and does every step that departs from it state why in its `Goal`?
 - [ ] No `TBD` / `TODO` / `???` outside a `Logic` block?
 - [ ] Are the steps ordered so nothing depends on a not-yet-established fact?
 
@@ -113,7 +116,7 @@ Instructions for `roadmap-to-workflow`'s per-item **plan agent**, spawned by `sk
 
 ### D1. Resolve the item
 
-Follow `skills/_lib/roadmap-item.md` — steps 3, 4 and 5 (read the ready description, collect the specs, derive the slug). Its steps 1 and 2 do not apply: the roadmap path and your `#N` arrive in the prompt.
+Follow `skills/_lib/roadmap-item.md` — steps 3 to 6 (read the ready description, collect the specs, derive the slug, note the architecture). Its steps 1 and 2 do not apply: the roadmap path and your `#N` arrive in the prompt.
 
 ### D2. Slug collision, without anyone to ask
 

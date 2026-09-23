@@ -4,7 +4,8 @@ The shared from-roadmap block: resolve the roadmap, pick the item, read its
 ready description, collect the specs it cites, and derive the task slug. Read by
 `to-task` (Step 1a), `to-plan` (Step 2a) and the driver's plan agent
 (`plan-driver.md` § Driver mode) — one copy, so the item-picking rules cannot
-drift between them.
+drift between them. Step 6 is for the planners only (`to-plan` and the plan agent);
+`to-task` stops after step 5.
 
 [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd)
 is the item grammar; [§ Cross-artifact references](../../docs/contract.md#cross-artifact-references)
@@ -69,3 +70,13 @@ item's. Read its header:
 - Different headers, or none → an unrelated task that merely kebab-cases the same
   title. Disambiguate `<item-slug>` with a short qualifier — append a second
   distinguishing word — and **never** overwrite it.
+
+## 6. Note the architecture (planners only)
+
+If the roadmap carries an `## Architecture` section, note it and this item's
+`#<N>` bullet under `### Item sketches`: `plan-driver.md` § Core step 1 reads them
+as the intended shape before drafting the Plan. Hold nothing for the write — the
+section stays in the roadmap, and the task file gains no header for it.
+
+`to-task` skips this step: a Description stays behavioral, and technical shape
+enters only through a Plan.
