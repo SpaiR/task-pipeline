@@ -161,7 +161,7 @@ All of this lives in `.task/CLAUDE.md`, written inline on first use of a capture
 - **Language** — by default the Description is in your language, everything else (headers, the `## Execution` pointer, commits) is in English, per "Commit Format".
 - **Test policy** — `Testing Policy`: `always` / `on-demand` *(default)* / `never`. In `on-demand`, `## Tests` is written only if the Description explicitly asks for it ("needs tests" / "with tests" / "cover with tests").
 - **Executing a task** — the instructions an implementing session follows, in one copy. Edit them and the change applies to tasks you captured earlier, too.
-- **Yours to edit** — setup writes the file once and never rewrites it. Change any line by hand; to start over, delete the file and run any capture again.
+- **Yours to edit** — setup writes the file once and never rewrites it. Change any line by hand; to start over, delete the file and run any capture again. The same first run records `git config task.root` and the `.git/info/exclude` line; later captures leave both as they are.
 
 ## How it works
 
