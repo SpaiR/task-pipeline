@@ -1,6 +1,6 @@
 # Capture a roadmap
 
-The roadmap capture flow, in one place. `to-roadmap` owns its Step 0 setup gate and its digest; everything between — the precondition, context, harvest or brainstorm, the draft, the save and the post-save self-check — is `## Core` below, and `to-roadmap` Steps 1–5 point here. [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd) is the artifact shape it produces.
+The roadmap capture flow, in one place, for two callers. `to-roadmap` owns its Step 0 setup gate and its digest; everything between — the precondition, context, harvest or brainstorm, the draft, the save and the post-save self-check — is `## Core` below, and `to-roadmap` Steps 1–5 point here. `to-architecture` runs the same Core in its fresh mode, when no roadmap exists yet, then adds the `## Architecture` section to the file Core wrote. Where the two callers differ, the step says so. [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd) is the artifact shape it produces.
 
 **From the caller:** Step 0's `AI_DIR:` (every `.task/roadmap/<slug>.md` below means `$AI_DIR/roadmap/<slug>.md`, never a cwd-relative path) and its `ROADMAPS:` list, which step 1 reads for structural style and step 4 for the slug collision — neither needs a listing call of its own. The digest printed after step 5 is the caller's.
 
@@ -79,7 +79,7 @@ It is a **recap** of decisions the user already reached: print it, no confirmati
 
 Always **2–3 decomposition options** with different phase boundaries — behavioral milestones, observable state changes, not technical layers like "substrate" vs "UI". Iterate as `Round N`, same structure, narrowed to the fork in focus. A round is **content dialogue, not a path fork**: print it as message text and close on the open question, because convention (c)'s chips would flatten the pros and cons the round exists to show. Typical depth 3–6 rounds; past 6, say the initiative is too big and suggest splitting. Stop when the user says "write it", or when another round would only restate conclusions.
 
-**Track decisions as you go, not in your head.** Two kinds surface: **behavioral** ones, observable properties the user locked in, which land in an item's `### Outcomes` / `### Acceptance criteria`; and **technical anchors** — a protocol, a cross-cutting data shape, a "we picked X over Y because…" whose reasoning would not survive re-derivation — which belong in a standalone spec, never in an item body. Step 3 routes both.
+**Track decisions as you go, not in your head.** Two kinds surface: **behavioral** ones, observable properties the user locked in, which land in an item's `### Outcomes` / `### Acceptance criteria`; and **technical anchors** — a protocol, a cross-cutting data shape, a "we picked X over Y because…" whose reasoning would not survive re-derivation — which belong in a standalone spec, never in an item body. A third kind surfaces in technical discussions: **technical shape** — which components the initiative builds or changes, what one item hands another — neither behavioral nor a decision with rationale, and the content of a roadmap's `## Architecture` section. Step 3 routes all three.
 
 Before drafting, reprint the full list as message text — the cold-start twin of 2H's inventory, no confirmation chip. Topics the user said to skip stay skipped.
 
@@ -94,6 +94,7 @@ Once the 2H inventory (or the 2C recap) is **printed** — no reply is awaited; 
 
 - Observable behavior / user-facing effect → the item's `### Outcomes`, or `### Acceptance criteria` when it's a testable assertion.
 - Cross-item technical decision → a standalone spec. One that already exists gets a `Spec:` header line **directly under `# <Title>`**, above the intro, plus a `### Spec references → [<spec-slug>](../spec/<spec-slug>.md) §N` citation in each steered item. One that does not exist is **not written here**: surface the decision with a one-line recommendation to capture it via `/task:to-spec`, and reference it on a later run.
+- Technical shape — components, boundaries, what crosses between items → never an item body. Caller `to-roadmap`: recommend a `/task:to-architecture <slug>` follow-up in the digest. Caller `to-architecture`: hold it for that skill's section, which it drafts once this Core returns.
 - Scope exclusion → `## Out of scope`, with the reason.
 - Anything else → drop it, but say so to the user with a one-line reason — never a silent omission.
 
@@ -119,7 +120,7 @@ Before saving, self-check and fix inline (drafting hygiene; step 5 is the post-s
 Write the file directly — no in-chat preview, no confirmation prompt.
 
 1. Slug: kebab-case from the initiative title, ≤ 50 chars (`add-auth-flow`, `migrate-to-vite`).
-2. **Slug collision.** If that slug is already in the caller's `ROADMAPS:` list → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). Never silently overwrite. That list is a snapshot taken before the brainstorm rounds, and unlike the task captures there is no writer script to refuse a collision here — so when the slug is *absent* from it, confirm with a file read that nothing is there before writing.
+2. **Slug collision.** If that slug is already in the caller's `ROADMAPS:` list → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). When the existing file carries an `## Architecture` section, say so as message text first: an overwrite destroys it, and `.task/` is git-excluded, so it is not recoverable. Caller `to-architecture` adds a third option, **Enrich existing** — keep the file and add or revise its section instead. Never silently overwrite. That list is a snapshot taken before the brainstorm rounds, and unlike the task captures there is no writer script to refuse a collision here — so when the slug is *absent* from it, confirm with a file read that nothing is there before writing.
 3. Write `$AI_DIR/roadmap/<slug>.md` (creating the directory if needed) with the full content, `Spec:` headers included. Nothing else is written — spec authorship is `to-spec`'s.
 4. Validate it: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" roadmap <slug>` — surface any WARN/ERROR in the caller's digest; only a setup-precondition failure (exit 2) hard-stops.
 
@@ -146,3 +147,4 @@ Binding on every roadmap this flow writes:
 - More than one initiative per file — split and pick one for this run.
 - Persisting topics the user asked to skip; placeholders anywhere.
 - Writing a `.refine.md` sidecar, a `.spec.md` sidecar, or a `.lock` file — none of those exists in the pipeline.
+- Writing `## Architecture` during Core — only `to-architecture` writes it, after Core returns.

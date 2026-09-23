@@ -39,6 +39,7 @@ done <<'PAIRS'
 to-task task
 to-plan plan
 to-roadmap roadmap
+to-architecture architecture
 to-spec spec
 roadmap-to-workflow workflow
 PAIRS

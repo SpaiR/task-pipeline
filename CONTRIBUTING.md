@@ -53,6 +53,8 @@ skills/                          SKILL.md per skill + shared bash helpers
   to-plan/                       SKILL.md — Description + `## Plan` (Goal/Touches/Logic);
                                    promotes/revises a to-task-only file in place
   to-roadmap/                    SKILL.md — multi-task initiative → .task/roadmap/<slug>.md
+  to-architecture/               SKILL.md — a roadmap's technical layer → its `## Architecture`
+                                   section; writes the roadmap first when none exists
   to-spec/                       SKILL.md — load-bearing technical decisions →
                                    .task/spec/<slug>.md, referenced via `Spec:` headers
   roadmap-to-workflow/           SKILL.md — the one launcher; reports a roadmap's unchecked items
@@ -89,7 +91,7 @@ CHANGELOG.md                     public release log (English)
 README.md                        GitHub landing page (links to the docs site)
 ```
 
-`grill` / `to-task` / `to-plan` / `to-roadmap` / `to-spec` / `roadmap-to-workflow` are the only six skills (`validate` is a bash-only utility, not a skill), and `agents/` holds exactly one file: `code-reviewer.md`, resolved as the agent type **`task:code-reviewer`**. It exists because the platform's `/verify` and `/code-review` are marked `disable-model-invocation` — a subagent, and a session that was merely *told* `implement …`, cannot run either, and the failure is silent (an unlisted command is skipped, not refused), so the pipeline had to own its review step rather than rent it. Both execution paths spawn that one agent: a plain session per the artifact's `## Execution` block, and `roadmap-to-workflow`'s driver as its own stage in the per-item serial loop. Orchestration itself is still not hand-rolled — `roadmap-to-workflow` invokes the platform's Workflow tool over the shipped driver script (`skills/_lib/roadmap-driver.js`), which reaches for the `agent()` / `parallel()` primitives.
+`grill` / `to-task` / `to-plan` / `to-roadmap` / `to-architecture` / `to-spec` / `roadmap-to-workflow` are the only seven skills (`validate` is a bash-only utility, not a skill), and `agents/` holds exactly one file: `code-reviewer.md`, resolved as the agent type **`task:code-reviewer`**. It exists because the platform's `/verify` and `/code-review` are marked `disable-model-invocation` — a subagent, and a session that was merely *told* `implement …`, cannot run either, and the failure is silent (an unlisted command is skipped, not refused), so the pipeline had to own its review step rather than rent it. Both execution paths spawn that one agent: a plain session per the artifact's `## Execution` block, and `roadmap-to-workflow`'s driver as its own stage in the per-item serial loop. Orchestration itself is still not hand-rolled — `roadmap-to-workflow` invokes the platform's Workflow tool over the shipped driver script (`skills/_lib/roadmap-driver.js`), which reaches for the `agent()` / `parallel()` primitives.
 
 ## All Code Changes Happen Through Pull Requests
 
@@ -218,7 +220,7 @@ Must be one of the following:
 
 **Do NOT invent new scopes.** Pick from the list below; if none fits, omit the scope entirely.
 
-* **A skill name** (no `task:` prefix): `grill`, `to-task`, `to-plan`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`, `validate`.
+* **A skill name** (no `task:` prefix): `grill`, `to-task`, `to-plan`, `to-roadmap`, `to-architecture`, `to-spec`, `roadmap-to-workflow`, `validate`.
 * **`skills`** — cross-cutting change that touches several skills at once. Also covers the repo-local meta-skills under `.claude/skills/` (`self-audit`, `self-improve`), which ship with no plugin scope of their own.
 * **`agents`** — the plugin's subagent definitions under `agents/` (currently only `code-reviewer.md`), and the repo-local lens agents under `.claude/agents/`.
 * **`lib`** — every shared helper under `skills/_lib/` (see the repository structure above) and `skills/validate/validate.sh`, plus their templates.

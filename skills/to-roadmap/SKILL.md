@@ -47,14 +47,15 @@ Items: {N} tasks across {M} phases — recommended order: 1 → 2 → 4 → 3 �
 - 1. {item title}
 - 2. {…}
 Specs referenced: {slug, …}   (or "none"; plus any decision flagged for a `/task:to-spec` follow-up)
+Technical shape: {flagged for a `/task:to-architecture` follow-up | none surfaced}
 validate: {OK — 0 errors, N warning(s) | the FAIL lines}
 ```
 
 - On a result that is **not** clean, append `re-check after editing: bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" roadmap <slug>` — `validate` is not a slash command, so it is worth spelling out. Omit it on a clean result.
 - Print the self-check findings summary from Core step 5 (or "clean / minor only").
 - The file is already written — to change anything, just say so.
-- End with the next-step footer, naming the slug in **both** halves so either is pasteable as-is: `→ Next: \`/task:roadmap-to-workflow <slug>\` (run the whole roadmap) or \`/task:to-task <slug>#1\` (pick up the first item by hand — any item number works).`
+- End with the next-step footer, naming the slug in **every** option so each is pasteable as-is: `→ Next: \`/task:roadmap-to-workflow <slug>\` (run the whole roadmap), \`/task:to-task <slug>#1\` (pick up the first item by hand — any item number works), or \`/task:to-architecture <slug>\` (add the technical layer first — components, interfaces between items, per-item sketches — for every planner to follow).`
 
 ## Forbidden
 
-Everything in `roadmap-capture.md` § **Forbidden** — it binds every roadmap the flow writes.
+Everything in `roadmap-capture.md` § **Forbidden** — it binds every roadmap the flow writes. That includes the `## Architecture` section: it is `to-architecture`'s, never written here.

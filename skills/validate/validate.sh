@@ -60,8 +60,9 @@ require_config() {
     # roadmap-to-workflow all branch on it. Everything after it is for the human
     # who ran this script by hand, which is the only way to reach this line.
     echo "ERROR precondition: CLAUDE.md not found at $AI_DIR/CLAUDE.md" >&2
-    echo "  The project isn't set up yet. Run /task:to-task, /task:to-plan, /task:to-roadmap" >&2
-    echo "  or /task:to-spec once — those four write .task/CLAUDE.md inline on first use." >&2
+    echo "  The project isn't set up yet. Run /task:to-task, /task:to-plan, /task:to-roadmap," >&2
+    echo "  /task:to-architecture or /task:to-spec once — those five write .task/CLAUDE.md" >&2
+    echo "  inline on first use." >&2
     exit 2
   fi
 }
