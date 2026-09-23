@@ -52,7 +52,7 @@ Take the **first** case that matches:
 One parallel batch where the reads are independent:
 
 - The target roadmap, in full — its intro, `Spec:` headers, phases, every item's ready description, and the existing `## Architecture` in revise mode.
-- `bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap-items.sh" <slug>` — each item's number, dependencies and title, and which are still open; the sketches and the ordering key on these numbers.
+- `bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap-items.sh" <slug>` — number, dependencies and title for each **unchecked** item, plus a `DONE` line listing the already-ticked numbers (their dependencies and titles come from the full roadmap read above); the sketches and the ordering key on these numbers.
 - Every spec the roadmap's `Spec:` headers name, plus any from `SPECS:` the discussion leaned on. Their decisions are **fixed anchors**: the section may cite them and must never contradict them.
 - `.task/CLAUDE.md` with a **file-read tool** — Language, and Code Navigation if declared — and the project's `CLAUDE.md` if present.
 
