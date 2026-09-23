@@ -42,9 +42,10 @@ There are **no user-facing flags** anywhere — footers, descriptions, and examp
 | `.task/CLAUDE.md` | Project settings — Language, Testing Policy, Build and Tests, Commit Format, tool priority — plus `## Executing a task`, the one copy of the execution instructions. A **nested `CLAUDE.md`**: the platform loads it into any session that reads a file under `.task/`. Written once by the capture skills' inline Step 0 setup, then **user-owned** — setup never rewrites an existing one. |
 | `.task/task/<slug>.md` | **One file per task.** `<slug>` is both the filename and the identity. Written by `to-task` / `to-plan`. |
 | `.task/roadmap/<slug>.md` | One file per multi-task initiative. Item backlog with checkboxes. |
+| `.task/.gitignore` | The single-pattern `*` that makes `.task/` ignore itself — the file included. Written by first-run setup, recreated by `preflight.sh` when missing, never rewritten when present. |
 | `.task/spec/<slug>.md` | **One file per spec.** Standalone load-bearing technical decisions, topic-derived slug. Written by `to-spec`. Cited by task/roadmap `Spec:` headers. |
 
-`.task/` is git-excluded via `.git/info/exclude` (pattern `.task`), written once by the capture skills' inline Step 0 setup. No tracked edits ever land outside `.task/` — the pipeline is invisible to the project.
+`.task/` is git-ignored by its own `.task/.gitignore` (pattern `*`, which also covers that file), not by `.git/info/exclude` or a tracked `.gitignore`. No tracked edits ever land outside `.task/` — the pipeline is invisible to the project, and `rm -rf .task` takes the ignore rule with it. One consequence: ripgrep applies that nested `*` to the folder's own children, so a search scoped to `.task/` (`rg <pat> .task`, a `Grep` whose path is `.task`) returns nothing. The pipeline never searches there — its helpers use shell globs, and every consumer is handed an explicit artifact path. Installs from before this change may still carry a `.task` line in `.git/info/exclude`; it is harmless and nothing removes it automatically.
 
 ### Slug as identifier
 
@@ -409,7 +410,7 @@ No pointer, no self-heal, no "which task is active" resolution anywhere.
 
 ## Marker inventory
 
-The pipeline's only markers are `git config task.root` and the `.git/info/exclude` entry (pattern `.task`) — nothing else. Both are zero-cost and needed so user-created parallel worktrees of a repo share one `.task/`.
+The pipeline's only markers are `git config task.root` and `.task/.gitignore` — nothing else. `task.root` lets user-created parallel worktrees of a repo share one `.task/`; `.task/.gitignore` keeps that `.task/` out of git, and lives inside it so deleting the folder deletes the marker too.
 
 ---
 
