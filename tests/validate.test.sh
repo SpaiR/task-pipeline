@@ -199,6 +199,8 @@ assert_exit 0 "$V_EXIT" "WARN only"
 assert_contains "$V_OUT" "cites #9, which has no item heading" "names the reference"
 assert_contains "$V_OUT" "OK 0 errors, 1 warning(s)" "the awk WARN is counted in the summary"
 
+# Runs under a UTF-8 locale on purpose: that is where macOS awk decodes the `→`
+# and, before the checks ran byte-wise, aborted the pass on it.
 t_case "a heading with trailing text is still the section, and '#N' after an arrow counts"
 arch_roadmap "$repo/.task/roadmap/arch-suffix.md" '## Architecture — draft
 
@@ -209,7 +211,7 @@ arch_roadmap "$repo/.task/roadmap/arch-suffix.md" '## Architecture — draft
 - #1 — adds it.
 - #2→#9 — a reference glued to an arrow.
 '
-v "$repo" roadmap arch-suffix
+LC_ALL=en_US.UTF-8 v "$repo" roadmap arch-suffix
 assert_exit 0 "$V_EXIT" "WARN only"
 assert_contains "$V_OUT" "cites #9, which has no item heading" "suffixed heading is scanned, glued ref counted"
 

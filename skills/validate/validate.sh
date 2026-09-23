@@ -73,13 +73,20 @@ require_config() {
 # substitution so the counting loop runs in THIS shell and can bump ERRORS /
 # WARNS directly — the same reason `err`/`warn` are plain functions. `$label` is
 # read from the caller's scope, as those two do.
+#
+# The awk runs under LC_ALL=C, byte-wise. In a UTF-8 locale macOS awk decodes
+# characters, and a match()/substr() walk across a multibyte character such as
+# the `→` of an `## Architecture` interface line aborts the whole pass with
+# "towc: multibyte conversion failure" — silently dropping every finding it would
+# have printed. Every pattern here is ASCII and every non-ASCII comparison (the
+# `—` no-dependency token) is an exact string match, so bytes lose nothing.
 awk_report() {
   local line
   while IFS= read -r line; do
     echo "$line" >&2
     [[ "$line" == ERROR* ]] && ERRORS=$((ERRORS + 1))
     [[ "$line" == WARN* ]] && WARNS=$((WARNS + 1))
-  done < <(awk -v label="$label" "$1" "$2")
+  done < <(LC_ALL=C awk -v label="$label" "$1" "$2")
 }
 
 # Task and spec path resolution reuse `resolve_artifact_path <kind> <arg>` from
