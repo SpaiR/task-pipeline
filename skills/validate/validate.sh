@@ -345,6 +345,17 @@ validate_roadmap() {
     done <<< "$dup"
   fi
 
+  # Item numbers start at 1: the driver asserts `n >= 1` on every item it is
+  # handed, so an item `0.` (or `00.`) that validated clean would still make the
+  # launch fail with `bad args`. The Dependencies check below rejects a `0`
+  # dependency for the same reason.
+  awk_report '
+    match($0, /^### - \[[ x~>-]\] [0-9]+\./) {
+      s = substr($0, RSTART, RLENGTH); gsub(/[^0-9]/, "", s)
+      if (s + 0 == 0) print "ERROR " label ": item number " s " — item numbers start at 1 (the roadmap-to-workflow driver rejects 0): " $0
+    }
+  ' "$file"
+
   # --- `**Dependencies:**` values, checked against this same file -------------
   # Only UNCHECKED items are checked: the driver reads dependencies while
   # collecting runnable items, so a shipped `[x]` item's dependency is history
@@ -382,6 +393,10 @@ validate_roadmap() {
       }
       k = split(v, d, ",")
       for (i = 1; i <= k; i++) {
+        if (d[i] + 0 == 0) {
+          print "ERROR " label ": Task " item " depends on item " d[i] " — item numbers start at 1 (the roadmap-to-workflow driver rejects 0)"
+          continue
+        }
         if (d[i] + 0 == item + 0) {
           print "ERROR " label ": Task " item " lists itself in **Dependencies:** — the driver reads that as an unsatisfiable cycle and hard-stops the run"
           continue
