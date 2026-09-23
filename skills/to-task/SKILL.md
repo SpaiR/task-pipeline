@@ -55,7 +55,7 @@ No pointer to resolve — the artifact path is the handle. Branch on `$ARGUMENTS
 1. **Slug.** Derive a kebab-case English slug (2–5 words) from the chat's essence / the drafted title. This is both the filename and the task's identity — no task-id, no bracket.
 
    **Slug collision.** If the slug is already in Step 0's `TASKS:` list, surface it before writing. First **read the existing file's headings** and state them as message text above the chip, so the user knows what an overwrite costs — e.g. "Existing `.task/task/<slug>.md` has: Description, Plan (4 steps), Tests (2)." Then pose an `AskUserQuestion`:
-   - **The existing file has a `## Plan`** → an overwrite would destroy it, and `.task/` is git-excluded, so there is nothing to restore from. Recommend deepening instead: chips **Deepen it — `/task:to-plan`** *(Recommended)* / **Pick a different slug** / **Overwrite (loses the Plan)** / **Decline → stop without writing**.
+   - **The existing file has a `## Plan`** → an overwrite would destroy it, and `.task/` is ignored by its own `.task/.gitignore` and never committed, so there is nothing to restore from. Recommend deepening instead: chips **Deepen it — `/task:to-plan`** *(Recommended)* / **Pick a different slug** / **Overwrite (loses the Plan)** / **Decline → stop without writing**.
    - **Description only** → the cheap case: chips **Accept overwrite** / **Edit → propose a different slug** / **Decline → stop without writing**.
 
    Either non-writing outcome says plainly that nothing was written and closes with `→ Next: \`/task:to-task <a different slug>\`` (convention (a)).

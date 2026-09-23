@@ -97,7 +97,7 @@ technical shape I captured. Say so if a line is wrong.}
 {Only if part of the discussion is out of context. Omit otherwise.}
 ```
 
-In **revise**, mark each line against the baseline — `+` added, `~` changed, `−` removed — and list every removed line explicitly: `.task/` is git-excluded, so a line dropped here is not recoverable from history.
+In **revise**, mark each line against the baseline — `+` added, `~` changed, `−` removed — and list every removed line explicitly: `.task/` is ignored by its own `.task/.gitignore` and never committed, so a line dropped here is not recoverable from history.
 
 It is a **recap**, printed without a confirmation chip. Open forks left → resolve them in one 3C round first, then draft. A misread arrives as chat: correct it and reprint before drafting.
 
