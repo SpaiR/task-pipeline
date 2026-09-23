@@ -25,7 +25,7 @@ The entry state, gathered before this skill reached you — no tool call of your
 
 1. `AI_DIR:` is the pipeline root: `.task/spec/<slug>.md` below means `$AI_DIR/spec/<slug>.md`, **never a cwd-relative path** ([contract § Setup-gate categories](../../docs/contract.md#setup-gate-categories)).
 2. **`CONFIG: absent`** → this skill is intake-capable: read `${CLAUDE_PLUGIN_ROOT}/skills/_lib/setup.md` and follow it — it owns the sub-steps and the `.task/CLAUDE.md` template — then continue. No confirmation chip; a wrong detected value is fixed by editing the file.
-3. **`CONFIG: present`** → leave the file untouched: it is user-owned, and the `task.root` anchor and the `.git/info/exclude` line are written by first-run setup only and never re-checked here.
+3. **`CONFIG: present`** → leave the file untouched: it is user-owned, and only a missing `.task/.gitignore` is recreated, by the preflight above itself; `task.root` is written by first-run setup and not restored afterwards.
 4. `SPECS:` lists the specs that already exist — Step 1 matches structural style against them and avoids re-pinning a decision one of them already carries; Step 4's slug-collision check reads the same list. Neither needs a listing call of its own.
 
 If that block arrived unexpanded — the command line itself rather than its output — the preprocessing did not fire: run that command yourself and continue exactly as above.

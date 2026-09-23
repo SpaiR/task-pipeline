@@ -12,7 +12,7 @@ Then it won't. The capture skills only ever write Markdown under `.task/` — no
 
 ## Does it work in a monorepo or with git worktrees?
 
-Yes. There's one `.task/` per repo, and every worktree resolves the same one through `git config task.root` (with an upward-walk fallback). Only first-run setup writes that anchor, and a worktree rarely needs it: the resolver finds a `.task/` at the main worktree root on its own. If a worktree still can't find `.task/`, set the anchor by hand with `git config --local task.root /path/that/contains/dot-task`. See [worktree can't find .task/](/guide/troubleshooting#a-worktree-cant-find-task).
+Yes. There's one `.task/` per repo, and every worktree resolves the same one: through `git config task.root`, then an upward walk, then the main worktree root. With `.task/` at the repo root — where setup puts it — nested and sibling worktrees find it with no setup at all. If yours lives elsewhere (a monorepo subdirectory, say), point the other worktrees at it by hand with `git config --local task.root /path/that/contains/dot-task`; running a capture skill from a worktree that can't see it would set up a second `.task/` instead. See [worktree can't find .task/](/guide/troubleshooting#a-worktree-cant-find-task).
 
 ## What if I just read the file myself and ignore the Execution pointer?
 
@@ -24,6 +24,6 @@ Yes. Descriptions and the dialogue follow `.task/CLAUDE.md` → Language, so you
 
 ## How do I uninstall cleanly?
 
-Two independent parts. Remove the artifacts with `rm -rf .task` — since `.task/` was never tracked (it lives in `.git/info/exclude`, not `.gitignore`), the repo is left exactly as it was. Remove the plugin itself through `/plugin` (uninstall `task@task-pipeline`). If you want to erase the last traces, drop the `.task` line from `.git/info/exclude` and run `git config --unset task.root`. See [Why you can trust this](/guide/trust#the-pipeline-leaves-no-trace-in-your-repo).
+Two independent parts. Remove the artifacts with `rm -rf .task` — since `.task/` was never tracked (it ignores itself through its own `.task/.gitignore`), the repo is left exactly as it was. Remove the plugin itself through `/plugin` (uninstall `task@task-pipeline`). If you want to erase the last trace, run `git config --unset task.root`. Projects set up by an earlier version may also carry a `.task` line in `.git/info/exclude` — harmless, and yours to delete by hand. See [Why you can trust this](/guide/trust#the-pipeline-leaves-no-trace-in-your-repo).
 
 → Next: [Troubleshooting](/guide/troubleshooting) — symptoms and fixes for the first run and the edge cases.

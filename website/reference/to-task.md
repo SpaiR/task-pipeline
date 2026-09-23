@@ -36,7 +36,7 @@ When opened from a roadmap item, it also stamps `Roadmap: [<slug>](../roadmap/<s
 
 ## First run
 
-On a fresh project, `to-task` runs setup inline: detect language + test policy → write `.task/CLAUDE.md` (no confirmation chip) → record `git config task.root`, exclude `.task`. Then it continues into the capture. See [Configuration](/reference/configuration).
+On a fresh project, `to-task` runs setup inline: detect language + test policy → write `.task/CLAUDE.md` (no confirmation chip) → record `git config task.root`, write the self-ignoring `.task/.gitignore`. Then it continues into the capture. See [Configuration](/reference/configuration).
 
 ## Output
 

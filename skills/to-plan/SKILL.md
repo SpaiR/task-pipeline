@@ -27,7 +27,7 @@ The entry state, gathered before this skill reached you — no tool call of your
 
 1. `AI_DIR:` is the pipeline root: `.task/task/<slug>.md` below means `$AI_DIR/task/<slug>.md`, **never a cwd-relative path** ([contract § Setup-gate categories](../../docs/contract.md#setup-gate-categories)).
 2. **`CONFIG: absent` → inline setup.** Read `${CLAUDE_PLUGIN_ROOT}/skills/_lib/setup.md` and follow it — it owns the sub-steps and the `.task/CLAUDE.md` template, and there is no separate setup command. No confirmation chip. Then continue to Step 1 with the original `$ARGUMENTS` unchanged. (A relative `AI_DIR: .task` means no git repository and no `.task/` yet; setup establishes `<ROOT>/.task`.)
-3. **`CONFIG: present` → leave it alone.** It is user-owned, and the `task.root` anchor and the `.git/info/exclude` line are written by first-run setup only and never re-checked here.
+3. **`CONFIG: present` → leave it alone.** It is user-owned; only a missing `.task/.gitignore` is recreated, by the preflight above itself; `task.root` is written by first-run setup and not restored afterwards.
 4. `ROADMAPS:` / `TASKS:` / `SPECS:` are what already exists. Step 1 resolves its target against `TASKS:` and `ROADMAPS:`, and Step 2a's collision check reads `TASKS:` — neither lists a directory of its own.
 
 If that block arrived unexpanded — the command line itself rather than its output — the preprocessing did not fire: run that command yourself and continue exactly as above.
