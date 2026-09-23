@@ -46,7 +46,7 @@ Talk a task through in chat — say, an HTTP retry system with backoff and a dea
 
 On a fresh project this will:
 
-1. **Detect and write the settings.** It reads `CLAUDE.md` and your commit conventions, writes `.task/CLAUDE.md`, records `git config task.root`, excludes `.task` from git, and reports what it wrote:
+1. **Detect and write the settings.** It reads `CLAUDE.md` and your commit conventions, writes `.task/CLAUDE.md`, records `git config task.root`, writes `.task/.gitignore` so the folder ignores itself, and reports what it wrote:
 
    ```text
    Wrote `.task/CLAUDE.md`
@@ -92,7 +92,7 @@ Nothing is committed until this step runs. Until then, every change is just work
 
 `.task/CLAUDE.md` is a nested `CLAUDE.md`, so Claude Code loads it into any session that reads a file under `.task/` — that's how an implementing session picks up your settings without being told to.
 
-`.task/` is flat and invisible to your repo — it's excluded via `.git/info/exclude`, so it never shows in `git status`. Delete it with `rm -rf .task` and the repo is exactly as before. See [.task/ layout](/reference/task-layout) for the full picture.
+`.task/` is flat and invisible to your repo — its own `.task/.gitignore` ignores it, so it never shows in `git status`. Delete it with `rm -rf .task` and the repo is exactly as before. See [.task/ layout](/reference/task-layout) for the full picture.
 
 ## Prefer a lighter touch?
 

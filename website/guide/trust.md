@@ -18,13 +18,13 @@ The capture skills spawn nothing. The plugin ships exactly one subagent — `tas
 
 ## The pipeline leaves no trace in your repo
 
-`.task/` is excluded via `.git/info/exclude` (not `.gitignore`), so:
+`.task/` ignores itself: it holds its own `.task/.gitignore` with a single `*`, which covers that file too. Nothing is written to your tracked `.gitignore` or to `.git/info/exclude`, so:
 
 - it never shows up in `git status`;
 - it never touches a tracked file — a teammate cloning the repo sees nothing;
-- `rm -rf .task` returns the repo to exactly how it was.
+- `rm -rf .task` returns the repo to exactly how it was — the ignore rule lives inside the folder and goes with it.
 
-The only markers the pipeline writes are that git-exclude entry and a `git config task.root` value (so parallel worktrees resolve the same `.task/`). Nothing else — no active-task pointer, no per-worktree state file.
+The only markers the pipeline writes are that `.task/.gitignore` and a `git config task.root` value (so parallel worktrees resolve the same `.task/`). Nothing else — no active-task pointer, no per-worktree state file.
 
 ## What that adds up to
 
