@@ -7,7 +7,7 @@ See the [grill guide](/guide/grill) for the full walkthrough.
 ## Usage
 
 ```text
-/task:grill [<context>]
+/task:grill [topic]
 ```
 
 **Input** — `$ARGUMENTS`, optional. A topic or free-form context to grill (`"the retry design"`, `"whether to shard the queue"`). Empty → grills the plan being discussed in the current chat.

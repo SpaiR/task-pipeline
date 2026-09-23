@@ -7,7 +7,7 @@ See the [specs guide](/guide/specs) for when a decision is spec material.
 ## Usage
 
 ```text
-/task:to-spec [<context>]
+/task:to-spec [decision area]
 ```
 
 **Input** — `$ARGUMENTS`: a rough description of the decision area, or a reference back to a prior discussion (`"write a spec from what we settled"`).
