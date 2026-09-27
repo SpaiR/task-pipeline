@@ -1,6 +1,6 @@
 # to-spec
 
-Fixes load-bearing technical decisions into a standalone `.task/spec/<slug>.md` — numbered Decision / Rationale / Constrains sections. Orthogonal to the depth-capture skills: tasks and roadmaps reference a spec via a `Spec:` header, and the executing session reads it as a fixed anchor.
+Fixes load-bearing technical decisions into a standalone `.task/spec/<slug>.md` — numbered Decision / Rationale / Constrains sections. Orthogonal to the work-capture skills: tasks and roadmaps reference a spec via a `Spec:` header, and the executing session reads it as a fixed anchor.
 
 See the [specs guide](/guide/specs) for when a decision is spec material.
 

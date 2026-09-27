@@ -5,7 +5,7 @@ title: Plan files for Claude Code
 hero:
   name: task-pipeline
   text: Freeze a Claude Code chat into one Markdown plan file any session can implement.
-  tagline: Talk it through, grill the plan, capture it at the depth you pick. Any later session reads the file and runs it. A free plugin — no server, no hooks, no MCP.
+  tagline: Talk it through, grill the plan, capture it as a task, a roadmap or a spec. Any later session reads the file and runs it. A free plugin — no server, no hooks, no MCP.
   image:
     src: /logo.svg
     alt: task-pipeline

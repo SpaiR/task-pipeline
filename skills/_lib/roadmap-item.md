@@ -4,7 +4,8 @@ The shared from-roadmap block: resolve the roadmap, pick the item, read its
 ready description, collect the specs it cites, and derive the task slug. Read by
 `to-task` (Step 1a) and the driver's plan agent (`plan-driver.md` § Driver mode) —
 one copy, so the item-picking rules cannot drift between them. Both are planners,
-so both run every step, step 6 included.
+so both run steps 3–6, step 6 included; steps 1–2 are `to-task`'s — the driver's
+plan agent receives their results in its prompt.
 
 [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd)
 is the item grammar; [§ Cross-artifact references](../../docs/contract.md#cross-artifact-references)

@@ -34,7 +34,7 @@ That distinction is why it stays small, and it's the opposite bet from the bread
 - **a stamped one-line `## Execution` pointer** inside that file, into `.task/CLAUDE.md` → `## Executing a task` — the single copy of the instructions that carries the run from implementation through commit to the review pass;
 - **one agent** — `task:code-reviewer`, which reviews that commit, proves what it flags, fixes the confirmed defects inside the plan's **Touches**, and commits those fixes on top.
 
-What gets pinned is an *argued* decision, serialized at the depth you chose — the skill you pick decides how much structure the file carries, from a bare "what and why" to a stepwise plan. (And yes, the file then outlives the `/clear`, the compaction, and tomorrow's fresh session that would otherwise erase it — table stakes, not the point.)
+What gets pinned is an *argued* decision, serialized as the artifact you chose — one task with its plan, an initiative with its architecture, or the decisions they must honor. (And yes, the file then outlives the `/clear`, the compaction, and tomorrow's fresh session that would otherwise erase it — table stakes, not the point.)
 
 ## The shape of the pipeline
 

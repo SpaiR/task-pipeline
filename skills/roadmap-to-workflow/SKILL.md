@@ -139,7 +139,7 @@ Autopilot needs the Workflow tool, and it isn't available in this environment, s
 
 ## Forbidden
 
-- Running setup on a missing `.task/CLAUDE.md`. This skill hard-stops and redirects; only the five capture skills are intake-capable.
+- Running setup on a missing `.task/CLAUDE.md`. This skill hard-stops and redirects; only the three capture skills (`to-task`, `to-roadmap`, `to-spec`) are intake-capable.
 - Looping the items yourself in this session's thread, or authoring a Workflow script inline via the `script` input. The shipped driver is what gives each item fresh context, per-item model control, parallel planning and the serial review that ticks each item; a hand-rolled loop or a re-authored copy drifts from it — including when the Workflow tool is unavailable, which is a hard stop, not a cue to loop the items yourself.
 - Reaching the driver by path instead of by its registered name. The Workflow tool checks a `scriptPath` for read permission against this session's working directory, and a plugin's own directory is never inside it — so the run dies before the first agent, everywhere except a checkout of the plugin itself. A name that does not resolve gets the hard-stop above, never a path retry.
 - Passing `args` as a JSON-encoded string, or any path relative — the sandbox expands nothing, and the driver's assertions reject both.
