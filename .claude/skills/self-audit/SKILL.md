@@ -35,7 +35,7 @@ All three are **read-only** named agents at `.claude/agents/self-{invariants,con
 In one parallel batch:
 - `ls skills/ skills/_lib/ agents/ .claude/agents/` — the live roster (folder names are canonical slugs) and a sanity check that the three self-* auditor files exist.
 - `git status --porcelain` — flag a dirty tree to the user before starting (findings against working state may diverge from `HEAD`).
-- `git stash create` — records the **baseline** Step 5 diffs the fixes against. It prints the SHA of a commit that snapshots the tracked working state, or nothing when the tree is clean; the baseline is that SHA, or `HEAD` when nothing was printed. Note it in the conversation — shell state does not survive between calls. It only writes an object: the stash list, which every worktree and session shares, is left untouched, so there is nothing to drop afterwards. Untracked files are not in the snapshot.
+- `git stash create` — records the **baseline** Step 5 diffs the fixes against. It prints the SHA of a commit that snapshots the tracked working state, or nothing when the tree is clean; the baseline is that SHA, or `HEAD` when nothing was printed. Note it in the conversation — shell state does not survive between calls. It only writes objects — the snapshot's commits, trees and blobs: the stash list, which every worktree and session shares, is left untouched, so there is nothing to drop afterwards. Untracked files are not in the snapshot.
 - Read `CLAUDE.md` in full (the main thread needs it to judge skip reasons in Step 4).
 
 Do not pre-read the skill bundle, the helpers, or the docs — each agent reads its own set, and the main thread reads a file only when merging or fixing a finding in it.
@@ -153,6 +153,6 @@ In the chat's language, terse:
 ## Notes
 
 - This skill is **local** (`.claude/skills/self-audit/` + `.claude/agents/self-*-auditor.md`). It is not installed globally and not bundled into the public skill set. To remove: delete those two paths.
-- It keeps no state between runs: no file is written except by the Step 4 fixes. Step 1's `git stash create` adds one unreferenced object under `.git/`, which git's own garbage collection removes.
+- It keeps no state between runs: no file is written except by the Step 4 fixes. Step 1's `git stash create` adds a few unreferenced objects under `.git/`, which git's own garbage collection removes.
 - Findings about `.task/` are **out of scope** (working artifacts; git history is their record — there is no archive).
 - This skill must not modify `.task/` or the project's `.gitignore`.
