@@ -15,9 +15,10 @@
 #         after a "/" (an absolute path, a worktree's copy), one line of
 #         hookSpecificOutput JSON with permissionDecision "ask" and a reason the
 #         user sees in the prompt; for any other path, or no path, nothing.
-# Exit:   always 0, since the decision rides on stdout. A crash would exit
-#         non-zero, which Claude Code treats as a non-blocking error: the guard
-#         fails open rather than stopping every edit.
+# Exit:   always 0, since the decision rides on stdout. Any other code but 2
+#         is a non-blocking error to Claude Code, so a runtime failure fails
+#         open rather than stopping every edit. A syntax error does not: bash
+#         exits 2 when it reaches one, and exit 2 blocks the edit.
 #
 # The path is matched as the tool sends it (case-sensitive, not resolved), and
 # a Bash write (sed -i, a redirect) never reaches this hook. It is a reminder
