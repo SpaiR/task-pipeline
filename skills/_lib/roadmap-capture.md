@@ -221,7 +221,7 @@ Report a count per lens plus the obvious issues, a few lines, in the caller's di
 Binding on every roadmap this flow writes:
 
 - Naming project-specific files, modules, functions, types, or constants in `### Outcomes` / `### Goal` / `### Invariants` — normative names from spec/CLAUDE.md are the only exception; the real names live in `## Architecture`.
-- Planning implementation details (file lists with line numbers, function signatures, step lists, code blocks > 5 lines) — in the items or in `## Architecture`; that is `/task:to-task`'s job when the item is picked up.
+- Planning implementation details — in the items: file lists, function signatures, code blocks > 5 lines; in `## Architecture`, where real module paths and symbol names are expected: `file:line` references, step lists, code blocks > 5 lines. That depth is `/task:to-task`'s job when the item is picked up.
 - Modifying any file other than `.task/roadmap/<slug>.md` — specs live at `.task/spec/<slug>.md` and are authored only by `to-spec`, never written or edited here.
 - Editing an existing roadmap in place — this flow only writes new files; an existing one is overwritten only through step 6's chip.
 - Auto-checking / auto-unchecking item checkboxes — ticking `- [x]` is `task:code-reviewer`'s last phase, once its review of the item passes, never here and never inside a plan or implement agent.

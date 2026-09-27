@@ -21,7 +21,7 @@ No pointer to re-point, nothing to restore from an archive.
 
 ## Change scope before re-running
 
-The artifact is plain Markdown. Edit `## Description` and `## Plan` by hand, or re-run [`/task:to-task`](/reference/to-task) — it asks before overwriting an existing slug (a roadmap item instead regenerates from the item, replacing the old Plan and any hand edits). There's no promote or revise mode: a fresh capture always writes Description and Plan together.
+The artifact is plain Markdown. Edit `## Description` and `## Plan` by hand, or re-run [`/task:to-task`](/reference/to-task) — it asks before overwriting an existing slug; for a roadmap item's own file the chip offers to regenerate it from the item, which replaces the old Plan and any hand edits. There's no promote or revise mode: a fresh capture always writes Description and Plan together.
 
 ## Where a roadmap stands
 
