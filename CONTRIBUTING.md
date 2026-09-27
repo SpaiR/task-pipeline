@@ -93,6 +93,9 @@ website/                         VitePress docs site (landing + guide + referenc
 CONTRIBUTING.md                  commit format, release procedure, this layout
 CHANGELOG.md                     public release log (English)
 README.md                        GitHub landing page (links to the docs site)
+LICENSE                          MIT license text
+.gitignore                       repo ignores — including the `.task/` dogfooding exception
+                                   and .claude/.audit-baseline.json
 ```
 
 `grill` / `to-task` / `to-plan` / `to-roadmap` / `to-architecture` / `to-spec` / `roadmap-to-workflow` are the only seven skills (`validate` is a bash-only utility, not a skill), and `agents/` holds exactly one file: `code-reviewer.md`, resolved as the agent type **`task:code-reviewer`**. It exists because the platform's `/verify` and `/code-review` are marked `disable-model-invocation` — a subagent, and a session that was merely *told* `implement …`, cannot run either, and the failure is silent (an unlisted command is skipped, not refused), so the pipeline had to own its review step rather than rent it. Both execution paths spawn that one agent: a plain session per the artifact's `## Execution` block, and `roadmap-to-workflow`'s driver as its own stage in the per-item serial loop. Orchestration itself is still not hand-rolled — `roadmap-to-workflow` invokes the platform's Workflow tool over the shipped driver script (`skills/_lib/roadmap-driver.js`), which reaches for the `agent()` / `parallel()` primitives.
