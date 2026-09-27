@@ -24,6 +24,12 @@ We use [GitHub](https://github.com/SpaiR/task-pipeline) to host code, track issu
                                    docs drift (three read-only lens agents)
   agents/self-*.md               the lens agents self-audit fans out to
                                    (read-only: Read, Grep, Glob, Bash — no Edit/Write)
+  hooks/guard-release-files.sh   PreToolUse hook: Claude Code asks before an Edit, Write or
+                                   MultiEdit of CHANGELOG.md or .claude-plugin/plugin.json
+                                   (a reminder for honest edits, not a sandbox)
+  settings.json                  shared project settings: wires that hook, and pre-approves
+                                   the suite, validate.sh, claude plugin validate and the
+                                   docs-site install and build
   .audit-baseline.json           gitignored ratchet metrics for self-audit
 .github/                         repo automation — NOT shipped with the plugin:
   pull_request_template.md       the PR body template (see § Pull request title)
@@ -72,10 +78,11 @@ agents/                          the plugin's subagent definitions (auto-loaded 
                                    plan's Touches, run .task/CLAUDE.md → Build and Tests, commit
                                    the fixes on top of the implementation's commit
 tests/                           the bash-layer test suite — run.sh + lib.sh + one *.test.sh
-                                   per helper; `bash tests/run.sh`, bash, awk and git — plus node
-                                   for the driver cases, which skip with a SKIP line when
-                                   node is absent — run on
-                                   ubuntu and macOS by .github/workflows/tests.yml
+                                   per helper and per .claude/hooks/ script; `bash tests/run.sh`,
+                                   bash, awk and git — plus node for the driver cases and jq for
+                                   some release-guard checks, each skipped with a SKIP line
+                                   when absent — run on ubuntu and macOS by
+                                   .github/workflows/tests.yml
 evals/                           prompt-level `claude plugin eval` cases (prompt.md + graders/
                                    per case) — a quality signal for the skills, NOT in CI;
                                    see evals/README.md for status; run output goes to the
@@ -109,7 +116,7 @@ LICENSE                          MIT license text
 
 1. Fork the project (or branch off `main`, if you have direct push access).
 2. Make sure the artifact validator still passes against any `.task/` snapshot you used while developing: `bash skills/validate/validate.sh all`.
-3. Run the bash-layer suite: `bash tests/run.sh` (one case file per helper under `tests/`, bash, awk and git — plus node for the driver's wave, digest and display cases, which skip with a SKIP line when node is absent — no bats). It must be green, and a change to a helper's behaviour comes with a case that covers it.
+3. Run the bash-layer suite: `bash tests/run.sh` (one case file per helper under `tests/`, bash, awk and git — plus node for the driver's wave, digest and display cases and jq for some release-guard checks, each skipped with a SKIP line when absent — no bats). It must be green, and a change to a helper's behaviour comes with a case that covers it.
 4. Manually run the affected skill in a real project before opening the PR. For a prompt change, the eval suite under `evals/` is the closest thing to an automated check — `claude plugin eval .`, or `--case '<name>*'` for one case; it needs the early-access `plugin eval` feature, and it is not wired into CI. See [`evals/README.md`](evals/README.md), including which graders are still unverified.
 5. Open the pull request against `main`.
 
