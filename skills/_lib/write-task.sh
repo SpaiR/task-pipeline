@@ -136,16 +136,20 @@ case "$mode" in
     grep -qE '^## Description[[:space:]]*$' "$target" \
       || die "$target has no '## Description' — not a task artifact this script can $mode" 3
 
-    work=$(mktemp) || die "mktemp failed"
-    trap 'rm -f "$work" "$work.sec"' EXIT
-    cp "$target" "$work"
+    # Every staging write below ends in `|| staging_failed`: with no `set -e`, an
+    # unchecked one would let a truncated copy reach the final `mv` over the
+    # target and still print `WROTE:` — exactly what exit 5 exists to prevent.
+    staging_failed() { die "cannot stage the $mode of $target" 5; }
+    work=$(mktemp) || staging_failed
+    trap 'rm -f "$work" "$work.sec" "$work.tmp" "$work.body"' EXIT
+    cp "$target" "$work" || staging_failed
 
     # Repair 1: a hand-written file with no header/body separator. `validate.sh`
     # calls its absence a hard ERROR, so leaving it would fail the validate call
     # at the bottom of this very script.
     if ! awk '/^---$/{found=1; exit} /^## /{exit} END{exit !found}' "$work"; then
       awk '/^## Description[[:space:]]*$/ && !done { print "---"; done=1 } { print }' \
-        "$work" >"$work.tmp" && mv "$work.tmp" "$work"
+        "$work" >"$work.tmp" && mv "$work.tmp" "$work" || staging_failed
     fi
 
     # Replace a section in place, or hold it for insertion when it is absent.
@@ -153,7 +157,7 @@ case "$mode" in
     put_section() { # <heading> <body-file>
       local heading="$1" body="$2"
       if grep -qE "^${heading}[[:space:]]*\$" "$work"; then
-        emit_body "$body" >"$work.body"
+        emit_body "$body" >"$work.body" || staging_failed
         awk -v h="$heading" -v bf="$work.body" '
           $0 ~ "^" h "[[:space:]]*$" {
             print h; print ""
@@ -163,17 +167,17 @@ case "$mode" in
           skip && /^## / { skip = 0; print ""; print; next }
           skip { next }
           { print }
-        ' "$work" >"$work.tmp" && mv "$work.tmp" "$work"
+        ' "$work" >"$work.tmp" && mv "$work.tmp" "$work" || staging_failed
         rm -f "$work.body"
       else
         {
           printf '%s\n\n' "$heading"
           emit_body "$body"
           printf '\n'
-        } >>"$work.sec"
+        } >>"$work.sec" || staging_failed
       fi
     }
-    : >"$work.sec"
+    : >"$work.sec" || staging_failed
     put_section '## Plan' "$plan"
     [[ -n "$tests" ]] && put_section '## Tests' "$tests"
 
@@ -197,7 +201,7 @@ case "$mode" in
             close(bf); done = 1
           }
           { print }
-        ' "$work" >"$work.tmp" && mv "$work.tmp" "$work"
+        ' "$work" >"$work.tmp" && mv "$work.tmp" "$work" || staging_failed
       else
         # Repair 2: no pointer to anchor on — append the sections, then stamp
         # the pointer after them, exactly as a fresh write does.
@@ -205,7 +209,7 @@ case "$mode" in
           printf '\n'
           cat "$work.sec"
           printf '## Execution\n%s\n' "$EXECUTION_POINTER"
-        } >>"$work"
+        } >>"$work" || staging_failed
       fi
     fi
 
