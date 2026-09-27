@@ -8,7 +8,7 @@ The roadmap capture flow, in one place, for two callers. `to-roadmap` owns its S
 
 ### Precondition
 
-- **Too small for a roadmap** — no obvious phases, no inter-task dependencies, fewer than ~3 atomic steps → **stop and suggest** `/task:to-task` or `/task:to-plan`. Say plainly that nothing was written; after several brainstorm rounds the user cannot otherwise tell whether a half-roadmap now exists. Carry **both** options with the reason: "This is one task, not an initiative — no phases, no cross-item dependencies. Nothing was written. `→ Next: \`/task:to-plan\` to capture it with a plan, or \`/task:to-task\` for the what-and-why only.`"
+- **Too small for a roadmap** — no obvious phases, no inter-task dependencies, fewer than ~3 atomic steps → **stop and suggest** `/task:to-task`. Say plainly that nothing was written; after several brainstorm rounds the user cannot otherwise tell whether a half-roadmap now exists. Carry the reason: "This is one task, not an initiative — no phases, no cross-item dependencies. Nothing was written. `→ Next: \`/task:to-task\` to capture it as a task with a plan.`"
 
 (The slug-collision check runs at save time, once the slug is derived — see step 4.)
 
@@ -88,7 +88,7 @@ Before drafting, reprint the full list as message text — the cold-start twin o
 Once the 2H inventory (or the 2C recap) is **printed** — no reply is awaited; a correction arrives as chat, and you reprint before drafting — draft the whole file per [contract § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd), which owns the section skeleton, the item grammar and the link rules. Two things it is easy to get wrong:
 
 - `**Dependencies:**` is an em dash `—` for none, otherwise a comma-separated list of item numbers. Any other word reads as a dependency on a missing item and hard-stops the autopilot.
-- A `**Ready description:**` blockquote must stand alone, and its sub-headings are **quoted** (`> ### Context`, …). `validate.sh` treats a bare unquoted one as a hard error, because `to-plan` strips the `> ` prefix to find the body.
+- A `**Ready description:**` blockquote must stand alone, and its sub-headings are **quoted** (`> ### Context`, …). `validate.sh` treats a bare unquoted one as a hard error, because `to-task` and the driver's plan agent strip the `> ` prefix to find the body.
 
 **Route every confirmed decision to a home:**
 
@@ -98,16 +98,16 @@ Once the 2H inventory (or the 2C recap) is **printed** — no reply is awaited; 
 - Scope exclusion → `## Out of scope`, with the reason.
 - Anything else → drop it, but say so to the user with a one-line reason — never a silent omission.
 
-Reserve specs for choices that would break cross-item consistency if a later `/task:to-plan` re-derived them differently. A single-item detail is that item's `### Outcomes` / `### Acceptance criteria`, never a spec.
+Reserve specs for choices that would break cross-item consistency if a later `/task:to-task` re-derived them differently. A single-item detail is that item's `### Outcomes` / `### Acceptance criteria`, never a spec.
 
 **`**Model:**` is optional** — only with a real basis: pure content editing → `haiku`, a new subsystem or cross-module change → `sonnet`. Leave it off rather than guess.
 
-Behavioral discipline: `### Outcomes` / `### Goal` / `### Invariants` state observable properties only, with no project-specific file or symbol names (normative names from a spec or `CLAUDE.md` are fine). If design work would be free to pick a different symbol, the name is `/task:to-plan`'s call, not this file's.
+Behavioral discipline: `### Outcomes` / `### Goal` / `### Invariants` state observable properties only, with no project-specific file or symbol names (normative names from a spec or `CLAUDE.md` are fine). If design work would be free to pick a different symbol, the name is `/task:to-task`'s call, not this file's.
 
 Before saving, self-check and fix inline (drafting hygiene; step 5 is the post-save pass):
 
 1. Every fork raised in the brainstorm has a home in some phase, or an explicit `## Out of scope` mention.
-2. Each `**Ready description:**` stands alone — a reader who hasn't seen the roadmap could pick it up in `/task:to-plan` from the blockquote alone.
+2. Each `**Ready description:**` stands alone — a reader who hasn't seen the roadmap could pick it up in `/task:to-task` from the blockquote alone.
 3. No placeholders (`TBD`, `TODO`, `???`, `fill in`).
 4. Every `**Dependencies:**` cites a task number that exists in this file.
 5. Every item heading produces a unique kebab-case slug.
@@ -139,7 +139,7 @@ Report a count per lens plus the obvious issues, a few lines, in the caller's di
 Binding on every roadmap this flow writes:
 
 - Naming project-specific files, modules, functions, types, or constants in `### Outcomes` / `### Goal` / `### Invariants` — normative names from spec/CLAUDE.md are the only exception.
-- Planning implementation details (file lists with line numbers, function signatures, code blocks > 5 lines) — that is `/task:to-plan`'s job when the item is picked up.
+- Planning implementation details (file lists with line numbers, function signatures, code blocks > 5 lines) — that is `/task:to-task`'s job when the item is picked up.
 - Modifying any file other than `.task/roadmap/<slug>.md` — specs live at `.task/spec/<slug>.md` and are authored only by `to-spec`, never written or edited here.
 - Auto-checking / auto-unchecking item checkboxes — ticking `- [x]` is `task:code-reviewer`'s last phase, once its review of the item passes, never here and never inside a plan or implement agent.
 - A single-direction monologue in a decomposition round — offer ≥ 2 options or explicitly justify why only one is viable. (The Decision Inventory and the cold-start recap are chat-only recaps, not decomposition rounds — exempt.)

@@ -37,7 +37,6 @@ while read -r skill kind; do
     "$skill: and it is the preflight call for kind '$kind'"
 done <<'PAIRS'
 to-task task
-to-plan plan
 to-roadmap roadmap
 to-architecture architecture
 to-spec spec

@@ -7,7 +7,7 @@ user-invocable: true
 allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/_lib/write-task.sh* *) Bash(bash *skills/_lib/roadmap-items.sh* *) Bash(bash *skills/_lib/detect-project.sh* *) Bash(bash *skills/validate/validate.sh* *)'
 ---
 
-Fix **load-bearing technical decisions** — a protocol, a cross-cutting data shape, a "we picked X over Y because…" whose reasoning wouldn't survive re-derivation — into `.task/spec/<slug>.md`. Unlike `to-task` / `to-plan` / `to-roadmap`, a spec does not decompose work; it pins the decisions that work must honor. A task or roadmap references it via a `Spec: [<slug>](../spec/<slug>.md)` header, and the executing session reads it as a fixed anchor (per `.task/CLAUDE.md` → `## Executing a task`, which its `## Execution` pointer names). One spec may be cited by many tasks and roadmaps, and can be captured before any exist.
+Fix **load-bearing technical decisions** — a protocol, a cross-cutting data shape, a "we picked X over Y because…" whose reasoning wouldn't survive re-derivation — into `.task/spec/<slug>.md`. Unlike `to-task` / `to-roadmap`, a spec does not decompose work; it pins the decisions that work must honor. A task or roadmap references it via a `Spec: [<slug>](../spec/<slug>.md)` header, and the executing session reads it as a fixed anchor (per `.task/CLAUDE.md` → `## Executing a task`, which its `## Execution` pointer names). One spec may be cited by many tasks and roadmaps, and can be captured before any exist.
 
 **Input:** `$ARGUMENTS` — a rough description of the decision area, or a reference back to a prior discussion in this conversation ("write a spec from what we settled").
 
@@ -34,7 +34,7 @@ There is no full-scan validate call here: Step 4 validates the one file it write
 
 ### Preconditions
 
-- **No real decision to pin** — only behavioral outcomes, or details local to one task → **stop and suggest** `/task:to-task` or `/task:to-plan`. Say plainly that nothing was written, and carry **both** options with the reason: "Nothing here is a cross-task technical anchor — these are outcomes local to one task. Nothing was written. `→ Next: \`/task:to-plan\` to capture it with a plan, or \`/task:to-task\` for the what-and-why only.`"
+- **No real decision to pin** — only behavioral outcomes, or details local to one task → **stop and suggest** `/task:to-task`. Say plainly that nothing was written, with the reason: "Nothing here is a cross-task technical anchor — these are outcomes local to one task. Nothing was written. `→ Next: \`/task:to-task\` to capture it as a task with a plan.`"
 - **Only an initiative's technical shape** — which components it builds, how its items connect, a module layout — with no choice whose reasoning must survive → **stop and suggest** `/task:to-architecture`. That is a roadmap's `## Architecture` section, not a spec; captured here it would restate the roadmap's items in technical dress. Say plainly that nothing was written: "This is the initiative's technical shape, not a decision with a rationale to pin. Nothing was written. `→ Next: \`/task:to-architecture\` to add it to the roadmap as its technical layer.`" When the discussion holds both, pin the real decisions here and name `/task:to-architecture` for the rest in the digest.
 
 (The slug-collision check runs at save time, once the slug is derived — see Step 4.)
@@ -120,7 +120,7 @@ Write the file directly — no in-chat preview, no confirmation prompt. Step 2's
 
 1. Slug: kebab-case from the decision-area topic, ≤ 50 chars (`event-envelope`, `auth-token-model`). Its own identity, independent of any roadmap.
 2. **Slug collision.** If that slug is already in Step 0's `SPECS:` list → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). Never silently overwrite. That list is a snapshot taken before the rounds and no writer script guards this path, so when the slug is *absent* from it, confirm with a file read that nothing is there before writing.
-3. Write `$AI_DIR/spec/<slug>.md` (creating the directory if needed), and nothing else — wiring a `Spec:` header into a task or roadmap is `to-task` / `to-plan` / `to-roadmap` / `to-architecture`'s job when they reference this spec.
+3. Write `$AI_DIR/spec/<slug>.md` (creating the directory if needed), and nothing else — wiring a `Spec:` header into a task or roadmap is `to-task` / `to-roadmap` / `to-architecture`'s job when they reference this spec.
 4. Validate it: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" spec <slug>` — surface any WARN/ERROR in the Step 5 digest; only a setup-precondition failure (exit 2) hard-stops.
 
 ### Step 5: Output — digest
@@ -139,7 +139,7 @@ validate: {OK — 0 errors, N warning(s) | the FAIL lines}
 
 On a result that is **not** clean, append `re-check after editing: bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" spec <slug>` — `validate` is not a slash command, so it is worth spelling out. Omit it on a clean result.
 
-The file is already written — to change any pin, just say so. Then the handoff footer (convention (a)): `→ Next: \`/task:to-plan\` for a task that leans on \`.task/spec/<slug>.md\` — or attach it by hand with the line \`Spec: [<slug>](../spec/<slug>.md)\`, above the \`---\` in a task or directly under a roadmap's \`# <Title>\`.`
+The file is already written — to change any pin, just say so. Then the handoff footer (convention (a)): `→ Next: \`/task:to-task\` for a task that leans on \`.task/spec/<slug>.md\` — or attach it by hand with the line \`Spec: [<slug>](../spec/<slug>.md)\`, above the \`---\` in a task or directly under a roadmap's \`# <Title>\`.`
 
 ## Forbidden
 

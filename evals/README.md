@@ -1,13 +1,13 @@
 # Eval suite
 
-Prompt-level cases for six of the seven skills — `to-roadmap` has no case of its own yet —
+Prompt-level cases for five of the six skills — `to-roadmap` has no case of its own yet —
 run with `claude plugin eval` (early access, see below). They cover what `tests/` cannot: the bash layer has unit
 tests, but whether a *skill* actually fires, writes the artifact it promises and
 prints the conventions is a property of the prompt, and only a real run shows it.
 
 ```bash
 claude plugin eval .                                  # every case, this plugin
-claude plugin eval --case 'to-plan*' .                # one case
+claude plugin eval --case 'to-task*' .                # one case
 claude plugin eval --tag capture .                    # by tag
 ```
 
@@ -17,8 +17,7 @@ project with no `.task/`, so the capture cases also exercise first-run setup.
 
 | Case | Asserts |
 |------|---------|
-| `to-task-from-chat` | the skill fires, an artifact is written, the footer is printed, no roadmap or spec is authored |
-| `to-plan-fresh` | the artifact validates clean and carries `### Step 1:` with real `**Touches:**` paths |
+| `to-task-from-chat` | the skill fires, the artifact is written, validates clean and carries `### Step 1:` with real `**Touches:**` paths, the footer is printed, no roadmap or spec is authored |
 | `grill-writes-nothing` | nothing is written under `.task/`, and exactly one load-bearing question is asked |
 | `to-spec-pins` | the digest lists every pin, and the spec carries numbered `## N.` decisions |
 | `to-architecture-fresh` | with no roadmap yet, the skill writes one plus its `## Architecture` section with `### Components`, and the digest carries the `Architecture:` line |
@@ -28,8 +27,9 @@ project with no `.task/`, so the capture cases also exercise first-run setup.
 
 `to-architecture-fresh` has been executed (`claude plugin eval --case
 'to-architecture*' --ablation none --allow-tools Bash Write Edit .`) and passes.
-The other five cases were written against the documented case format before the
-runner was available, and running this one showed three things they get wrong:
+`to-task-from-chat` was rebuilt to the same format but has not been executed yet.
+The other three cases were written against the documented case format before the
+runner was available, and running `to-architecture-fresh` showed three things they get wrong:
 
 - **The Skill tool must be listed.** Runs are in don't-ask mode, so a case whose
   `allowed_tools` omits `Skill` has the skill call denied and the run stops
@@ -46,7 +46,7 @@ prompts.
 
 Still missing a case: `to-roadmap`. Its output is a multi-phase file whose items
 each need a `**Ready description:**` blockquote, so a useful grader there is a
-larger piece of work than the six above. `to-architecture-fresh` exercises its
+larger piece of work than the cases above. `to-architecture-fresh` exercises its
 capture flow indirectly — fresh mode runs the same shared `roadmap-capture.md`
 Core — but grades only the architecture layer on top.
 

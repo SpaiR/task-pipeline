@@ -1,6 +1,6 @@
 ---
 type: regex
-target: {source: file, path: '**/.task/task/*.md'}
+target: {source: file, path: '.task/task/api-rate-limiter.md'}
 match: contains
 pattern: '\*\*Touches:\*\*\s*`'
 ---

@@ -90,7 +90,7 @@ Read set per lens:
 
    | # | Lens | Sev | Conf | Location | Problem | Fix |
    |---|------|-----|------|----------|---------|-----|
-   | 1 | Invariants | high | 95 | `skills/to-plan/SKILL.md:42` | … | … |
+   | 1 | Invariants | high | 95 | `skills/to-task/SKILL.md:42` | … | … |
    ```
 
    Then a `Details` list (one entry per finding with `Source: Invariants | Contract | Docs-sync`, `Confidence: <0-100>`, `Status: pending`).

@@ -30,7 +30,7 @@ Any count, roster, or inventory a doc states is checked against these lists. Do 
 **`README.md`** (the GitHub landing page):
 - Every skill in its diagrams, command list, and comparison tables exists on disk, under the folder's name with the `/task:` prefix; no user skill is missing from a section that claims to list them all.
 - Example artifacts match the real shapes: plain `# <Title>`, header lines above `---`, `## Description`, optional `## Plan`, the `## Execution` pointer; no `[TASK-ID]`, no `plan.md` / `summary.md`.
-- Walkthroughs use flag-free capture depth (the skill name, never a flag).
+- Walkthroughs pick the capture by skill name, never by a flag.
 
 **`CLAUDE.md`** (for the editing assistant):
 - The Quick-orient diagram and prose name exactly the skills and agents that exist.

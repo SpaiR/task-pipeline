@@ -278,6 +278,7 @@ v "$bare" task whatever
 assert_exit 2 "$V_EXIT" "no .task/CLAUDE.md"
 assert_contains "$V_OUT" "CLAUDE.md not found" "the substring the skills branch on"
 assert_contains "$V_OUT" "/task:to-architecture" "the roster names every intake-capable capture skill"
+assert_eq "0" "$(grep -c '/task:to-plan' <<<"$V_OUT")" "the roster names no removed skill"
 
 t_case "a missing slug argument is a usage error (exit 2)"
 v "$repo" task

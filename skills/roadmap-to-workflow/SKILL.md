@@ -29,7 +29,7 @@ The entry state, gathered before this skill reached you — no tool call of your
 
 1. `PLUGIN_ROOT:` and `AI_DIR:` are Step 2's `pluginRoot` and `aiDir` args, used verbatim — the sandbox expands neither.
 2. **`CONFIG: absent`** → hard-stop redirect (do **not** bootstrap here):
-   > The project isn't set up yet. Capture something first with `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, `/task:to-architecture`, or `/task:to-spec` — those five set the project up inline.
+   > The project isn't set up yet. Capture something first with `/task:to-task`, `/task:to-roadmap`, `/task:to-architecture`, or `/task:to-spec` — those four set the project up inline.
    > → Next: `/task:to-roadmap`
 3. **`VALIDATE:` holds `validate.sh all`'s output** — every artifact, so an error may belong to a task or roadmap unrelated to this run. Surface every `ERROR` line, block on none of them yet, and **hold** the roadmap ones: once `<slug>` is resolved below, an error against **that** file is a stop — "→ Next: fix the reported error in `.task/roadmap/<slug>.md`, then rerun `/task:roadmap-to-workflow <slug>`". `WARN` lines are informational. (`ERROR precondition: CLAUDE.md not found` is case 2, not a validation error.)
 4. `ROADMAPS:` carries each roadmap's progress and open item numbers — the picker below reads it, and lists no directory of its own.
@@ -120,8 +120,8 @@ Per wave the driver plans every item in `parallel()` — each plan agent follows
 **No Workflow tool** — the Workflow tool itself is absent from this environment, which is a different case from the one above (there, the tool is present but the driver's name fails to resolve). Autopilot cannot run without it, so this skill stops rather than looping the items itself. Stop, with this message:
 
 ```
-Autopilot needs the Workflow tool, and it isn't available in this environment, so `/task:roadmap-to-workflow` can't run. The items can still be run by hand, one at a time, in dependency order: in this chat, run `/task:to-plan <slug>#<N>` for one unchecked item, then start a fresh session and say `implement .task/task/<item-slug>.md`. That session's `## Execution` pointer carries plan → commit → `task:code-reviewer` on its own (`## Executing a task` step 4), and the reviewer ticks the roadmap checkbox once its review passes — nothing further to do per item.
-→ Next: run `/task:to-plan <slug>#<N>` for the first unchecked item.
+Autopilot needs the Workflow tool, and it isn't available in this environment, so `/task:roadmap-to-workflow` can't run. The items can still be run by hand, one at a time, in dependency order: in this chat, run `/task:to-task <slug>#<N>` for one unchecked item, then start a fresh session and say `implement .task/task/<item-slug>.md`. That session's `## Execution` pointer carries plan → commit → `task:code-reviewer` on its own (`## Executing a task` step 4), and the reviewer ticks the roadmap checkbox once its review passes — nothing further to do per item.
+→ Next: run `/task:to-task <slug>#<N>` for the first unchecked item.
 ```
 
 ## Output
@@ -135,7 +135,7 @@ Autopilot needs the Workflow tool, and it isn't available in this environment, s
 
 - End with the canonical next-step footer (convention (a), flag-free):
   - All items shipped → `→ Done. Roadmap complete — \`.task/roadmap/<slug>.md\` fully checked; review the landed commits with \`git log\`.`
-  - Stopped on a `FAIL` → surface the failing digest, then say **where** it stopped and **what state the tree is in**: `Stopped at #<N> <item-slug> in wave <W>. Its work is left in the working tree — inspect it with \`git status\` and \`git log --oneline -3\`. → Next: fix #<N> (or re-plan it with \`/task:to-plan <slug>#<N>\`), then rerun \`/task:roadmap-to-workflow <slug>\` — already-ticked items stay ticked, only the unchecked remainder reruns.`
+  - Stopped on a `FAIL` → surface the failing digest, then say **where** it stopped and **what state the tree is in**: `Stopped at #<N> <item-slug> in wave <W>. Its work is left in the working tree — inspect it with \`git status\` and \`git log --oneline -3\`. → Next: fix #<N> (or re-plan it with \`/task:to-task <slug>#<N>\`), then rerun \`/task:roadmap-to-workflow <slug>\` — already-ticked items stay ticked, only the unchecked remainder reruns.`
 
 ## Forbidden
 

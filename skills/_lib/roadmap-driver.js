@@ -155,7 +155,7 @@ const lastLine = (s) => (s || '').trim().split('\n').filter(Boolean).pop() || ''
 
 // PLAN — writes only its own .task/task/<item-slug>.md, never the working tree,
 // so a whole wave plans in parallel. Reads skills/_lib/plan-driver.md instead of
-// the full to-plan skill. Planner tier: opus by default, sonnet for an item the
+// the full to-task skill. Planner tier: opus by default, sonnet for an item the
 // roadmap hints as `haiku` (with effort scaled down) — the review stage never
 // scales down, see runReview.
 async function runPlan(n, title, model, phase) {
