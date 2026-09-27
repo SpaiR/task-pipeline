@@ -1,23 +1,13 @@
 name: Bash layer tests
 
+# No path filters: besides the helpers, the suite reads every SKILL.md, the
+# agents, the plugin manifest and every tracked Markdown file (injection count,
+# the driver's registered name, reviewer markers, cross-references), so any
+# change can turn it red.
 on:
   push:
     branches: [main]
-    paths:
-      # Wider than the helpers: the suite also reads every SKILL.md (injection
-      # count, the driver's registered name) and the plugin manifest.
-      - 'tests/**'
-      - 'skills/**'
-      - '.claude-plugin/**'
-      - '.github/workflows/tests.yml'
   pull_request:
-    paths:
-      # Wider than the helpers: the suite also reads every SKILL.md (injection
-      # count, the driver's registered name) and the plugin manifest.
-      - 'tests/**'
-      - 'skills/**'
-      - '.claude-plugin/**'
-      - '.github/workflows/tests.yml'
   workflow_dispatch:
 
 permissions:
@@ -36,5 +26,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Show bash versions
+        run: |
+          echo "PATH bash: $(command -v bash)"
+          bash --version | head -n 1
+          echo "/bin/bash:"
+          /bin/bash --version | head -n 1
       - name: Run the suite
         run: bash tests/run.sh
+      # If the runner's PATH bash is Homebrew's, stock macOS bash 3.2 would
+      # otherwise go untested; the versions printed above show which ran.
+      # Informational until it has proven stable, hence continue-on-error.
+      - name: Run the suite under /bin/bash (stock macOS bash)
+        if: runner.os == 'macOS'
+        continue-on-error: true
+        run: PATH="/bin:$PATH" bash tests/run.sh
