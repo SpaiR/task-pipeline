@@ -22,7 +22,7 @@ This is why the plan survives `/clear`, compaction, and tomorrow's fresh session
 
 ## 4. Execution is a section, not a skill
 
-Execution isn't a command you learn. Every artifact ends with a one-line pointer:
+Execution isn't a command you learn. Every task file ends with a one-line pointer:
 
 ```markdown
 > Read [.task/CLAUDE.md](../CLAUDE.md) and follow its `## Executing a task` section.
