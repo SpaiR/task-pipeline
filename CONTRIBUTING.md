@@ -326,15 +326,15 @@ Two extra rules apply on top of the regular contribution flow:
 
 ### `Co-Authored-By` trailer for AI-assisted commits
 
-Add a `Co-Authored-By` line to the [commit message footer](#commit-message-footer) for any commit an AI agent helped produce. Use the **short, family-level name** of the model — not the specific version — followed by the standard vendor noreply email.
+Add a `Co-Authored-By` line to the [commit message footer](#commit-message-footer) for any commit an AI agent helped produce: the agent's or model's name, followed by the vendor's noreply email. The trailer is **required**; its exact form is **not pinned**. The line your tool adds on its own is fine as it is, with or without a version suffix, and so is a family-level name.
 
 Format:
 
 ```
-Co-Authored-By: <Model Family> <<vendor-noreply-email>>
+Co-Authored-By: <Agent or model name> <<vendor-noreply-email>>
 ```
 
-Examples (use the family name, drop the version/tier suffix):
+Examples:
 
 | Model used                                 | Trailer                                          |
 |--------------------------------------------|--------------------------------------------------|
