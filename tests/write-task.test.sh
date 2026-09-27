@@ -6,7 +6,6 @@
 source "$(dirname "$0")/lib.sh"
 
 WRITE="$T_REPO_ROOT/skills/_lib/write-task.sh"
-VALIDATE="$T_REPO_ROOT/skills/validate/validate.sh"
 
 w() { # <repo> <args…> → $W_OUT, $W_EXIT
   local dir="$1"
