@@ -6,7 +6,7 @@ First-run problems, then the edge cases of a solo, hook-free, pointer-free pipel
 
 ### /task: commands don't appear after installing {#commands-appear}
 
-**Symptom** — typing `/task:` shows nothing; no `/task:to-task`, `/task:to-plan`, etc.
+**Symptom** — typing `/task:` shows nothing; no `/task:to-task`, `/task:to-roadmap`, etc.
 
 **Cause** — the `task` plugin isn't installed/enabled in this session, or the marketplace was never added.
 
@@ -65,9 +65,9 @@ Nothing was written when this fires, so re-running the command after fixing the 
 
 **Symptom** — a skill stops with `.task/CLAUDE.md not found`.
 
-**Cause** — `/task:roadmap-to-workflow` and `validate` require `.task/CLAUDE.md`, and it hasn't been written in this project yet. The five intake-capable capture skills (`to-task` / `to-plan` / `to-roadmap` / `to-architecture` / `to-spec`) write it inline on first use instead of stopping, and `/task:grill` needs no setup at all. There is no separate setup command — setup is folded inline into those five capture skills.
+**Cause** — `/task:roadmap-to-workflow` and `validate` require `.task/CLAUDE.md`, and it hasn't been written in this project yet. The three intake-capable capture skills (`to-task` / `to-roadmap` / `to-spec`) write it inline on first use instead of stopping, and `/task:grill` needs no setup at all. There is no separate setup command — setup is folded inline into those three capture skills.
 
-**Fix** — run any of `/task:to-task`, `/task:to-plan`, `/task:to-roadmap`, `/task:to-architecture`, or `/task:to-spec`. Each detects language and test policy, writes `.task/CLAUDE.md`, records `git config task.root`, reports what it wrote, and continues into the capture. `/task:roadmap-to-workflow` is *not* setup-capable by design — if you hit this there, run a capture skill first, then retry.
+**Fix** — run any of `/task:to-task`, `/task:to-roadmap`, or `/task:to-spec`. Each detects language and test policy, writes `.task/CLAUDE.md`, records `git config task.root`, reports what it wrote, and continues into the capture. `/task:roadmap-to-workflow` is *not* setup-capable by design — if you hit this there, run a capture skill first, then retry.
 
 ### .task/ shows up in git status
 
@@ -142,7 +142,7 @@ ls .task/task/
 # every task file you've captured; a task stays here until you delete it
 
 grep -L '^## Plan' .task/task/*.md
-# task files with a Description but no Plan yet (to-task-only captures)
+# older, Description-only task files captured before to-task always wrote a Plan
 
 grep '^### - \[ \]' .task/roadmap/<slug>.md
 # every item still unchecked in that roadmap

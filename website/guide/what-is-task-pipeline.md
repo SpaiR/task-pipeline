@@ -11,10 +11,10 @@ you: add HTTP retry with backoff to the payments client
 # 2. grill the plan first (optional) — one question at a time, writes nothing
 /task:grill
   → Retry the 429s too, or only 5xx and timeouts?  [recommended: 429s too]
-    decision ledger → route to /task:to-plan
+    decision ledger → route to /task:to-task
 
 # 3. when you're ready, one command freezes that discussion into a file
-/task:to-plan
+/task:to-task
   → wrote .task/task/http-retry-backoff.md   (## Description + ## Plan)
 
 # 4. hand the file to any session — this one, or a fresh one next week
@@ -43,8 +43,8 @@ discuss freely in chat
   ↓
 grill                                 ← pre-capture: interrogate the decision, no artifact
   ↓
-to-task | to-plan | to-roadmap        ← capture depth is the skill, not a flag
-to-architecture                       ← a roadmap's technical layer: ## Architecture
+to-task                               ← one task: what you capture is the skill, not a flag
+to-roadmap                            ← a multi-task initiative, architecture included
 to-spec                               ← pins technical decisions, cited via Spec:
   ↓                       ↓
 implement session   roadmap-to-workflow   ← the launcher fans items out to sessions
@@ -55,10 +55,10 @@ task:code-reviewer                    ← the plugin's own review pass, spawned 
 
 A few things to notice, because they're the load-bearing design choices:
 
-- **Depth of capture is the skill you pick, not a flag.** [`to-task`](/reference/to-task) records just the "what and why". [`to-plan`](/reference/to-plan) adds a step-by-step Plan. [`to-roadmap`](/reference/to-roadmap) captures a whole multi-task initiative. There is no `--plan` or `--deep` switch anywhere.
+- **What you capture is the skill you pick, not a flag.** [`to-task`](/reference/to-task) records the "what and why" plus a step-by-step Plan, for one task. [`to-roadmap`](/reference/to-roadmap) captures a whole multi-task initiative, architecture included. There is no `--plan` or `--deep` switch anywhere.
 - **There is no execution skill.** Every artifact ends with a one-line `## Execution` pointer into `.task/CLAUDE.md` → `## Executing a task`, and any ordinary session told `implement .task/task/<slug>.md` follows it.
 - **[`grill`](/reference/grill) sits before capture.** It interrogates a plan one question at a time and hands off to the right capture skill — it writes nothing itself.
-- **[`to-architecture`](/reference/to-architecture) is a roadmap's technical layer.** It adds a `## Architecture` section — components, interfaces between items, per-item sketches — that planners follow as intended shape, writing the roadmap through the same flow as `to-roadmap` when none exists yet.
+- **[`to-roadmap`](/reference/to-roadmap) always writes its technical layer too.** Its `## Architecture` section — components, interfaces between items, per-item sketches — is written in the same pass as the items, and planners follow it as intended shape.
 - **[`to-spec`](/reference/to-spec) is orthogonal.** It pins load-bearing technical decisions into their own file, which tasks and roadmaps point at with a `Spec:` header.
 
 ## When to use it (and when not to)

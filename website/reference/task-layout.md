@@ -31,7 +31,7 @@ Spec: [<slug>](../spec/<slug>.md)         (optional, repeatable — each cites a
 ## Description
 Why + what, distilled from the chat.
 
-## Plan                  (written only by to-plan)
+## Plan                  (written only by to-task)
 ### Step 1: <short title>
 **Goal:** <observable end state>
 **Touches:** `path/one` `path/two`
@@ -47,8 +47,8 @@ Why + what, distilled from the chat.
 - **Line 1** is a plain `# <Title>` — no bracketed task-id.
 - `Roadmap:` / `Source item:` / `Spec:` headers sit above the `---`, ASCII.
 - Cross-references are **Markdown links**, so a `.task/` file is navigable in a Markdown viewer or plan-review tool. The link **text** is the slug that carries the identity; the target is what a viewer follows, and is always `../<kind>/<slug>.md` — `task/`, `roadmap/` and `spec/` are siblings under `.task/`. `Source item:` is a number, not a reference, so it stays bare.
-- `## Description` is mandatory; `## Plan` and `## Tests` are optional.
-- `## Execution` is a one-line pointer, stamped verbatim by `to-task` / `to-plan`. The instructions it names live once in `.task/CLAUDE.md` → `## Executing a task` — that is the mechanism carrying implement → commit → review.
+- `## Description` and `## Plan` are always written together by `to-task`; `## Tests` is optional, per Testing Policy. (An older, Description-only file captured before `to-task` always wrote a Plan stays valid.)
+- `## Execution` is a one-line pointer, stamped verbatim by `to-task`. The instructions it names live once in `.task/CLAUDE.md` → `## Executing a task` — that is the mechanism carrying implement → commit → review.
 
 ## roadmap.md
 
@@ -82,7 +82,7 @@ The checkbox is the progress marker; `**Dependencies:**` drives the wave orderin
 
 An item that leans on a spec decision cites it as `### Spec references → [<slug>](../spec/<slug>.md) §N`. `## Prerequisites` and `## Backlinks` hold Markdown links too — a sibling roadmap is `[<slug>](<slug>.md)`, a spec `[<slug>](../spec/<slug>.md)`.
 
-A roadmap may also carry one optional `## Architecture` section — components, interfaces between items, a sketch per item, technical ordering — written by [`to-architecture`](/reference/to-architecture). No parser reads it; planners follow it as the intended shape.
+A roadmap also carries a `## Architecture` section — components, interfaces between items, a sketch per item, technical ordering — written by [`to-roadmap`](/reference/to-roadmap) in the same pass as the items. No parser reads it; planners follow it as the intended shape. (An older roadmap captured before `to-roadmap` always wrote this section stays valid without one.)
 
 ## spec.md
 

@@ -1,23 +1,17 @@
 # Capture a single task
 
-The everyday flow: discuss in chat, capture to a file, implement. Two skills capture a single task — the difference is depth.
+The everyday flow: discuss in chat, capture to a file, implement. One skill captures a single task — [`to-task`](/reference/to-task).
 
-## to-task vs to-plan
+## What it writes
 
-| | [`to-task`](/reference/to-task) | [`to-plan`](/reference/to-plan) |
-|---|---|---|
-| Writes | `## Description` only | `## Description` **+** `## Plan` (+ `## Tests` when policy calls for it) |
-| Use when | You want to record the "what and why" before deciding an approach | You know enough about the approach to hand straight to implementation |
-| Output file | `.task/task/<slug>.md` | `.task/task/<slug>.md` (same shape, with a Plan) |
-
-Both produce one file per task, and both stamp the same `## Execution` block. Depth is the skill you pick — there is no flag.
+`to-task` always writes `## Description` **and** `## Plan` (Goal / Touches / Logic steps) together, plus `## Tests` when the testing policy calls for it. A task worth an artifact is a task whose approach is worth writing down, so the Plan is never optional — a task too small to deserve a plan is too small to deserve a file; just do it in chat.
 
 ## The flow
 
 ```text
 # talk the task through in chat, then:
 
-/task:to-plan
+/task:to-task
 # → drafts .task/task/http-retry-backoff.md:
 #   ## Description + ## Plan (Goal / Touches / Logic steps)
 # → prints a digest, then:
@@ -35,34 +29,20 @@ Each `## Plan` step has three layers:
 - **Touches** — the files it changes (this list also scopes which review fixes get applied).
 - **Logic** — optional, only when the "how" is non-obvious.
 
-## From a quick capture to a full plan
-
-Start light with `to-task`, then deepen later. Running `to-plan` on a file that already exists does the right thing automatically:
-
-- **Promote** — the file has a Description but no Plan yet → `to-plan` inserts a `## Plan` in place, leaving the Description untouched.
-- **Revise** — the file already has a Plan → `to-plan` replaces it in place and shows a one-line note of what changed, rather than starting over or appending a duplicate.
-
-```text
-/task:to-task
-# → .task/task/http-retry-backoff.md — Description only
-
-# …later, once you know the approach…
-/task:to-plan http-retry-backoff
-# → promotes it in place: adds ## Plan, Description stays as-is
-```
-
 ## Tests
 
 Whether a task gets a `## Tests` section is governed by `.task/CLAUDE.md` → Testing Policy:
 
-- `always` — every `to-plan` capture includes Tests.
+- `always` — every capture includes Tests.
 - `on-demand` (default) — Tests are written only if the discussion explicitly asks ("with tests", "cover with tests").
 - `never` — no Tests section.
 
-Only `to-plan` writes `## Tests`; `to-task` never does.
+## Fresh only
+
+`to-task` always drafts a new `## Description` and `## Plan` together — it never targets an existing file to add or replace just the plan. An existing slug is surfaced first, with a chip to pick a different slug or overwrite; from a roadmap item whose own file already exists, the chip is to regenerate from the item or decline. `.task/` is git-ignored, so an overwritten file isn't recoverable — the chip exists so that's never silent.
 
 ## Editing by hand
 
-The artifact is a plain Markdown file. To change scope, edit the `## Description` (and `## Plan`, if present) directly — or re-run `/task:to-plan` to revise the plan through the tool. Either way, it's just a file.
+The artifact is a plain Markdown file. To change scope, edit `## Description` and `## Plan` directly, or re-run `/task:to-task` — it asks before overwriting an existing slug.
 
 → Next: [Grill before you capture](/guide/grill) — pressure-test the decision first.

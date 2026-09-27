@@ -33,7 +33,7 @@ When a plan has real forks — this flag's default, that error's fallback — ru
 ## 3. Capture it (one command)
 
 ```text
-/task:to-plan
+/task:to-task
 ```
 
 On a fresh project this detects your language and test policy, writes `.task/CLAUDE.md`, reports what it wrote, then drafts the task file and prints a short digest of what it captured. You don't pre-approve a draft — the chat was the review; the file is already written when the digest appears.

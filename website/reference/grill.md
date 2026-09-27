@@ -35,7 +35,7 @@ A decision ledger printed as chat text (there is no file), followed by a routing
 1. {decision at full specificity} — because {the load-bearing reason}
 2. …
 
-→ Next: /task:to-plan — one task with the approach nailed down; capture Description + Plan.
+→ Next: /task:to-task — one task with the approach nailed down; capture Description + Plan.
 ```
 
 ## Does not
