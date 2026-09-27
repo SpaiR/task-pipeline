@@ -1,0 +1,35 @@
+name: Docs site build check
+
+# The deploy workflow (docs.yml) only runs on main, so without this a broken
+# site build would surface only after merge. Same build steps as the deploy,
+# no Pages upload. CHANGELOG.md is included because website/changelog.md
+# pulls it in with VitePress's file-include directive.
+on:
+  pull_request:
+    paths:
+      - 'website/**'
+      - 'CHANGELOG.md'
+      - '.github/workflows/docs-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # lastUpdated needs full git history
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Build with VitePress
+        run: npm run docs:build
