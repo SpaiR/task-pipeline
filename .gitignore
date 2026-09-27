@@ -13,9 +13,6 @@
 # contributor inherits the exclusion even before any skill has written that file.
 .task/
 
-# self-audit ratchet baseline (runtime metrics, per-clone)
-.claude/.audit-baseline.json
-
 # Claude Code local state: personal settings and agent worktrees
 .claude/settings.local.json
 .claude/worktrees/

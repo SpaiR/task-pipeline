@@ -34,7 +34,6 @@ All three are **read-only** named agents at `.claude/agents/self-{invariants,con
 In one parallel batch:
 - `ls skills/ skills/_lib/ agents/ .claude/agents/` — the live roster (folder names are canonical slugs) and a sanity check that the three self-* auditor files exist.
 - `git status --porcelain` — flag a dirty tree to the user before starting (findings against working state may diverge from `HEAD`).
-- Read `.claude/.audit-baseline.json` if it exists (prior ratchet metrics; absent on first run — treat as no baseline).
 - Read `CLAUDE.md` in full (the main thread needs it to judge skip reasons in Step 4).
 
 Do not pre-read the skill bundle, the helpers, or the docs — each agent reads its own set, and the main thread reads a file only when merging or fixing a finding in it.
@@ -95,7 +94,7 @@ Read set per lens:
 
    Then a `Details` list (one entry per finding with `Source: Invariants | Contract | Docs-sync`, `Confidence: <0-100>`, `Status: pending`).
 
-5. **Do not write findings artifacts to disk.** The chat report is the deliverable. The one sanctioned on-disk write is the ratchet baseline (Step 6) — a single gitignored metrics file, not a parallel artifact tree.
+5. **Do not write findings artifacts to disk.** The chat report is the deliverable; the only files this skill changes are the ones Step 4 fixes.
 
 ### Step 4: Apply fixes — confidence-gated, then proven
 
@@ -136,33 +135,9 @@ In the chat's language, terse:
 - `Verification`: pass / fail / n/a.
 - Reminder: files were edited; review with `git diff` before commit.
 
-#### Ratchet
-
-**Only on a full-repo run.** A scoped run (non-empty `$ARGUMENTS`) sees a fraction of the repo, so comparing it against a full-repo baseline — or overwriting that baseline with it — would fake a trend. On a scoped run render `Ratchet: skipped (scoped run).` and do not write the file.
-
-On a full-repo run, compare against the baseline read in Step 1 and render a trend block:
-
-```
-Ratchet (previous → current):
-  findings_total: <p> → <c>  <▪ flat | ↓ improved | ↑ regressed>
-  findings_high:  <p> → <c>  <…>
-  findings_med:   <p> → <c>  <…>
-  findings_low:   <p> → <c>  <…>
-```
-
-First run (no baseline read in Step 1) → render `Ratchet: baseline initialised (no prior run).`
-
-The counts come from LLM agents and vary somewhat run to run — read the trend as a signal, not a gate.
-
-Then **write** the new baseline to `.claude/.audit-baseline.json` (the only sanctioned on-disk write of this skill; the file is gitignored). Counts are the Step 3 totals (**pre-fix**), so the trend reflects drift caught per run, not residual:
-
-```json
-{ "version": 1, "last_run": "<ISO8601 UTC>", "metrics": { "findings_total": N, "findings_high": N, "findings_med": N, "findings_low": N } }
-```
-
 ## Notes
 
-- This skill is **local** (`.claude/skills/self-audit/` + `.claude/agents/self-*-auditor.md`). It is not installed globally and not bundled into the public skill set. To remove: delete those two paths (and the gitignored `.claude/.audit-baseline.json`).
-- The ratchet baseline `.claude/.audit-baseline.json` is the **sole** on-disk artifact this skill writes (gitignored, per-clone). The skill must not modify `.gitignore` at runtime — the baseline entry is added once at bootstrap.
+- This skill is **local** (`.claude/skills/self-audit/` + `.claude/agents/self-*-auditor.md`). It is not installed globally and not bundled into the public skill set. To remove: delete those two paths.
+- It keeps no state between runs: nothing is written to disk except the Step 4 fixes.
 - Findings about `.task/` are **out of scope** (working artifacts; git history is their record — there is no archive).
 - This skill must not modify `.task/` or the project's `.gitignore`.

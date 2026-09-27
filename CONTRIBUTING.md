@@ -31,7 +31,6 @@ We use [GitHub](https://github.com/SpaiR/task-pipeline) to host code, track issu
   settings.json                  shared project settings: wires that hook, and pre-approves
                                    the suite, validate.sh, claude plugin validate and the
                                    docs-site install and build
-  .audit-baseline.json           gitignored ratchet metrics for self-audit
 .github/                         repo automation — NOT shipped with the plugin:
   pull_request_template.md       the PR body template (see § Pull request title)
   workflows/tests.yml            CI: runs the bash-layer suite (tests/run.sh)
@@ -104,7 +103,6 @@ CHANGELOG.md                     public release log (English)
 README.md                        GitHub landing page (links to the docs site)
 LICENSE                          MIT license text
 .gitignore                       repo ignores — including the `.task/` dogfooding exception
-                                   and .claude/.audit-baseline.json
 .gitattributes                   LF line endings for every text file, on every OS; PNGs are binary
 .editorconfig                    editor defaults: UTF-8, LF, final newline, no trailing
                                    whitespace, 2-space indent (unset for the tab-indented
