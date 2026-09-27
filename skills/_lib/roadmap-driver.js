@@ -100,6 +100,37 @@ function digestPassed(line, n, itemSlug) {
 }
 // --- end digestPassed -------------------------------------------------------
 
+// --- itemPhase (pure; extracted verbatim by tests/driver-display.test.sh) ----
+// The progress-group title every stage of one item shares, so an item's four
+// agents land in one box named after what it IS, not just its number. The
+// Phases pane is narrow, so the title is cut — by code point, never mid-way
+// through a surrogate pair — with a trailing ellipsis. `#N` keeps two items
+// with the same cut title in separate groups.
+function itemPhase(w, n, title) {
+  const MAX = 32
+  const chars = Array.from(String(title).replace(/\s+/g, ' ').trim())
+  const short = chars.length > MAX ? `${chars.slice(0, MAX - 1).join('').trimEnd()}…` : chars.join('')
+  return `W${w} · #${n} ${short}`
+}
+// --- end itemPhase ----------------------------------------------------------
+
+// --- runReport (pure; extracted verbatim by tests/driver-display.test.sh) ----
+// What the invoking skill gets back once any agent has run: the parser-stable
+// headline first and unchanged, then one line per item that landed (reviewed
+// AND marked), in landing order — on a stop too, so the skill can say what made
+// it in before the failure without re-deriving it from git.
+function digestSummary(line, n, itemSlug) {
+  return (line || '').slice(`OK #${n} ${itemSlug}`.length).trim()
+}
+function runReport(headline, landed) {
+  return [
+    headline,
+    ...landed.map(({ n, slug, impl, review }) =>
+      `#${n} ${slug} — ${impl || '(no summary)'}; review: ${review || '(no summary)'}`),
+  ].join('\n')
+}
+// --- end runReport ----------------------------------------------------------
+
 const sorted = computeWaves(items, done, scope)
 if (sorted.error) return `roadmap-to-workflow: ${sorted.error}`
 const waves = sorted.waves
@@ -114,7 +145,7 @@ const lastLine = (s) => (s || '').trim().split('\n').filter(Boolean).pop() || ''
 // the full to-plan skill. Planner tier: opus by default, sonnet for an item the
 // roadmap hints as `haiku` (with effort scaled down) — the review stage never
 // scales down, see runReview.
-async function runPlan(n, title, model, w) {
+async function runPlan(n, title, model, phase) {
   const r = await agent(
     `Read ${pluginRoot}/skills/_lib/plan-driver.md and follow it. Your item:
      - roadmap file: ${ROADMAP}
@@ -133,8 +164,8 @@ async function runPlan(n, title, model, w) {
     {
       model: model === 'haiku' ? 'sonnet' : 'opus',
       effort: model === 'haiku' ? 'low' : 'medium',
-      label: `plan #${n}`,
-      phase: `Wave ${w} · Item #${n}`,
+      label: '1/4 plan',
+      phase,
     }
   )
   return lastLine(r)
@@ -144,7 +175,7 @@ async function runPlan(n, title, model, w) {
 // disk (no chat carries over from the plan agent). Runs one at a time within a
 // wave — the sole mutator of the shared working tree, so each implement sees its
 // already-landed wave-mates' reviewed commits.
-async function runImplement(n, itemSlug, model, w) {
+async function runImplement(n, itemSlug, model, phase) {
   const r = await agent(
     `Implement ${aiDir}/task/${itemSlug}.md. Follow its ## Execution pointer —
      it sends you to .task/CLAUDE.md → ## Executing a task — with two carve-outs:
@@ -157,7 +188,7 @@ async function runImplement(n, itemSlug, model, w) {
      Last non-empty line MUST be exactly:
        OK #${n} ${itemSlug} <one-line summary>      (on success)
        FAIL #${n} ${itemSlug} <what failed>         (on failure)`,
-    { model, label: `implement #${n}`, phase: `Wave ${w} · Item #${n}` }
+    { model, label: '2/4 implement', phase }
   )
   return lastLine(r)
 }
@@ -166,7 +197,7 @@ async function runImplement(n, itemSlug, model, w) {
 // serial per-item loop, right after that item's implement. No `model` opt:
 // task:code-reviewer pins its own model/effort, so a haiku item never gets a
 // haiku review. No `isolation`: it must see and commit into this very working tree.
-async function runReview(n, itemSlug, w) {
+async function runReview(n, itemSlug, phase) {
   const r = await agent(
     `Review the implementation of ${aiDir}/task/${itemSlug}.md, which was just
      implemented and committed in this working tree. Reference string for your
@@ -176,7 +207,7 @@ async function runReview(n, itemSlug, w) {
      Last non-empty line MUST be exactly:
        OK #${n} ${itemSlug} <one-line summary>      (review passed)
        FAIL #${n} ${itemSlug} <what failed>         (review failed)`,
-    { agentType: 'task:code-reviewer', label: `review #${n}`, phase: `Wave ${w} · Item #${n}` }
+    { agentType: 'task:code-reviewer', label: '3/4 review', phase }
   )
   return lastLine(r)
 }
@@ -202,7 +233,7 @@ async function runReview(n, itemSlug, w) {
 //   * both branches echo, so stdout is never empty. Success used to print
 //     nothing, leaving the agent to infer it from `(Bash completed with no
 //     output)` — which is what drove it to re-run the destructive command.
-async function runMark(n, itemSlug, w) {
+async function runMark(n, itemSlug, phase) {
   const r = await agent(
     `Run EXACTLY this bash command, once, verbatim — do not modify it and do not
      edit any file yourself. It prints its own outcome and is safe to re-run, so
@@ -222,21 +253,37 @@ async function runMark(n, itemSlug, w) {
        OK #${n} ${itemSlug} marked
      If stdout says "MARK-FAIL #${n}", it MUST be exactly:
        FAIL #${n} ${itemSlug} no unique '### - [ ] ${n}.' heading in the roadmap`,
-    { model: 'haiku', effort: 'low', label: `mark #${n}`, phase: `Wave ${w} · Item #${n}` }
+    { model: 'haiku', effort: 'low', label: '4/4 mark', phase }
   )
   return lastLine(r)
 }
 
+// The run's shape, up front: which items, in which waves, waiting on what. A
+// dependency already marked before this run is not worth naming.
+const doneSet = new Set(done)
+const itemLine = (it) => {
+  const open = it.deps.filter((d) => !doneSet.has(d))
+  return `#${it.n} ${it.title}${open.length ? ` (after #${open.join(', #')})` : ''}`
+}
+const total = waves.reduce((k, wave) => k + wave.length, 0)
+log(`${slug}: ${total} item(s) in ${waves.length} wave(s)${scope === 'next-wave' ? ' (next wave only)' : ''} — ${
+  waves.map((wave, i) => `W${i + 1}: ${wave.map(itemLine).join(', ')}`).join(' · ')}`)
+
+// Items reviewed AND marked, in landing order — the body of runReport.
+const landed = []
+
 for (const [wIdx, items] of waves.entries()) {
   const w = wIdx + 1
+  const phases = items.map(({ n, title }) => itemPhase(w, n, title))
+  log(`Wave ${w}/${waves.length} — planning #${items.map((it) => it.n).join(', #')}${items.length > 1 ? ' in parallel' : ''}`)
 
   // 1) PLAN the whole wave in parallel. A single plan FAIL stops the run before
   //    any implement of this wave starts (plans are cheap to rerun).
-  const plans = await parallel(items.map(({ n, title, model }) => () => runPlan(n, title, model, w)))
+  const plans = await parallel(items.map(({ n, title, model }, i) => () => runPlan(n, title, model, phases[i])))
   for (const [i, status] of plans.entries()) {
-    log(status || `FAIL #${items[i].n} plan agent returned nothing`)
+    log(`[W${w} plan] ${status || `FAIL #${items[i].n} plan agent returned nothing`}`)
     if (!status || status.startsWith('FAIL'))
-      return `roadmap-to-workflow stopped in wave ${w} (planning), item #${items[i].n}: ${status || 'plan agent returned nothing'}`
+      return runReport(`roadmap-to-workflow stopped in wave ${w} (planning), item #${items[i].n}: ${status || 'plan agent returned nothing'}`, landed)
   }
 
   // 2) IMPLEMENT → REVIEW → MARK strictly one item at a time — all three inside
@@ -246,28 +293,30 @@ for (const [wIdx, items] of waves.entries()) {
     // The digest is LLM output — assert its shape, never index into it blindly.
     const m = plans[i].match(/^OK #(\d+) (\S+) planned$/)
     if (!m || Number(m[1]) !== n)
-      return `roadmap-to-workflow stopped in wave ${w} (planning), item #${n}: unparsable plan digest: ${plans[i]}`
+      return runReport(`roadmap-to-workflow stopped in wave ${w} (planning), item #${n}: unparsable plan digest: ${plans[i]}`, landed)
     const itemSlug = m[2]
 
-    const status = await runImplement(n, itemSlug, model, w)
-    log(status || `FAIL #${n} ${itemSlug} implement agent returned nothing`)
+    const status = await runImplement(n, itemSlug, model, phases[i])
+    log(`[W${w} implement] ${status || `FAIL #${n} ${itemSlug} implement agent returned nothing`}`)
     if (!digestPassed(status, n, itemSlug))
-      return `roadmap-to-workflow stopped in wave ${w}, item #${n}: ${
-        !status ? 'implement agent returned nothing' : status.startsWith('FAIL') ? status : `unparsable implement digest: ${status}`}`
+      return runReport(`roadmap-to-workflow stopped in wave ${w}, item #${n}: ${
+        !status ? 'implement agent returned nothing' : status.startsWith('FAIL') ? status : `unparsable implement digest: ${status}`}`, landed)
 
-    const review = await runReview(n, itemSlug, w)
-    log(review || `FAIL #${n} ${itemSlug} review agent returned nothing`)
+    const review = await runReview(n, itemSlug, phases[i])
+    log(`[W${w} review] ${review || `FAIL #${n} ${itemSlug} review agent returned nothing`}`)
     if (!digestPassed(review, n, itemSlug))
-      return `roadmap-to-workflow stopped in wave ${w} (review), item #${n}: ${
-        !review ? 'review agent returned nothing' : review.startsWith('FAIL') ? review : `unparsable review digest: ${review}`}`
+      return runReport(`roadmap-to-workflow stopped in wave ${w} (review), item #${n}: ${
+        !review ? 'review agent returned nothing' : review.startsWith('FAIL') ? review : `unparsable review digest: ${review}`}`, landed)
 
-    const marked = await runMark(n, itemSlug, w)
-    log(marked || `FAIL #${n} ${itemSlug} mark agent returned nothing`)
+    const marked = await runMark(n, itemSlug, phases[i])
+    log(`[W${w} mark] ${marked || `FAIL #${n} ${itemSlug} mark agent returned nothing`}`)
     const mm = (marked || '').match(/^OK #(\d+) (\S+) marked$/)
     if (!mm || Number(mm[1]) !== n)
-      return `roadmap-to-workflow stopped in wave ${w} (mark), item #${n}: ${marked || 'mark agent returned nothing'} — the item's commit is in the tree but its checkbox is not flipped. The flip is idempotent, so this means item #${n} has no unique '### - [ ] ${n}.' heading in ${ROADMAP} (renumbered, retitled, or duplicated): tick it by hand, then rerun /task:roadmap-to-workflow ${slug}`
+      return runReport(`roadmap-to-workflow stopped in wave ${w} (mark), item #${n}: ${marked || 'mark agent returned nothing'} — the item's commit is in the tree but its checkbox is not flipped. The flip is idempotent, so this means item #${n} has no unique '### - [ ] ${n}.' heading in ${ROADMAP} (renumbered, retitled, or duplicated): tick it by hand, then rerun /task:roadmap-to-workflow ${slug}`, landed)
+
+    landed.push({ n, slug: itemSlug, impl: digestSummary(status, n, itemSlug), review: digestSummary(review, n, itemSlug) })
   }
   // Barrier: the next wave starts only after every item above is reviewed and marked.
 }
 
-return 'roadmap-to-workflow: all items shipped.'
+return runReport('roadmap-to-workflow: all items shipped.', landed)
