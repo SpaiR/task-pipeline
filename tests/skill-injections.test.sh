@@ -9,7 +9,9 @@
 #
 # So the rule is positional, not visual: in a skill body, `!` at line start or
 # after whitespace followed by a backticked command IS a command. Step 0's
-# `preflight.sh` call is the only one any skill is allowed to carry.
+# `preflight.sh` call is the only one a plugin skill is allowed to carry, and
+# the repo-local skills under .claude/skills/, preprocessed the same way, carry
+# none.
 source "$(dirname "$0")/lib.sh"
 
 # The body the platform preprocesses — frontmatter is parsed off first.
@@ -46,6 +48,17 @@ PAIRS
 
 t_case "grill runs no bash at all, so it carries no injection"
 assert_eq "0" "$(injections "$T_REPO_ROOT/skills/grill/SKILL.md")" "grill"
+
+t_case "the repo-local skills under .claude/skills/ carry no injection either"
+# The platform preprocesses a project skill's body exactly like a plugin
+# skill's, and none of these runs a helper when it starts.
+local_skills=0
+for f in "$T_REPO_ROOT"/.claude/skills/*/SKILL.md; do
+  [[ -f "$f" ]] || continue
+  local_skills=$((local_skills + 1))
+  assert_eq "0" "$(injections "$f")" "${f#"$T_REPO_ROOT"/}"
+done
+assert_eq "yes" "$( (( local_skills > 0 )) && echo yes || echo no)" "at least one .claude/skills/*/SKILL.md was scanned"
 
 t_case "the scan follows the platform's rule, not the eye"
 probe="$(t_tmpdir)/SKILL.md"

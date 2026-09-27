@@ -23,7 +23,8 @@ We use [GitHub](https://github.com/SpaiR/task-pipeline) to host code, track issu
   skills/self-audit/             meta-skill: audits this repo for invariant / contract /
                                    docs drift (three read-only lens agents)
   agents/self-*.md               the lens agents self-audit fans out to
-                                   (read-only: Read, Grep, Glob, Bash — no Edit/Write)
+                                   (read-only by instruction: Read, Grep, Glob, Bash, no
+                                   Edit/Write; nothing enforces it at runtime)
   hooks/guard-release-files.sh   PreToolUse hook: Claude Code asks before an Edit, Write or
                                    MultiEdit of CHANGELOG.md or .claude-plugin/plugin.json
                                    (a reminder for honest edits, not a sandbox)

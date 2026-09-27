@@ -25,7 +25,7 @@ This is a **meta-skill**. It operates on the repo's own files, not on `.task/*` 
 | Contract   | `self-contract-auditor`   | `docs/contract.md` | Producer↔consumer artifact protocol is symmetric: `write-task.sh` / capture flows ↔ `validate.sh` / `roadmap*.sh` parsers ↔ consumer rules, plus the driver contract and the plugin manifest. |
 | Docs-sync  | `self-docs-sync-auditor`  | `ls skills/`, `ls skills/_lib/`, `ls agents/`, frontmatter | `README.md`, `CLAUDE.md`, `docs/`, `CONTRIBUTING.md`, and `website/` reflect what is on disk. |
 
-All three are **read-only** named agents at `.claude/agents/self-{invariants,contract,docs-sync}-auditor.md`, with `tools: Read, Grep, Glob, Bash` (no `Edit`/`Write` — read-only is runtime-enforced). They read the repo themselves; the main thread does not paste file contents into their prompts. Fixes happen only in the main thread (Step 4).
+All three are **read-only** named agents at `.claude/agents/self-{invariants,contract,docs-sync}-auditor.md`, with `tools: Read, Grep, Glob, Bash`. They carry no `Edit`/`Write` tools, and Bash is theirs for reading and searching only — that rule is an instruction in each agent's prompt, not a runtime guarantee: nothing stops a Bash command from writing. They read the repo themselves; the main thread does not paste file contents into their prompts. Fixes happen only in the main thread (Step 4).
 
 ## Instructions
 
@@ -46,7 +46,7 @@ Send **one tool message** with three `Agent` calls, `subagent_type` set to:
 - `self-contract-auditor`
 - `self-docs-sync-auditor`
 
-If any of those agent files is missing under `.claude/agents/`, stop and tell the user which agent file is missing — do not fall back to inline prompts (it would lose the read-only allowlist guarantee).
+If any of those agent files is missing under `.claude/agents/`, stop and tell the user which agent file is missing — do not fall back to inline prompts (they would lose the agent file's tool list, which keeps `Edit`/`Write` out, and its read-only instructions).
 
 #### Per-call prompt
 
@@ -105,7 +105,7 @@ After rendering the report, consider for auto-apply only findings that pass the 
 
 For each gate-passing finding, in order:
 
-1. **Prove it.** The agent's confidence is self-reported. Read the anchor in the current file and confirm the problem exists as stated — the quoted text is there, the roster claim matches `ls`, the parser really rejects the template. If it does not reproduce, mark `skipped-not-reproduced` and move on.
+1. **Prove it.** The agent's confidence is self-reported. Read the anchor in the current file and confirm the problem exists as stated — the quoted text is there, the roster claim matches `ls`, the parser really rejects the template. When proving it means running a helper or `validate.sh`, do it in a temp dir with `AI_DIR` exported to a `.task/` inside it (holding a minimal `CLAUDE.md`) and `CLAUDE_PROJECT_DIR` unset, never from inside the repo — its `git config task.root` points at the live dogfood `.task/`. If it does not reproduce, mark `skipped-not-reproduced` and move on.
 2. **Check the fix is whole.** This repo's editing protocol ties some edits to others; a half-applied fix creates the next drift. Mark `skipped-underspecified` instead of applying when:
    - it edits a `skills/*/SKILL.md` and the `Fix` does not also cover the matching `README.md` / `docs/contract.md` (and `website/` page, when user-facing behavior changes) — `CLAUDE.md` § Editing protocol requires them in the same commit;
    - it edits a bash helper or the driver and does not also update its case file under `tests/`;
