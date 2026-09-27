@@ -55,7 +55,7 @@ SRC="${BASH_SOURCE[0]}"
 while [ -L "$SRC" ]; do D=$(cd "$(dirname "$SRC")" && pwd); SRC=$(readlink "$SRC"); [[ "$SRC" != /* ]] && SRC="$D/$SRC"; done
 SCRIPT_DIR=$(cd "$(dirname "$SRC")" && pwd)
 
-# The single copy of the pointer every artifact carries. Byte-identical
+# The single copy of the pointer every task file carries. Byte-identical
 # everywhere by construction: nothing else writes it.
 EXECUTION_POINTER='> Read [.task/CLAUDE.md](../CLAUDE.md) and follow its `## Executing a task` section.'
 
