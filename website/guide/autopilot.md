@@ -22,7 +22,9 @@ Launched with no argument, it asks which roadmap and how much to cover.
 While it runs, the Workflow panel shows one group per item, named after the item — `W1 · #1 Migrate auth endpoints` — with its agents numbered `1/4 plan` through `4/4 mark`, so you can see which item is in flight and how far along it is. The narrator lines above the panel start with the run's shape (items, waves, what waits on what) and then log each stage's digest as it lands:
 
 ```text
-api-v2-migration: 2 item(s) in 2 wave(s) — W1: #1 Migrate auth endpoints · W2: #2 Update client SDK (after #1)
+api-v2-migration: 2 item(s) in 2 wave(s)
+  W1: #1 Migrate auth endpoints
+  W2: #2 Update client SDK (after #1)
 Wave 1/2 — planning #1
 [W1 plan] OK #1 migrate-auth-endpoints planned
 [W1 implement] OK #1 migrate-auth-endpoints implemented, committed

@@ -29,7 +29,9 @@ See the [autopilot guide](/guide/autopilot) for the full walkthrough.
 While it runs, the Workflow panel groups each item's four agents under the item's own title — `W1 · #1 Migrate auth endpoints` — labelled `1/4 plan`, `2/4 implement`, `3/4 review` and `4/4 mark`. The narrator lines above the panel open with the run's shape and then carry one digest per stage:
 
 ```text
-api-v2-migration: 2 item(s) in 2 wave(s) — W1: #1 Migrate auth endpoints · W2: #2 Update client SDK (after #1)
+api-v2-migration: 2 item(s) in 2 wave(s)
+  W1: #1 Migrate auth endpoints
+  W2: #2 Update client SDK (after #1)
 Wave 1/2 — planning #1
 [W1 plan] OK #1 migrate-auth-endpoints planned
 [W1 implement] OK #1 migrate-auth-endpoints implemented, committed

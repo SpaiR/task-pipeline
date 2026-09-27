@@ -73,7 +73,7 @@ agents/                          the plugin's subagent definitions (auto-loaded 
                                    the fixes on top of the implementation's commit
 tests/                           the bash-layer test suite — run.sh + lib.sh + one *.test.sh
                                    per helper; `bash tests/run.sh`, bash, awk and git — plus node
-                                   for the driver-wave case, which skips with a SKIP line when
+                                   for the driver cases, which skip with a SKIP line when
                                    node is absent — run on
                                    ubuntu and macOS by .github/workflows/tests.yml
 evals/                           prompt-level `claude plugin eval` cases (prompt.md + graders/
@@ -101,7 +101,7 @@ README.md                        GitHub landing page (links to the docs site)
 
 1. Fork the project (or branch off `main`, if you have direct push access).
 2. Make sure the artifact validator still passes against any `.task/` snapshot you used while developing: `bash skills/validate/validate.sh all`.
-3. Run the bash-layer suite: `bash tests/run.sh` (one case file per helper under `tests/`, bash, awk and git — plus node for the driver's wave and digest cases, which skip with a SKIP line when node is absent — no bats). It must be green, and a change to a helper's behaviour comes with a case that covers it.
+3. Run the bash-layer suite: `bash tests/run.sh` (one case file per helper under `tests/`, bash, awk and git — plus node for the driver's wave, digest and display cases, which skip with a SKIP line when node is absent — no bats). It must be green, and a change to a helper's behaviour comes with a case that covers it.
 4. Manually run the affected skill in a real project before opening the PR. For a prompt change, the eval suite under `evals/` is the closest thing to an automated check — `claude plugin eval .`, or `--case '<name>*'` for one case; it needs the early-access `plugin eval` feature, and it is not wired into CI. See [`evals/README.md`](evals/README.md), including which graders are still unverified.
 5. Open the pull request against `main`.
 

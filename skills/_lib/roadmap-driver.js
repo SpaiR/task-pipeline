@@ -108,7 +108,7 @@ function digestPassed(line, n, itemSlug) {
 // with the same cut title in separate groups.
 function itemPhase(w, n, title) {
   const MAX = 32
-  const chars = Array.from(String(title).replace(/\s+/g, ' ').trim())
+  const chars = Array.from(title.replace(/\s+/g, ' ').trim())
   const short = chars.length > MAX ? `${chars.slice(0, MAX - 1).join('').trimEnd()}…` : chars.join('')
   return `W${w} · #${n} ${short}`
 }
@@ -258,16 +258,17 @@ async function runMark(n, itemSlug, phase) {
   return lastLine(r)
 }
 
-// The run's shape, up front: which items, in which waves, waiting on what. A
+// The run's shape, up front: which items, in which waves, waiting on what —
+// one line per wave, so a long roadmap is not clipped to one terminal width. A
 // dependency already marked before this run is not worth naming.
 const doneSet = new Set(done)
 const itemLine = (it) => {
   const open = it.deps.filter((d) => !doneSet.has(d))
-  return `#${it.n} ${it.title}${open.length ? ` (after #${open.join(', #')})` : ''}`
+  return `#${it.n} ${it.title.replace(/\s+/g, ' ').trim()}${open.length ? ` (after #${open.join(', #')})` : ''}`
 }
 const total = waves.reduce((k, wave) => k + wave.length, 0)
-log(`${slug}: ${total} item(s) in ${waves.length} wave(s)${scope === 'next-wave' ? ' (next wave only)' : ''} — ${
-  waves.map((wave, i) => `W${i + 1}: ${wave.map(itemLine).join(', ')}`).join(' · ')}`)
+log(`${slug}: ${total} item(s) in ${waves.length} wave(s)${scope === 'next-wave' ? ' (next wave only)' : ''}`)
+for (const [i, wave] of waves.entries()) log(`  W${i + 1}: ${wave.map(itemLine).join(', ')}`)
 
 // Items reviewed AND marked, in landing order — the body of runReport.
 const landed = []
