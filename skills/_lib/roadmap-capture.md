@@ -111,7 +111,7 @@ Before saving, self-check and fix inline (drafting hygiene; step 5 is the post-s
 3. No placeholders (`TBD`, `TODO`, `???`, `fill in`).
 4. Every `**Dependencies:**` cites a task number that exists in this file.
 5. Every item heading produces a unique kebab-case slug.
-6. Item numbers unique across the whole file — the driver's auto-mark keys on the number, so two items sharing one would be ticked together.
+6. Item numbers unique across the whole file — the reviewer's auto-mark keys on the number, so two items sharing one would be ticked together.
 7. Every confirmed decision (step 2) has a concrete home, or was explicitly dropped with a stated reason.
 8. Every cross-artifact reference is a Markdown link — `Spec:` headers, `### Spec references` citations, `## Prerequisites`, `## Backlinks`.
 
@@ -141,7 +141,7 @@ Binding on every roadmap this flow writes:
 - Naming project-specific files, modules, functions, types, or constants in `### Outcomes` / `### Goal` / `### Invariants` — normative names from spec/CLAUDE.md are the only exception.
 - Planning implementation details (file lists with line numbers, function signatures, code blocks > 5 lines) — that is `/task:to-plan`'s job when the item is picked up.
 - Modifying any file other than `.task/roadmap/<slug>.md` — specs live at `.task/spec/<slug>.md` and are authored only by `to-spec`, never written or edited here.
-- Auto-checking / auto-unchecking item checkboxes — ticking `- [x]` happens inside the executing session (or, in a roadmap run, the `roadmap-to-workflow` **driver**), never here and never inside a per-item agent.
+- Auto-checking / auto-unchecking item checkboxes — ticking `- [x]` is `task:code-reviewer`'s last phase, once its review of the item passes, never here and never inside a plan or implement agent.
 - A single-direction monologue in a decomposition round — offer ≥ 2 options or explicitly justify why only one is viable. (The Decision Inventory and the cold-start recap are chat-only recaps, not decomposition rounds — exempt.)
 - Generic risks ("watch out for bugs") — risks must be specific to the initiative and project.
 - More than one initiative per file — split and pick one for this run.

@@ -45,7 +45,7 @@ Take the **first** case that matches:
 
 **Stop — nothing left to plan.** If the target's `ROADMAPS:` line reads `unchecked=none`, every item is already checked off and no planner will read a new section: stop without writing. `→ Next: \`/task:to-roadmap\` to capture the next initiative, or describe new work in chat.`
 
-**Hard stop — a roadmap run in progress.** If the user says a `/task:roadmap-to-workflow` run is active on the target, stop without writing: its mark stage rewrites the file and would drop this edit, and its waves were computed at launch, so an added dependency would not apply anyway. `→ Next: \`/task:to-architecture <slug>\` once the run has finished.`
+**Hard stop — a roadmap run in progress.** If the user says a `/task:roadmap-to-workflow` run is active on the target, stop without writing: its review stage rewrites the file as items land and would drop this edit, and its waves were computed at launch, so an added dependency would not apply anyway. `→ Next: \`/task:to-architecture <slug>\` once the run has finished.`
 
 ### Step 2: Load the technical context
 
@@ -182,7 +182,7 @@ validate: {OK — 0 errors, N warning(s) | the FAIL lines}
 ## Forbidden
 
 - Anything the contract's section rules exclude: a `### <digits>.` sub-heading, a copied item heading, `file:line` references, step lists, code blocks over 5 lines.
-- Editing the roadmap beyond the three Step 5 edits — no item titles, ready descriptions, `**Model:**` hints or phases; above all no checkbox, which only the executing session or the driver's mark stage ticks.
+- Editing the roadmap beyond the three Step 5 edits — no item titles, ready descriptions, `**Model:**` hints or phases; above all no checkbox, which only `task:code-reviewer` ticks, once its review of the item passes.
 - Removing a dependency, or adding one to a checked item.
 - Writing or editing a spec — spec authorship is `to-spec`'s; this skill only cites and wires the header.
 - Restating the items' behavioral outcomes as architecture.

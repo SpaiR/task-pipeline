@@ -16,8 +16,8 @@ Launched with no argument, it asks which roadmap and how much to cover.
 
 1. **Sorts items into dependency waves.** The skill reports each unchecked item's `**Dependencies:**`; the driver script topologically sorts them, so items with no unmet dependency land in the same wave. Nothing is spawned until that sort succeeds — a cycle, or a scope missing a dependency, stops the run with one line naming the items.
 2. **Plans a wave in parallel, then implements and reviews it one item at a time.** Within a wave, every item is *planned* at once (each plan agent only writes its own `.task/task/<item-slug>.md`, so there's no collision), then each item is *implemented and reviewed* strictly one at a time in the shared working tree — the tree keeps exactly one writer, so item N never starts implementing while item N−1 is still under review. A barrier separates waves — a later wave never starts before every item it depends on has landed, and each implement sees its already-landed wave-mates' reviewed commits.
-3. **Plans, implements, reviews — per item.** The default per-item shape is **opus-plans / sonnet-implements / reviewer-reviews**: a first agent plans the item from the roadmap (writing `.task/task/<item-slug>.md`), a second implements and commits, and a third is `task:code-reviewer`, which reviews that commit, fixes what it proves within the plan's **Touches**, runs your build and tests, and commits those fixes on top. If the item has a `**Model:**` hint, the implement agent uses it, and a `haiku` hint also scales the plan agent down to sonnet — the reviewer pins its own model, so a `haiku` item never gets a `haiku` review.
-4. **Ticks the checkbox — from the driver.** After an item's *review* returns OK, the **driver** ticks that item's checkbox, never the per-item agent. That's deliberate: parallel wave-mates would otherwise race on the roadmap file. Ticking is idempotent — if the box is already checked, the driver treats that as the desired end state and moves on.
+3. **Plans, implements, reviews — per item.** The default per-item shape is **opus-plans / sonnet-implements / reviewer-reviews**: a first agent plans the item from the roadmap (writing `.task/task/<item-slug>.md`), a second implements and commits, and a third is `task:code-reviewer`, which reviews that commit, fixes what it proves within the plan's **Touches**, runs your build and tests, commits those fixes on top, and ticks the item's checkbox (next step). If the item has a `**Model:**` hint, the implement agent uses it, and a `haiku` hint also scales the plan agent down to sonnet — the reviewer pins its own model, so a `haiku` item never gets a `haiku` review.
+4. **Ticks the checkbox — from the review.** Once an item's review passes, `task:code-reviewer` ticks that item's checkbox as its last step; the plan and implement agents never touch it. That's deliberate: the review runs one item at a time, while parallel plan agents would otherwise race on the roadmap file. Ticking is idempotent — if the box is already checked, the reviewer treats that as the desired end state and moves on.
 
 Output is one digest line per stage as each wave lands:
 
@@ -25,11 +25,9 @@ Output is one digest line per stage as each wave lands:
 OK #1 migrate-auth-endpoints planned
 OK #2 update-client-sdk planned
 OK #1 migrate-auth-endpoints implemented, committed
-OK #1 migrate-auth-endpoints reviewed — 2 fixes, tests green, fixes committed
-OK #1 migrate-auth-endpoints marked
+OK #1 migrate-auth-endpoints reviewed — 2 fixes, tests green, fixes committed, ticked
 OK #2 update-client-sdk implemented, committed
-OK #2 update-client-sdk reviewed — 0 findings, tests green
-OK #2 update-client-sdk marked
+OK #2 update-client-sdk reviewed — 0 findings, tests green, ticked
 → Done. Roadmap complete — .task/roadmap/api-v2-migration.md fully checked.
 ```
 

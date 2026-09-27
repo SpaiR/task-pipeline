@@ -21,7 +21,7 @@
 #     roadmap-items.sh) sources resolve-ws.sh first, which exports AI_DIR. This
 #     file does no resolution of its own.
 #   - Task heading shape: `### - [ x~>-] N. <title>`. The 5-state checkbox
-#     class is the contract `roadmap-to-workflow`'s driver-side auto-mark and
+#     class is the contract `task:code-reviewer`'s auto-mark and
 #     `to-task <slug>#N` item-pick both depend on; do not narrow it to `[ x]` only.
 
 # --- resolve_artifact_path <kind> <arg> ---
@@ -41,7 +41,7 @@ resolve_artifact_path() {
 #   total: <N>
 #   done: <N>
 #   unchecked: <N>
-# DONE counts the same 5-state class the driver's auto-mark treats as "already
+# DONE counts the same 5-state class the reviewer's auto-mark treats as "already
 # marked" ([x]/[~]/[>]/[-]); without this, a roadmap with [~]/[>]/[-] items
 # would report done<total even when no [ ] remains, and the wizard's
 # (complete) flag would never fire for it.
