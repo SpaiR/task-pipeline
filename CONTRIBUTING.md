@@ -36,6 +36,8 @@ We use [GitHub](https://github.com/SpaiR/task-pipeline) to host code, track issu
   workflows/tests.yml            CI: runs the bash-layer suite (tests/run.sh) on ubuntu and
                                    macOS, and lints the bash layer with a pinned shellcheck
   workflows/docs.yml             builds and deploys website/ to GitHub Pages
+  workflows/docs-check.yml       builds website/ on pull requests that touch it or
+                                   CHANGELOG.md, without deploying
 skills/                          SKILL.md per skill + shared bash helpers
   _lib/                          shared helpers (roles: docs/contract.md § Helpers):
                                    resolve-ws.sh (pure .task/-root finder, exports AI_DIR),
