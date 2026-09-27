@@ -66,6 +66,11 @@ agent prompt.
 involve a scoped file: located in one, or in a file whose statement about
 one is wrong."}
 
+--- Checked mechanically ---
+tests/xref.test.sh pins: relative links and anchors, backticked repo
+paths, `<file>.md §` citations, `Step N` in SKILL.md, helper test
+coverage, rule globs — do not report those.
+
 --- Live roster (ls skills/ skills/_lib/ agents/) ---
 {Step 1 output}
 

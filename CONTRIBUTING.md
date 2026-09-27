@@ -78,7 +78,10 @@ agents/                          the plugin's subagent definitions (auto-loaded 
                                    plan's Touches, run .task/CLAUDE.md → Build and Tests, commit
                                    the fixes on top of the implementation's commit
 tests/                           the bash-layer test suite — run.sh + lib.sh + one *.test.sh
-                                   per helper and per .claude/hooks/ script; `bash tests/run.sh`,
+                                   per helper and per .claude/hooks/ script, plus text checks
+                                   over the prompts and docs (xref.test.sh: links, anchors,
+                                   backticked paths, § citations, Step N, helper coverage,
+                                   rule globs); `bash tests/run.sh`,
                                    bash, awk and git — plus node for the driver cases and jq for
                                    some release-guard checks, each skipped with a SKIP line
                                    when absent — run on ubuntu and macOS by
