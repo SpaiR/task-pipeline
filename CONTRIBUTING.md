@@ -28,6 +28,9 @@ We use [GitHub](https://github.com/SpaiR/task-pipeline) to host code, track issu
   hooks/guard-release-files.sh   PreToolUse hook: Claude Code asks before an Edit, Write or
                                    MultiEdit of CHANGELOG.md or .claude-plugin/plugin.json
                                    (a reminder for honest edits, not a sandbox)
+  rules/*.md                     path-scoped how-to (skills, bash helpers, tests, evals,
+                                   website, agents, driver, manifests); each loads when a
+                                   file matching its `paths:` is read
   settings.json                  shared project settings: wires that hook, and pre-approves
                                    the suite, validate.sh, claude plugin validate and the
                                    docs-site install and build
@@ -93,7 +96,8 @@ evals/                           prompt-level `claude plugin eval` cases (prompt
                                    per case) — a quality signal for the skills, NOT in CI;
                                    see evals/README.md for status; run output goes to the
                                    gitignored evals/results/
-CLAUDE.md                        invariants + maintainer guidance
+CLAUDE.md                        maintainer rules: invariants linking the contract, verify
+                                   commands, editing protocol, release procedure
 docs/
   README.md                      docs index (table of the files below)
   contract.md                    the authoritative artifact contract — flat .task/ layout,
@@ -335,6 +339,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/): `Added` / `Chang
 ## Contributing with AI Agents
 
 This repository **is** a tool for working with AI coding agents, so dogfooding is encouraged: it is fine — preferred, even — to use the pipeline itself when contributing here — discuss the change in chat, fix it with `/task:to-task` or `/task:to-plan` into `.task/task/<slug>.md`, then tell any session `implement .task/task/<slug>.md` (which commits per this file's Commit Format, then hands the diff to `task:code-reviewer`). AI coding agents (Claude Code, Copilot, Cursor, Codex, Gemini, etc.) are welcome to assist with contributions of any kind.
+
+An agent working here gets its rules from three places: [`CLAUDE.md`](CLAUDE.md) (the invariants, each linking its [`docs/contract.md`](docs/contract.md) section, plus the verify commands and the release procedure), the path-scoped `.claude/rules/*.md` files that load when it reads a matching file, and the shared `.claude/settings.json`, which pre-approves the verify commands and asks before an edit of `CHANGELOG.md` or `.claude-plugin/plugin.json`.
 
 Two extra rules apply on top of the regular contribution flow:
 
