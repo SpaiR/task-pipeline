@@ -43,7 +43,7 @@ If a load-bearing cross-item technical decision surfaces, `to-roadmap` does **no
 
 ## Architecture
 
-If the discussion also settles the initiative's **technical shape** — which components it builds, what one item hands another — `to-roadmap` doesn't inline that either: it flags the shape in the digest and recommends a [`/task:to-architecture <slug>`](/reference/to-architecture) follow-up, which adds a `## Architecture` section to the file this run just wrote. Re-running `to-roadmap` on an existing slug that already carries that section warns you first, before the overwrite prompt — an overwrite destroys the section, and `.task/` is git-excluded, so it isn't recoverable.
+If the discussion also settles the initiative's **technical shape** — which components it builds, what one item hands another — `to-roadmap` doesn't inline that either: it flags the shape in the digest and recommends a [`/task:to-architecture <slug>`](/reference/to-architecture) follow-up, which adds a `## Architecture` section to the file this run just wrote. Re-running `to-roadmap` on an existing slug that already carries that section warns you first, before the overwrite prompt — an overwrite destroys the section, and `.task/` is git-ignored, so it isn't recoverable.
 
 ## Output
 

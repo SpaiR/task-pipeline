@@ -38,6 +38,7 @@ When the run ends, the chat gets one line per item that landed and a summary:
 #1 migrate-auth-endpoints — implemented, committed; review: 2 fixes, tests green, fixes committed, ticked
 #2 update-client-sdk — implemented, committed; review: 0 findings, tests green, ticked
 Ran `api-v2-migration`: 2 of 2 items landed and ticked, 0 still unchecked.
+  Commits: a1b2c3d..e4f5a6b.
 → Done. Roadmap complete — .task/roadmap/api-v2-migration.md fully checked.
 ```
 

@@ -125,7 +125,7 @@ Nothing was written when this fires, so re-running the command after fixing the 
 
 One digest is worth reading closely: a review `FAIL` that says `no unique '### - [ ] N.' heading` means the item's work already landed and was committed, and only the checkbox is behind. The flip is idempotent, so this is never "the box was already ticked" — it means the roadmap has no unique `### - [ ] N.` heading for that item, because it was renumbered, retitled, or duplicated. Tick it by hand and rerun; there is nothing to re-implement.
 
-### A worktree can't find .task/
+### A worktree can't find .task/ {#a-worktree-cant-find-task}
 
 **Cause** — worktrees resolve the shared `.task/` through `git config --local task.root` (fallbacks: an upward walk, then `dirname(git-common-dir)`, the main worktree root). That last fallback already covers every worktree of a repo whose `.task/` sits at the main worktree root, anchor or not. A worktree gets lost when `.task/` lives somewhere else — a subdirectory, as older versions allowed, or a spot you moved it to — and the anchor is missing or wrong. The anchor is written only by first-run setup; nothing records or repairs it on later runs.
 
