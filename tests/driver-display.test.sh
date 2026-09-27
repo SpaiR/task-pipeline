@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Contract under test: the driver's two display helpers in
-# skills/_lib/roadmap-driver.js — itemPhase(), the progress-group title all four
+# skills/_lib/roadmap-driver.js — itemPhase(), the progress-group title all three
 # stages of one item share, and runReport() + digestSummary(), the value the
 # invoking skill gets back once any agent has run. runReport's first line is the
 # parser-stable headline and must come through untouched. Extracted verbatim

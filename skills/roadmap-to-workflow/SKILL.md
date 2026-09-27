@@ -9,7 +9,7 @@ allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/_lib/w
 
 Drive an approved roadmap through a dynamic Workflow. This skill reports the roadmap's unchecked items and the scope the user picks; the **plugin-shipped driver** (`skills/_lib/roadmap-driver.js`, invoked by name as `task:roadmap-driver`) sorts them into dependency-ordered **waves** and, per wave, plans in parallel then implements, reviews and ticks off one item at a time in the shared working tree. The driver is a static file, inspectable at any time and parameterized only through `args` (Step 2) — never hand-rolled here, never re-authored inline. Without the Workflow tool, Step 2 hard-stops instead of running the items itself.
 
-**Per-item execution is a four-stage split:** opus plans it (sonnet at low effort when the item's `**Model:**` hint is `haiku`), the item's own model implements and commits, `task:code-reviewer` reviews and commits its fixes on top, and a cheap driver stage ticks the checkbox. The review stage ignores the hint, pinning its own model — a `haiku` item never gets a `haiku` review.
+**Per-item execution is a three-stage split:** opus plans it (sonnet at low effort when the item's `**Model:**` hint is `haiku`), the item's own model implements and commits, and `task:code-reviewer` reviews, commits its fixes on top, and ticks the checkbox once its review passes. The review stage ignores the hint, pinning its own model — a `haiku` item never gets a `haiku` review.
 
 **This skill *is* the opt-in** for the Workflow tool: following its Steps is the authorization. No magic keyword, no separate confirmation.
 
@@ -106,7 +106,7 @@ Workflow({
 
 **Args are real JSON values, every path absolute** — `items` an actual array of objects, `done` an actual array of numbers, never JSON-encoded strings. The driver asserts all of it up front and returns one explanatory line instead of launching an agent against garbage.
 
-Per wave the driver plans every item in `parallel()` — each plan agent follows `plan-driver.md` and writes only its own task file — then runs **implement → review → mark strictly one item at a time**, so the shared tree keeps one writer and each implement sees its wave-mates' reviewed commits. A `FAIL` digest from any stage stops the run, and a barrier separates waves. The stage details are the driver's ([contract § execution shape](../../docs/contract.md#roadmap-to-workflow-execution-shape-driver-contract)); nothing here has to restate them.
+Per wave the driver plans every item in `parallel()` — each plan agent follows `plan-driver.md` and writes only its own task file — then runs **implement → review strictly one item at a time** (the review ticks the checkbox), so the shared tree and the roadmap file keep one writer each and each implement sees its wave-mates' reviewed commits. A `FAIL` digest from any stage stops the run, and a barrier separates waves. The stage details are the driver's ([contract § execution shape](../../docs/contract.md#roadmap-to-workflow-execution-shape-driver-contract)); nothing here has to restate them.
 
 **Rerun / resume.** The workflow name and args are static, so `resumeFromRunId` replays completed stages from cache — prefer it after a stop in the same session. A plain rerun is equivalent in effect: Step 1 reports only unchecked items, and ticked ones never rerun.
 
@@ -140,11 +140,11 @@ Autopilot needs the Workflow tool, and it isn't available in this environment, s
 ## Forbidden
 
 - Running setup on a missing `.task/CLAUDE.md`. This skill hard-stops and redirects; only the five capture skills are intake-capable.
-- Looping the items yourself in this session's thread, or authoring a Workflow script inline via the `script` input. The shipped driver is what gives each item fresh context, per-item model control, parallel planning and driver-side auto-mark; a hand-rolled loop or a re-authored copy drifts from it — including when the Workflow tool is unavailable, which is a hard stop, not a cue to loop the items yourself.
+- Looping the items yourself in this session's thread, or authoring a Workflow script inline via the `script` input. The shipped driver is what gives each item fresh context, per-item model control, parallel planning and the serial review that ticks each item; a hand-rolled loop or a re-authored copy drifts from it — including when the Workflow tool is unavailable, which is a hard stop, not a cue to loop the items yourself.
 - Reaching the driver by path instead of by its registered name. The Workflow tool checks a `scriptPath` for read permission against this session's working directory, and a plugin's own directory is never inside it — so the run dies before the first agent, everywhere except a checkout of the plugin itself. A name that does not resolve gets the hard-stop above, never a path retry.
 - Passing `args` as a JSON-encoded string, or any path relative — the sandbox expands nothing, and the driver's assertions reject both.
 - Sorting the items yourself, or narrowing `items` to the chosen scope. Both are `computeWaves`' job, and a pre-narrowed set hides the dependencies that define a wave.
-- Auto-marking a checkbox from inside a plan / implement / review agent — the flip is the driver's own stage, strictly after that item's review returns `OK`, so parallel writers never race on the roadmap file.
+- Auto-marking a checkbox from inside a plan or implement agent — the flip is `task:code-reviewer`'s last phase, strictly once its review of that item passes, inside the serial loop, so parallel writers never race on the roadmap file.
 - Instructing an implement agent to run `/verify` or `/code-review`: both are `disable-model-invocation`, so a subagent skips them silently and still reports `OK`. Verification and review live inside `task:code-reviewer`.
 - Passing `model` or `isolation` to the review stage — it pins its own model, and an isolated worktree would hide the very tree it must review and commit into.
-- Modifying project code or any file yourself — including the roadmap. Implementation happens in the per-item agents, review fixes in the review agent, the checkbox flip in the driver's mark stage.
+- Modifying project code or any file yourself — including the roadmap. Implementation happens in the per-item agents, review fixes and the checkbox flip in the review agent.

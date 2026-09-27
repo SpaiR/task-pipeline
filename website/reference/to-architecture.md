@@ -26,7 +26,7 @@ Three stops worth knowing:
 
 - **Too small for a roadmap** — with no roadmap yet, a discussion that is really one task (no phases, no cross-item dependencies) → it **stops without writing** and points you at [`to-plan`](/reference/to-plan) or [`to-task`](/reference/to-task): one task's technical shape is a `## Plan`, not this section.
 - **Nothing left to plan** — every item on the target roadmap is already checked off → it **stops without writing**; no planner would read the section.
-- **A `/task:roadmap-to-workflow` run is active on the target roadmap** → it **stops without writing**. The run's mark stage rewrites the file as items land and would drop the edit, and its waves were already computed at launch, so an added dependency wouldn't apply anyway.
+- **A `/task:roadmap-to-workflow` run is active on the target roadmap** → it **stops without writing**. The run's review stage rewrites the file as items land and would drop the edit, and its waves were already computed at launch, so an added dependency wouldn't apply anyway.
 
 ## What it writes
 

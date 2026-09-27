@@ -70,7 +70,7 @@ validate: OK — 0 errors, 0 warnings
 
 - Name project-specific files/symbols in `### Outcomes` / `### Goal` / `### Invariants`.
 - Plan implementation details — that's [`to-plan`](/reference/to-plan)'s job when the item is picked up.
-- Auto-check / auto-uncheck item checkboxes — that happens in the executing session (or the [`roadmap-to-workflow`](/reference/roadmap-to-workflow) driver in an autopilot run), never here.
+- Auto-check / auto-uncheck item checkboxes — `task:code-reviewer` ticks an item once its review passes, whether in a plain session or a [`roadmap-to-workflow`](/reference/roadmap-to-workflow) run, never here.
 - Modify any file other than the roadmap — specs are authored only by `to-spec`.
 - Write the `## Architecture` section — that's [`to-architecture`](/reference/to-architecture)'s job, never this skill's.
 - Hold more than one initiative per file.
