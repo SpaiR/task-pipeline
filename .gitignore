@@ -16,6 +16,10 @@
 # self-audit ratchet baseline (runtime metrics, per-clone)
 .claude/.audit-baseline.json
 
+# Claude Code local state: personal settings and agent worktrees
+.claude/settings.local.json
+.claude/worktrees/
+
 # Docs site (VitePress) build artifacts and deps
 website/node_modules/
 website/.vitepress/dist/

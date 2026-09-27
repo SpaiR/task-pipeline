@@ -1,0 +1,6 @@
+# LF in the index and in every checkout, on every OS: bash fails on a script
+# checked out with CRLF. Git's content check decides what counts as text.
+* text=auto eol=lf
+
+# Images are never converted, diffed or merged as text.
+*.png binary
