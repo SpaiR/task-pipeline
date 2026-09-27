@@ -4,6 +4,28 @@ All notable changes to this project are documented here. Format — [Keep a Chan
 
 This file is maintained in **English** — see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-policy).
 
+## [Unreleased]
+
+Two capture skills fold into the two that remain: a task is always captured with its plan, and a roadmap always with its architecture. Five skills instead of seven, and the promote / revise / enrich branches that served two capture depths are gone. Breaking — see **Migration** below.
+
+### Removed (breaking)
+- **`/task:to-plan`.** A Description-only capture turned out not to earn its file: a task too vague to plan is quicker done in chat, and every task worth an artifact was being deepened into a plan anyway. `to-task` now does what `to-plan` did.
+- **`/task:to-architecture`.** The architecture section is what every planner follows, too useful to leave as an optional second skill that could be skipped. `to-roadmap` now writes it with every roadmap.
+- **The preflight kinds `plan` and `architecture`.** `preflight.sh` now rejects them as a usage error.
+
+### Changed (breaking)
+- **`to-task` always writes Description + Plan** (Goal/Touches/Logic steps), plus `## Tests` when the testing policy calls for it — the former `to-plan` pipeline, through the same `plan-driver.md` § Core the driver's plan agent follows. It is a fresh capture only: it no longer targets an existing task file to add or replace its Plan. An existing slug is surfaced first with a chip (pick another slug, or overwrite); a roadmap item's own earlier file is offered for regeneration from the item. `write-task.sh` keeps `--promote` / `--revise` for the driver's reruns.
+- **`to-roadmap` always writes the roadmap together with its `## Architecture`.** The decomposition comes first and stays behavioral; then the code is read at module level over the fixed items, the architecture is harvested from the discussion or settled in rounds, and the whole file lands in one write, with technical ordering already folded into the items' **Dependencies**. It is a fresh capture only: there is no enrich or revise mode for an existing roadmap.
+- **`grill` routes to three skills** — `to-spec`, then `to-roadmap`, then `to-task`, first match wins. The "one task, approach still open" route is gone: an open approach is a fork the grill should ask before it ends.
+- **`to-spec` redirects** local outcomes to `to-task`, and an initiative's pure technical shape to `to-roadmap`.
+- **The eval cases follow the skills** — `to-task-from-chat` gains the plan graders and the runner-format fixes, and the architecture case becomes `to-roadmap-fresh`.
+
+### Migration
+- Replace `/task:to-plan` with `/task:to-task`, and `/task:to-architecture` with `/task:to-roadmap`.
+- Existing Description-only task files stay valid: `validate.sh` still accepts a task without `## Plan`, and the executing session implements it from its Description. Existing roadmaps without `## Architecture` stay valid too; their planners have no architecture to follow, as before.
+- To add or change the architecture of an existing roadmap, edit its `## Architecture` section in chat. To re-plan an existing task, run `/task:to-task` again: it asks before overwriting.
+- A `.task/CLAUDE.md` written by an earlier version may name `to-plan` in its Testing Policy line. The file is yours and is never rewritten; edit the name by hand if it bothers you — nothing parses it.
+
 ## [3.7.0] — 2026-09-23
 
 A roadmap gains a technical layer: `to-architecture` writes an initiative's components, interfaces between items and per-item sketches into the roadmap itself, and the planners follow it. `.task/` now hides itself with its own `.gitignore` instead of a line in `.git/info/exclude`. Non-breaking: the new section is optional, a configured project gets its `.task/.gitignore` from preflight on the next run, and old `info/exclude` lines are left alone.
