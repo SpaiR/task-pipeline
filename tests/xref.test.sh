@@ -329,7 +329,7 @@ xref_scan() {
     [[ -n "$line" ]] || continue
     case "$line" in
       "path? "*)
-        p=${line##*: }
+        p=${line##*: } p=${p%%#*} p=${p%%:[0-9]*}
         git -C "$root" check-ignore -q --no-index -- "$p" </dev/null 2>/dev/null && continue
         printf 'path %s\n' "${line#"path? "}" ;;
       *) printf '%s\n' "$line" ;;
@@ -353,7 +353,7 @@ xref_scan() {
 t_case "a fixture with one planted defect per check reports each of them, and only them"
 fx=$(make_repo)
 mkdir -p "$fx/docs" "$fx/skills/x" "$fx/skills/_lib" "$fx/skills/validate" "$fx/tests" "$fx/.claude/rules" "$fx/.claude/hooks"
-printf 'docs/out/\n' >"$fx/.gitignore"
+printf 'docs/out/\n*.log\n' >"$fx/.gitignore"
 cat >"$fx/docs/a.md" <<'MD'
 # Real heading
 
@@ -368,7 +368,7 @@ Good: [a](docs/a.md#real-heading), [dup](docs/a.md#real-heading-1), [dir](docs/)
 # Top title
 Bad link: [x](missing.md) and [y](../outside.md).
 Bad anchor: [z](docs/a.md#nope).
-Paths: `docs/a.md:12` is fine, `docs/gone.md` is not; `docs/<slug>.md`, `.task/x.md` are skipped, the ignored `docs/out/` is exempt.
+Paths: `docs/a.md:12` is fine, `docs/gone.md` is not; `docs/<slug>.md`, `.task/x.md` are skipped, the ignored `docs/out/` and `docs/run.log:3` are exempt.
 Code: `[w](missing-in-code.md)` is not a link.
 Cited: docs/a.md § Helpers is fine, so is docs/a.md § Editing protocol requires it; `docs/a.md` § **Nope**; docs/a.md §3 and contract § Nope are skipped.
 Cited file: nowhere.md § Anything.
