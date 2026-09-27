@@ -128,5 +128,5 @@ For **promote** / **revise**, note plainly what stayed untouched (Description, a
 ## Forbidden
 
 - Overwrite or paraphrase-away an existing `## Description`, or pick a new slug, in promote or revise mode.
-- Modify the source roadmap or any referenced spec — read-only from here. Ticking a checkbox is the executing session's job (the driver's, in a roadmap run); specs are authored only by `to-spec`.
+- Modify the source roadmap or any referenced spec — read-only from here. Ticking a checkbox is `task:code-reviewer`'s job, once its review of the item passes; specs are authored only by `to-spec`.
 - Invent or resolve an active-task pointer. There is none.

@@ -49,11 +49,11 @@ Run it right after `to-roadmap`, in the same chat, or on its own against a roadm
 implement .task/task/migrate-auth-endpoints.md
 # → follows ## Execution: implement → commit → task:code-reviewer reviews,
 #   fixes what it proves, runs your build and tests, commits the fixes
-# → because Roadmap: / Source item: are present, the executing session also
-#   ticks item #1's checkbox in the roadmap file once the review comes back OK
+# → because Roadmap: / Source item: are present, the reviewer also ticks
+#   item #1's checkbox in the roadmap file once its review passes
 ```
 
-The `Roadmap:` and `Source item:` headers on the task file are what let the executing session tick the right checkbox automatically. Then repeat for the next item — no state to remember between them:
+The `Roadmap:` and `Source item:` headers on the task file are what let the reviewer tick the right checkbox automatically. Then repeat for the next item — no state to remember between them:
 
 ```text
 /task:to-plan api-v2-migration#2

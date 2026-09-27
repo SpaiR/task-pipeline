@@ -16,9 +16,9 @@ See the [autopilot guide](/guide/autopilot) for the full walkthrough.
 
 1. **Scope** — asks (via chips) how much to run: all remaining items, just the next dependency-wave, or a picked range like `1,3-5,8`.
 2. **Waves** — the driver topologically sorts the unchecked items on `**Dependencies:**` into waves, before it spawns anything. A dependency cycle among scoped items is a hard stop, and so is a scope that leaves a dependency neither ticked nor included; both come back as one line naming the items.
-3. **Per item, four stages** — three agents plus the driver's own mark stage (step 5). The default shape is **opus-plans / sonnet-implements / reviewer-reviews**: a first agent plans the item (per `skills/_lib/plan-driver.md`, on sonnet at low effort when the item's `**Model:**` hint is `haiku`); a second implements and commits, using the item's `**Model:**` hint if present; a third is `task:code-reviewer`, which reviews that commit, proves each finding, fixes the confirmed ones inside the plan's `Touches`, runs `.task/CLAUDE.md` → Build and Tests, and commits those fixes on top. Context passes via the on-disk task file, not chat. The reviewer pins its own model, so the item's `**Model:**` hint never downgrades the review.
+3. **Per item, three agents** — the last of which also ticks the checkbox (step 5). The default shape is **opus-plans / sonnet-implements / reviewer-reviews**: a first agent plans the item (per `skills/_lib/plan-driver.md`, on sonnet at low effort when the item's `**Model:**` hint is `haiku`); a second implements and commits, using the item's `**Model:**` hint if present; a third is `task:code-reviewer`, which reviews that commit, proves each finding, fixes the confirmed ones inside the plan's `Touches`, runs `.task/CLAUDE.md` → Build and Tests, commits those fixes on top, and ticks the item's checkbox. Context passes via the on-disk task file, not chat. The reviewer pins its own model, so the item's `**Model:**` hint never downgrades the review.
 4. **Parallel plans, serialized implement-then-review** — within a wave, all items are planned in parallel (plan agents only write their own task files), then each item is implemented and reviewed strictly one at a time in the shared working tree, both inside the same serial loop. A barrier separates waves, so each implement sees its already-landed wave-mates' reviewed commits.
-5. **Driver auto-marks** — after an item's *review* returns OK, the **driver** ticks its checkbox — never the per-item agent, so parallel wave-mates never race on the roadmap file. The flip is idempotent: an already-ticked item is the desired end state, not a failure. It stops the wave only when the roadmap holds no unique `### - [ ] N.` heading for that item — renumbered, retitled, or duplicated.
+5. **The review auto-marks** — once an item's review passes, `task:code-reviewer` ticks its checkbox as its last phase; the driver hands it the item number and roadmap path. Never the plan or implement agents, and the review runs one item at a time, so parallel wave-mates never race on the roadmap file. The flip is idempotent: an already-ticked item is the desired end state, not a failure. It fails the review — and stops the wave — only when the roadmap holds no unique `### - [ ] N.` heading for that item: renumbered, retitled, or duplicated.
 
 ## Config
 
@@ -32,11 +32,9 @@ One digest line per stage as each wave lands; stop-on-FAIL (an implement *or* a 
 OK #1 migrate-auth-endpoints planned
 OK #2 update-client-sdk planned
 OK #1 migrate-auth-endpoints implemented, committed
-OK #1 migrate-auth-endpoints reviewed — 2 fixes, tests green, fixes committed
-OK #1 migrate-auth-endpoints marked
+OK #1 migrate-auth-endpoints reviewed — 2 fixes, tests green, fixes committed, ticked
 OK #2 update-client-sdk implemented, committed
-OK #2 update-client-sdk reviewed — 0 findings, tests green
-OK #2 update-client-sdk marked
+OK #2 update-client-sdk reviewed — 0 findings, tests green, ticked
 Ran `api-v2-migration`: 2 of 2 items landed and ticked, 0 still unchecked.
   Commits: a1b2c3d..e4f5a6b.
 → Done. Roadmap complete — `.task/roadmap/api-v2-migration.md` fully checked.
@@ -66,5 +64,5 @@ A driver that doesn't resolve is a different case and does **not** get this trea
 - Run setup on a missing `.task/CLAUDE.md` — it hard-stops and redirects.
 - Loop items in the main session, or re-author the Workflow script inline, instead of invoking the shipped driver — including when the Workflow tool is unavailable, which is a hard stop, not a cue to run the items itself.
 - Run an item whose dependencies are still unchecked.
-- Auto-mark a checkbox from inside a per-item agent — strictly the driver's job.
+- Auto-mark a checkbox from inside a plan or implement agent — strictly the reviewer's job, once its review passes.
 - Modify project code or any file itself — all implementation happens inside the per-item implement agents, run one at a time in the shared working tree.

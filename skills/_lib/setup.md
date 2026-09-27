@@ -66,10 +66,9 @@ Read and followed by a capture skill's Step 0 (`to-task` / `to-plan` / `to-roadm
    4. Spawn the `task:code-reviewer` agent on that task file: it proves each finding, fixes
       confirmed defects within **Touches** plus regressions this diff introduced outside
       them, runs Build and Tests, and commits its fixes as a follow-up commit — it never
-      rewrites yours. With no `## Plan`, scope fixes to what you changed.
-   5. If the file carries `Roadmap:` + `Source item: #N`, tick item #N's checkbox in
-      `.task/roadmap/<slug>.md` once the review returns OK — `<slug>` read from the
-      `Roadmap:` link's text, or from a bare `Roadmap: <slug>`, same rule as step 1.
+      rewrites yours. With no `## Plan`, scope fixes to what you changed. When the
+      file carries `Roadmap:` + `Source item: #N`, the reviewer also ticks that
+      roadmap item once its review passes — do not tick it yourself.
    ```
 
    Substitute every `{…}` with a real value — except `${CLAUDE_PLUGIN_ROOT}` inside the Commit Format option, which is not a placeholder but a shell variable: `echo` it first and write the resolved absolute path, never the literal `${CLAUDE_PLUGIN_ROOT}` (nothing expands it inside a user's `.task/CLAUDE.md`). Keep the section headings and the `## Executing a task` steps as they stand — `.task/task/<slug>.md` points at that heading by name, and the reviewer and `to-plan` look their settings up by heading.

@@ -1,6 +1,6 @@
 export const meta = {
   name: 'roadmap-driver',
-  description: "Run a roadmap's unchecked items in dependency-ordered waves: parallel planning, strictly serial implement → review → mark per item, stop on FAIL",
+  description: "Run a roadmap's unchecked items in dependency-ordered waves: parallel planning, strictly serial implement → review per item (the review ticks the checkbox), stop on FAIL",
   whenToUse: "Do not call this directly. Only the task-pipeline plugin's /task:roadmap-to-workflow skill invokes it, building {slug, aiDir, pluginRoot, specPaths, items, done, scope} from a validated roadmap file and a scope the user confirmed — hand-assembled args skip that and can commit work against a stale item list. To run a roadmap, invoke that skill instead.",
 }
 
@@ -18,8 +18,10 @@ export const meta = {
 //
 // The Workflow sandbox has no filesystem access — every write (the task files,
 // the code, the roadmap checkbox) happens inside an agent() stage. Auto-mark is
-// therefore its own serial driver stage (runMark), never part of the per-item
-// plan/implement/review agents.
+// the review stage's last phase (task:code-reviewer phase 7), handed the item
+// number and roadmap path by runReview: the review already runs inside the
+// serial per-item loop, so the flip has one writer without a stage of its own —
+// a dedicated mark agent cost a whole agent spawn for one awk call.
 
 // ---- args (real JSON values, absolute paths — asserted, not trusted) ----
 const bad = (msg) => `roadmap-to-workflow: bad args — ${msg}`
@@ -93,12 +95,23 @@ function computeWaves(items, done, scope) {
 // Only an exact `OK #N <item-slug>` head counts as a pass. Anything else — a
 // FAIL, an empty line, or a drifted one (`**FAIL** #3 …`, a closing code fence,
 // `Review: FAIL`) — is a stop: a bare startsWith('FAIL') test would read those
-// drifted lines as passes and let the mark stage tick an item whose review failed.
+// drifted lines as passes and let the next item build on one whose review failed.
 function digestPassed(line, n, itemSlug) {
   const head = `OK #${n} ${itemSlug}`
   return line === head || (line || '').startsWith(`${head} `)
 }
 // --- end digestPassed -------------------------------------------------------
+
+// --- flipReported (pure; extracted verbatim by tests/driver-digest.test.sh) -
+// The review's OK digest is not proof the checkbox was ticked: the reviewer's
+// phase 7 prints the flip command's own stdout line, so the driver asks for it.
+// Only a whole line `MARK-OK #N` counts — `MARK-OK #13` is not item 1's, and a
+// passing digest without it means phase 7 never ran, which would leave the item
+// unchecked and have the next run re-implement work already committed.
+function flipReported(text, n) {
+  return (text || '').split('\n').some((l) => l.trim() === `MARK-OK #${n}`)
+}
+// --- end flipReported -------------------------------------------------------
 
 const sorted = computeWaves(items, done, scope)
 if (sorted.error) return `roadmap-to-workflow: ${sorted.error}`
@@ -152,7 +165,7 @@ async function runImplement(n, itemSlug, model, w) {
      carries, then commit per .task/CLAUDE.md → Commit Format — and do NOT
      spawn the task:code-reviewer agent, and do NOT tick the roadmap
      checkbox. The driver runs the review as its own stage right after this
-     call, and ticks the checkbox after that.
+     call, and the review ticks the checkbox when it passes.
      Make constructive assumptions; never block on a prompt.
      Last non-empty line MUST be exactly:
        OK #${n} ${itemSlug} <one-line summary>      (on success)
@@ -162,69 +175,26 @@ async function runImplement(n, itemSlug, model, w) {
   return lastLine(r)
 }
 
-// REVIEW + FIX + BUILD/TESTS + COMMIT via the plugin's own agent. Runs inside the
-// serial per-item loop, right after that item's implement. No `model` opt:
+// REVIEW + FIX + BUILD/TESTS + COMMIT + MARK via the plugin's own agent. Runs
+// inside the serial per-item loop, right after that item's implement. The item
+// to tick is passed explicitly, so the flip never depends on the plan agent
+// having stamped Roadmap:/Source item: headers; OK means the checkbox is ticked
+// (the reviewer's phase 7 turns a failed flip into a FAIL digest). No `model` opt:
 // task:code-reviewer pins its own model/effort, so a haiku item never gets a
 // haiku review. No `isolation`: it must see and commit into this very working tree.
 async function runReview(n, itemSlug, w) {
   const r = await agent(
     `Review the implementation of ${aiDir}/task/${itemSlug}.md, which was just
      implemented and committed in this working tree. Reference string for your
-     digest: "#${n} ${itemSlug}". Work your phases in order and print each
-     mandatory output. Do NOT tick the roadmap checkbox — the driver does that
-     after this call returns OK.
+     digest: "#${n} ${itemSlug}". Roadmap item to tick when your verdict is
+     OK: #${n} in ${ROADMAP}. Work your phases in order and print each
+     mandatory output.
      Last non-empty line MUST be exactly:
        OK #${n} ${itemSlug} <one-line summary>      (review passed)
        FAIL #${n} ${itemSlug} <what failed>         (review failed)`,
     { agentType: 'task:code-reviewer', label: `review #${n}`, phase: `Wave ${w} · Item #${n}` }
   )
-  return lastLine(r)
-}
-
-// MARK — the driver-side checkbox flip, as its own serial stage right after the
-// review returns OK (the sandbox cannot write files itself). The command is
-// fully baked and deliberately IDEMPOTENT + SELF-REPORTING, because the mark
-// agent is the one stage whose whole job is a side effect with no output:
-//   * it matches the item heading on the full 5-state class `[ x~>-]` (`0*`
-//     tolerates a hand-written zero-padded `0N.`, which validate.sh sanctions as
-//     the same item), so `hits` counts "item N EXISTS", not "item N is
-//     unchecked". `hits == 1` gates the mv: a drifted/renumbered heading (zero)
-//     or a duplicate N (two) discards the temp file, exits non-zero and FAILs
-//     loudly instead of copying the file over itself in silence (the item's
-//     commit is already in the tree; a silent miss would make the next run
-//     re-implement landed work). An ALREADY-ticked item is the desired end
-//     state, so it is a no-op that reports OK — re-running the flip must never
-//     turn a success into a failure, whether the agent re-ran it to observe an
-//     exit code it could not see, or `agent()` retried after an API error.
-//   * the sub is anchored to `^### - \[ \]`, never a bare `\[ \]`: with the
-//     widened match class the line may already be `[x]`, and an unanchored sub
-//     would rewrite a literal `[ ]` inside the item's TITLE.
-//   * both branches echo, so stdout is never empty. Success used to print
-//     nothing, leaving the agent to infer it from `(Bash completed with no
-//     output)` — which is what drove it to re-run the destructive command.
-async function runMark(n, itemSlug, w) {
-  const r = await agent(
-    `Run EXACTLY this bash command, once, verbatim — do not modify it and do not
-     edit any file yourself. It prints its own outcome and is safe to re-run, so
-     read the outcome off stdout; never infer it from the exit code:
-
-       awk -v n="${n}" '
-         $0 ~ ("^### - \\\\[[ x~>-]\\\\] 0*" n "\\\\. ") { hits++; sub(/^### - \\[ \\]/, "### - [x]") } { print }
-         END { exit (hits == 1 ? 0 : 1) }
-       ' "${ROADMAP}" > "${ROADMAP}.tmp" \\
-         && mv "${ROADMAP}.tmp" "${ROADMAP}" && echo "MARK-OK #${n}" \\
-         || { rm -f "${ROADMAP}.tmp"; echo "MARK-FAIL #${n}"; exit 1; }
-
-     The command prints exactly one line. Decide from THAT line, then report.
-
-     If stdout says "MARK-OK #${n}", your last non-empty line MUST be exactly,
-     with no leading spaces and nothing after it:
-       OK #${n} ${itemSlug} marked
-     If stdout says "MARK-FAIL #${n}", it MUST be exactly:
-       FAIL #${n} ${itemSlug} no unique '### - [ ] ${n}.' heading in the roadmap`,
-    { model: 'haiku', effort: 'low', label: `mark #${n}`, phase: `Wave ${w} · Item #${n}` }
-  )
-  return lastLine(r)
+  return { line: lastLine(r), flipped: flipReported(r, n) }
 }
 
 for (const [wIdx, items] of waves.entries()) {
@@ -239,9 +209,10 @@ for (const [wIdx, items] of waves.entries()) {
       return `roadmap-to-workflow stopped in wave ${w} (planning), item #${items[i].n}: ${status || 'plan agent returned nothing'}`
   }
 
-  // 2) IMPLEMENT → REVIEW → MARK strictly one item at a time — all three inside
-  //    this one serial loop, so the shared tree keeps exactly one writer and
-  //    item N never starts implementing while item N−1 is still under review.
+  // 2) IMPLEMENT → REVIEW strictly one item at a time — both inside this one
+  //    serial loop, so the shared tree and the roadmap file each keep exactly
+  //    one writer, and item N never starts implementing while item N−1 is
+  //    still under review.
   for (const [i, { n, model }] of items.entries()) {
     // The digest is LLM output — assert its shape, never index into it blindly.
     const m = plans[i].match(/^OK #(\d+) (\S+) planned$/)
@@ -255,19 +226,16 @@ for (const [wIdx, items] of waves.entries()) {
       return `roadmap-to-workflow stopped in wave ${w}, item #${n}: ${
         !status ? 'implement agent returned nothing' : status.startsWith('FAIL') ? status : `unparsable implement digest: ${status}`}`
 
-    const review = await runReview(n, itemSlug, w)
+    const { line: review, flipped } = await runReview(n, itemSlug, w)
     log(review || `FAIL #${n} ${itemSlug} review agent returned nothing`)
     if (!digestPassed(review, n, itemSlug))
       return `roadmap-to-workflow stopped in wave ${w} (review), item #${n}: ${
-        !review ? 'review agent returned nothing' : review.startsWith('FAIL') ? review : `unparsable review digest: ${review}`}`
-
-    const marked = await runMark(n, itemSlug, w)
-    log(marked || `FAIL #${n} ${itemSlug} mark agent returned nothing`)
-    const mm = (marked || '').match(/^OK #(\d+) (\S+) marked$/)
-    if (!mm || Number(mm[1]) !== n)
-      return `roadmap-to-workflow stopped in wave ${w} (mark), item #${n}: ${marked || 'mark agent returned nothing'} — the item's commit is in the tree but its checkbox is not flipped. The flip is idempotent, so this means item #${n} has no unique '### - [ ] ${n}.' heading in ${ROADMAP} (renumbered, retitled, or duplicated): tick it by hand, then rerun /task:roadmap-to-workflow ${slug}`
+        !review ? 'review agent returned nothing' : review.startsWith('FAIL') ? review : `unparsable review digest: ${review}`}${
+        (review || '').includes('no unique') ? ` — tick #${n} in ${ROADMAP} by hand, then rerun /task:roadmap-to-workflow ${slug}` : ''}`
+    if (!flipped)
+      return `roadmap-to-workflow stopped in wave ${w} (review), item #${n}: the review passed but never reported MARK-OK #${n}, so its checkbox may not be flipped. The item's work is in the tree: check ${ROADMAP}, tick #${n} by hand if it is still unchecked, then rerun /task:roadmap-to-workflow ${slug}`
   }
-  // Barrier: the next wave starts only after every item above is reviewed and marked.
+  // Barrier: the next wave starts only after every item above is reviewed and ticked.
 }
 
 return 'roadmap-to-workflow: all items shipped.'

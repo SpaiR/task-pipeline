@@ -106,5 +106,5 @@ The file is already written — to change anything, just say so. Then close with
 
 - Write a `## Plan` or `## Tests` section — both are `to-plan`'s contract; this skill captures the Description only.
 - Scan the codebase beyond `CLAUDE.md` + top-level manifests. This skill captures discussion; it does not investigate implementation.
-- Modify the source roadmap or write a spec file — read-only from here. Ticking `- [x]` is the executing session's job (the driver's, in a roadmap run); specs are authored only by `to-spec`.
+- Modify the source roadmap or write a spec file — read-only from here. Ticking `- [x]` is `task:code-reviewer`'s job, once its review of the item passes; specs are authored only by `to-spec`.
 - Silently overwrite an existing task file, or invent an active-task pointer. There is none: the artifact path is the only handle.

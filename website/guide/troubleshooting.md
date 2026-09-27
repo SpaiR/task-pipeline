@@ -113,7 +113,7 @@ Nothing was written when this fires, so re-running the command after fixing the 
 
 ### A roadmap item's checkbox never gets ticked
 
-**Cause** — the auto-mark step is conditional on the task file carrying both `Roadmap:` and `Source item: #N` header lines, above the `---`. If the file was hand-created, those headers were edited out, or the item number doesn't match, the executing session has nothing to key the flip off of.
+**Cause** — the auto-mark step is conditional on the task file carrying both `Roadmap:` and `Source item: #N` header lines, above the `---`. If the file was hand-created, those headers were edited out, or the item number doesn't match, `task:code-reviewer` has nothing to key the flip off of. (A `roadmap-to-workflow` run doesn't depend on the headers — the driver hands the reviewer the item number directly.) The reviewer also ticks nothing when its review fails.
 
 **Fix** — check the top of `.task/task/<item-slug>.md` for both header lines and a correct `#N`. Add them if missing (ASCII, above `---`, `Roadmap: [<slug>](../roadmap/<slug>.md)`) and re-run, or just tick the box yourself — it's a plain `- [ ]` → `- [x]` edit.
 
@@ -123,7 +123,7 @@ Nothing was written when this fires, so re-running the command after fixing the 
 
 **Fix** — read the failure digest, fix the item (edit `.task/task/<item-slug>.md`, or re-implement it by hand), tick its checkbox, then rerun `/task:roadmap-to-workflow <slug>`. Completed items stay checked, so the rerun only picks up the unchecked remainder.
 
-One digest is worth reading closely: a stop from the **mark** stage means the item's work already landed and was committed, and only the checkbox is behind. The flip is idempotent, so this is never "the box was already ticked" — it means the roadmap has no unique `### - [ ] N.` heading for that item, because it was renumbered, retitled, or duplicated. Tick it by hand and rerun; there is nothing to re-implement.
+One digest is worth reading closely: a review `FAIL` that says `no unique '### - [ ] N.' heading` means the item's work already landed and was committed, and only the checkbox is behind. The flip is idempotent, so this is never "the box was already ticked" — it means the roadmap has no unique `### - [ ] N.` heading for that item, because it was renumbered, retitled, or duplicated. Tick it by hand and rerun; there is nothing to re-implement.
 
 ### A worktree can't find .task/
 

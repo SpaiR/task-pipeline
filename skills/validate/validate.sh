@@ -321,16 +321,16 @@ validate_roadmap() {
   ' "$file"
 
   # Find task headings: `### - [x] | - [ ] | - [~] | - [>] | - [-] N. <title>`.
-  # Checkbox prefix is REQUIRED — the roadmap-to-workflow driver's auto-mark
+  # Checkbox prefix is REQUIRED — task:code-reviewer's auto-mark
   # and item selection both rely on it.
   if ! grep -qE '^### - \[[ x~>-]\] [0-9]+\. .+$' "$file"; then
     err "$label" "no task headings matching '### - [ ] N. <title>' — every item must carry a checkbox prefix (roadmap-to-workflow auto-mark and item selection rely on it)"
     return
   fi
 
-  # Item numbers are the driver's auto-mark key — the driver's inline awk flip
-  # keys on N and requires exactly one heading for it, so a duplicate N makes the
-  # mark stage FAIL the wave outright. Flag any number that appears on more than
+  # Item numbers are the auto-mark key — task:code-reviewer's awk flip keys on
+  # N and requires exactly one heading for it, so a duplicate N makes the
+  # review FAIL and stops the wave outright. Flag any number that appears on more than
   # one item heading. Compare numerically — `1.` and `01.` are the same item to
   # every other consumer (the Dependencies check below, the driver's `0*` match).
   local dup

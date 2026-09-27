@@ -32,7 +32,7 @@ Spec: [{spec-slug}](../spec/{spec-slug}.md)   (one line per relevant spec; omitt
 > …stamped verbatim…
 ```
 
-When opened from a roadmap item, it also stamps `Roadmap: [<slug>](../roadmap/<slug>.md)` and `Source item: #N` so the executing session can tick the right checkbox.
+When opened from a roadmap item, it also stamps `Roadmap: [<slug>](../roadmap/<slug>.md)` and `Source item: #N` so `task:code-reviewer` can tick the right checkbox once its review passes.
 
 ## First run
 
