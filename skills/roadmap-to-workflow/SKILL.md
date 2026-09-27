@@ -120,7 +120,7 @@ Per wave the driver plans every item in `parallel()` — each plan agent follows
 **No Workflow tool** — the Workflow tool itself is absent from this environment, which is a different case from the one above (there, the tool is present but the driver's name fails to resolve). Autopilot cannot run without it, so this skill stops rather than looping the items itself. Stop, with this message:
 
 ```
-Autopilot needs the Workflow tool, and it isn't available in this environment, so `/task:roadmap-to-workflow` can't run. The items can still be run by hand, one at a time, in dependency order: in this chat, run `/task:to-plan <slug>#<N>` for one unchecked item, then start a fresh session and say `implement .task/task/<item-slug>.md`. That session's `## Execution` pointer carries plan → commit → `task:code-reviewer` on its own, and ticks the roadmap checkbox itself via `## Executing a task` step 5 — nothing further to do per item.
+Autopilot needs the Workflow tool, and it isn't available in this environment, so `/task:roadmap-to-workflow` can't run. The items can still be run by hand, one at a time, in dependency order: in this chat, run `/task:to-plan <slug>#<N>` for one unchecked item, then start a fresh session and say `implement .task/task/<item-slug>.md`. That session's `## Execution` pointer carries plan → commit → `task:code-reviewer` on its own (`## Executing a task` step 4), and the reviewer ticks the roadmap checkbox once its review passes — nothing further to do per item.
 → Next: run `/task:to-plan <slug>#<N>` for the first unchecked item.
 ```
 

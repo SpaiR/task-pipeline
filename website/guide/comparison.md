@@ -23,7 +23,7 @@ The sections below compare against six references — default Claude Code (plan 
 | **Plan format** | Arbitrary text / TodoWrite items | `### Step N` with `Goal` / `Touches` / optional `Logic`, checked by `validate.sh` on write |
 | **Result review** | Whatever the model decides to do | The `## Execution` block hands the commit to `task:code-reviewer`: prove each finding → fix the confirmed ones inside `Touches` → run the project's build and tests → commit the fixes on top |
 | **Moving parts** | None beyond the chat | Flat Markdown under `.task/`; nothing else added |
-| **Trace in the repo** | None | Normal code commits; the plan artifacts stay local and git-excluded |
+| **Trace in the repo** | None | Normal code commits; the plan artifacts stay local and git-ignored |
 | **Multi-task initiatives** | None | `to-roadmap` → a plan per item, or opt-in autopilot `roadmap-to-workflow` |
 
 **Use default Claude Code** if the task is one or two files and twenty minutes. **Use task-pipeline** if the task is longer than one session, needs a plan you can hand-edit and resume, or should leave a record.
@@ -52,7 +52,7 @@ task-pipeline's `grill` is openly inspired by Matt Pocock's grilling skill, and 
 | **Plan format** | Templated `### Step N` with `Goal` / `Touches` / optional `Logic`, checked by `validate.sh` on write | A prose spec plus "tracer-bullet" tickets that declare their blocking edges |
 | **Result review** | `## Execution` block hands the commit to the plugin's own `task:code-reviewer`; no execute skill — any plain session implements the artifact | `implement` builds with TDD at agreed seams, then a two-axis `code-review` (coding standards + spec compliance) |
 | **Scope** | Capture only; the routine around a task (filing tickets, pulling work from a tracker) is left to project-level skills | Covers that routine too — `to-tickets` files the work and the chain reads from your tracker |
-| **Moving parts** | Flat Markdown under `.task/`, git-excluded | Specs and tickets go to GitHub, Linear, or local files, chosen at setup |
+| **Moving parts** | Flat Markdown under `.task/`, git-ignored | Specs and tickets go to GitHub, Linear, or local files, chosen at setup |
 | **Platforms** | Claude Code only | Cross-agent — "work with any model"; installs into Codex and other Agent-Skills harnesses, plus a Claude Code plugin |
 | **Multi-task initiatives** | `to-roadmap` → a plan per item, or opt-in unattended autopilot (`roadmap-to-workflow` fans a roadmap out to dynamic workflows) | An interactive chain; `wayfinder` plans a big chunk of work resolved one ticket at a time — no unattended runner |
 
@@ -65,7 +65,7 @@ task-pipeline's `grill` is openly inspired by Matt Pocock's grilling skill, and 
 | **Paradigm** | Per-task capture, chat-first | Spec-driven (a living spec set + deltas) |
 | **Who authors the plan** | You in chat; captured after the discussion | You and the agent author specs up front as the source of truth |
 | **Spec granularity** | Pinned per-decision `.task/spec/<slug>.md` files, cited via `Spec:` | A living whole-system spec |
-| **Moving parts** | Flat Markdown under `.task/`, git-excluded | An `openspec/` directory committed to the repo |
+| **Moving parts** | Flat Markdown under `.task/`, git-ignored | An `openspec/` directory committed to the repo |
 | **Trace in the repo** | Invisible — a personal tool, no repo trace | Part of the repository, visible to the team |
 | **Language** | Multilingual via `.task/CLAUDE.md` | English by default |
 
@@ -79,7 +79,7 @@ task-pipeline's `grill` is openly inspired by Matt Pocock's grilling skill, and 
 | **Who authors the plan** | You in chat; the skill serializes it | Driven through a command sequence you fill in and refine |
 | **Workflow** | One short capture skill (`to-task` / `to-plan` / `to-roadmap` / `to-architecture` / `to-spec`) | `/speckit.constitution` → `/speckit.specify` → `/speckit.plan` → `/speckit.tasks` → `/speckit.implement` |
 | **Moving parts** | Flat Markdown under `.task/`; nothing to install | A `specify` CLI (installed via `uv`) plus per-agent integrations |
-| **Trace in the repo** | Invisible — git-excluded | A `.specify/` artifact tree committed to the repo |
+| **Trace in the repo** | Invisible — git-ignored | A `.specify/` artifact tree committed to the repo |
 | **Platforms** | Claude Code only | 30+ AI coding agents, cross-agent |
 
 **Use task-pipeline** if you want chat-first capture with no ceremony and no repo trace. **Use spec-kit** if you want an explicit, phased spec workflow whose artifacts live in the repo and travel across many coding agents.

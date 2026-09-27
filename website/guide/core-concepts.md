@@ -51,7 +51,7 @@ See [Configuration](/reference/configuration) for the details.
 Every skill follows the same three habits, so the tool feels consistent:
 
 - **(a) Next-step footer.** Every output ends with `→ Next: <runnable command>` or `→ Done.` — the path *is* the handle, so there's nothing else to remember.
-- **(b) Write-then-digest.** A capture writes its artifact immediately, then prints a short structural digest (path, title, sections, the load-bearing decisions, the `validate.sh` result). The chat discussion *was* the review — there's no "confirm before writing" gate, because the file is git-excluded and a wrong write costs one deletion. ([`grill`](/reference/grill) writes nothing, so its decision ledger *is* the digest.)
+- **(b) Write-then-digest.** A capture writes its artifact immediately, then prints a short structural digest (path, title, sections, the load-bearing decisions, the `validate.sh` result). The chat discussion *was* the review — there's no "confirm before writing" gate, because the file is git-ignored and a wrong write costs one deletion. ([`grill`](/reference/grill) writes nothing, so its decision ledger *is* the digest.)
 - **(c) Chip forks.** Any real either/or decision the skill can't infer is a small multiple-choice prompt, never a guess.
 
 → Next: [Capture a single task](/guide/single-task) — the everyday flow in full.

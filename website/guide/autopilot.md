@@ -38,6 +38,7 @@ When the run ends, the chat gets one line per item that landed and a summary:
 #1 migrate-auth-endpoints — implemented, committed; review: 2 fixes, tests green, fixes committed, ticked
 #2 update-client-sdk — implemented, committed; review: 0 findings, tests green, ticked
 Ran `api-v2-migration`: 2 of 2 items landed and ticked, 0 still unchecked.
+  Commits: a1b2c3d..e4f5a6b.
 → Done. Roadmap complete — .task/roadmap/api-v2-migration.md fully checked.
 ```
 
@@ -75,6 +76,6 @@ Fix the failing item (edit its task file, or re-implement it by hand), tick its 
 
 ## No Workflow tool?
 
-If the Workflow tool isn't available in your environment, `roadmap-to-workflow` hard-stops instead of running anything itself — it prints the unchecked items and tells you to run them by hand, in dependency order: `to-plan` on one item in this chat, then `implement .task/task/<item-slug>.md` in a fresh session. That session's `## Execution` pointer already carries plan → commit → `task:code-reviewer`, and it ticks the roadmap checkbox itself — so this is exactly the "mixing hand-picked items" pattern above, just for every item instead of the first one.
+If the Workflow tool isn't available in your environment, `roadmap-to-workflow` hard-stops instead of running anything itself — it prints the unchecked items and tells you to run them by hand, in dependency order: `to-plan` on one item in this chat, then `implement .task/task/<item-slug>.md` in a fresh session. That session's `## Execution` pointer already carries plan → commit → `task:code-reviewer`, and the reviewer ticks the roadmap checkbox once its review passes — so this is exactly the "mixing hand-picked items" pattern above, just for every item instead of the first one.
 
 → Next: [Specs](/guide/specs) — pinning the technical decisions a roadmap leans on.

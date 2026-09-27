@@ -126,6 +126,23 @@ assert_exit 5 "$W_EXIT" "unwritable task dir"
 assert_eq "0" "$(grep -c 'WROTE:' <<<"$W_OUT")" "no success line"
 assert_eq "no" "$([[ -f "$repo/.task/task/eta.md" ]] && echo yes || echo no)" "nothing created"
 
+t_case "a promote whose staging copy cannot be made exits 5 and leaves the target alone"
+# A failing `mktemp` or `cp` stands in for a full disk: a PATH shim, since the
+# chmod trick above does not bite as root and macOS mktemp shrugs off a bad
+# TMPDIR. A failed `cp` once left an empty staging file that the final `mv`
+# moved over the target, printing `WROTE:`.
+w "$repo" --fresh --slug theta --title "Theta task" --description "$body/desc.md"
+before=$(cat "$repo/.task/task/theta.md")
+shim=$(t_tmpdir)
+for tool in mktemp cp; do
+  rm -f "$shim"/*
+  printf '#!/bin/sh\nexit 1\n' >"$shim/$tool" && chmod +x "$shim/$tool"
+  PATH="$shim:$PATH" w "$repo" --promote --slug theta --plan "$body/plan.md"
+  assert_exit 5 "$W_EXIT" "$tool failed"
+  assert_eq "0" "$(grep -c 'WROTE:' <<<"$W_OUT")" "$tool: no success line"
+  assert_eq "$before" "$(cat "$repo/.task/task/theta.md")" "$tool: target untouched"
+done
+
 t_case "a slug that is a path is a usage error"
 w "$repo" --fresh --slug ../escape --title T --description "$body/desc.md"
 assert_exit 2 "$W_EXIT" "path rejected"
