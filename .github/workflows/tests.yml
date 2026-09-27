@@ -41,3 +41,28 @@ jobs:
         if: runner.os == 'macOS'
         continue-on-error: true
         run: PATH="/bin:$PATH" bash tests/run.sh
+
+  shellcheck:
+    # A pinned, checksum-verified release, so a new shellcheck version cannot
+    # turn the job red on its own. `-x -P SCRIPTDIR` follows each `source`
+    # relative to the sourcing file; `-S warning` leaves out info and style.
+    runs-on: ubuntu-latest
+    env:
+      SHELLCHECK_VERSION: v0.10.0
+      SHELLCHECK_SHA256: 6c881ab0698e4e6ea235245f22832860544f17ba386442fe7e9d629f8cbedf87
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: |
+          tarball="shellcheck-${SHELLCHECK_VERSION}.linux.x86_64.tar.xz"
+          curl -fsSL -o "$RUNNER_TEMP/$tarball" \
+            "https://github.com/koalaman/shellcheck/releases/download/${SHELLCHECK_VERSION}/${tarball}"
+          echo "${SHELLCHECK_SHA256}  $RUNNER_TEMP/$tarball" | sha256sum -c -
+          tar -xJf "$RUNNER_TEMP/$tarball" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/shellcheck-${SHELLCHECK_VERSION}" >> "$GITHUB_PATH"
+      - name: Lint the bash layer
+        run: |
+          shellcheck --version
+          shellcheck -x -P SCRIPTDIR -S warning \
+            skills/_lib/*.sh skills/validate/validate.sh tests/*.sh .claude/hooks/*.sh

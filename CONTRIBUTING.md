@@ -33,7 +33,8 @@ We use [GitHub](https://github.com/SpaiR/task-pipeline) to host code, track issu
                                    docs-site install and build
 .github/                         repo automation — NOT shipped with the plugin:
   pull_request_template.md       the PR body template (see § Pull request title)
-  workflows/tests.yml            CI: runs the bash-layer suite (tests/run.sh)
+  workflows/tests.yml            CI: runs the bash-layer suite (tests/run.sh) on ubuntu and
+                                   macOS, and lints the bash layer with a pinned shellcheck
   workflows/docs.yml             builds and deploys website/ to GitHub Pages
 skills/                          SKILL.md per skill + shared bash helpers
   _lib/                          shared helpers (roles: docs/contract.md § Helpers):
@@ -122,7 +123,7 @@ LICENSE                          MIT license text
 4. Manually run the affected skill in a real project before opening the PR. For a prompt change, the eval suite under `evals/` is the closest thing to an automated check — `claude plugin eval .`, or `--case '<name>*'` for one case; it needs the early-access `plugin eval` feature, and it is not wired into CI. See [`evals/README.md`](evals/README.md), including which graders are still unverified.
 5. Open the pull request against `main`.
 
-This project is a collection of Markdown skills plus a handful of bash helpers. There is no compile step and no linter; the automated tests are the bash-layer suite under `tests/` (`bash tests/run.sh`, also run on ubuntu and macOS by `.github/workflows/tests.yml`), which covers the helpers rather than the prompts. The bar for "it works" is: `tests/run.sh` green, skills run end-to-end, invariants in [`CLAUDE.md`](CLAUDE.md) still hold, and the `validate.sh` script accepts the new artifact shapes.
+This project is a collection of Markdown skills plus a handful of bash helpers. There is no compile step. The bash layer is linted in CI only: `.github/workflows/tests.yml` runs a pinned shellcheck at `-S warning` over `skills/_lib/*.sh`, `skills/validate/validate.sh`, `tests/*.sh` and `.claude/hooks/*.sh`. The automated tests are the bash-layer suite under `tests/` (`bash tests/run.sh`, also run on ubuntu and macOS by `.github/workflows/tests.yml`), which covers the helpers rather than the prompts. The bar for "it works" is: `tests/run.sh` green, skills run end-to-end, invariants in [`CLAUDE.md`](CLAUDE.md) still hold, and the `validate.sh` script accepts the new artifact shapes.
 
 ### Pull Request Title
 
