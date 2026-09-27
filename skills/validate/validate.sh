@@ -61,8 +61,8 @@ require_config() {
     # Everything after it is for the human who ran this script by hand, which
     # is the only way to reach this line.
     echo "ERROR precondition: CLAUDE.md not found at $AI_DIR/CLAUDE.md" >&2
-    echo "  The project isn't set up yet. Run /task:to-task, /task:to-roadmap," >&2
-    echo "  /task:to-architecture or /task:to-spec once — those four write .task/CLAUDE.md" >&2
+    echo "  The project isn't set up yet. Run /task:to-task, /task:to-roadmap or" >&2
+    echo "  /task:to-spec once — those three write .task/CLAUDE.md" >&2
     echo "  inline on first use." >&2
     exit 2
   fi
@@ -503,7 +503,7 @@ validate_roadmap() {
     END { flush_block() }
   ' "$file"
 
-  # --- `## Architecture` (optional; written by to-architecture) ---------------
+  # --- `## Architecture` (optional; written by to-roadmap) -------------------
   # WARN only, never ERROR: no parser consumes this section — planners read it as
   # the intended shape — and any roadmap ERROR stops roadmap-to-workflow from
   # launching, which a stale sketch must not do. Three checks:

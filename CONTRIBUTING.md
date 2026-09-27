@@ -48,7 +48,7 @@ skills/                          SKILL.md per skill + shared bash helpers
                                    roadmap-item.md (the shared from-roadmap block: pick the item,
                                      read its ready description, derive the slug),
                                    roadmap-capture.md (the roadmap capture flow: § Core, followed by
-                                     to-roadmap Steps 1-5 and to-architecture's fresh mode),
+                                     to-roadmap Steps 1-7, architecture included),
                                    setup.md (first-run setup sub-steps + the .task/CLAUDE.md template);
                                    templates/conventional-commits.md (commit-format fallback)
   grill/                         SKILL.md — pre-capture interrogation; writes nothing,
@@ -56,9 +56,8 @@ skills/                          SKILL.md per skill + shared bash helpers
   to-task/                       SKILL.md — one task: Description + `## Plan` (Goal/Touches/Logic),
                                    always a fresh capture; runs first-use config setup
                                    from _lib/setup.md on a fresh project
-  to-roadmap/                    SKILL.md — multi-task initiative → .task/roadmap/<slug>.md
-  to-architecture/               SKILL.md — a roadmap's technical layer → its `## Architecture`
-                                   section; writes the roadmap first when none exists
+  to-roadmap/                    SKILL.md — multi-task initiative → .task/roadmap/<slug>.md,
+                                   written together with its `## Architecture` section
   to-spec/                       SKILL.md — load-bearing technical decisions →
                                    .task/spec/<slug>.md, referenced via `Spec:` headers
   roadmap-to-workflow/           SKILL.md — the one launcher; reports a roadmap's unchecked items
@@ -98,7 +97,7 @@ LICENSE                          MIT license text
                                    and .claude/.audit-baseline.json
 ```
 
-`grill` / `to-task` / `to-roadmap` / `to-architecture` / `to-spec` / `roadmap-to-workflow` are the only six skills (`validate` is a bash-only utility, not a skill), and `agents/` holds exactly one file: `code-reviewer.md`, resolved as the agent type **`task:code-reviewer`**. It exists because the platform's `/verify` and `/code-review` are marked `disable-model-invocation` — a subagent, and a session that was merely *told* `implement …`, cannot run either, and the failure is silent (an unlisted command is skipped, not refused), so the pipeline had to own its review step rather than rent it. Both execution paths spawn that one agent: a plain session per the artifact's `## Execution` block, and `roadmap-to-workflow`'s driver as its own stage in the per-item serial loop. Orchestration itself is still not hand-rolled — `roadmap-to-workflow` invokes the platform's Workflow tool over the shipped driver script (`skills/_lib/roadmap-driver.js`), which reaches for the `agent()` / `parallel()` primitives.
+`grill` / `to-task` / `to-roadmap` / `to-spec` / `roadmap-to-workflow` are the only five skills (`validate` is a bash-only utility, not a skill), and `agents/` holds exactly one file: `code-reviewer.md`, resolved as the agent type **`task:code-reviewer`**. It exists because the platform's `/verify` and `/code-review` are marked `disable-model-invocation` — a subagent, and a session that was merely *told* `implement …`, cannot run either, and the failure is silent (an unlisted command is skipped, not refused), so the pipeline had to own its review step rather than rent it. Both execution paths spawn that one agent: a plain session per the artifact's `## Execution` block, and `roadmap-to-workflow`'s driver as its own stage in the per-item serial loop. Orchestration itself is still not hand-rolled — `roadmap-to-workflow` invokes the platform's Workflow tool over the shipped driver script (`skills/_lib/roadmap-driver.js`), which reaches for the `agent()` / `parallel()` primitives.
 
 ## All Code Changes Happen Through Pull Requests
 
@@ -227,7 +226,7 @@ Must be one of the following:
 
 **Do NOT invent new scopes.** Pick from the list below; if none fits, omit the scope entirely.
 
-* **A skill name** (no `task:` prefix): `grill`, `to-task`, `to-roadmap`, `to-architecture`, `to-spec`, `roadmap-to-workflow`, `validate`.
+* **A skill name** (no `task:` prefix): `grill`, `to-task`, `to-roadmap`, `to-spec`, `roadmap-to-workflow`, `validate`.
 * **`skills`** — cross-cutting change that touches several skills at once. Also covers the repo-local meta-skill under `.claude/skills/` (`self-audit`), which ships with no plugin scope of its own.
 * **`agents`** — the plugin's subagent definitions under `agents/` (currently only `code-reviewer.md`), and the repo-local lens agents under `.claude/agents/`.
 * **`lib`** — every shared helper under `skills/_lib/` (see the repository structure above) and `skills/validate/validate.sh`, plus their templates.

@@ -29,7 +29,7 @@ The entry state, gathered before this skill reached you — no tool call of your
 
 1. `PLUGIN_ROOT:` and `AI_DIR:` are Step 2's `pluginRoot` and `aiDir` args, used verbatim — the sandbox expands neither.
 2. **`CONFIG: absent`** → hard-stop redirect (do **not** bootstrap here):
-   > The project isn't set up yet. Capture something first with `/task:to-task`, `/task:to-roadmap`, `/task:to-architecture`, or `/task:to-spec` — those four set the project up inline.
+   > The project isn't set up yet. Capture something first with `/task:to-task`, `/task:to-roadmap`, or `/task:to-spec` — those three set the project up inline.
    > → Next: `/task:to-roadmap`
 3. **`VALIDATE:` holds `validate.sh all`'s output** — every artifact, so an error may belong to a task or roadmap unrelated to this run. Surface every `ERROR` line, block on none of them yet, and **hold** the roadmap ones: once `<slug>` is resolved below, an error against **that** file is a stop — "→ Next: fix the reported error in `.task/roadmap/<slug>.md`, then rerun `/task:roadmap-to-workflow <slug>`". `WARN` lines are informational. (`ERROR precondition: CLAUDE.md not found` is case 2, not a validation error.)
 4. `ROADMAPS:` carries each roadmap's progress and open item numbers — the picker below reads it, and lists no directory of its own.

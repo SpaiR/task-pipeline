@@ -38,7 +38,6 @@ while read -r skill kind; do
 done <<'PAIRS'
 to-task task
 to-roadmap roadmap
-to-architecture architecture
 to-spec spec
 roadmap-to-workflow workflow
 PAIRS

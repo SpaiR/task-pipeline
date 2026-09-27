@@ -76,11 +76,10 @@ MD
 p "$repo" roadmap
 assert_contains "$P_OUT" "ROADMAPS: withspace 0/1 unchecked=3" "well-formed heading is offered as open item 3"
 
-t_case "kind architecture prints the same block as the other capture kinds"
+t_case "kind architecture is gone with to-architecture — a usage error"
 p "$repo" architecture
-assert_exit 0 "$P_EXIT" "architecture is a known kind"
-assert_contains "$P_OUT" "CONFIG: present" "config state"
-assert_contains "$P_OUT" "ROADMAPS: api-v2 1/2 unchecked=2" "roadmap list the skill picks its target from"
+assert_exit 2 "$P_EXIT" "unknown kind"
+assert_contains "$P_OUT" "ERROR usage" "usage line names the valid kinds"
 
 t_case "kind plan is gone with to-plan — a usage error, not a silent default"
 p "$repo" plan
