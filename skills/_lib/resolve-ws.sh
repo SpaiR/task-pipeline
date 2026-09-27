@@ -44,8 +44,10 @@
 #      worktrees and bare repos that the ceilinged walk in (2) misses; reuses
 #      the value (2) already computed.
 #   4. `$CLAUDE_PROJECT_DIR/.task` when that path ALREADY holds a
-#      `CLAUDE.md` — like steps 1-3, this step claims a root only on
-#      evidence, never on the variable being set alone. Otherwise the relative
+#      `CLAUDE.md` — like steps 1 and 2, this step claims a root only on
+#      evidence, never on the variable being set alone. (Step 3 is the one
+#      that does not: it takes the git root it finds without looking for a
+#      `CLAUDE.md` there.) Otherwise the relative
 #      `.task`: the historical default, so a call from outside any project
 #      still fails cleanly on the setup gate with "CLAUDE.md not found".
 #

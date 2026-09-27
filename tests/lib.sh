@@ -27,6 +27,8 @@
 # `find_ai_dir` entirely, and `CLAUDE_PROJECT_DIR` is resolution step 4.
 unset AI_DIR CLAUDE_PROJECT_DIR
 
+# Unused here on purpose: the case files that source this one read it.
+# shellcheck disable=SC2034
 T_REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 T_NAME=$(basename "${0}")
 T_CHECKS=0

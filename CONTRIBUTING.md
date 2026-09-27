@@ -21,14 +21,26 @@ We use [GitHub](https://github.com/SpaiR/task-pipeline) to host code, track issu
 .claude-plugin/marketplace.json  catalog for the `task-pipeline` marketplace
 .claude/                         repo-local maintainer tooling — NOT shipped with the plugin:
   skills/self-audit/             meta-skill: audits this repo for invariant / contract /
-                                   docs drift (three read-only lens agents)
+                                   robustness / docs drift (four read-only lens agents)
   agents/self-*.md               the lens agents self-audit fans out to
-                                   (read-only: Read, Grep, Glob, Bash — no Edit/Write)
-  .audit-baseline.json           gitignored ratchet metrics for self-audit
+                                   (read-only by instruction: Read, Grep, Glob, Bash, no
+                                   Edit/Write; nothing enforces it at runtime)
+  hooks/guard-release-files.sh   PreToolUse hook: Claude Code asks before an Edit, Write or
+                                   MultiEdit of CHANGELOG.md or .claude-plugin/plugin.json
+                                   (a reminder for honest edits, not a sandbox)
+  rules/*.md                     path-scoped how-to (skills, bash helpers, tests, evals,
+                                   website, agents, driver, manifests); each loads when a
+                                   file matching its `paths:` is read
+  settings.json                  shared project settings: wires that hook, and pre-approves
+                                   the suite, validate.sh, claude plugin validate and the
+                                   docs-site install and build
 .github/                         repo automation — NOT shipped with the plugin:
   pull_request_template.md       the PR body template (see § Pull request title)
-  workflows/tests.yml            CI: runs the bash-layer suite (tests/run.sh)
+  workflows/tests.yml            CI: runs the bash-layer suite (tests/run.sh) on ubuntu and
+                                   macOS, and lints the bash layer with a pinned shellcheck
   workflows/docs.yml             builds and deploys website/ to GitHub Pages
+  workflows/docs-check.yml       builds website/ on pull requests that touch it or
+                                   CHANGELOG.md, without deploying
 skills/                          SKILL.md per skill + shared bash helpers
   _lib/                          shared helpers (roles: docs/contract.md § Helpers):
                                    resolve-ws.sh (pure .task/-root finder, exports AI_DIR),
@@ -71,14 +83,20 @@ agents/                          the plugin's subagent definitions (auto-loaded 
                                    plan's Touches, run .task/CLAUDE.md → Build and Tests, commit
                                    the fixes on top of the implementation's commit
 tests/                           the bash-layer test suite — run.sh + lib.sh + one *.test.sh
-                                   per helper; `bash tests/run.sh`, bash, awk and git — plus node
-                                   for the driver cases, which skip with a SKIP line when
-                                   node is absent — run on
-                                   ubuntu and macOS by .github/workflows/tests.yml
+                                   per helper and per .claude/hooks/ script, plus text checks
+                                   over the prompts and docs (xref.test.sh: links, anchors,
+                                   backticked paths, § citations, Step N, helper coverage,
+                                   rule globs); `bash tests/run.sh`,
+                                   bash, awk and git — plus node for the driver cases and jq for
+                                   some release-guard checks, each skipped with a SKIP line
+                                   when absent — run on ubuntu and macOS by
+                                   .github/workflows/tests.yml
 evals/                           prompt-level `claude plugin eval` cases (prompt.md + graders/
                                    per case) — a quality signal for the skills, NOT in CI;
-                                   see evals/README.md for status
-CLAUDE.md                        invariants + maintainer guidance
+                                   see evals/README.md for status; run output goes to the
+                                   gitignored evals/results/
+CLAUDE.md                        maintainer rules: invariants linking the contract, verify
+                                   commands, editing protocol, release procedure
 docs/
   README.md                      docs index (table of the files below)
   contract.md                    the authoritative artifact contract — flat .task/ layout,
@@ -94,7 +112,10 @@ CHANGELOG.md                     public release log (English)
 README.md                        GitHub landing page (links to the docs site)
 LICENSE                          MIT license text
 .gitignore                       repo ignores — including the `.task/` dogfooding exception
-                                   and .claude/.audit-baseline.json
+.gitattributes                   LF line endings for every text file, on every OS; PNGs are binary
+.editorconfig                    editor defaults: UTF-8, LF, final newline, no trailing
+                                   whitespace, 2-space indent (unset for the tab-indented
+                                   Makefile fixture in tests/detect-project.test.sh)
 ```
 
 `grill` / `to-task` / `to-roadmap` / `to-spec` / `roadmap-to-workflow` are the only five skills (`validate` is a bash-only utility, not a skill), and `agents/` holds exactly one file: `code-reviewer.md`, resolved as the agent type **`task:code-reviewer`**. It exists because the platform's `/verify` and `/code-review` are marked `disable-model-invocation` — a subagent, and a session that was merely *told* `implement …`, cannot run either, and the failure is silent (an unlisted command is skipped, not refused), so the pipeline had to own its review step rather than rent it. Both execution paths spawn that one agent: a plain session per the artifact's `## Execution` block, and `roadmap-to-workflow`'s driver as its own stage in the per-item serial loop. Orchestration itself is still not hand-rolled — `roadmap-to-workflow` invokes the platform's Workflow tool over the shipped driver script (`skills/_lib/roadmap-driver.js`), which reaches for the `agent()` / `parallel()` primitives.
@@ -103,11 +124,11 @@ LICENSE                          MIT license text
 
 1. Fork the project (or branch off `main`, if you have direct push access).
 2. Make sure the artifact validator still passes against any `.task/` snapshot you used while developing: `bash skills/validate/validate.sh all`.
-3. Run the bash-layer suite: `bash tests/run.sh` (one case file per helper under `tests/`, bash, awk and git — plus node for the driver's wave, digest and display cases, which skip with a SKIP line when node is absent — no bats). It must be green, and a change to a helper's behaviour comes with a case that covers it.
+3. Run the bash-layer suite: `bash tests/run.sh` (one case file per helper under `tests/`, bash, awk and git — plus node for the driver's wave, digest and display cases and jq for some release-guard checks, each skipped with a SKIP line when absent — no bats). It must be green, and a change to a helper's behaviour comes with a case that covers it.
 4. Manually run the affected skill in a real project before opening the PR. For a prompt change, the eval suite under `evals/` is the closest thing to an automated check — `claude plugin eval .`, or `--case '<name>*'` for one case; it needs the early-access `plugin eval` feature, and it is not wired into CI. See [`evals/README.md`](evals/README.md), including which graders are still unverified.
 5. Open the pull request against `main`.
 
-This project is a collection of Markdown skills plus a handful of bash helpers. There is no compile step and no linter; the automated tests are the bash-layer suite under `tests/` (`bash tests/run.sh`, also run on ubuntu and macOS by `.github/workflows/tests.yml`), which covers the helpers rather than the prompts. The bar for "it works" is: `tests/run.sh` green, skills run end-to-end, invariants in [`CLAUDE.md`](CLAUDE.md) still hold, and the `validate.sh` script accepts the new artifact shapes.
+This project is a collection of Markdown skills plus a handful of bash helpers. There is no compile step. The bash layer is linted in CI only: `.github/workflows/tests.yml` runs a pinned shellcheck at `-S warning` over `skills/_lib/*.sh`, `skills/validate/validate.sh`, `tests/*.sh` and `.claude/hooks/*.sh`. The automated tests are the bash-layer suite under `tests/` (`bash tests/run.sh`, also run on ubuntu and macOS by `.github/workflows/tests.yml`), which covers the helpers rather than the prompts. The bar for "it works" is: `tests/run.sh` green, skills run end-to-end, invariants in [`CLAUDE.md`](CLAUDE.md) still hold, and the `validate.sh` script accepts the new artifact shapes.
 
 ### Pull Request Title
 
@@ -318,6 +339,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/): `Added` / `Chang
 
 This repository **is** a tool for working with AI coding agents, so dogfooding is encouraged: it is fine — preferred, even — to use the pipeline itself when contributing here — discuss the change in chat, fix it with `/task:to-task` into `.task/task/<slug>.md`, then tell any session `implement .task/task/<slug>.md` (which commits per this file's Commit Format, then hands the diff to `task:code-reviewer`). AI coding agents (Claude Code, Copilot, Cursor, Codex, Gemini, etc.) are welcome to assist with contributions of any kind.
 
+An agent working here gets its rules from three places: [`CLAUDE.md`](CLAUDE.md) (the invariants, each linking its [`docs/contract.md`](docs/contract.md) section, plus the verify commands and the release procedure), the path-scoped `.claude/rules/*.md` files that load when it reads a matching file, and the shared `.claude/settings.json`, which pre-approves the verify commands and asks before an edit of `CHANGELOG.md` or `.claude-plugin/plugin.json`.
+
 Two extra rules apply on top of the regular contribution flow:
 
 1. **You are responsible for the change.** The agent is a tool — review the diff, manually run the affected skill in a real project, and make sure invariants in [`CLAUDE.md`](CLAUDE.md) still hold. "The agent did it" is not a defense for a broken or low-quality patch, and it is *especially* not a defense for a silently broken artifact contract.
@@ -325,15 +348,15 @@ Two extra rules apply on top of the regular contribution flow:
 
 ### `Co-Authored-By` trailer for AI-assisted commits
 
-Add a `Co-Authored-By` line to the [commit message footer](#commit-message-footer) for any commit an AI agent helped produce. Use the **short, family-level name** of the model — not the specific version — followed by the standard vendor noreply email.
+Add a `Co-Authored-By` line to the [commit message footer](#commit-message-footer) for any commit an AI agent helped produce: the agent's or model's name, followed by the vendor's noreply email. The trailer is **required**; its exact form is **not pinned**. The line your tool adds on its own is fine as it is, with or without a version suffix, and so is a family-level name.
 
 Format:
 
 ```
-Co-Authored-By: <Model Family> <<vendor-noreply-email>>
+Co-Authored-By: <Agent or model name> <<vendor-noreply-email>>
 ```
 
-Examples (use the family name, drop the version/tier suffix):
+Examples:
 
 | Model used                                 | Trailer                                          |
 |--------------------------------------------|--------------------------------------------------|

@@ -56,7 +56,7 @@ task:code-reviewer                    ← the plugin's own review pass, spawned 
 A few things to notice, because they're the load-bearing design choices:
 
 - **What you capture is the skill you pick, not a flag.** [`to-task`](/reference/to-task) records the "what and why" plus a step-by-step Plan, for one task. [`to-roadmap`](/reference/to-roadmap) captures a whole multi-task initiative, architecture included. There is no `--plan` or `--deep` switch anywhere.
-- **There is no execution skill.** Every artifact ends with a one-line `## Execution` pointer into `.task/CLAUDE.md` → `## Executing a task`, and any ordinary session told `implement .task/task/<slug>.md` follows it.
+- **There is no execution skill.** Every task file ends with a one-line `## Execution` pointer into `.task/CLAUDE.md` → `## Executing a task`, and any ordinary session told `implement .task/task/<slug>.md` follows it.
 - **[`grill`](/reference/grill) sits before capture.** It interrogates a plan one question at a time and hands off to the right capture skill — it writes nothing itself.
 - **[`to-roadmap`](/reference/to-roadmap) always writes its technical layer too.** Its `## Architecture` section — components, interfaces between items, per-item sketches — is written in the same pass as the items, and planners follow it as intended shape.
 - **[`to-spec`](/reference/to-spec) is orthogonal.** It pins load-bearing technical decisions into their own file, which tasks and roadmaps point at with a `Spec:` header.
