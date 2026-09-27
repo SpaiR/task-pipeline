@@ -2,9 +2,9 @@
 
 Single source of truth for how the chat-first task pipeline stores state and how skills hand work to each other. Maintainer-facing.
 
-task-pipeline is **not** an orchestration engine — it is a **context-serialization protocol**. The user discusses a task freely in chat, then runs **one short skill** that distils the discussion into a fixed-format Markdown artifact under `.task/`. A fresh or isolated Claude Code session then **executes that artifact directly** — there is no execution skill. Orchestration and commits stay delegated to the platform (dynamic Workflows, `.task/CLAUDE.md` → Commit Format); **review is owned by the plugin**, as the `task:code-reviewer` agent (`agents/code-reviewer.md`), which also carries verification via `.task/CLAUDE.md` → Build and Tests.
+task-pipeline is **not** an orchestration engine — it is a **context-serialization protocol**. The user discusses a task freely in chat, then runs **one short skill** that distils the discussion into a fixed-format Markdown artifact under `.task/`. A fresh or isolated Claude Code session then **executes that artifact directly** — there is no execution skill. Orchestration and commits stay delegated to the platform (dynamic Workflows, `.task/CLAUDE.md` → Commit Format) and are never hand-rolled inside a skill; **review is owned by the plugin**, as the `task:code-reviewer` agent (`agents/code-reviewer.md`), which also carries verification via `.task/CLAUDE.md` → Build and Tests.
 
-Enforcement is traded for **convention** (this is a solo tool): there is **no hook gate**, and `validate.sh` is an optional self-check, never a blocking gate. Depth of capture is the **skill name**, never a flag.
+Enforcement is traded for **convention** (this is a solo tool): there is **no hook gate**, no phase companion agents and no lock protocol, and `validate.sh` is an optional self-check, never a blocking gate. Depth of capture is the **skill name**, never a flag.
 
 ```
 discuss freely in chat
@@ -37,7 +37,7 @@ There are **no user-facing flags** anywhere — footers, descriptions, and examp
 
 ## `.task/` layout (FLAT)
 
-`.task/` sits **once at the pipeline root**, shared by every worktree of the repo. The layout is flat — one file per task, one file per spec, no per-task subfolders, no workspace, no log, no archive. A closed task is just a file that stays in `.task/task/` (or the user deletes it) — **git history is the record**.
+`.task/` sits **once at the pipeline root**, shared by every worktree of the repo. The layout is flat — one file per task, one file per spec, no per-task subfolders, no workspace, no log, no archive: no `.task/workspace/`, no `.task/log/`, no `<task-id>/` folder, and no `.spec.md` sidecar beside a roadmap (specs are standalone files under `.task/spec/`). A closed task is just a file that stays in `.task/task/` (or the user deletes it) — **git history is the record**.
 
 | Path | Role |
 |------|------|
@@ -52,7 +52,7 @@ There are **no user-facing flags** anywhere — footers, descriptions, and examp
 ### Slug as identifier
 
 - The **slug** is kebab-case English, derived from the task (or roadmap) title.
-- It is **both the filename and the identity**. There is no task-id, no bracketed `[TASK-ID]`, no umbrella grouping, no `derive-task-id`.
+- It is **both the filename and the identity** — never a header line inside the file. There is no task-id, no bracketed `[TASK-ID]`, no umbrella grouping, no `derive-task-id`.
 - A roadmap item's task file is `.task/task/<item-slug>.md`, where `<item-slug>` is the kebab-case of that item's title.
 
 ### Root resolution (`skills/_lib/resolve-ws.sh`)
@@ -350,7 +350,7 @@ Every skill except `grill` opens on the same fixed block, substituted into its b
 Three categories, not two:
 
 - **Capture skills** (`to-task` / `to-plan` / `to-roadmap` / `to-architecture` / `to-spec`) — the *intake-capable* five, in the skills' own wording — auto-run setup in a fresh project by following `skills/_lib/setup.md`: they write `.task/CLAUDE.md` on first use, without a confirmation chip, and never rewrite one that already exists.
-- **Consumer skills** (`roadmap-to-workflow`) — and the `validate` utility — check `.task/CLAUDE.md` and hard-stop if it is absent.
+- **Consumer skills** (`roadmap-to-workflow`) — and the `validate` utility — check `.task/CLAUDE.md` and hard-stop if it is absent. The stop rests on the bash layer — `preflight.sh`'s `CONFIG: absent` and `validate.sh`'s precondition error (exit 2) — and a prompt edit must not relax it.
 - **`grill`** is exempt from both: it neither checks nor creates `.task/CLAUDE.md`, so it can run at the discussion stage before any setup or capture exists. It never reads or writes anything under `.task/`; dialog mirrors the chat's language.
 
 ---
@@ -409,7 +409,7 @@ Keeps the `.task/CLAUDE.md` precondition and English parser-stable strings. **No
 
 ## Agent layer (`agents/`)
 
-The plugin ships **exactly one** agent: `agents/code-reviewer.md`, resolved as the agent type **`task:code-reviewer`** (plugin `agents/` directories are auto-loaded; the type is `[plugin, ...subdirs, name].join(":")`). It is the pipeline's own review pass — the platform's `/verify` and `/code-review` commands are marked `disable-model-invocation`, so neither a subagent nor a session that was told `implement …` can run them, and the failure is silent (an unlisted command is skipped, not refused).
+The plugin ships **exactly one** agent: `agents/code-reviewer.md`, resolved as the agent type **`task:code-reviewer`** (plugin `agents/` directories are auto-loaded; the type is `[plugin, ...subdirs, name].join(":")`). It is the pipeline's own review pass — the platform's `/verify` and `/code-review` commands are marked `disable-model-invocation`, so neither a subagent nor a session that was told `implement …` can run them, and the failure is silent (an unlisted command is skipped, not refused). So **no agent, skill or `## Executing a task` text may instruct a call to either**, and verification is never a separate skill: it rides inside this agent, via `.task/CLAUDE.md` → Build and Tests.
 
 It is invoked identically from both execution paths, always given the task artifact's path, plus a reference string to echo in its digest when the caller has one — a roadmap run passes `#N <item-slug>`; a plain session may omit it, and the reviewer then defaults to the task slug. A roadmap run also names the roadmap item to tick (`#N` in the absolute roadmap path), which wins over the artifact's headers; a plain session leaves it to the artifact's `Roadmap:` + `Source item:`:
 
@@ -451,7 +451,7 @@ No pointer, no self-heal, no "which task is active" resolution anywhere.
 
 ## Marker inventory
 
-The pipeline's only markers are `git config task.root` and `.task/.gitignore` — nothing else. `task.root` lets user-created parallel worktrees of a repo share one `.task/`; `.task/.gitignore` keeps that `.task/` out of git, and lives inside it so deleting the folder deletes the marker too.
+The pipeline's only markers are `git config task.root` and `.task/.gitignore` — nothing else: no active-task pointer (see [§ Handoff](#handoff)), no `TASK_ID_OVERRIDE`, no per-worktree pointer file. `task.root` lets user-created parallel worktrees of a repo share one `.task/`; `.task/.gitignore` keeps that `.task/` out of git, and lives inside it so deleting the folder deletes the marker too.
 
 ---
 
@@ -459,7 +459,7 @@ The pipeline's only markers are `git config task.root` and `.task/.gitignore` �
 
 All three are cheap and architecture-independent. Human-facing dialog only — parser-stable strings and artifact content are untouched.
 
-- **(a) Next-step footer.** Every user-facing output ends with `→ Next: <runnable command>`, or `→ Done.` when the flow is complete. Footers are flag-free; the handoff footer above is the canonical form for the `to-*` skills.
+- **(a) Next-step footer.** Every user-facing output ends with a `→ Next:` footer naming what to do next — one or more commands, each pasteable as written, or the fix to make before rerunning one — or with `→ Done.` (a short closing note may follow it) when the flow is complete. Agents with no user in the loop — the driver's plan agent, `task:code-reviewer` — end on their parser-stable digest line instead. Footers are flag-free; the handoff footer above is the canonical form for the `to-*` skills.
 - **(b) Capture grammar.** Every capture **writes its artifact immediately, then prints a structural digest** as visible Markdown message text — not a full draft, and never a pre-write confirmation. The chat discussion (or, for `grill`, the one-question-at-a-time interrogation) *was* the review; re-asking the user to Accept/Edit/Decline distilled content they already discussed is empty ceremony, and the print-then-confirm gate it replaced was the pipeline's most error-prone step. The digest carries: the artifact path, its title, the sections written, the load-bearing decisions/pins captured one line each (for a **spec**, *every* pin — it is read downstream as a fixed anchor, so this is the user's one glance to catch a misstatement), and the `validate.sh` result. It closes by inviting edits against the already-written file ("to change anything, just say so"), then the (a) footer. `grill` writes nothing, so its decision ledger *is* the digest. Corrections happen naturally in chat and against the file (which is ignored by `.task/.gitignore` — a wrong write costs one deletion), not through a chip. **Exactly one chip survives, and it is not about distilled content:** the slug-collision overwrite guard (a pre-write safety check on a destructive action). Step 0 setup does not ask either — it writes `.task/CLAUDE.md`, then reports what it wrote.
 - **(c) Path forks.** Every 2–4 option path fork that can't be inferred is presented via `AskUserQuestion` chips.
 
@@ -479,7 +479,7 @@ Every skill also carries an `argument-hint` — the placeholder the slash-comman
 | `to-spec` | `[decision area]` |
 | `roadmap-to-workflow` | `[<roadmap-slug>]` |
 
-Each mirrors that skill's own **Input:** line, and stays flag-free — there is no `--plan` / `--from` / `--phase` anywhere user-facing, so a hint must never suggest one.
+Each mirrors that skill's own **Input:** line, and stays flag-free — there is no `--plan` / `--from` / `--phase` / `--refine` anywhere user-facing, so a hint must never suggest one.
 
 The six skills that call bash — `to-task`, `to-plan`, `to-roadmap`, `to-architecture`, `to-spec`, `roadmap-to-workflow` — also carry `allowed-tools`, pre-approving the plugin's own helpers one script at a time:
 
