@@ -21,6 +21,10 @@ website/node_modules/
 website/.vitepress/dist/
 website/.vitepress/cache/
 
+# Eval run output: `claude plugin eval` writes one timestamped directory per run,
+# carrying machine-specific absolute paths, costs and the CLI version
+evals/results/
+
 # Editor
 .idea/
 .vscode/

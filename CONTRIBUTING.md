@@ -78,7 +78,8 @@ tests/                           the bash-layer test suite — run.sh + lib.sh +
                                    ubuntu and macOS by .github/workflows/tests.yml
 evals/                           prompt-level `claude plugin eval` cases (prompt.md + graders/
                                    per case) — a quality signal for the skills, NOT in CI;
-                                   see evals/README.md for status
+                                   see evals/README.md for status; run output goes to the
+                                   gitignored evals/results/
 CLAUDE.md                        invariants + maintainer guidance
 docs/
   README.md                      docs index (table of the files below)
