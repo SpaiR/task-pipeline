@@ -26,24 +26,36 @@ See the [autopilot guide](/guide/autopilot) for the full walkthrough.
 
 ## Output
 
-One digest line per stage as each wave lands; stop-on-FAIL (an implement *or* a review `FAIL` stops the run):
+While it runs, the Workflow panel groups each item's three agents under the item's own title — `W1 · #1 Migrate auth endpoints` — labelled `1/3 plan`, `2/3 implement` and `3/3 review`. The narrator lines above the panel open with the run's shape and then carry one digest per stage:
 
 ```text
-OK #1 migrate-auth-endpoints planned
-OK #2 update-client-sdk planned
-OK #1 migrate-auth-endpoints implemented, committed
-OK #1 migrate-auth-endpoints reviewed — 2 fixes, tests green, fixes committed, ticked
-OK #2 update-client-sdk implemented, committed
-OK #2 update-client-sdk reviewed — 0 findings, tests green, ticked
+api-v2-migration: 2 item(s) in 2 wave(s)
+  W1: #1 Migrate auth endpoints
+  W2: #2 Update client SDK (after #1)
+Wave 1/2 — planning #1
+[W1 plan] OK #1 migrate-auth-endpoints planned
+[W1 implement] OK #1 migrate-auth-endpoints implemented, committed
+[W1 review] OK #1 migrate-auth-endpoints 2 fixes, tests green, fixes committed, ticked
+Wave 2/2 — planning #2
+…
+```
+
+Stop-on-FAIL: an implement *or* a review `FAIL` stops the run. When it ends, the skill reports one line per item that landed, then the run summary:
+
+```text
+#1 migrate-auth-endpoints — implemented, committed; review: 2 fixes, tests green, fixes committed, ticked
+#2 update-client-sdk — implemented, committed; review: 0 findings, tests green, ticked
 Ran `api-v2-migration`: 2 of 2 items landed and ticked, 0 still unchecked.
   Commits: a1b2c3d..e4f5a6b.
 → Done. Roadmap complete — `.task/roadmap/api-v2-migration.md` fully checked.
 ```
 
-On failure:
+On failure, the items that landed before the stop are still listed:
 
 ```text
 FAIL #3 <item-slug> <what failed>
+#1 … — …; review: …
+#2 … — …; review: …
 Ran `api-v2-migration`: 2 of 5 items landed and ticked, 3 still unchecked.
   Commits: a1b2c3d..e4f5a6b.
 Stopped at #3 <item-slug> in wave 2. Its work is left in the working tree —

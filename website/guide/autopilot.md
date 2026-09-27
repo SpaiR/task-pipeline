@@ -19,15 +19,25 @@ Launched with no argument, it asks which roadmap and how much to cover.
 3. **Plans, implements, reviews — per item.** The default per-item shape is **opus-plans / sonnet-implements / reviewer-reviews**: a first agent plans the item from the roadmap (writing `.task/task/<item-slug>.md`), a second implements and commits, and a third is `task:code-reviewer`, which reviews that commit, fixes what it proves within the plan's **Touches**, runs your build and tests, commits those fixes on top, and ticks the item's checkbox (next step). If the item has a `**Model:**` hint, the implement agent uses it, and a `haiku` hint also scales the plan agent down to sonnet — the reviewer pins its own model, so a `haiku` item never gets a `haiku` review.
 4. **Ticks the checkbox — from the review.** Once an item's review passes, `task:code-reviewer` ticks that item's checkbox as its last step; the plan and implement agents never touch it. That's deliberate: the review runs one item at a time, while parallel plan agents would otherwise race on the roadmap file. Ticking is idempotent — if the box is already checked, the reviewer treats that as the desired end state and moves on.
 
-Output is one digest line per stage as each wave lands:
+While it runs, the Workflow panel shows one group per item, named after the item — `W1 · #1 Migrate auth endpoints` — with its agents numbered `1/3 plan` through `3/3 review`, so you can see which item is in flight and how far along it is. The narrator lines above the panel start with the run's shape (items, waves, what waits on what) and then log each stage's digest as it lands:
 
 ```text
-OK #1 migrate-auth-endpoints planned
-OK #2 update-client-sdk planned
-OK #1 migrate-auth-endpoints implemented, committed
-OK #1 migrate-auth-endpoints reviewed — 2 fixes, tests green, fixes committed, ticked
-OK #2 update-client-sdk implemented, committed
-OK #2 update-client-sdk reviewed — 0 findings, tests green, ticked
+api-v2-migration: 2 item(s) in 2 wave(s)
+  W1: #1 Migrate auth endpoints
+  W2: #2 Update client SDK (after #1)
+Wave 1/2 — planning #1
+[W1 plan] OK #1 migrate-auth-endpoints planned
+[W1 implement] OK #1 migrate-auth-endpoints implemented, committed
+[W1 review] OK #1 migrate-auth-endpoints 2 fixes, tests green, fixes committed, ticked
+…
+```
+
+When the run ends, the chat gets one line per item that landed and a summary:
+
+```text
+#1 migrate-auth-endpoints — implemented, committed; review: 2 fixes, tests green, fixes committed, ticked
+#2 update-client-sdk — implemented, committed; review: 0 findings, tests green, ticked
+Ran `api-v2-migration`: 2 of 2 items landed and ticked, 0 still unchecked.
 → Done. Roadmap complete — .task/roadmap/api-v2-migration.md fully checked.
 ```
 
@@ -46,10 +56,12 @@ implement .task/task/<item-1-slug>.md
 
 ## When an item fails
 
-The run is **stop-on-FAIL**: if an item's implement *or* review agent returns `FAIL`, the run prints that item's digest and stops instead of starting the next wave (a later item might depend on the failed one). A red build or test run inside the review is a `FAIL`, and the reviewer leaves its fixes uncommitted in that case — the implementation commit stands as it was. Completed items stay checked.
+The run is **stop-on-FAIL**: if an item's implement *or* review agent returns `FAIL`, the run prints that item's digest, lists the items that landed before it, and stops instead of starting the next wave (a later item might depend on the failed one). A red build or test run inside the review is a `FAIL`, and the reviewer leaves its fixes uncommitted in that case — the implementation commit stands as it was. Completed items stay checked.
 
 ```text
 FAIL #3 <item-slug> <what failed>
+#1 … — …; review: …
+#2 … — …; review: …
 Ran `api-v2-migration`: 2 of 5 items landed and ticked, 3 still unchecked.
   Commits: a1b2c3d..e4f5a6b.
 Stopped at #3 <item-slug> in wave 2. Its work is left in the working tree —

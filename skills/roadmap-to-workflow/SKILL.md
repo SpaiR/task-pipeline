@@ -126,8 +126,8 @@ Autopilot needs the Workflow tool, and it isn't available in this environment, s
 
 ## Output
 
-- Per item: the returned digest lines (`OK|FAIL #N <item-slug> <summary>`), one per stage, surfaced as each wave lands.
-- **One run-summary line above the footer, in both outcomes** — after an unattended run, nobody should have to count `OK` lines to learn how much landed:
+- The driver's return value, surfaced as-is. Its **first line is the headline** — `roadmap-to-workflow: all items shipped.` or `roadmap-to-workflow stopped in wave <W> …: <failing digest>` — and it alone decides done versus stopped. Below it comes one line per item that landed (reviewed **and** ticked), in landing order, on a stop too: `#N <item-slug> — <implement summary>; review: <review summary>`. The per-stage digest lines (`OK|FAIL #N <item-slug> <summary>`) went to the Workflow progress view as the run went; they are not repeated in the return value.
+- **One run-summary line above the footer, in both outcomes** — after an unattended run, nobody should have to count `OK` lines to learn how much landed. `<K>` is the number of `#N` lines under the headline:
 
   ```
   Ran `<slug>`: <K> of <M> items landed and ticked, <R> still unchecked. Commits: <first-sha>..<last-sha>.
