@@ -1,14 +1,14 @@
 ---
 name: self-audit
-description: Self-audit this skills repo against CLAUDE.md invariants, the artifact contract, and README/CLAUDE.md/docs/website sync via three parallel read-only subagents. Local meta-skill — independent of the /task:* pipeline.
+description: Self-audit this skills repo against CLAUDE.md invariants, the artifact contract, failure-path robustness, and README/CLAUDE.md/docs/website sync via four parallel read-only subagents. Local meta-skill — independent of the /task:* pipeline.
 disable-model-invocation: true
 user-invocable: true
 argument-hint: '[skill-name]'
 ---
 
-Audit **this repository** (the task-pipeline skills repo itself) for drift between skills, the artifact contract, and the docs. Three lenses run in parallel as named subagents: **Invariants**, **Contract**, **Docs-sync**.
+Audit **this repository** (the task-pipeline skills repo itself) for drift between skills, the artifact contract, and the docs, and for failure paths that end nowhere. Four lenses run in parallel as named subagents: **Invariants**, **Contract**, **Robustness**, **Docs-sync**.
 
-This is a **meta-skill**. It operates on the repo's own files, not on `.task/*` artifacts. It asks one question — *does the repo obey its own declared rules?* — and each lens has an oracle: `CLAUDE.md` § "Invariants — don't break these when editing skills" and § "Editing protocol — quick rules" with the `docs/contract.md` sections their bullets link, `docs/contract.md`, and what is actually on disk. The skill can be invoked at any time.
+This is a **meta-skill**. It operates on the repo's own files, not on `.task/*` artifacts. It asks one question — *does the repo obey its own declared rules?* — and each lens has an oracle: `CLAUDE.md` § "Invariants — don't break these when editing skills" and § "Editing protocol — quick rules" with the `docs/contract.md` sections their bullets link, `docs/contract.md`, the documented outputs and exit codes in `docs/contract.md` together with each skill's own declared flow, and what is actually on disk. The skill can be invoked at any time.
 
 **Input:** Optional scope hint: $ARGUMENTS — a skill name (e.g. `to-plan`) or one or more repo paths; default: full repo.
 
@@ -24,27 +24,29 @@ This is a **meta-skill**. It operates on the repo's own files, not on `.task/*` 
 |------|-------------|--------|---------------|
 | Invariants | `self-invariants-auditor` | `CLAUDE.md` § Invariants + § Editing protocol, and the `docs/contract.md` sections their bullets link | Skills, `_lib/` helpers, the driver, and `agents/code-reviewer.md` don't violate a declared invariant. |
 | Contract   | `self-contract-auditor`   | `docs/contract.md` | Producer↔consumer artifact protocol is symmetric: `write-task.sh` / capture flows ↔ `validate.sh` / `roadmap*.sh` parsers ↔ consumer rules, plus the driver contract and the plugin manifest. |
+| Robustness | `self-robustness-auditor` | `docs/contract.md` § Bash layer (§ validate.sh, § Helpers), § Agent layer and § execution shape (driver contract), plus each skill's own declared flow | Every failure, decline, rerun and no-op path ends in a defined output; success lines only after a checked operation; documented exit codes reachable and tested; shell constructs safe on bash 3.2 and 5.x, BSD and GNU tools, any locale; no term used for two things across sibling steps. |
 | Docs-sync  | `self-docs-sync-auditor`  | `ls skills/`, `ls skills/_lib/`, `ls agents/`, frontmatter | `README.md`, `CLAUDE.md`, `docs/`, `CONTRIBUTING.md`, `website/`, `evals/README.md` and `.claude/rules/` reflect what is on disk. |
 
-All three are **read-only** named agents at `.claude/agents/self-{invariants,contract,docs-sync}-auditor.md`, with `tools: Read, Grep, Glob, Bash`. They carry no `Edit`/`Write` tools, and Bash is theirs for reading and searching only — that rule is an instruction in each agent's prompt, not a runtime guarantee: nothing stops a Bash command from writing. They read the repo themselves; the main thread does not paste file contents into their prompts. Fixes happen only in the main thread (Step 4).
+All four are **read-only** named agents at `.claude/agents/self-{invariants,contract,robustness,docs-sync}-auditor.md`, with `tools: Read, Grep, Glob, Bash`. They carry no `Edit`/`Write` tools, and Bash is theirs for reading and searching only — that rule is an instruction in each agent's prompt, not a runtime guarantee: nothing stops a Bash command from writing. They read the repo themselves; the main thread does not paste file contents into their prompts. Fixes happen only in the main thread (Step 4).
 
 ## Instructions
 
 ### Step 1: Gather context
 
 In one parallel batch:
-- `ls skills/ skills/_lib/ agents/ .claude/agents/` — the live roster (folder names are canonical slugs) and a sanity check that the three self-* auditor files exist.
+- `ls skills/ skills/_lib/ agents/ .claude/agents/` — the live roster (folder names are canonical slugs) and a sanity check that the four self-* auditor files exist.
 - `git status --porcelain` — flag a dirty tree to the user before starting (findings against working state may diverge from `HEAD`).
 - `git stash create` — records the **baseline** Step 5 diffs the fixes against. It prints the SHA of a commit that snapshots the tracked working state, or nothing when the tree is clean; the baseline is that SHA, or `HEAD` when nothing was printed. Note it in the conversation — shell state does not survive between calls. It only writes objects — the snapshot's commits, trees and blobs: the stash list, which every worktree and session shares, is left untouched, so there is nothing to drop afterwards. Untracked files are not in the snapshot.
 - Read `CLAUDE.md` in full (the main thread needs it to judge skip reasons in Step 4).
 
 Do not pre-read the skill bundle, the helpers, or the docs — each agent reads its own set, and the main thread reads a file only when merging or fixing a finding in it.
 
-### Step 2: Run three agents in parallel
+### Step 2: Run four agents in parallel
 
-Send **one tool message** with three `Agent` calls, `subagent_type` set to:
+Send **one tool message** with four `Agent` calls, `subagent_type` set to:
 - `self-invariants-auditor`
 - `self-contract-auditor`
+- `self-robustness-auditor`
 - `self-docs-sync-auditor`
 
 If any of those agent files is missing under `.claude/agents/`, stop and tell the user which agent file is missing — do not fall back to inline prompts (they would lose the agent file's tool list, which keeps `Edit`/`Write` out, and its read-only instructions).
@@ -77,17 +79,18 @@ Read set per lens:
 |------|----------|
 | Invariants | `CLAUDE.md`; every `docs/contract.md` section linked from a bullet in `CLAUDE.md` § Invariants or § Editing protocol; every `skills/*/SKILL.md`; every file under `skills/_lib/` (`*.sh`, `*.md`, `roadmap-driver.js`, `templates/`); `skills/validate/validate.sh`; `agents/code-reviewer.md`. |
 | Contract | `docs/contract.md` (source of truth, in full); every `skills/*/SKILL.md`; every file under `skills/_lib/`; `skills/validate/validate.sh`; `agents/code-reviewer.md`; `.claude-plugin/plugin.json`. |
+| Robustness | `docs/contract.md` § Bash layer, § Agent layer and § `roadmap-to-workflow` execution shape; every `skills/*/SKILL.md`; every file under `skills/_lib/`; `skills/validate/validate.sh`; `agents/code-reviewer.md`; every `tests/*.test.sh` and `tests/lib.sh`, which they source. |
 | Docs-sync | `README.md`; `CLAUDE.md`; every file under `docs/`; `CONTRIBUTING.md`; `website/index.md`, `website/guide/*.md`, `website/reference/*.md` and `website/.vitepress/config.mts` (sidebar, version label); `evals/README.md`; every `.claude/rules/*.md`, when that directory exists; the frontmatter of every `skills/*/SKILL.md`; `.claude-plugin/plugin.json`. |
 
 **Scope hint.** Empty `$ARGUMENTS` is a full-repo run: each lens gets its table row. Otherwise the main thread resolves the scope before Step 2:
 
 - **Scoped files.** A name that is a folder in `ls skills/` means the files in `skills/<name>/`; anything else is a repo path, and every path must exist — if one does not, stop and tell the user which.
-- **Scoped read set, per lens** — the lens's oracle (Invariants: `CLAUDE.md` and the contract sections its bullets link; Contract: `docs/contract.md`; Docs-sync: none, its oracle is the disk), plus the scoped files, plus every file of the lens's full read set that names a scoped file (`git grep -l -F` on its path, and on the bare name for a skill) or that a scoped file names (a path it cites or links).
+- **Scoped read set, per lens** — the lens's oracle (Invariants: `CLAUDE.md` and the contract sections its bullets link; Contract: `docs/contract.md`; Robustness: `docs/contract.md` § Bash layer, § Agent layer and § `roadmap-to-workflow` execution shape; Docs-sync: none, its oracle is the disk), plus the scoped files, plus every file of the lens's full read set that names a scoped file (`git grep -l -F` on its path, and on the bare name for a skill) or that a scoped file names (a path it cites or links).
 
 ### Step 3: Merge and report
 
 1. Parse each agent's reply with the one finding schema every lens declares under `## Output format — strict`: required `severity`, `confidence`, `category`, `location`, `evidence`, `problem`, `fix`; optional `invariant`, `producer`, `consumer`. A finding missing a required field stays in the report but never passes the Step 4 gate. An agent that returns the literal `no findings` (its declared empty sentinel) contributes zero findings — do not parse the sentinel as a finding.
-2. **Merge** cross-lens duplicates on `(location, category)`: the same `location` (same `file:line`, or the same file when one side is file-wide) and the same defect class in `category` (each lens words its labels differently — compare what they name, not the spelling) become one row. The row takes `problem`, `fix` and `confidence` from the highest-priority lens among them — Contract, then Docs-sync, then Invariants — and the highest `severity` of any of them; it keeps every lens's `evidence` and optional fields, and its `Lens` lists every lens that reported it (e.g. `Contract + Invariants`).
+2. **Merge** cross-lens duplicates on `(location, category)`: the same `location` (same `file:line`, or the same file when one side is file-wide) and the same defect class in `category` (each lens words its labels differently — compare what they name, not the spelling) become one row. The row takes `problem`, `fix` and `confidence` from the highest-priority lens among them — Contract, then Robustness, then Docs-sync, then Invariants — and the highest `severity` of any of them; it keeps every lens's `evidence` and optional fields, and its `Lens` lists every lens that reported it (e.g. `Contract + Invariants`).
 3. **Sort**: high → med → low; within severity by file, then line.
 4. Render to chat as a single report, headed in the chat's language, findings in English:
 
