@@ -66,7 +66,9 @@ require_config() {
   find_ai_dir
   if [[ ! -f "$AI_DIR/CLAUDE.md" ]]; then
     # Keep the literal substring `CLAUDE.md not found` — roadmap-to-workflow
-    # Step 0 matches it in the VALIDATE: block; the capture skills key on exit 2.
+    # Step 0 matches it in the VALIDATE: block, and so do the capture skills,
+    # since write-task.sh exits 0 once the file is written and exit 2 never
+    # reaches them.
     # Everything after it is for the human who ran this script by hand, which
     # is the only way to reach this line.
     echo "ERROR precondition: CLAUDE.md not found at $AI_DIR/CLAUDE.md" >&2

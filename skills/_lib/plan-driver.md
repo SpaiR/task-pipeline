@@ -100,7 +100,7 @@ It refuses to overwrite rather than guessing, and writes nothing when it does: *
 
 **Exit 5** is the one write failure that is not a refusal — an unwritable `$AI_DIR` or a full disk. Nothing was written and no `WROTE:` line was printed: report that plainly instead of a digest, and never claim a path that does not exist.
 
-The `WROTE:` / `VALIDATE:` lines it prints are what the caller's digest reports. Only a setup-precondition failure (validate exit 2) is fatal.
+The `WROTE:` / `VALIDATE:` lines it prints are what the caller's digest reports. Only a setup-precondition failure is fatal — in driver mode a `FAIL` in D3. Its signal is the line `ERROR precondition: CLAUDE.md not found` inside the `VALIDATE:` block: `write-task.sh` exits 0 once the file is written, so validate's own exit code never reaches the caller.
 
 ## Driver mode
 
@@ -119,7 +119,7 @@ Follow `skills/_lib/roadmap-item.md` — steps 3 to 6 (read the ready descriptio
 `roadmap-item.md` step 5 already separates the two cases. Your prompt carries no `TASKS:` list, so check whether `$AI_DIR/task/<item-slug>.md` exists before writing — a rerun after a failed implement finds this item's own file there, and `--fresh` on it without `--force` would exit 4. In driver mode:
 
 - **This item's earlier capture** → regenerate it: write fresh with `--force`. The Description is re-derived from the item's ready description, exactly as `to-task`'s regenerate chip does, so an item edited since the failed run is planned from its new text. The header match in `roadmap-item.md` step 5 is the collision guard that earns the `--force`.
-- **An unrelated task on the same kebab-case** → disambiguate the slug and write fresh. Never overwrite, never `--force`.
+- **An unrelated task on the same kebab-case** → disambiguate the slug per `roadmap-item.md` step 5, which checks the new slug the same way — an earlier run of this item may already have written its file under that disambiguated slug, and then it is this item's own capture after all. Write fresh; `--force` only on that header match, never over a namesake.
 - **`write-task.sh` exits 4 anyway** → report `FAIL` in D3 and name the slug. There is nobody to ask, so a destructive fallback is never the answer.
 
 ### D3. Run `## Core`, then the digest

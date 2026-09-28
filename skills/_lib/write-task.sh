@@ -32,7 +32,9 @@
 #   2 usage error   4 file exists (no --force)
 #   5 the write itself failed (unwritable `.task/`, full disk) — nothing was
 #     written and no `WROTE:` line is printed, because a caller reports that
-#     line as a success and treats only validate exit 2 as fatal.
+#     line as a success. Validate's own exit code never leaves this script:
+#     a caller finds the one fatal case, the `ERROR precondition` line, in
+#     the VALIDATE block.
 set -u
 
 SRC="${BASH_SOURCE[0]}"
@@ -62,7 +64,7 @@ while (( $# )); do
     --plan)        need "$@"; plan="$2";    shift 2 ;;
     --tests)       need "$@"; tests="$2";   shift 2 ;;
     --force)       force=1;          shift ;;
-    -h | --help)   sed -n '2,35p' "$SRC" >&2; exit 2 ;;
+    -h | --help)   awk 'NR > 1 && /^set -u$/ { exit } NR > 1' "$SRC" >&2; exit 2 ;;
     *)             die "unknown argument '$1'" ;;
   esac
 done

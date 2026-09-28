@@ -87,6 +87,13 @@ w_bounded "$repo" --fresh --slug beta --title "Beta task" --description "$body/d
 assert_eq "2" "$W_EXIT" "trailing --spec"
 assert_eq "no" "$([[ -f "$repo/.task/task/beta.md" ]] && echo yes || echo no)" "nothing created"
 
+t_case "--help prints the whole header, and nothing past it"
+# A fixed line range once cut the header's last lines when it grew.
+w "$repo" --help
+assert_exit 2 "$W_EXIT" "help is a usage exit"
+assert_contains "$W_OUT" "the VALIDATE block." "last header line"
+assert_eq "0" "$(grep -c '^set -u' <<<"$W_OUT")" "stops at the code"
+
 t_case "a mode other than --fresh is a usage error"
 w "$repo" --revise --slug alpha --plan "$body/plan.md"
 assert_exit 2 "$W_EXIT" "no revise mode"
