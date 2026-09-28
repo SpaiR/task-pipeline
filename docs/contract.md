@@ -48,7 +48,7 @@ There are **no user-facing flags** anywhere — footers, descriptions, and examp
 
 ### Slug as identifier
 
-- The **slug** is kebab-case English, derived from the task (or roadmap) title.
+- The **slug** is kebab-case English, derived from the task's, roadmap's or spec's title — English whatever `.task/CLAUDE.md` → Language says, since it is a filename.
 - It is **both the filename and the identity** — never a header line inside the file. There is no task-id, no bracketed `[TASK-ID]`, no umbrella grouping, no `derive-task-id`.
 - A roadmap item's task file is `.task/task/<item-slug>.md`, where `<item-slug>` is the kebab-case of that item's title.
 
