@@ -57,7 +57,7 @@ implement .task/task/<item-1-slug>.md
 
 ## When an item fails
 
-The run is **stop-on-FAIL**: if an item's implement *or* review agent returns `FAIL`, the run prints that item's digest, lists the items that landed before it, and stops instead of starting the next wave (a later item might depend on the failed one). A red build or test run inside the review is a `FAIL`, and the reviewer leaves its fixes uncommitted in that case — the implementation commit stands as it was. Completed items stay checked.
+The run is **stop-on-FAIL**: if an item's implement *or* review agent returns `FAIL`, the run prints that item's digest, lists the items that landed before it, and stops instead of starting the next wave (a later item might depend on the failed one). A red build or test run inside the review is a `FAIL`, and the reviewer leaves its fixes uncommitted in that case — the implementation commit stands as it was. So is an implementation that never got committed (a pre-commit hook rejected it, say): nothing is ticked over work no commit holds. Completed items stay checked.
 
 ```text
 FAIL #3 <item-slug> <what failed>
