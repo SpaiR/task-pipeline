@@ -31,6 +31,9 @@ prompt instead, already resolved.
 - `unchecked=none` → **stop**: every item is already checked off. Footer:
   `→ Next: \`<the caller's command> <slug>#<a real item number from the file>\`
   to redo a specific item, or describe new work in chat.`
+- `unchecked=unreadable` → **stop**: the roadmap file could not be read. Name
+  `$AI_DIR/roadmap/<slug>.md`. Footer: `→ Next: fix the file's permissions, then
+  rerun \`<the caller's command> <slug>\`.`
 - Driver mode never picks: `#N` and the title arrive in the prompt.
 
 ## 3. Read the ready description
@@ -65,11 +68,14 @@ exists — do not assume that file is this item's. Read its header:
 - `Roadmap:` label matches this roadmap's slug **and** `Source item: #N` matches
   this item → it **is** this item's earlier capture. The interactive caller
   (`to-task`) asks before replacing it — its slug-collision chip, never a silent
-  `--force`; the driver's plan agent, which has nobody to ask, extends it in place
-  per `plan-driver.md` D2 (`write-task.sh --promote` / `--revise`).
+  `--force`; the driver's plan agent, which has nobody to ask, regenerates it
+  per `plan-driver.md` D2 — this header match is the guard that earns its `--force`.
 - Different headers, or none → an unrelated task that merely kebab-cases the same
   title. Disambiguate `<item-slug>` with a short qualifier — append a second
-  distinguishing word — and **never** overwrite it.
+  distinguishing word — and **never** overwrite it. Then run this same check on
+  the new slug: a rerun derives the same qualifier, so the file there may be this
+  item's own earlier capture (the first bullet) or another namesake (this one,
+  again). Repeat until the slug is free or is this item's own file.
 
 ## 6. Note the architecture
 

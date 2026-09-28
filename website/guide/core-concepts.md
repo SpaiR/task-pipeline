@@ -4,7 +4,7 @@ Six ideas carry the whole design. Once they click, everything else follows.
 
 ## 1. The artifact is the unit of work
 
-Every task is exactly one Markdown file: `.task/task/<slug>.md`. It carries the "why + what" from your discussion, an optional step-by-step Plan, and a stamped `## Execution` block. That file is the contract between the discussion and the doing — nothing important lives outside it.
+Every task is exactly one Markdown file: `.task/task/<slug>.md`. It carries the "why + what" from your discussion, a step-by-step Plan, and a stamped `## Execution` block. That file is the contract between the discussion and the doing — nothing important lives outside it.
 
 ## 2. The slug is the identity
 

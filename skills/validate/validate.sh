@@ -27,6 +27,15 @@ set -u
 # Note: do NOT use `set -e` — we collect issues and report them all at once
 # rather than aborting on the first failure.
 
+# Byte-wise, for the whole script: every awk, grep and `[[ =~ ]]` below parses
+# hand-edited text that may hold a byte the caller's locale cannot decode. In a
+# UTF-8 locale macOS awk aborts on one ("towc: multibyte conversion failure"),
+# and each section check is a negated awk, so an abort read as a missing
+# section; the title's `=~` failed to match `.+` across it. Every pattern is
+# ASCII, and the one non-ASCII comparison (the `—` no-dependency token) is an
+# exact string match, so bytes lose nothing.
+export LC_ALL=C
+
 # AI_DIR is resolved by `find_ai_dir` (defined in resolve-ws.sh, sourced below)
 # — a git-style upward walk so validation works from any subdir, not only the
 # project root. It is deliberately NOT hardcoded to `.task` here: pinning it
@@ -57,7 +66,9 @@ require_config() {
   find_ai_dir
   if [[ ! -f "$AI_DIR/CLAUDE.md" ]]; then
     # Keep the literal substring `CLAUDE.md not found` — roadmap-to-workflow
-    # Step 0 matches it in the VALIDATE: block; the capture skills key on exit 2.
+    # Step 0 matches it in the VALIDATE: block, and so do the capture skills,
+    # since write-task.sh exits 0 once the file is written and exit 2 never
+    # reaches them.
     # Everything after it is for the human who ran this script by hand, which
     # is the only way to reach this line.
     echo "ERROR precondition: CLAUDE.md not found at $AI_DIR/CLAUDE.md" >&2
@@ -75,12 +86,10 @@ require_config() {
 # WARNS directly — the same reason `err`/`warn` are plain functions. `$label` is
 # read from the caller's scope, as those two do.
 #
-# The awk runs under LC_ALL=C, byte-wise. In a UTF-8 locale macOS awk decodes
-# characters, and a match()/substr() walk across a multibyte character such as
-# the `→` of an `## Architecture` interface line aborts the whole pass with
-# "towc: multibyte conversion failure" — silently dropping every finding it would
-# have printed. Every pattern here is ASCII and every non-ASCII comparison (the
-# `—` no-dependency token) is an exact string match, so bytes lose nothing.
+# The awk runs under LC_ALL=C, byte-wise (the script-wide pin above, repeated
+# here because this is where it once went missing): in a UTF-8 locale a
+# match()/substr() walk across the `→` of an `## Architecture` interface line
+# aborted the whole pass, silently dropping every finding it would have printed.
 awk_report() {
   local line
   while IFS= read -r line; do
@@ -181,9 +190,7 @@ check_spec_refs() {
 #   line 1   — `# <Title>` (plain title, no task-id)
 #   `---`    — separator between header and body
 #   `## Description` — always present
-#   `## Plan`  — OPTIONAL (every producer writes it, but a hand-written or
-#                older Description-only file is still a task); if present, require >=1
-#                `### Step N:` block.
+#   `## Plan`  — always present, with >=1 `### Step N:` block.
 #   `## Tests` — OPTIONAL; if present, require >=1 `### Test N:` block.
 validate_task() {
   local file="$1"
@@ -201,9 +208,8 @@ validate_task() {
   fi
 
   # The separator must sit in the HEADER block — before the first `## ` heading.
-  # A `---` thematic break inside the body must not satisfy this check: a deleted
-  # header separator would then pass silently, and write-task.sh's promote repair
-  # (which relies on this ERROR firing) would never trigger.
+  # A `---` thematic break inside the body must not satisfy this check, or a
+  # deleted header separator would pass silently.
   if ! awk '/^---$/{found=1; exit} /^## /{exit} END{exit !found}' "$file"; then
     err "$label" "missing '---' separator between header and Description (a '---' inside the body does not count)"
   fi
@@ -212,10 +218,11 @@ validate_task() {
     err "$label" "missing '## Description' section heading"
   fi
 
-  # `## Plan` is OPTIONAL (an older or hand-written file may lack it). If present, it must carry
-  # at least one `### Step N:` block. One awk pass does both the presence and
-  # the step check: exit non-zero only when a Plan heading is seen with no step.
-  if ! awk '/^## Plan[[:space:]]*$/{seen=1; flag=1; next} /^## /{flag=0} flag && /^### Step [0-9]+:/{found=1} END{exit (seen && !found)}' "$file"; then
+  # `## Plan` is required, with at least one `### Step N:` block: the executing
+  # session implements it, and the reviewer takes its fix scope from its Touches.
+  if ! grep -qE '^## Plan[[:space:]]*$' "$file"; then
+    err "$label" "missing '## Plan' section heading"
+  elif ! awk '/^## Plan[[:space:]]*$/{flag=1; next} /^## /{flag=0} flag && /^### Step [0-9]+:/{found=1} END{exit !found}' "$file"; then
     err "$label" "'## Plan' section is present but contains no '### Step N:' blocks"
   fi
 
@@ -272,7 +279,11 @@ validate_roadmap() {
   local file
   file=$(resolve_artifact_path roadmap "$raw")
   if [[ -z "$file" ]]; then
-    err "roadmap($raw)" "file not found (looked at $raw, $AI_DIR/roadmap/$raw(.md))"
+    if [[ "$raw" == */* ]]; then
+      err "roadmap($raw)" "file not found at $raw"
+    else
+      err "roadmap($raw)" "file not found (looked at $AI_DIR/roadmap/$raw(.md))"
+    fi
     return
   fi
   local label
@@ -634,8 +645,8 @@ Usage:
   validate.sh spec <slug>     — validate .task/spec/<slug>.md
   validate.sh all             — every task + roadmap + spec file
 
-<slug> is the filename (with or without the .md suffix); it is also accepted
-as an explicit path.
+<slug> is the filename (with or without the .md suffix), looked up under
+.task/ only. An argument holding a `/` is taken as an explicit path instead.
 
 Exit codes: 0 ok, 1 validation errors, 2 usage / precondition.
 EOF

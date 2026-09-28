@@ -57,7 +57,7 @@ implement .task/task/<item-1-slug>.md
 
 ## When an item fails
 
-The run is **stop-on-FAIL**: if an item's implement *or* review agent returns `FAIL`, the run prints that item's digest, lists the items that landed before it, and stops instead of starting the next wave (a later item might depend on the failed one). A red build or test run inside the review is a `FAIL`, and the reviewer leaves its fixes uncommitted in that case — the implementation commit stands as it was. Completed items stay checked.
+The run is **stop-on-FAIL**: if an item's implement *or* review agent returns `FAIL`, the run prints that item's digest, lists the items that landed before it, and stops instead of starting the next wave (a later item might depend on the failed one). A red build or test run inside the review is a `FAIL`, and the reviewer leaves its fixes uncommitted in that case — the implementation commit stands as it was. So is an implementation that never got committed (a pre-commit hook rejected it, say): nothing is ticked over work no commit holds. Completed items stay checked.
 
 ```text
 FAIL #3 <item-slug> <what failed>
@@ -67,12 +67,15 @@ Ran `api-v2-migration`: 2 of 5 items landed and ticked, 3 still unchecked.
   Commits: a1b2c3d..e4f5a6b.
 Stopped at #3 <item-slug> in wave 2. Its work is left in the working tree —
   inspect it with `git status` and `git log --oneline -3`.
-→ Next: fix #3 (or re-plan it with `/task:to-task api-v2-migration#3`), then rerun
-  `/task:roadmap-to-workflow api-v2-migration` — already-ticked items stay ticked,
-  only the unchecked remainder reruns.
+→ Next: fix #3 by hand and tick it, or edit the item in
+  `.task/roadmap/api-v2-migration.md` so the rerun re-plans it from the new text,
+  then rerun `/task:roadmap-to-workflow api-v2-migration` — already-ticked items
+  stay ticked, only the unchecked remainder reruns.
 ```
 
 Fix the failing item (edit its task file, or re-implement it by hand), tick its box, then rerun — it only picks up the unchecked remainder.
+
+An item you leave unchecked is planned again from the roadmap: the rerun regenerates its task file from the item, and hand edits to that file do not survive. To change what the rerun plans, edit the item in the roadmap instead.
 
 ## No Workflow tool?
 

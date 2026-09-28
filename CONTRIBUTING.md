@@ -47,8 +47,8 @@ skills/                          SKILL.md per skill + shared bash helpers
                                    roadmap.sh (artifact-path resolution + roadmap progress counts),
                                    preflight.sh (a skill's whole Step 0 entry state in one block,
                                      substituted into the skill body by !-preprocessing),
-                                   write-task.sh (the single task.md writer: fresh, plus
-                                     promote/revise for the driver's reruns),
+                                   write-task.sh (the single task.md writer, whole files
+                                     only — driver reruns regenerate),
                                    detect-project.sh (the facts first-run setup picks from),
                                    roadmap-items.sh (a roadmap's unchecked items, for the driver args),
                                    roadmap-driver.js (the static Workflow script roadmap-to-workflow

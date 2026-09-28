@@ -10,7 +10,7 @@ See the [autopilot guide](/guide/autopilot) for the full walkthrough.
 /task:roadmap-to-workflow [<roadmap-slug>]
 ```
 
-**Input** — `$ARGUMENTS`, optional. A single `<roadmap-slug>` (or path) to skip the picker. No flags — item scope is chosen interactively.
+**Input** — `$ARGUMENTS`, optional. A single `<roadmap-slug>` (or its path under `.task/roadmap/`; a roadmap anywhere else is refused) to skip the picker. No flags — item scope is chosen interactively.
 
 ## What it does
 
@@ -60,10 +60,18 @@ Ran `api-v2-migration`: 2 of 5 items landed and ticked, 3 still unchecked.
   Commits: a1b2c3d..e4f5a6b.
 Stopped at #3 <item-slug> in wave 2. Its work is left in the working tree —
   inspect it with `git status` and `git log --oneline -3`.
-→ Next: fix #3 (or re-plan it with `/task:to-task api-v2-migration#3`), then rerun
-  `/task:roadmap-to-workflow api-v2-migration` — already-ticked items stay ticked,
-  only the unchecked remainder reruns.
+→ Next: fix #3 by hand and tick it, or edit the item in
+  `.task/roadmap/api-v2-migration.md` so the rerun re-plans it from the new text,
+  then rerun `/task:roadmap-to-workflow api-v2-migration` — already-ticked items
+  stay ticked, only the unchecked remainder reruns.
 ```
+
+Two stops get a different footer, because re-planning the item would be wrong there:
+
+- **The checkbox was not flipped** (`no unique` heading, or no `MARK-OK` reported) — the item's reviewed work is already committed, so the footer says to tick it by hand and rerun.
+- **The implementation was never committed** — the footer says to commit it, tick the item by hand, and rerun.
+
+Rerun a stopped run plainly. Resuming it from its run id replays the cached failing stage and stops at the same place; that is only for a run interrupted before it returned.
 
 ## No Workflow tool
 

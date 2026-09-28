@@ -16,6 +16,7 @@
 #   AI_DIR: /abs/path/.task
 #   CONFIG: present | absent
 #   ROADMAPS: <slug> <done>/<total> unchecked=<n,n>|none  (one line per roadmap)
+#   ROADMAPS: <slug> ?/? unchecked=unreadable           (a roadmap that could not be read)
 #   ROADMAPS: none                                      (when there are none)
 #   TASKS: <slug> <slug> … | none
 #   SPECS: <slug> <slug> … | none
@@ -77,19 +78,27 @@ if (( ${#roadmaps[@]} == 0 )); then
   echo "ROADMAPS: none"
 else
   for f in "${roadmaps[@]}"; do
-    counts=$(roadmap_progress_counts "$f")
+    # A pass that fails must not print as a finished roadmap: an empty open
+    # list falls back to `none`, which the skills read as "every item ticked".
+    if ! counts=$(roadmap_progress_counts "$f"); then
+      printf 'ROADMAPS: %s ?/? unchecked=unreadable\n' "$(basename "$f" .md)"
+      continue
+    fi
     total=$(awk -F': ' '/^total/{print $2}' <<<"$counts")
     done_n=$(awk -F': ' '/^done/{print $2}' <<<"$counts")
     # The item numbers still open. The 5-state checkbox class this keys on is
     # owned by `roadmap.sh` (see its header) — an unchecked item is the one
-    # state that is NOT in the done class.
-    open=$(awk '
+    # state that is NOT in the done class. Byte-wise, as roadmap.sh's pass is.
+    if ! open=$(LC_ALL=C awk '
       match($0, /^### - \[ \] [0-9]+\. /) {
         s = substr($0, RSTART, RLENGTH); gsub(/[^0-9]/, "", s)
         out = (out == "" ? s : out "," s)
       }
       END { print out }
-    ' "$f")
+    ' "$f"); then
+      printf 'ROADMAPS: %s ?/? unchecked=unreadable\n' "$(basename "$f" .md)"
+      continue
+    fi
     printf 'ROADMAPS: %s %s/%s unchecked=%s\n' \
       "$(basename "$f" .md)" "$done_n" "$total" "${open:-none}"
   done

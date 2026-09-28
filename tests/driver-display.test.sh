@@ -91,6 +91,8 @@ const agent = async (prompt, opts) => {
   const head = `OK #${n} ${SLUG[n]}`
   if (BREAK === `${stage}${n}`) return `FAIL #${n} ${SLUG[n]} tests red`
   if (BREAK === `nomark${n}` && stage === 'review') return `${head} done`
+  if (BREAK === `drift${n}` && stage === 'plan') return 'Plan written.'
+  if (BREAK === `dup${n}` && stage === 'plan') return `OK #${n} ${SLUG[1]} planned`
   return { plan: `${head} planned`, implement: `${head} built`, review: `MARK-OK #${n}\n${head} ok, ticked` }[stage]
 }
 console.log(await (async () => {
@@ -121,5 +123,21 @@ assert_contains "$out" "
 t_case "a plan FAIL before anything landed is the headline alone"
 assert_eq "roadmap-to-workflow stopped in wave 1 (planning), item #1: FAIL #1 retry-backoff tests red" \
   "$(run_driver "'plan1'")" "plan stop"
+
+t_case "a drifted plan digest stops the wave before any of it is implemented"
+# The shape check once ran lazily inside the serial loop, so #1 landed before
+# the driver reached #3's unparsable digest.
+assert_eq "roadmap-to-workflow stopped in wave 1 (planning), item #3: unparsable plan digest: Plan written." \
+  "$(run_driver "'drift3'")" "headline only, nothing landed"
+
+t_case "two items of one wave planned on the same slug stop before either is implemented"
+# Parallel planners cannot see each other's file, so both can land on one slug:
+# one task file for two items, and the second implement would rebuild the first.
+assert_eq "roadmap-to-workflow stopped in wave 1 (planning), item #3: #1 and #3 both planned retry-backoff — one task file for two items; give one of them a more distinct title, then rerun /task:roadmap-to-workflow retry-work" \
+  "$(run_driver "'dup3'")" "headline only, nothing landed"
+
+t_case "a later wave's slug that matches a landed item's stops too"
+assert_contains "$(run_driver "'dup2'")" \
+  "roadmap-to-workflow stopped in wave 2 (planning), item #2: #1 and #2 both planned retry-backoff" "clash with a landed item"
 
 t_summary

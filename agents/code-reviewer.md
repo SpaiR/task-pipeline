@@ -52,7 +52,10 @@ Include a commit while its files intersect the Touches set, and stop at the firs
 - **Cap it at 10 commits.** A longer run of touching commits means the tree holds more than this task's work; take the 10 and say so.
 - **Stop at a commit that is plainly not this task's** — a different author, or a subject describing unrelated work — even when its files intersect.
 - **Touches set empty** (no `## Plan`) → do not walk at all: the base is `HEAD~1`, since there is no scope to match commits against.
-- **`HEAD` itself does not intersect** → nothing is included and there is no oldest commit to take a parent of. The base is `HEAD~1` and `<K>` is `0`, which is precisely the `implementation commit: none` case the check below records — the change is uncommitted, so the working tree is the whole diff.
+- **Nothing is included** (`HEAD` itself does not intersect, or is plainly not this task's) → there is no oldest commit to take a parent of. Decide from `git status --porcelain`, counting only the entries that are **this task's change** — a path in the Touches set, or one the plan's steps plainly produce. A user's unrelated edit or a stray untracked file is not the implementation, and does not decide anything here:
+  - **The working tree holds this task's change** → the implementation was never committed. The base is `HEAD` and `<K>` is `0`: `<base>..HEAD` is empty, so the unrelated `HEAD` commit stays out of the review, and the working tree is the whole diff. This is the `implementation commit: none` case.
+  - **It does not, and `HEAD` only missed the Touches set** → the implementation is `HEAD`, landed in files `Touches` never named — it is a scope hint, not an exact list. The base is `HEAD~1` and `<K>` is `1`; say that `Touches` missed its files, and review `HEAD` whole.
+  - **It does not, and `HEAD` is plainly not this task's** → neither a commit nor the working tree holds this task's change. That is the `nothing to review` `FAIL` below — never a review of another task's commit, which would pass it and tick an item nothing implemented.
 
 Then read the **full patch**, not only the stat — per file, both of:
 
@@ -61,9 +64,11 @@ git diff <base> HEAD          # the implementation's commits
 git diff HEAD                 # anything the implementation left uncommitted
 ```
 
-The **diff under review** is `<base>..HEAD` plus any uncommitted working-tree changes. Record `HEAD`'s sha — phase 6 commits on top of it, and every later phase diffs against `<base>`, never `HEAD~1`.
+`git diff HEAD` omits untracked files: read each `??` path from `git status --porcelain` that is this task's change in full — a new file the implementation never committed belongs to the uncommitted half.
 
-Check one thing here, because phase 6 depends on it: does `HEAD` actually contain part of the change under review? Compare `git diff <base> HEAD --name-only` against the Touches set and the working-tree changes. If `HEAD` is unrelated (the implementation was never committed, and the whole change sits uncommitted), record **`implementation commit: none`** and carry that to phase 6 — you must not sweep an uncommitted implementation into a commit of your own.
+The **diff under review** is `<base>..HEAD` plus any uncommitted working-tree changes, untracked files included. Record `HEAD`'s sha — phase 6 commits on top of it, and every later phase diffs against `<base>`, never `HEAD~1`. When both halves are empty there is nothing to review: that is a `FAIL` (`nothing to review`), never `0 candidates`.
+
+Phase 6 depends on one fact the walk settles: record **`implementation commit: none`** exactly when nothing was included and the working tree holds this task's change, and `implementation commit: <HEAD's sha>` otherwise. Carry it to phase 6 — you must not sweep an uncommitted implementation into a commit of your own.
 
 **Mandatory output:** the literal line `reviewed range: <base>..HEAD (<K> commits)`; each reviewed commit's sha and subject; the changed-file list with line counts; the uncommitted-changes list (or `none`); and either `implementation commit: <sha>` or `implementation commit: none — the change is uncommitted`.
 
@@ -118,7 +123,7 @@ Your fixes land as their own commit on top of the implementation's. You never re
 
 - **`implementation commit: <sha>`** (phase 1) and you changed files → stage only the files you actually changed — never `git add -A` — and commit them per `.task/CLAUDE.md` → **Commit Format**, in the review-fix shape below.
 - **`implementation commit: <sha>`** and you changed nothing → do not commit. The implementation commit stands alone.
-- **`implementation commit: none`** → leave your fixes in the working tree, uncommitted, and say so plainly in the digest. Do not create a commit — staging a file here would sweep the implementation's own uncommitted work into your message.
+- **`implementation commit: none`** → leave your fixes in the working tree, uncommitted, and say so plainly in the digest. Do not create a commit — staging a file here would sweep the implementation's own uncommitted work into your message. When phase 0 resolved a roadmap item, the verdict is `FAIL <reference string> implementation never committed — commit it, then tick #N`: an item ticked over uncommitted work would land in the next item's commit, and the checkbox would claim work no commit holds.
 
 The review-fix commit, adapted to the project's **Commit Format** — drop `(<scope>)` when that format has no scopes, use its equivalent of the `fix` type when it names types differently, and append whatever trailers it requires:
 
@@ -197,8 +202,8 @@ Rules for the report:
 - The **Checked, per Touches** list is mandatory and must name every file in the Touches set, plus every file outside it that this diff changed. A file you did not examine is written as `not reviewed — <why>`, which is itself a `FAIL`. A report without this list is a failed review even when the code is fine.
 - When phase 7 ran, the report repeats the flip's stdout line (`MARK-OK #N`) **verbatim, on a line of its own** — a roadmap driver reads only this report, and it stops the run when a passing review lacks that line.
 - The **last non-empty line** is the digest, and nothing may follow it:
-  - `OK <reference string> <one-line summary>` — review complete: everything confirmed in scope is fixed, Build and Tests is green or explicitly declared absent, and the roadmap item, if any, is ticked.
-  - `FAIL <reference string> <what failed>` — Build and Tests red, a confirmed in-scope defect you could not fix, the task's Goal not reached, a `MARK-FAIL` from phase 7, or a phase you could not complete.
+  - `OK <reference string> <one-line summary>` — review complete: everything confirmed in scope is fixed, Build and Tests is green or explicitly declared absent, and the roadmap item, if any, is ticked over a committed implementation.
+  - `FAIL <reference string> <what failed>` — Build and Tests red, a confirmed in-scope defect you could not fix, the task's Goal not reached, nothing to review, a roadmap item whose implementation was never committed, a `MARK-FAIL` from phase 7, or a phase you could not complete.
 - When the `ReportFindings` tool is available, call it **once** in addition to the text report, with the confirmed findings ranked most-severe first and `outcome` set per finding (`fixed` / `skipped`). It renders in the native UI; it does **not** replace the text above, because your caller only reads your text.
 
 ## Forbidden

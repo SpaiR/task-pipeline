@@ -200,7 +200,7 @@ Before saving, self-check and fix inline (drafting hygiene; step 7 is the post-s
 
 Write the file directly — no in-chat preview, no confirmation prompt.
 
-1. Slug: kebab-case from the initiative title, ≤ 50 chars (`add-auth-flow`, `migrate-to-vite`).
+1. Slug: kebab-case from the initiative title, ≤ 50 chars (`add-auth-flow`, `migrate-to-vite`), in English whatever `.task/CLAUDE.md` → Language says — it is a filename, a parser-stable string.
 2. **Slug collision.** If that slug is already in the caller's `ROADMAPS:` list → **stop** and pose an `AskUserQuestion` (**Pick different slug** *(Recommended)* / **Overwrite**). Say first, as message text, what an overwrite destroys — the existing file's items and progress, and its `## Architecture` if it has one — since `.task/` is ignored by its own `.task/.gitignore` and never committed, so none of it is recoverable. Never silently overwrite. That list is a snapshot taken before the brainstorm rounds, and unlike the task captures there is no writer script to refuse a collision here — so when the slug is *absent* from it, confirm with a file read that nothing is there before writing.
 3. Write `$AI_DIR/roadmap/<slug>.md` (creating the directory if needed) with the full content, `Spec:` headers and `## Architecture` included — one write. Nothing else is written — spec authorship is `to-spec`'s.
 4. Validate it: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" roadmap <slug>` — surface any WARN/ERROR in the caller's digest; only a setup-precondition failure (exit 2) hard-stops.

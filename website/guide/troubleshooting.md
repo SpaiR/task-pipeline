@@ -121,7 +121,7 @@ Nothing was written when this fires, so re-running the command after fixing the 
 
 **Cause** — by design: the driver is stop-on-FAIL. A later wave never starts if an earlier item didn't land cleanly, since a later item may depend on it.
 
-**Fix** — read the failure digest, fix the item (edit `.task/task/<item-slug>.md`, or re-implement it by hand), tick its checkbox, then rerun `/task:roadmap-to-workflow <slug>`. Completed items stay checked, so the rerun only picks up the unchecked remainder.
+**Fix** — read the failure digest, fix the item (edit `.task/task/<item-slug>.md`, or re-implement it by hand), tick its checkbox, then rerun `/task:roadmap-to-workflow <slug>`. Completed items stay checked, so the rerun only picks up the unchecked remainder. An item left unchecked is re-planned from the roadmap, and its task file regenerated — hand edits to it are lost, so change the item in the roadmap instead.
 
 One digest is worth reading closely: a review `FAIL` that says `no unique '### - [ ] N.' heading` means the item's work already landed and was committed, and only the checkbox is behind. The flip is idempotent, so this is never "the box was already ticked" — it means the roadmap has no unique `### - [ ] N.` heading for that item, because it was renumbered, retitled, or duplicated. Tick it by hand and rerun; there is nothing to re-implement.
 
@@ -142,7 +142,7 @@ ls .task/task/
 # every task file you've captured; a task stays here until you delete it
 
 grep -L '^## Plan' .task/task/*.md
-# older, Description-only task files captured before to-task always wrote a Plan
+# task files with no Plan — validate rejects them; recapture with /task:to-task
 
 grep '^### - \[ \]' .task/roadmap/<slug>.md
 # every item still unchecked in that roadmap
