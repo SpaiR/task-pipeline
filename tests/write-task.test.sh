@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Contract under test: skills/_lib/write-task.sh — the single owner of task.md
-# assembly. What matters is that every mode leaves a file `validate.sh` accepts,
-# that a collision never writes, and that revise touches nothing it was not
-# asked to touch.
+# assembly. What matters is that every write leaves a file `validate.sh`
+# accepts, that a collision never writes, and that a failed write never
+# reports success or damages the file it was replacing.
 source "$(dirname "$0")/lib.sh"
 
 WRITE="$T_REPO_ROOT/skills/_lib/write-task.sh"
@@ -22,11 +22,6 @@ cat >"$body/plan.md" <<'MD'
 **Goal:** it is done
 **Touches:** `src/a.ts`
 MD
-cat >"$body/plan2.md" <<'MD'
-### Step 1: do a different thing
-**Goal:** also done
-**Touches:** `src/b.ts`
-MD
 cat >"$body/tests.md" <<'MD'
 ### Test 1: it works
 `src/a.test.ts`; assert the thing.
@@ -43,107 +38,65 @@ assert_contains "$written" "Roadmap: [api-v2](../roadmap/api-v2.md)" "roadmap li
 assert_contains "$written" "Source item: #3" "bare item number"
 assert_contains "$written" "Spec: [event-envelope](../spec/event-envelope.md)" "spec link form"
 assert_contains "$written" '> Read [.task/CLAUDE.md](../CLAUDE.md) and follow its `## Executing a task` section.' "stamped pointer"
+assert_eq "## Description ## Plan ## Tests ## Execution" \
+  "$(grep '^## ' "$repo/.task/task/alpha.md" | tr '\n' ' ' | sed 's/ $//')" "section order"
 # The dangling spec reference is a WARN, never an error, so the file is valid.
 assert_contains "$W_OUT" "OK 0 errors" "validate is clean"
 
 t_case "a second --fresh without --force exits 4 and changes nothing"
 before=$(cat "$repo/.task/task/alpha.md")
-w "$repo" --fresh --slug alpha --title "Overwriting" --description "$body/desc.md"
+w "$repo" --fresh --slug alpha --title "Overwriting" --description "$body/desc.md" --plan "$body/plan.md"
 assert_exit 4 "$W_EXIT" "collision"
 assert_eq "$before" "$(cat "$repo/.task/task/alpha.md")" "file untouched"
 
-t_case "--force overwrites the same slug"
-w "$repo" --fresh --slug alpha --title "Overwritten" --description "$body/desc.md" --force
+t_case "--force rewrites the same slug whole"
+w "$repo" --fresh --slug alpha --title "Overwritten" --description "$body/desc.md" \
+  --plan "$body/plan.md" --force
 assert_exit 0 "$W_EXIT" "forced write"
 assert_contains "$(head -1 "$repo/.task/task/alpha.md")" "# Overwritten" "new title"
+assert_eq "0" "$(grep -c '^## Tests' "$repo/.task/task/alpha.md")" "nothing of the old file survives"
 
-t_case "--promote inserts the plan directly above the Execution pointer"
+t_case "a write with no --plan is a usage error and writes nothing"
+# Every task file carries a Plan: validate.sh errors on a file without one.
 w "$repo" --fresh --slug beta --title "Beta task" --description "$body/desc.md"
-w "$repo" --promote --slug beta --plan "$body/plan.md"
-assert_exit 0 "$W_EXIT" "promote"
-assert_eq "## Description ## Plan ## Execution" \
-  "$(grep '^## ' "$repo/.task/task/beta.md" | tr '\n' ' ' | sed 's/ $//')" "section order"
-assert_contains "$W_OUT" "OK 0 errors" "still valid"
+assert_exit 2 "$W_EXIT" "missing --plan"
+assert_eq "no" "$([[ -f "$repo/.task/task/beta.md" ]] && echo yes || echo no)" "nothing created"
 
-t_case "--revise replaces the plan and leaves an untouched Tests section byte-identical"
-w "$repo" --fresh --slug gamma --title "Gamma task" --description "$body/desc.md" \
-  --plan "$body/plan.md" --tests "$body/tests.md"
-tests_before=$(awk '/^## Tests/{f=1} f && !/^## Execution/{print} /^## Execution/{exit}' "$repo/.task/task/gamma.md")
-w "$repo" --revise --slug gamma --plan "$body/plan2.md"
-assert_exit 0 "$W_EXIT" "revise"
-gamma=$(cat "$repo/.task/task/gamma.md")
-assert_contains "$gamma" "### Step 1: do a different thing" "new plan"
-assert_eq "0" "$(grep -c 'do the thing' <<<"$gamma")" "old plan gone"
-tests_after=$(awk '/^## Tests/{f=1} f && !/^## Execution/{print} /^## Execution/{exit}' "$repo/.task/task/gamma.md")
-assert_eq "$tests_before" "$tests_after" "Tests section unchanged"
-assert_contains "$W_OUT" "OK 0 errors" "still valid"
+t_case "a mode other than --fresh is a usage error"
+w "$repo" --revise --slug alpha --plan "$body/plan.md"
+assert_exit 2 "$W_EXIT" "no revise mode"
 
-t_case "a file with no '## Description' exits 3 untouched"
-printf '# Not a task\n\nJust prose.\n' >"$repo/.task/task/delta.md"
-before=$(cat "$repo/.task/task/delta.md")
-w "$repo" --promote --slug delta --plan "$body/plan.md"
-assert_exit 3 "$W_EXIT" "nothing to promote"
-assert_eq "$before" "$(cat "$repo/.task/task/delta.md")" "file untouched"
-
-t_case "promote repairs a hand-written file with no separator and no pointer"
-printf '# Hand written\n## Description\n\nWhy.\n' >"$repo/.task/task/eps.md"
-w "$repo" --promote --slug eps --plan "$body/plan.md"
-assert_exit 0 "$W_EXIT" "repaired promote"
-eps=$(cat "$repo/.task/task/eps.md")
-assert_contains "$W_OUT" "OK 0 errors" "validates after repair"
-assert_contains "$eps" "## Execution" "pointer stamped"
-
-t_case "promote keeps the contract order when the target already has Tests"
-# A hand-edited target: Tests but no Plan. The plan must land ABOVE the tests.
-cat >"$repo/.task/task/zeta.md" <<'MD'
-# Zeta task
----
-## Description
-
-Why and what.
-
-## Tests
-
-### Test 1: it works
-
-## Execution
-> Read [.task/CLAUDE.md](../CLAUDE.md) and follow its `## Executing a task` section.
-MD
-w "$repo" --promote --slug zeta --plan "$body/plan.md"
-assert_exit 0 "$W_EXIT" "promote onto a Tests-only file"
-assert_eq "## Description ## Plan ## Tests ## Execution" \
-  "$(grep '^## ' "$repo/.task/task/zeta.md" | tr '\n' ' ' | sed 's/ $//')" "section order"
-assert_contains "$W_OUT" "OK 0 errors" "still valid"
-
-t_case "a write that cannot happen exits 5 and reports no WROTE line"
-# A caller reports the `WROTE:` line as success and treats only validate exit 2
-# as fatal, so a failed write must not print one.
-chmod 500 "$repo/.task/task"
-w "$repo" --fresh --slug eta --title "Eta task" --description "$body/desc.md"
-chmod 700 "$repo/.task/task"
-assert_exit 5 "$W_EXIT" "unwritable task dir"
-assert_eq "0" "$(grep -c 'WROTE:' <<<"$W_OUT")" "no success line"
-assert_eq "no" "$([[ -f "$repo/.task/task/eta.md" ]] && echo yes || echo no)" "nothing created"
-
-t_case "a promote whose staging copy cannot be made exits 5 and leaves the target alone"
-# A failing `mktemp` or `cp` stands in for a full disk: a PATH shim, since the
-# chmod trick above does not bite as root and macOS mktemp shrugs off a bad
-# TMPDIR. A failed `cp` once left an empty staging file that the final `mv`
-# moved over the target, printing `WROTE:`.
-w "$repo" --fresh --slug theta --title "Theta task" --description "$body/desc.md"
-before=$(cat "$repo/.task/task/theta.md")
+t_case "a write that fails partway exits 5 and leaves the old file alone"
+# A failing tool stands in for a full disk or an unwritable `.task/`: a PATH
+# shim, since a chmod does not bite as root. The write once redirected straight
+# into the target: a failed body step still printed `WROTE:`, and `--force` had
+# already truncated the original.
+w "$repo" --fresh --slug lambda --title "Lambda task" --description "$body/desc.md" --plan "$body/plan.md"
+before=$(cat "$repo/.task/task/lambda.md")
 shim=$(t_tmpdir)
-for tool in mktemp cp; do
+for tool in mktemp awk mv; do
   rm -f "$shim"/*
   printf '#!/bin/sh\nexit 1\n' >"$shim/$tool" && chmod +x "$shim/$tool"
-  PATH="$shim:$PATH" w "$repo" --promote --slug theta --plan "$body/plan.md"
+  PATH="$shim:$PATH" w "$repo" --fresh --force --slug lambda --title "Replaced" \
+    --description "$body/desc.md" --plan "$body/plan.md"
   assert_exit 5 "$W_EXIT" "$tool failed"
   assert_eq "0" "$(grep -c 'WROTE:' <<<"$W_OUT")" "$tool: no success line"
-  assert_eq "$before" "$(cat "$repo/.task/task/theta.md")" "$tool: target untouched"
+  assert_eq "$before" "$(cat "$repo/.task/task/lambda.md")" "$tool: target untouched"
+  assert_eq "" "$(find "$repo/.task/task" -name '.lambda.*')" "$tool: no staging file left"
 done
 
+t_case "a byte that is not UTF-8 survives a UTF-8 locale"
+# macOS awk decodes by locale and aborts on an invalid byte (`towc: multibyte
+# conversion failure`), which surfaced as a write failure. The helper's awk
+# runs under LC_ALL=C.
+printf 'Caf\351, saved as Latin-1.\n' >"$body/latin1.md"
+LC_ALL=en_US.UTF-8 w "$repo" --fresh --slug xi --title "Xi task" \
+  --description "$body/latin1.md" --plan "$body/plan.md"
+assert_exit 0 "$W_EXIT" "fresh"
+assert_eq "1" "$(LC_ALL=C grep -c $'Caf\351' "$repo/.task/task/xi.md")" "byte kept"
+
 t_case "a slug that is a path is a usage error"
-w "$repo" --fresh --slug ../escape --title T --description "$body/desc.md"
+w "$repo" --fresh --slug ../escape --title T --description "$body/desc.md" --plan "$body/plan.md"
 assert_exit 2 "$W_EXIT" "path rejected"
 
 t_summary

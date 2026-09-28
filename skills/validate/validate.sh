@@ -181,9 +181,7 @@ check_spec_refs() {
 #   line 1   — `# <Title>` (plain title, no task-id)
 #   `---`    — separator between header and body
 #   `## Description` — always present
-#   `## Plan`  — OPTIONAL (every producer writes it, but a hand-written or
-#                older Description-only file is still a task); if present, require >=1
-#                `### Step N:` block.
+#   `## Plan`  — always present, with >=1 `### Step N:` block.
 #   `## Tests` — OPTIONAL; if present, require >=1 `### Test N:` block.
 validate_task() {
   local file="$1"
@@ -201,9 +199,8 @@ validate_task() {
   fi
 
   # The separator must sit in the HEADER block — before the first `## ` heading.
-  # A `---` thematic break inside the body must not satisfy this check: a deleted
-  # header separator would then pass silently, and write-task.sh's promote repair
-  # (which relies on this ERROR firing) would never trigger.
+  # A `---` thematic break inside the body must not satisfy this check, or a
+  # deleted header separator would pass silently.
   if ! awk '/^---$/{found=1; exit} /^## /{exit} END{exit !found}' "$file"; then
     err "$label" "missing '---' separator between header and Description (a '---' inside the body does not count)"
   fi
@@ -212,10 +209,11 @@ validate_task() {
     err "$label" "missing '## Description' section heading"
   fi
 
-  # `## Plan` is OPTIONAL (an older or hand-written file may lack it). If present, it must carry
-  # at least one `### Step N:` block. One awk pass does both the presence and
-  # the step check: exit non-zero only when a Plan heading is seen with no step.
-  if ! awk '/^## Plan[[:space:]]*$/{seen=1; flag=1; next} /^## /{flag=0} flag && /^### Step [0-9]+:/{found=1} END{exit (seen && !found)}' "$file"; then
+  # `## Plan` is required, with at least one `### Step N:` block: the executing
+  # session implements it, and the reviewer takes its fix scope from its Touches.
+  if ! grep -qE '^## Plan[[:space:]]*$' "$file"; then
+    err "$label" "missing '## Plan' section heading"
+  elif ! awk '/^## Plan[[:space:]]*$/{flag=1; next} /^## /{flag=0} flag && /^### Step [0-9]+:/{found=1} END{exit !found}' "$file"; then
     err "$label" "'## Plan' section is present but contains no '### Step N:' blocks"
   fi
 

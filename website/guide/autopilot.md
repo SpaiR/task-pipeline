@@ -74,6 +74,8 @@ Stopped at #3 <item-slug> in wave 2. Its work is left in the working tree —
 
 Fix the failing item (edit its task file, or re-implement it by hand), tick its box, then rerun — it only picks up the unchecked remainder.
 
+An item you leave unchecked is planned again from the roadmap: the rerun regenerates its task file from the item, and hand edits to that file do not survive. To change what the rerun plans, edit the item in the roadmap instead.
+
 ## No Workflow tool?
 
 If the Workflow tool isn't available in your environment, `roadmap-to-workflow` hard-stops instead of running anything itself — it prints the unchecked items and tells you to run them by hand, in dependency order: `to-task` on one item in this chat, then `implement .task/task/<item-slug>.md` in a fresh session. That session's `## Execution` pointer already carries plan → commit → `task:code-reviewer`, and the reviewer ticks the roadmap checkbox once its review passes — so this is exactly the "mixing hand-picked items" pattern above, just for every item instead of the first one.

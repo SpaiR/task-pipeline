@@ -40,7 +40,7 @@ Two remaining `on-demand` cases, resolved distinctly:
 
 ### 4. Draft the Description, Plan and Tests
 
-- `## Description` — the why + the what, per `.task/CLAUDE.md` → Language (section labels themselves stay English). From a roadmap item: the why from `### Context`, the what from Goal / Outcomes / Invariants / Acceptance criteria. Fabricate nothing that was not actually discussed or written down. In driver mode's promote / revise (D2) the Description already exists and is inherited as-is.
+- `## Description` — the why + the what, per `.task/CLAUDE.md` → Language (section labels themselves stay English). From a roadmap item: the why from `### Context`, the what from Goal / Outcomes / Invariants / Acceptance criteria. Fabricate nothing that was not actually discussed or written down.
 - `## Plan` — `### Step N:` blocks, three layers:
 
   ```markdown
@@ -94,13 +94,9 @@ bash "<plugin root>/skills/_lib/write-task.sh" --fresh \
 rm -f "$d" "$p" "$t"
 ```
 
-Three modes, one per situation — interactive `to-task` only ever writes `--fresh`; `--promote` / `--revise` exist for the driver's reruns (D2):
+`--fresh` is the one mode: the file is always written whole, never edited in place. `--title`, `--description` and `--plan` are required; drop `--roadmap` / `--item` when the source is the chat, and `--spec` when nothing is cited.
 
-- **`--fresh`** — a new file. `--title` and `--description` required; drop `--roadmap` / `--item` when the source is the chat, and `--spec` when nothing is cited.
-- **`--promote`** — an existing Description-only file gains `## Plan` (+ `## Tests`, if this run adds them), inserted directly above `## Execution`. Header, separator, Description and pointer untouched.
-- **`--revise`** — an existing `## Plan` is replaced. Pass `--tests` **only** when this run's edit touches the tests; without it the existing `## Tests` is left byte-for-byte as it was.
-
-It refuses the destructive cases rather than guessing, and writes nothing when it does: **exit 4** — `--fresh` on a slug that already exists (`--force` overrides, and is only ever earned by a caller's collision guard); **exit 3** — the promote/revise target has no `## Description`, so it is not a task artifact to extend. A hand-edited target that lost its `---` separator or its `## Execution` pointer is repaired on the way through; do not pre-patch it.
+It refuses to overwrite rather than guessing, and writes nothing when it does: **exit 4** — the slug already exists. `--force` overrides, and is only ever earned by a caller's collision guard: `to-task`'s overwrite chip, or the driver's header match on its own item's file (D2).
 
 **Exit 5** is the one write failure that is not a refusal — an unwritable `$AI_DIR` or a full disk. Nothing was written and no `WROTE:` line was printed: report that plainly instead of a digest, and never claim a path that does not exist.
 
@@ -120,11 +116,11 @@ Follow `skills/_lib/roadmap-item.md` — steps 3 to 6 (read the ready descriptio
 
 ### D2. Slug collision, without anyone to ask
 
-`roadmap-item.md` step 5 already separates the two cases. Your prompt carries no `TASKS:` list, so check whether `$AI_DIR/task/<item-slug>.md` exists before choosing a mode — a rerun after a failed implement finds this item's own file there, and `--fresh` on it would exit 4. In driver mode:
+`roadmap-item.md` step 5 already separates the two cases. Your prompt carries no `TASKS:` list, so check whether `$AI_DIR/task/<item-slug>.md` exists before writing — a rerun after a failed implement finds this item's own file there, and `--fresh` on it without `--force` would exit 4. In driver mode:
 
-- **This item's earlier capture** → `--promote` it (no `## Plan` yet) or `--revise` it (one already present).
+- **This item's earlier capture** → regenerate it: write fresh with `--force`. The Description is re-derived from the item's ready description, exactly as `to-task`'s regenerate chip does, so an item edited since the failed run is planned from its new text. The header match in `roadmap-item.md` step 5 is the collision guard that earns the `--force`.
 - **An unrelated task on the same kebab-case** → disambiguate the slug and write fresh. Never overwrite, never `--force`.
-- **`write-task.sh` exits 3 or 4 anyway** → report `FAIL` in D3 and name the slug. There is nobody to ask, so a destructive fallback is never the answer.
+- **`write-task.sh` exits 4 anyway** → report `FAIL` in D3 and name the slug. There is nobody to ask, so a destructive fallback is never the answer.
 
 ### D3. Run `## Core`, then the digest
 

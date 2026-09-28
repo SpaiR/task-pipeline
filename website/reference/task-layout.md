@@ -47,7 +47,7 @@ Why + what, distilled from the chat.
 - **Line 1** is a plain `# <Title>` — no bracketed task-id.
 - `Roadmap:` / `Source item:` / `Spec:` headers sit above the `---`, ASCII.
 - Cross-references are **Markdown links**, so a `.task/` file is navigable in a Markdown viewer or plan-review tool. The link **text** is the slug that carries the identity; the target is what a viewer follows, and is always `../<kind>/<slug>.md` — `task/`, `roadmap/` and `spec/` are siblings under `.task/`. `Source item:` is a number, not a reference, so it stays bare.
-- `## Description` and `## Plan` are always written together by `to-task`; `## Tests` is optional, per Testing Policy. (An older, Description-only file captured before `to-task` always wrote a Plan stays valid.)
+- `## Description` and `## Plan` are always written together, and both are required; `## Tests` is optional, per Testing Policy.
 - `## Execution` is a one-line pointer, stamped verbatim by `to-task` and `roadmap-to-workflow`'s per-item plan agent. Roadmaps and specs carry none. The instructions it names live once in `.task/CLAUDE.md` → `## Executing a task` — that is the mechanism carrying implement → commit → review.
 
 ## roadmap.md

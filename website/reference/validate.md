@@ -14,7 +14,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" [ all | task <slug> | r
 - line 1 is a `# <Title>`;
 - a `---` separator is present;
 - `## Description` is present;
-- `## Plan` is optional — if present, it has ≥1 `### Step N:` block;
+- `## Plan` is present and has ≥1 `### Step N:` block;
 - `## Tests` is optional — if present, it has ≥1 `### Test N:` block;
 - `## Execution` is present (presence only);
 - each `Spec:` header's slug resolves to an existing spec — a miss is a `WARN`, not an error. The slug is read from the link text, so `Spec: [<slug>](../spec/<slug>.md)` and a bare `Spec: <slug>` check identically;

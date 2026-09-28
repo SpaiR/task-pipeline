@@ -67,6 +67,15 @@ v "$repo" task emptyplan
 assert_exit 1 "$V_EXIT" "plan without steps"
 assert_contains "$V_OUT" "contains no '### Step N:' blocks" "names the step blocks"
 
+t_case "a task with no '## Plan' is an error"
+# The Plan is mandatory: there is no Description-only task shape.
+awk '/^## Plan/{skip=1; next} skip && /^## /{skip=0} !skip' \
+  "$repo/.task/task/good.md" >"$repo/.task/task/noplan.md"
+v "$repo" task noplan
+assert_exit 1 "$V_EXIT" "plan missing"
+assert_contains "$V_OUT" "missing '## Plan' section heading" "names the Plan"
+assert_eq "0" "$(grep -c '^## Plan' "$repo/.task/task/noplan.md")" "fixture really has no Plan"
+
 t_case "a roadmap with a duplicate item number is an error"
 mkdir -p "$repo/.task/roadmap"
 cat >"$repo/.task/roadmap/dup.md" <<'MD'
