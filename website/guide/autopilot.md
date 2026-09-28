@@ -67,9 +67,10 @@ Ran `api-v2-migration`: 2 of 5 items landed and ticked, 3 still unchecked.
   Commits: a1b2c3d..e4f5a6b.
 Stopped at #3 <item-slug> in wave 2. Its work is left in the working tree —
   inspect it with `git status` and `git log --oneline -3`.
-→ Next: fix #3 (or re-plan it with `/task:to-task api-v2-migration#3`), then rerun
-  `/task:roadmap-to-workflow api-v2-migration` — already-ticked items stay ticked,
-  only the unchecked remainder reruns.
+→ Next: fix #3 by hand and tick it, or edit the item in
+  `.task/roadmap/api-v2-migration.md` so the rerun re-plans it from the new text,
+  then rerun `/task:roadmap-to-workflow api-v2-migration` — already-ticked items
+  stay ticked, only the unchecked remainder reruns.
 ```
 
 Fix the failing item (edit its task file, or re-implement it by hand), tick its box, then rerun — it only picks up the unchecked remainder.
