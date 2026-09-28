@@ -31,7 +31,7 @@ Spec: [<slug>](../spec/<slug>.md)         (optional, repeatable — each cites a
 ## Description
 Why + what, distilled from the chat.
 
-## Plan                  (written only by to-task)
+## Plan                  (required; to-task and the per-item plan agent write it)
 ### Step 1: <short title>
 **Goal:** <observable end state>
 **Touches:** `path/one` `path/two`
