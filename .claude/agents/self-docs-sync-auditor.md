@@ -22,7 +22,7 @@ Build the reality you compare against at run time, before reading any doc:
 - **Helpers** — `ls skills/_lib/ skills/_lib/templates/`. Every file there is part of the inventory.
 - **Agents** — `ls agents/`. That is the plugin's agent roster; `.claude/agents/` is repo-local maintainer tooling and never part of it.
 - **Docs** — `ls docs/ website/guide/ website/reference/`.
-- **Eval cases** — `ls evals/`: every directory except `results/` (gitignored run output) is one case; the skill it drives is the `/task:<skill>` line in its `prompt.md`.
+- **Eval cases** — `ls evals/`: every directory except `results/` (gitignored run output) is one case; the skill it drives is the `/task:<skill>` line in its `prompt.md`, and an agent case names `task:code-reviewer` instead.
 - **Path rules** — `ls .claude/rules/`, when that directory exists.
 - **Version** — `.claude-plugin/plugin.json` → `version`.
 

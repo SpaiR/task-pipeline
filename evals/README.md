@@ -1,6 +1,6 @@
 # Eval suite
 
-Prompt-level cases for all five skills —
+Prompt-level cases for the skills and the reviewer agent —
 run with `claude plugin eval`. They cover what `tests/` cannot: the bash layer has unit
 tests, but whether a *skill* actually fires, writes the artifact it promises and
 prints the conventions is a property of the prompt, and only a real run shows it.
@@ -18,8 +18,9 @@ claude plugin eval . --ablation none --scaffold --no-publish --allow-tools Bash 
 ```
 
 Each case is a directory: `prompt.md` (frontmatter plus the user prompt in its
-body) and one file per grader under `graders/`. Every case starts from a scratch
-project with no `.task/`, so the capture cases also exercise first-run setup.
+body) and one file per grader under `graders/`. The skill cases start from a scratch
+project with no `.task/`, so the capture cases also exercise first-run setup; the
+reviewer cases seed a repository through `case.yaml` and `fixture.sh`.
 
 | Case | Asserts |
 |------|---------|
@@ -28,10 +29,12 @@ project with no `.task/`, so the capture cases also exercise first-run setup.
 | `to-spec-pins` | the digest lists every pin, and the spec carries numbered `## N.` decisions |
 | `to-roadmap-fresh` | the skill writes the roadmap together with its `## Architecture` section with `### Components`, no em-dash dependency is appended to, and the digest carries the `Architecture:` line |
 | `roadmap-to-workflow-unconfigured` | the launcher hard-stops and redirects instead of bootstrapping |
+| `code-reviewer-fixes-on-top` | `task:code-reviewer` fixes a planted defect in one `fix` commit on top, rewrites no history, and ticks the roadmap item |
+| `code-reviewer-uncommitted-fails` | over an uncommitted implementation the reviewer commits nothing, leaves the item unticked, and says it was never committed |
 
 ## Status
 
-All five cases follow the runner's format. `to-roadmap-fresh` passed under its
+All seven cases follow the runner's format. `to-roadmap-fresh` passed under its
 previous name, when the architecture layer was still a skill of its own; the
 others await their first run.
 

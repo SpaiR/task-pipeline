@@ -5,7 +5,7 @@ paths:
 
 # Editing the eval cases
 
-- **Case shape.** One directory per case: `prompt.md` (frontmatter such as `name`, `tags`, `runs`, `max_turns`, `allowed_tools`, then the user prompt as the body) and one file per grader under `graders/`. Every case starts from a scratch project with no `.task/`.
+- **Case shape.** One directory per case: `prompt.md` (frontmatter such as `name`, `tags`, `runs`, `max_turns`, `allowed_tools`, then the user prompt as the body) and one file per grader under `graders/`. A case starts from a scratch project with no `.task/`, unless its `case.yaml` names a `fixture.sh` that seeds the workspace; a run then needs `--scaffold`.
 - **List `Skill` in `allowed_tools`.** Runs are in don't-ask mode, so without it the skill call is denied and only the `tool_used: Skill` grader passes.
 - **Patterns are JavaScript regexes.** An inline `(?m)` throws; put multiline in a `flags: m` key.
 - **A file target takes one literal path**, relative to the run's workspace; a glob fails with "does not exist". Name the slug in the prompt, or use a `file_exists` grader, the one that accepts a glob.
