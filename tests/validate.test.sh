@@ -76,6 +76,27 @@ assert_exit 1 "$V_EXIT" "plan missing"
 assert_contains "$V_OUT" "missing '## Plan' section heading" "names the Plan"
 assert_eq "0" "$(grep -c '^## Plan' "$repo/.task/task/noplan.md")" "fixture really has no Plan"
 
+t_case "a byte that is not UTF-8 changes nothing under a UTF-8 locale"
+# macOS awk decodes by locale and aborts on an invalid byte (`towc: multibyte
+# conversion failure`); each section check is a negated awk, so an abort once
+# read as a missing Plan or Tests block, and a dangling Spec: WARN went quiet.
+{
+  printf '# Caf\351 task\nSpec: [nosuch](../spec/nosuch.md)\n'
+  sed '1d' "$repo/.task/task/good.md" | LC_ALL=C sed $'s/^\\*\\*Goal:\\*\\* it is done$/**Goal:** caf\351 is done/'
+} >"$repo/.task/task/latin1.md"
+assert_eq "2" "$(LC_ALL=C grep -c $'\351' "$repo/.task/task/latin1.md")" "fixture holds the byte"
+LC_ALL=en_US.UTF-8 v "$repo" task latin1
+assert_exit 0 "$V_EXIT" "still clean"
+assert_contains "$V_OUT" "OK 0 errors" "no false section error"
+assert_contains "$V_OUT" "Spec: nosuch" "dangling spec still warned"
+
+t_case "duplicate item numbers are still caught past a non-UTF-8 byte"
+mkdir -p "$repo/.task/roadmap"
+printf '# R\n\n### - [ ] 1. Caf\351\n\n### - [ ] 1. Again\n' >"$repo/.task/roadmap/latin1.md"
+LC_ALL=en_US.UTF-8 v "$repo" roadmap latin1
+assert_exit 1 "$V_EXIT" "duplicate is an error"
+assert_contains "$V_OUT" "duplicate" "names the duplicate"
+
 t_case "a roadmap with a duplicate item number is an error"
 mkdir -p "$repo/.task/roadmap"
 cat >"$repo/.task/roadmap/dup.md" <<'MD'

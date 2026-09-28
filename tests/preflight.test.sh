@@ -111,11 +111,37 @@ assert_eq "no" "$([[ -e "$bare/.task/.gitignore" ]] && echo yes || echo no)" "no
 t_case "an unwritable .task/ still prints the block and exits 0"
 locked=$(make_repo --config)
 chmod a-w "$locked/.task"
-p "$locked" task
+if [[ -w "$locked/.task" ]]; then
+  # As root a chmod does not bite: the write would succeed and prove nothing.
+  echo "$T_NAME: SKIP — .task/ stays writable after chmod (running as root)"
+else
+  p "$locked" task
+  assert_exit 0 "$P_EXIT" "a failed restore is swallowed"
+  assert_contains "$P_OUT" "CONFIG: present" "block still printed"
+  assert_eq "no" "$([[ "$P_OUT" == *ermission* ]] && echo yes || echo no)" "no write error leaks into the block"
+  assert_eq "no" "$([[ -e "$locked/.task/.gitignore" ]] && echo yes || echo no)" "the write really was refused"
+fi
 chmod u+w "$locked/.task"
-assert_exit 0 "$P_EXIT" "a failed restore is swallowed"
-assert_contains "$P_OUT" "CONFIG: present" "block still printed"
-assert_eq "no" "$([[ "$P_OUT" == *ermission* ]] && echo yes || echo no)" "no write error leaks into the block"
+
+t_case "a byte that is not UTF-8 in a roadmap keeps its progress"
+# macOS awk decodes by locale and aborts on an invalid byte: the counts came
+# back empty and the open list fell back to `none`, a finished roadmap.
+latin=$(make_repo --config)
+mkdir -p "$latin/.task/roadmap"
+printf '# L\n\n### - [x] 1. Caf\351\n\n### - [ ] 2. Open\n' >"$latin/.task/roadmap/latin1.md"
+LC_ALL=en_US.UTF-8 p "$latin" task
+assert_contains "$P_OUT" "ROADMAPS: latin1 1/2 unchecked=2" "progress survives the byte"
+
+t_case "an unreadable roadmap is never reported as complete"
+chmod a-r "$latin/.task/roadmap/latin1.md"
+if [[ -r "$latin/.task/roadmap/latin1.md" ]]; then
+  echo "$T_NAME: SKIP — the roadmap stays readable after chmod (running as root)"
+else
+  p "$latin" task
+  assert_exit 0 "$P_EXIT" "block still printed"
+  assert_contains "$P_OUT" "ROADMAPS: latin1 ?/? unchecked=unreadable" "a failed read is its own value"
+fi
+chmod u+r "$latin/.task/roadmap/latin1.md"
 
 t_case "an unknown kind is a usage error"
 p "$repo" nonsense

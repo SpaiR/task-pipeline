@@ -31,6 +31,9 @@ prompt instead, already resolved.
 - `unchecked=none` → **stop**: every item is already checked off. Footer:
   `→ Next: \`<the caller's command> <slug>#<a real item number from the file>\`
   to redo a specific item, or describe new work in chat.`
+- `unchecked=unreadable` → **stop**: the roadmap file could not be read. Name
+  `$AI_DIR/roadmap/<slug>.md`. Footer: `→ Next: fix the file's permissions, then
+  rerun \`<the caller's command> <slug>\`.`
 - Driver mode never picks: `#N` and the title arrive in the prompt.
 
 ## 3. Read the ready description

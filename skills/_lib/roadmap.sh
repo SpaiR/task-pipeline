@@ -45,10 +45,14 @@ resolve_artifact_path() {
 # marked" ([x]/[~]/[>]/[-]); without this, a roadmap with [~]/[>]/[-] items
 # would report done<total even when no [ ] remains, and the wizard's
 # (complete) flag would never fire for it.
+#
+# Returns awk's status, so a caller can tell an unreadable file from an empty
+# one. Byte-wise: in a UTF-8 locale macOS awk aborts on a byte it cannot
+# decode, and the counts came back empty; every pattern here is ASCII.
 roadmap_progress_counts() {
   local file="$1"
   # One pass, three counters — same regex classes as before, one fork not three.
-  awk '
+  LC_ALL=C awk '
     /^### - \[[ x~>-]\] [0-9]+\. / { t++ }
     /^### - \[[x~>-]\] [0-9]+\. /  { d++ }
     /^### - \[ \] [0-9]+\. /       { u++ }

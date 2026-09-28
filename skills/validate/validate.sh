@@ -27,6 +27,15 @@ set -u
 # Note: do NOT use `set -e` — we collect issues and report them all at once
 # rather than aborting on the first failure.
 
+# Byte-wise, for the whole script: every awk, grep and `[[ =~ ]]` below parses
+# hand-edited text that may hold a byte the caller's locale cannot decode. In a
+# UTF-8 locale macOS awk aborts on one ("towc: multibyte conversion failure"),
+# and each section check is a negated awk, so an abort read as a missing
+# section; the title's `=~` failed to match `.+` across it. Every pattern is
+# ASCII, and the one non-ASCII comparison (the `—` no-dependency token) is an
+# exact string match, so bytes lose nothing.
+export LC_ALL=C
+
 # AI_DIR is resolved by `find_ai_dir` (defined in resolve-ws.sh, sourced below)
 # — a git-style upward walk so validation works from any subdir, not only the
 # project root. It is deliberately NOT hardcoded to `.task` here: pinning it
@@ -75,12 +84,10 @@ require_config() {
 # WARNS directly — the same reason `err`/`warn` are plain functions. `$label` is
 # read from the caller's scope, as those two do.
 #
-# The awk runs under LC_ALL=C, byte-wise. In a UTF-8 locale macOS awk decodes
-# characters, and a match()/substr() walk across a multibyte character such as
-# the `→` of an `## Architecture` interface line aborts the whole pass with
-# "towc: multibyte conversion failure" — silently dropping every finding it would
-# have printed. Every pattern here is ASCII and every non-ASCII comparison (the
-# `—` no-dependency token) is an exact string match, so bytes lose nothing.
+# The awk runs under LC_ALL=C, byte-wise (the script-wide pin above, repeated
+# here because this is where it once went missing): in a UTF-8 locale a
+# match()/substr() walk across the `→` of an `## Architecture` interface line
+# aborted the whole pass, silently dropping every finding it would have printed.
 awk_report() {
   local line
   while IFS= read -r line; do

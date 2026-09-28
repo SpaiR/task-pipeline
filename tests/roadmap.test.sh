@@ -25,6 +25,16 @@ assert_eq "total: 6
 done: 4
 unchecked: 2" "$counts" "five-state tally"
 
+t_case "roadmap_progress_counts counts past a non-UTF-8 byte, and fails on a missing file"
+# macOS awk decodes by locale and aborts on an invalid byte; the counts came
+# back empty, which preflight.sh printed as a finished roadmap.
+printf '### - [x] 1. Caf\351\n### - [ ] 2. open\n' >"$dir/latin1.md"
+assert_eq "total: 2
+done: 1
+unchecked: 1" "$(LC_ALL=en_US.UTF-8 roadmap_progress_counts "$dir/latin1.md")" "tally survives the byte"
+roadmap_progress_counts "$dir/nosuch.md" >/dev/null 2>&1
+assert_eq "no" "$([[ $? -eq 0 ]] && echo yes || echo no)" "a failed read is a non-zero status"
+
 t_case "resolve_artifact_path: explicit path, bare slug, slug + .md"
 AI_DIR=$(t_tmpdir)/.task
 mkdir -p "$AI_DIR/task"

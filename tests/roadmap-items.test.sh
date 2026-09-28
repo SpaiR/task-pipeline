@@ -67,6 +67,16 @@ i "$repo" nosuchthing
 assert_exit 1 "$I_EXIT" "no such roadmap"
 assert_contains "$I_OUT" "roadmap not found" "says so"
 
+t_case "a byte that is not UTF-8 does not truncate the item list"
+# macOS awk decodes by locale and aborts on an invalid byte: the list once
+# stopped at that item, with no DONE line and an exit code no caller handles.
+printf '# L\n\n### - [x] 1. Done\n**Dependencies:** \342\200\224\n\n### - [ ] 2. Caf\351\n**Dependencies:** 1\n\n### - [ ] 3. After\n**Dependencies:** \342\200\224\n' \
+  >"$repo/.task/roadmap/latin1.md"
+LC_ALL=en_US.UTF-8 i "$repo" latin1
+assert_exit 0 "$I_EXIT" "collector ran"
+assert_contains "$I_OUT" "$(printf '3\t\tsonnet\tAfter')" "item past the byte, em dash still no deps"
+assert_contains "$I_OUT" "$(printf 'DONE\t1')" "DONE line"
+
 t_case "a missing argument is a usage error"
 i "$repo"
 assert_exit 2 "$I_EXIT" "usage"

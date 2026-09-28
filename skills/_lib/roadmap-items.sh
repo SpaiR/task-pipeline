@@ -12,7 +12,8 @@
 # `done` args verbatim. Nothing here sorts or filters: the driver's own
 # computeWaves() decides the order and the scope.
 #
-# Exit codes: 0 printed, 1 no such roadmap, 2 usage.
+# Exit codes: 0 printed, 1 no such roadmap (or one that could not be read),
+# 2 usage.
 set -u
 
 SRC="${BASH_SOURCE[0]}"
@@ -33,7 +34,11 @@ ROADMAP=$(resolve_artifact_path roadmap "$arg")
 # exactly like a fully-completed roadmap.
 [[ -n "$ROADMAP" && -f "$ROADMAP" ]] || { echo "ERROR roadmap not found: $arg" >&2; exit 1; }
 
-awk '
+# Byte-wise: in a UTF-8 locale macOS awk aborts on a byte it cannot decode,
+# which truncated the item list mid-file. Every pattern is ASCII and the `—`
+# token is an exact string compare, so bytes lose nothing. A pass that still
+# fails (an unreadable file) is exit 1 too: its partial list must never run.
+LC_ALL=C awk '
   function flush() { if (pend) { print n "\t" deps "\t" (model==""?"sonnet":model) "\t" title; pend=0 } }
   /^### - \[[ x~>-]\] [0-9]+\. / {
     flush()
@@ -69,4 +74,4 @@ awk '
   /^\*\*Dependencies:\*\*/ && pend { deps=$0; sub(/^\*\*Dependencies:\*\* */,"",deps); gsub(/[ \t]/,"",deps); if (deps=="—"||deps=="-"||tolower(deps)=="none"||tolower(deps)=="n/a") deps="" }
   /^\*\*Model:\*\*/       && pend { model=$0; sub(/^\*\*Model:\*\* */,"",model); gsub(/[ \t]/,"",model); if (model!="haiku" && model!="sonnet" && model!="opus") model="" }
   END { flush(); print "DONE\t" donelist }
-' "$ROADMAP"
+' "$ROADMAP" || { echo "ERROR cannot read roadmap: $ROADMAP" >&2; exit 1; }
