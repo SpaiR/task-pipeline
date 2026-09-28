@@ -46,4 +46,11 @@ assert_eq "$AI_DIR/task/beta" "$(resolve_artifact_path task beta)" "bare name un
 assert_eq "$AI_DIR/task/alpha.md" "$(resolve_artifact_path task alpha)" "slug + .md"
 assert_eq "" "$(resolve_artifact_path task nope)" "no match is empty"
 
+t_case "resolve_artifact_path: a bare slug never resolves to a file in the cwd"
+# A stray `alpha` beside the caller once shadowed $AI_DIR/task/alpha.md.
+printf '# stray\n' >"$dir/alpha"
+assert_eq "$AI_DIR/task/alpha.md" "$(cd "$dir" && resolve_artifact_path task alpha)" "slug wins over a cwd file"
+assert_eq "" "$(cd "$dir" && resolve_artifact_path task loose.md)" "a cwd file is not a slug"
+assert_eq "./loose.md" "$(cd "$dir" && resolve_artifact_path task ./loose.md)" "a path still is, used as given"
+
 t_summary

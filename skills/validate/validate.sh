@@ -279,7 +279,11 @@ validate_roadmap() {
   local file
   file=$(resolve_artifact_path roadmap "$raw")
   if [[ -z "$file" ]]; then
-    err "roadmap($raw)" "file not found (looked at $raw, $AI_DIR/roadmap/$raw(.md))"
+    if [[ "$raw" == */* ]]; then
+      err "roadmap($raw)" "file not found at $raw"
+    else
+      err "roadmap($raw)" "file not found (looked at $AI_DIR/roadmap/$raw(.md))"
+    fi
     return
   fi
   local label
@@ -641,8 +645,8 @@ Usage:
   validate.sh spec <slug>     — validate .task/spec/<slug>.md
   validate.sh all             — every task + roadmap + spec file
 
-<slug> is the filename (with or without the .md suffix); it is also accepted
-as an explicit path.
+<slug> is the filename (with or without the .md suffix), looked up under
+.task/ only. An argument holding a `/` is taken as an explicit path instead.
 
 Exit codes: 0 ok, 1 validation errors, 2 usage / precondition.
 EOF

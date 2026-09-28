@@ -9,7 +9,7 @@
 # sources nothing itself.
 #
 # Exposed API:
-#   resolve_artifact_path <kind> <arg>  — slug-or-path → absolute path under
+#   resolve_artifact_path <kind> <arg>  — slug (no `/`) or path → path under
 #                                         $AI_DIR/<kind> (task | roadmap | spec).
 #                                         Callers: validate.sh + roadmap-items.sh.
 #   roadmap_progress_counts <path>      — prints three lines: total / done / unchecked.
@@ -26,11 +26,17 @@
 
 # --- resolve_artifact_path <kind> <arg> ---
 # Echoes the resolved artifact path on stdout, or empty string if no match.
-# <kind> is the .task subdirectory (task | roadmap | spec). Lookup order:
-# explicit path → $AI_DIR/<kind>/<arg> → $AI_DIR/<kind>/<arg>.md.
+# <kind> is the .task subdirectory (task | roadmap | spec). An <arg> holding a
+# `/` is a path, used as given; anything else is a slug, looked up as
+# $AI_DIR/<kind>/<arg> → $AI_DIR/<kind>/<arg>.md and never in the cwd. Checking
+# the cwd first let a stray file named like the slug shadow the artifact: the
+# items came from it while the reviewer ticked the real roadmap.
 resolve_artifact_path() {
   local kind="$1" arg="$2"
-  if [[ -f "$arg" ]]; then echo "$arg"; return; fi
+  if [[ "$arg" == */* ]]; then
+    if [[ -f "$arg" ]]; then echo "$arg"; else echo ""; fi
+    return
+  fi
   if [[ -f "$AI_DIR/$kind/$arg" ]]; then echo "$AI_DIR/$kind/$arg"; return; fi
   if [[ -f "$AI_DIR/$kind/$arg.md" ]]; then echo "$AI_DIR/$kind/$arg.md"; return; fi
   echo ""
