@@ -13,7 +13,8 @@ export const meta = {
 // itself. A scriptPath into the plugin cannot work — the tool checks it for
 // read permission against the session's cwd, and a plugin never sits inside
 // it. The script never changes between runs, so resumeFromRunId replays
-// completed stages from cache. Contract:
+// completed stages from cache — a failing stage included, so it resumes only
+// an interrupted run, never one that returned a stop. Contract:
 // docs/contract.md § roadmap-to-workflow execution shape (driver contract).
 //
 // The Workflow sandbox has no filesystem access — every write (the task files,
