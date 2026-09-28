@@ -4,7 +4,7 @@ The objections that come up most, answered short. Each links to the page with th
 
 ## Does it conflict with plan mode?
 
-No — they do different jobs and compose. Plan mode helps you think inside one session; task-pipeline persists the result of that thinking to a file so it survives `/clear` and a fresh session tomorrow. Use plan mode to explore, then run `/task:to-plan` when the plan is worth keeping. See the [comparison with default Claude Code](/guide/comparison#vs-default-claude-code).
+No — they do different jobs and compose. Plan mode helps you think inside one session; task-pipeline persists the result of that thinking to a file so it survives `/clear` and a fresh session tomorrow. Use plan mode to explore, then run `/task:to-task` when the plan is worth keeping. See the [comparison with default Claude Code](/guide/comparison#vs-default-claude-code).
 
 ## What if I don't want it to commit?
 

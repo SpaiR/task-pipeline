@@ -3,7 +3,7 @@
 #
 # The one owner of task.md assembly: the header link forms, the `---`
 # separator, the section order and the stamped `## Execution` pointer all live
-# here, so `to-task`, `to-plan` and the driver's plan agent stop hand-building
+# here, so `to-task` and the driver's plan agent stop hand-building
 # the same file three times. See docs/contract.md § task.md format.
 #
 # Usage:

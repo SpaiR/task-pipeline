@@ -10,12 +10,6 @@ ls .task/task/
 # files that stay put; git history is the record, there is no archive
 ```
 
-Want just the tasks that still have no Plan (the `to-task`-only captures)?
-
-```text
-grep -L '^## Plan' .task/task/*.md
-```
-
 ## Pick one up
 
 ```text
@@ -27,10 +21,7 @@ No pointer to re-point, nothing to restore from an archive.
 
 ## Change scope before re-running
 
-The artifact is plain Markdown. Edit the `## Description` (and `## Plan`, if present) by hand, or run [`/task:to-plan`](/reference/to-plan) again:
-
-- on a file that already has a `## Plan`, `to-plan` **revises** it in place and shows a one-line note of what changed;
-- on a `to-task`-only file with no `## Plan` yet, the same command **promotes** it in place.
+The artifact is plain Markdown. Edit `## Description` and `## Plan` by hand, or re-run [`/task:to-task`](/reference/to-task) — it asks before overwriting an existing slug; for a roadmap item's own file the chip offers to regenerate it from the item, which replaces the old Plan and any hand edits. There's no promote or revise mode: a fresh capture always writes Description and Plan together.
 
 ## Where a roadmap stands
 
@@ -43,6 +34,6 @@ grep '^### - \[ \]' .task/roadmap/api-v2-migration.md
 
 ## Combining scenarios
 
-None of these modes are exclusive. Capture a couple of small fixes directly with `to-task`, run a larger one through `to-plan`, and reserve `to-roadmap` + `roadmap-to-workflow` for the initiative-sized work — all sharing the same flat `.task/`, all invisible to `git status`.
+None of these modes are exclusive. Capture a couple of small fixes with `to-task`, and reserve `to-roadmap` + `roadmap-to-workflow` for the initiative-sized work — all sharing the same flat `.task/`, all invisible to `git status`.
 
 → Next: [Why you can trust this](/guide/trust).

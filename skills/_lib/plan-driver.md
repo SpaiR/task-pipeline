@@ -2,10 +2,10 @@
 
 The plan pipeline, in one place. Two audiences:
 
-- **`## Core`** — the pipeline itself: anchors, codebase analysis, `tests_required`, the Description/Plan/Tests draft, the self-check, the write. `to-plan` Steps 3–7 point here, and so does the per-item plan agent.
+- **`## Core`** — the pipeline itself: anchors, codebase analysis, `tests_required`, the Description/Plan/Tests draft, the self-check, the write. `to-task` Steps 3–7 point here, and so does the per-item plan agent.
 - **`## Driver mode`** — what the plan agent spawned by `skills/_lib/roadmap-driver.js` does differently: its inputs, its non-interactive rules, and the parser-stable digest it must end on.
 
-Interactive `to-plan` follows `## Core` and ignores `## Driver mode`; the plan agent follows both, starting at `## Driver mode`. [docs/contract.md § task.md format](../../docs/contract.md#taskmd-format-tasktaskslugmd) is the artifact shape both produce.
+Interactive `to-task` follows `## Core` and ignores `## Driver mode`; the plan agent follows both, starting at `## Driver mode`. [docs/contract.md § task.md format](../../docs/contract.md#taskmd-format-tasktaskslugmd) is the artifact shape both produce.
 
 ## Core
 
@@ -15,7 +15,7 @@ Read `$AI_DIR/CLAUDE.md` with a **file-read tool**, not `cat` — the platform's
 
 Then read every spec the task cites (`Spec:` headers, or the slugs collected from a roadmap item). Their decisions are **fixed anchors**: the Plan honors them and never re-derives a different technical choice. No `Spec:` at all → no anchors, proceed on the Description alone.
 
-Then the **roadmap architecture**, when the task comes from a roadmap item. The roadmap is the one `roadmap-item.md` resolved (`to-plan` Step 2a, or the path in your driver-mode prompt); for an existing target reached without it, it is the one the file's `Roadmap:` header names, with `#N` from `Source item:` — take the slug from the link **label** and read `$AI_DIR/roadmap/<slug>.md`, never the href. If that roadmap carries an `## Architecture` section, read its `### Components`, its `### Interfaces between items` involving `#N`, this item's bullet under `### Item sketches`, and any `### Technical ordering` line naming `#N`. It is the **intended shape, not a fixed anchor**: the Plan's `Touches` and `Goal`s follow its components and interfaces by default, and where the code you analyze in step 2 contradicts it — a module that does not exist, a boundary that sits elsewhere — the Plan deviates, and the `Goal` of the step that deviates says why in one clause. No such section, or no roadmap → nothing to follow.
+Then the **roadmap architecture**, when the task comes from a roadmap item. The roadmap is the one `roadmap-item.md` resolved (`to-task` Step 1a, or the path in your driver-mode prompt — present on every run, reruns included). If that roadmap carries an `## Architecture` section, read its `### Components`, its `### Interfaces between items` involving `#N`, this item's bullet under `### Item sketches`, and any `### Technical ordering` line naming `#N`. It is the **intended shape, not a fixed anchor**: the Plan's `Touches` and `Goal`s follow its components and interfaces by default, and where the code you analyze in step 2 contradicts it — a module that does not exist, a boundary that sits elsewhere — the Plan deviates, and the `Goal` of the step that deviates says why in one clause. No such section, or no roadmap → nothing to follow.
 
 ### 2. Analyze the codebase
 
@@ -40,7 +40,7 @@ Two remaining `on-demand` cases, resolved distinctly:
 
 ### 4. Draft the Description, Plan and Tests
 
-- `## Description` — the why + the what, per `.task/CLAUDE.md` → Language (section labels themselves stay English). From a roadmap item: the why from `### Context`, the what from Goal / Outcomes / Invariants / Acceptance criteria. Fabricate nothing that was not actually discussed or written down. In promote / revise the Description already exists and is inherited as-is.
+- `## Description` — the why + the what, per `.task/CLAUDE.md` → Language (section labels themselves stay English). From a roadmap item: the why from `### Context`, the what from Goal / Outcomes / Invariants / Acceptance criteria. Fabricate nothing that was not actually discussed or written down. In driver mode's promote / revise (D2) the Description already exists and is inherited as-is.
 - `## Plan` — `### Step N:` blocks, three layers:
 
   ```markdown
@@ -94,7 +94,7 @@ bash "<plugin root>/skills/_lib/write-task.sh" --fresh \
 rm -f "$d" "$p" "$t"
 ```
 
-Three modes, one per situation:
+Three modes, one per situation — interactive `to-task` only ever writes `--fresh`; `--promote` / `--revise` exist for the driver's reruns (D2):
 
 - **`--fresh`** — a new file. `--title` and `--description` required; drop `--roadmap` / `--item` when the source is the chat, and `--spec` when nothing is cited.
 - **`--promote`** — an existing Description-only file gains `## Plan` (+ `## Tests`, if this run adds them), inserted directly above `## Execution`. Header, separator, Description and pointer untouched.
@@ -108,7 +108,7 @@ The `WROTE:` / `VALIDATE:` lines it prints are what the caller's digest reports.
 
 ## Driver mode
 
-Instructions for `roadmap-to-workflow`'s per-item **plan agent**, spawned by `skills/_lib/roadmap-driver.js`. Same output contract as the `to-plan` skill, none of the interactive machinery.
+Instructions for `roadmap-to-workflow`'s per-item **plan agent**, spawned by `skills/_lib/roadmap-driver.js`. Same output contract as the `to-task` skill, none of the interactive machinery.
 
 **Inputs (from your prompt):** the roadmap file (absolute path), the roadmap slug, the item `#N` and its title, the pipeline root (`AI_DIR`), the plugin root, and the roadmap-level spec file paths + slugs.
 

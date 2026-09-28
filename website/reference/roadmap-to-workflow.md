@@ -60,14 +60,14 @@ Ran `api-v2-migration`: 2 of 5 items landed and ticked, 3 still unchecked.
   Commits: a1b2c3d..e4f5a6b.
 Stopped at #3 <item-slug> in wave 2. Its work is left in the working tree —
   inspect it with `git status` and `git log --oneline -3`.
-→ Next: fix #3 (or re-plan it with `/task:to-plan api-v2-migration#3`), then rerun
+→ Next: fix #3 (or re-plan it with `/task:to-task api-v2-migration#3`), then rerun
   `/task:roadmap-to-workflow api-v2-migration` — already-ticked items stay ticked,
   only the unchecked remainder reruns.
 ```
 
 ## No Workflow tool
 
-If the Workflow tool isn't available in your environment, the skill hard-stops instead of running anything itself — it prints the unchecked items and a by-hand recipe: run `/task:to-plan <slug>#<N>` for one item in this chat, then say `implement .task/task/<item-slug>.md` in a fresh session. That session's `## Execution` pointer carries plan → commit → `task:code-reviewer` on its own, and the reviewer ticks the roadmap checkbox once its review passes, so there's nothing further to do per item — just repeat for the next one, in dependency order.
+If the Workflow tool isn't available in your environment, the skill hard-stops instead of running anything itself — it prints the unchecked items and a by-hand recipe: run `/task:to-task <slug>#<N>` for one item in this chat, then say `implement .task/task/<item-slug>.md` in a fresh session. That session's `## Execution` pointer carries plan → commit → `task:code-reviewer` on its own, and the reviewer ticks the roadmap checkbox once its review passes, so there's nothing further to do per item — just repeat for the next one, in dependency order.
 
 A driver that doesn't resolve is a different case and does **not** get this treatment. The driver ships with the plugin and is registered as `task:roadmap-driver`, so a name that fails to resolve means a stale or unreloaded plugin, not an environment without automation — the skill stops and says to update the plugin and restart, rather than putting you through the by-hand path for an install defect. See [Troubleshooting](/guide/troubleshooting#roadmap-driver-not-registered).
 

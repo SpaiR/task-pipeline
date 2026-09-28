@@ -23,7 +23,7 @@ From then on, updates are a single command:
 
 After installation, Claude Code gains these commands:
 
-`/task:grill` · `/task:to-task` · `/task:to-plan` · `/task:to-roadmap` · `/task:to-architecture` · `/task:to-spec` · `/task:roadmap-to-workflow`
+`/task:grill` · `/task:to-task` · `/task:to-roadmap` · `/task:to-spec` · `/task:roadmap-to-workflow`
 
 There is no hook — enforcement is by convention, not a gate. (If the commands don't show up, see [Troubleshooting](/guide/troubleshooting#commands-appear).)
 
@@ -41,7 +41,7 @@ You don't run a setup command first. The first capture in a new project detects 
 Talk a task through in chat — say, an HTTP retry system with backoff and a dead-letter queue — then capture it:
 
 ```text
-/task:to-plan
+/task:to-task
 ```
 
 On a fresh project this will:
@@ -94,9 +94,5 @@ Nothing is committed until this step runs. Until then, every change is just work
 `.task/CLAUDE.md` is a nested `CLAUDE.md`, so Claude Code loads it into any session that reads a file under `.task/` — that's how an implementing session picks up your settings without being told to.
 
 `.task/` is flat and invisible to your repo — its own `.task/.gitignore` ignores it, so it never shows in `git status`. Delete it with `rm -rf .task` and the repo is exactly as before. See [.task/ layout](/reference/task-layout) for the full picture.
-
-## Prefer a lighter touch?
-
-[`/task:to-task`](/reference/to-task) skips the Plan — good for a quick capture of the "what and why" that you'll flesh out with `/task:to-plan` later, or hand straight to implementation when the fix is obvious.
 
 → Next: [Core concepts](/guide/core-concepts) — the handful of ideas that make the rest predictable.

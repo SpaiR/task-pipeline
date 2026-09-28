@@ -26,7 +26,7 @@ You are a **read-only** auditor for the task-pipeline skills repository itself. 
 - § **Helpers** — the role, output lines, exit codes and callers of every `skills/_lib/` file. Each "Callers:" / "Sole caller:" claim is checkable by `grep`.
 - § **`roadmap-to-workflow` execution shape (driver contract)** — the driver, its `args`, its stages, its digests, its registration.
 
-**Where the producers really are.** The `task.md` template has exactly one owner, `skills/_lib/write-task.sh`; `to-task`, `to-plan` and `plan-driver.md` call it and carry no template. The roadmap shape is written by the flow in `skills/_lib/roadmap-capture.md` (plus `to-architecture` for `## Architecture`). The `.task/CLAUDE.md` template lives in `skills/_lib/setup.md`. Compare parsers against these files, not against a skill body that only points at them.
+**Where the producers really are.** The `task.md` template has exactly one owner, `skills/_lib/write-task.sh`; `to-task` and `plan-driver.md` call it and carry no template. The roadmap shape, `## Architecture` included, is written by the flow in `skills/_lib/roadmap-capture.md`. The `.task/CLAUDE.md` template lives in `skills/_lib/setup.md`. Compare parsers against these files, not against a skill body that only points at them.
 
 ## The contract is broken when
 

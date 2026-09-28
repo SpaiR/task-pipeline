@@ -1,6 +1,6 @@
 ---
-name: to-architecture-fresh
-tags: [capture, to-architecture]
+name: to-roadmap-fresh
+tags: [capture, to-roadmap]
 runs: 2
 max_turns: 30
 allowed_tools: [Skill, Bash, Read, Write, Edit, Glob, Grep]
@@ -18,4 +18,4 @@ items depend on the core landing first, and the redaction filter plugs into the
 core's write path, so it needs the core too. Commands never import the logger
 directly — they only see it through the context.
 
-/task:to-architecture capture the roadmap with its architecture — call it structured-logging
+/task:to-roadmap capture that — call it structured-logging

@@ -6,7 +6,7 @@ It writes **nothing**. Its whole output is a hardened discussion plus a decision
 
 ## Why grill before you capture
 
-A capture skill freezes a discussion into a file. If the discussion was fuzzy, the file is fuzzy. `grill` is where you pressure-test the thinking *before* it's frozen — so `to-plan` / `to-spec` / `to-architecture` / `to-task` / `to-roadmap` serialize something that's already been examined.
+A capture skill freezes a discussion into a file. If the discussion was fuzzy, the file is fuzzy. `grill` is where you pressure-test the thinking *before* it's frozen — so `to-task` / `to-roadmap` / `to-spec` serialize something that's already been examined.
 
 ## Where it comes from
 
@@ -40,12 +40,10 @@ The tests run in this order, and the first match wins:
 | What the ledger turned out to be | Routes to |
 |---|---|
 | Load-bearing "we chose X over Y because…" technical reasoning — each line names a concrete artifact **and** the alternative it beat | [`/task:to-spec`](/guide/specs) |
-| A multi-task initiative whose technical shape is also settled — which components it builds, what one item hands another, with no rejected alternative to preserve | [`/task:to-architecture`](/reference/to-architecture) |
-| An initiative that sprawled into several tasks | [`/task:to-roadmap`](/guide/roadmaps) |
-| One task, approach settled | [`/task:to-plan`](/guide/single-task) |
-| One task, approach still open | [`/task:to-task`](/guide/single-task) |
+| An initiative that sprawled into several tasks — whether or not its technical shape (components, what one item hands another) is also settled | [`/task:to-roadmap`](/guide/roadmaps) |
+| One task, whatever the approach's state | [`/task:to-task`](/guide/single-task) |
 
-The spec test is narrow on purpose: reasoning alone isn't the signal, since every ledger line reads "{decision} — because {reason}" by construction. What separates it from architecture is whether that reasoning binds work the ledger itself doesn't contain — a component layout or "item 2 hands item 4 an event" with no rejected alternative is technical shape, not an anchor, and falls through to the architecture test instead.
+The spec test is narrow on purpose: reasoning alone isn't the signal, since every ledger line reads "{decision} — because {reason}" by construction. What separates it from a roadmap's technical shape is whether that reasoning binds work the ledger itself doesn't contain — a component layout or "item 2 hands item 4 an event" with no rejected alternative is technical shape, not an anchor, and falls through to the roadmap test instead; `to-roadmap` harvests settled shape into its `## Architecture` and runs architecture rounds for the rest.
 
 It doesn't run the capture skill for you — the footer is the handoff. You review the ledger, then run the suggested command.
 

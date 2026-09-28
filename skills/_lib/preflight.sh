@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # preflight.sh — print a capture skill's entry state as one parser-stable block.
 #
-# Usage: bash preflight.sh <task|plan|roadmap|architecture|spec|workflow>
+# Usage: bash preflight.sh <task|roadmap|spec|workflow>
 #
 # Exists so a skill's Step 0 costs zero tool round-trips: the block is
 # substituted into the skill body by SKILL.md's `!`-preprocessing, before the
@@ -22,7 +22,7 @@
 #   VALIDATE: …                                         (kind `workflow` only)
 #
 # `unchecked=` lists the ITEM NUMBERS still open, not a count — the pickers in
-# `to-task <slug>#N` / `to-plan` / `roadmap-to-workflow` need the numbers.
+# `to-task <slug>#N` / `roadmap-to-workflow` need the numbers.
 #
 # Exit status is 0 whenever the block was printed, including for an unconfigured
 # project: the skill decides what to do from `CONFIG:`, not from an exit code.
@@ -42,9 +42,9 @@ SCRIPT_DIR=$(cd "$(dirname "$SRC")" && pwd)
 
 kind="${1:-}"
 case "$kind" in
-  task | plan | roadmap | architecture | spec | workflow) ;;
+  task | roadmap | spec | workflow) ;;
   *)
-    echo "ERROR usage: preflight.sh <task|plan|roadmap|architecture|spec|workflow>" >&2
+    echo "ERROR usage: preflight.sh <task|roadmap|spec|workflow>" >&2
     exit 2
     ;;
 esac

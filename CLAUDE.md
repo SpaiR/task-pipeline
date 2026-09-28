@@ -6,15 +6,14 @@ Guidance for Claude Code when editing **this repository**. User docs are the `we
 
 ## Quick orient
 
-The `task` plugin: seven skills implementing a chat-first context-serialization protocol, not an orchestration engine. One skill fixes a chat discussion into a Markdown artifact under `.task/`; the skill name, never a flag, sets its depth. No execution skill: a session told `implement .task/task/<slug>.md` follows its `## Execution` pointer, `roadmap-to-workflow` fans items out through the driver `skills/_lib/roadmap-driver.js`, and both hand the diff to the one agent, `agents/code-reviewer.md`. No build step, no plugin hook; the bash layer is tested and shellchecked in CI. Work here is mostly Markdown and pipeline reasoning.
+The `task` plugin: five skills implementing a chat-first context-serialization protocol, not an orchestration engine. One skill fixes a chat discussion into a Markdown artifact under `.task/`; what you capture — one task with its plan, an initiative with its architecture, or the decisions they must honor — is the skill name, never a flag. No execution skill: a session told `implement .task/task/<slug>.md` follows its `## Execution` pointer, `roadmap-to-workflow` fans items out through the driver `skills/_lib/roadmap-driver.js`, and both hand the diff to the one agent, `agents/code-reviewer.md`. No build step, no plugin hook; the bash layer is tested and shellchecked in CI. Work here is mostly Markdown and pipeline reasoning.
 
 ```
 discuss freely in chat
   ↓
 grill                                 ← pre-capture: interrogate the decision, no artifact
   ↓
-to-task | to-plan | to-roadmap        ← capture depth is the skill, not a flag
-to-architecture                       ← a roadmap's technical layer: ## Architecture
+to-task | to-roadmap                  ← what you capture is the skill, not a flag
 to-spec                               ← pins technical decisions, cited via Spec:
   ↓                       ↓
 implement session   roadmap-to-workflow   ← the launcher fans items out to sessions
@@ -35,15 +34,15 @@ task:code-reviewer                    ← the plugin's own review pass, spawned 
 - `.task/` is **flat**: `CLAUDE.md`, `.gitignore`, one file per artifact under `task/`, `roadmap/`, `spec/`. No subfolders, workspace, log or archive. [§ layout](docs/contract.md#task-layout-flat)
 - `.task/CLAUDE.md` is a nested `CLAUDE.md`, written once by setup, then user-owned: never rewritten or section-repaired. It auto-loads only through file-read tools and is not re-injected after `/compact`, hence the `## Execution` pointer and the reviewer's phase-0 read. [§ format](docs/contract.md#taskclaudemd-format)
 - **Slug is the identity**: kebab-case English from the title, the filename, never a header. No task-id, no `[TASK-ID]`, no umbrella grouping. [§ Slug](docs/contract.md#slug-as-identifier)
-- Setup gate: the five captures run setup without a chip; `roadmap-to-workflow` and `validate.sh` hard-stop without `.task/CLAUDE.md`; `grill` touches nothing under `.task/`. [§ Setup gate](docs/contract.md#setup-gate-categories)
-- `task.md` is the single contract: ASCII `Roadmap:`, `Source item:`, `Spec:` headers above `---`, `## Description`, optional `## Plan` and `## Tests`. Every task file ends with the stamped English `## Execution` pointer; roadmaps and specs carry none. [§ task.md](docs/contract.md#taskmd-format-tasktaskslugmd)
+- Setup gate: the three captures run setup without a chip; `roadmap-to-workflow` and `validate.sh` hard-stop without `.task/CLAUDE.md`; `grill` touches nothing under `.task/`. [§ Setup gate](docs/contract.md#setup-gate-categories)
+- `task.md` is the single contract: ASCII `Roadmap:`, `Source item:`, `Spec:` headers above `---`, `## Description`, `## Plan` (every producer writes it; `validate.sh` still accepts an older file without one), optional `## Tests`. Every task file ends with the stamped English `## Execution` pointer; roadmaps and specs carry none. [§ task.md](docs/contract.md#taskmd-format-tasktaskslugmd)
 - **Cross-artifact references are Markdown links** (`../<kind>/<slug>.md`; a related roadmap `<slug>.md`). The label is the identity: consumers rebuild `$AI_DIR/<kind>/<slug>.md` from it and accept a bare slug. Only `to-spec` writes specs; users edit them after. [§ references](docs/contract.md#cross-artifact-references)
 - The pipeline is **invisible** to the project: no tracked edits outside `.task/`, which its own `.task/.gitignore` (`*`) ignores; exactly two markers, `git config task.root` and `.task/.gitignore`. This repo's tracked `.task/` ignore is the dogfooding exception. [§ Markers](docs/contract.md#marker-inventory)
 - `resolve-ws.sh` is a pure root finder: it exports `AI_DIR`, claiming a root only on evidence. Every producer writes under `$AI_DIR`, never a cwd-relative `.task/`. [§ Root resolution](docs/contract.md#root-resolution-skills_libresolve-wssh)
 - Orchestration and commits stay delegated to the platform, never hand-rolled in a skill. The driver is reached by its registered name `task:roadmap-driver`, never by `scriptPath`. [§ driver contract](docs/contract.md#roadmap-to-workflow-execution-shape-driver-contract)
 - Review lives only in `agents/code-reviewer.md`: it proves before fixing, stays within **Touches**, commits at most one fix commit on top (none when clean), never sets `isolation`. Nothing instructs a call to `/verify` or `/code-review`. [§ Agent layer](docs/contract.md#agent-layer-agents)
 - Auto-mark is the reviewer's phase 7: OK verdict only, one baked flip command, never a plan or implement agent or a stage of its own. [§ Agent layer](docs/contract.md#agent-layer-agents)
-- Frontmatter: every skill carries `disable-model-invocation: true`, `user-invocable: true` and a flag-free `argument-hint`; the six bash-calling skills share one identical `allowed-tools` line. Each holds exactly one `!`-injection, its Step 0 preflight call; `grill` and `.claude/skills/` hold none. [§ Frontmatter](docs/contract.md#frontmatter)
+- Frontmatter: every skill carries `disable-model-invocation: true`, `user-invocable: true` and a flag-free `argument-hint`; the four bash-calling skills share one identical `allowed-tools` line. Each holds exactly one `!`-injection, its Step 0 preflight call; `grill` and `.claude/skills/` hold none. [§ Frontmatter](docs/contract.md#frontmatter)
 - Artifacts and dialog follow `.task/CLAUDE.md` → Language (`grill` mirrors the chat); parser-stable strings stay English. [§ Language split](docs/contract.md#language-split)
 - User-facing output ends with a `→ Next:` footer or `→ Done.`; a capture writes, then prints a digest (its only chip: the slug-collision guard); 2–4 option forks use `AskUserQuestion`; no flags. [§ Interaction conventions](docs/contract.md#interaction-conventions)
 

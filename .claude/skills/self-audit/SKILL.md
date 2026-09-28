@@ -10,7 +10,7 @@ Audit **this repository** (the task-pipeline skills repo itself) for drift betwe
 
 This is a **meta-skill**. It operates on the repo's own files, not on `.task/*` artifacts. It asks one question — *does the repo obey its own declared rules?* — and each lens has an oracle: `CLAUDE.md` § "Invariants — don't break these when editing skills" and § "Editing protocol — quick rules" with the `docs/contract.md` sections their bullets link, `docs/contract.md`, the documented outputs and exit codes in `docs/contract.md` together with each skill's own declared flow, and what is actually on disk. The skill can be invoked at any time.
 
-**Input:** Optional scope hint: $ARGUMENTS — a skill name (e.g. `to-plan`) or one or more repo paths; default: full repo.
+**Input:** Optional scope hint: $ARGUMENTS — a skill name (e.g. `to-task`) or one or more repo paths; default: full repo.
 
 **Precondition (hard-stop):** This skill is local to the task-pipeline repo. Verify the working directory contains `skills/to-task/`, `skills/validate/`, and `CLAUDE.md` at the repo root. If not, stop with: "This skill is local and only works inside the task-pipeline repository."
 
@@ -104,7 +104,7 @@ Read set per lens:
 
    | # | Lens | Sev | Conf | Location | Problem | Fix |
    |---|------|-----|------|----------|---------|-----|
-   | 1 | Invariants | high | 95 | `skills/to-plan/SKILL.md:42` | … | … |
+   | 1 | Invariants | high | 95 | `skills/to-task/SKILL.md:42` | … | … |
    ```
 
    Then a `Details` list (one entry per finding with `Source: <its Lens value>`, `Confidence: <0-100>`, `Evidence: <evidence>`, `Status: pending`).

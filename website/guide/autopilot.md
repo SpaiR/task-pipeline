@@ -47,7 +47,7 @@ Ran `api-v2-migration`: 2 of 2 items landed and ticked, 0 still unchecked.
 Nothing forces one mode for a whole roadmap. A common pattern: do the first, riskiest item yourself to validate the approach, then let autopilot take the rest.
 
 ```text
-/task:to-plan api-v2-migration#1
+/task:to-task api-v2-migration#1
 implement .task/task/<item-1-slug>.md
 # item 1 lands, its checkbox is ticked
 
@@ -67,7 +67,7 @@ Ran `api-v2-migration`: 2 of 5 items landed and ticked, 3 still unchecked.
   Commits: a1b2c3d..e4f5a6b.
 Stopped at #3 <item-slug> in wave 2. Its work is left in the working tree —
   inspect it with `git status` and `git log --oneline -3`.
-→ Next: fix #3 (or re-plan it with `/task:to-plan api-v2-migration#3`), then rerun
+→ Next: fix #3 (or re-plan it with `/task:to-task api-v2-migration#3`), then rerun
   `/task:roadmap-to-workflow api-v2-migration` — already-ticked items stay ticked,
   only the unchecked remainder reruns.
 ```
@@ -76,6 +76,6 @@ Fix the failing item (edit its task file, or re-implement it by hand), tick its 
 
 ## No Workflow tool?
 
-If the Workflow tool isn't available in your environment, `roadmap-to-workflow` hard-stops instead of running anything itself — it prints the unchecked items and tells you to run them by hand, in dependency order: `to-plan` on one item in this chat, then `implement .task/task/<item-slug>.md` in a fresh session. That session's `## Execution` pointer already carries plan → commit → `task:code-reviewer`, and the reviewer ticks the roadmap checkbox once its review passes — so this is exactly the "mixing hand-picked items" pattern above, just for every item instead of the first one.
+If the Workflow tool isn't available in your environment, `roadmap-to-workflow` hard-stops instead of running anything itself — it prints the unchecked items and tells you to run them by hand, in dependency order: `to-task` on one item in this chat, then `implement .task/task/<item-slug>.md` in a fresh session. That session's `## Execution` pointer already carries plan → commit → `task:code-reviewer`, and the reviewer ticks the roadmap checkbox once its review passes — so this is exactly the "mixing hand-picked items" pattern above, just for every item instead of the first one.
 
 → Next: [Specs](/guide/specs) — pinning the technical decisions a roadmap leans on.

@@ -2,15 +2,15 @@
 
 A **spec** pins load-bearing technical decisions — a protocol, a cross-cutting data shape, a "we picked X over Y because…" whose reasoning wouldn't survive re-derivation — into a standalone file at `.task/spec/<slug>.md`.
 
-A spec is **orthogonal** to the depth-capture skills. `to-task` / `to-plan` / `to-roadmap` decompose *work*; [`to-spec`](/reference/to-spec) pins the *decisions* that work must honor. One spec can be cited by many tasks and roadmaps, and can be captured before, alongside, or independently of any of them.
+A spec is **orthogonal** to the work-capture skills. `to-task` / `to-roadmap` decompose *work*; [`to-spec`](/reference/to-spec) pins the *decisions* that work must honor. One spec can be cited by many tasks and roadmaps, and can be captured before, alongside, or independently of any of them.
 
-It's also easy to confuse with [`to-architecture`](/reference/to-architecture), the other technical-layer skill — the two divide cleanly. A spec says **why this form over that one**: a protocol, a data shape, a "we picked X over Y because…" whose reasoning must survive re-derivation. Architecture says **what goes where**: which component a roadmap item touches, and what crosses the boundary to the next one — no rejected alternative to preserve, just a layout. A component map or a restated roadmap item is architecture, not a spec; `to-spec` tests every section for a concrete artifact plus a beaten alternative, and redirects to `to-architecture` when a discussion is only the latter.
+It's also easy to confuse with a roadmap's `## Architecture` section, which [`to-roadmap`](/reference/to-roadmap) writes — the two divide cleanly. A spec says **why this form over that one**: a protocol, a data shape, a "we picked X over Y because…" whose reasoning must survive re-derivation. Architecture says **what goes where**: which component a roadmap item touches, and what crosses the boundary to the next one — no rejected alternative to preserve, just a layout. A component map or a restated roadmap item is architecture, not a spec; `to-spec` tests every section for a concrete artifact plus a beaten alternative, and redirects to `to-roadmap` when a discussion is only the latter.
 
 ## Why specs exist
 
 Put a technical decision in a task's Plan and it's local to that task. Put it in a spec and it becomes a fixed anchor: every task that references it reads it first and honors it, instead of re-deriving a different choice. That's the point — to stop the same decision being re-litigated (and re-decided differently) across tasks.
 
-A rule of thumb: if a later `to-plan` or executing session would be *free to pick a different answer*, and that would break consistency, it's spec material. A detail local to one task is not.
+A rule of thumb: if a later `to-task` or executing session would be *free to pick a different answer*, and that would break consistency, it's spec material. A detail local to one task is not.
 
 ## Capture one
 
@@ -48,6 +48,6 @@ When a session implements a task carrying a `Spec:` header, its `## Execution` p
 
 ## Where specs live
 
-Specs are standalone files under `.task/spec/`, independent of any roadmap. A spec is authored **only** by `to-spec` — `to-task` / `to-plan` / `to-roadmap` / `to-architecture` can reference a spec via a header, but never write or edit the spec file itself.
+Specs are standalone files under `.task/spec/`, independent of any roadmap. A spec is authored **only** by `to-spec` — `to-task` / `to-roadmap` can reference a spec via a header, but never write or edit the spec file itself.
 
 → Next: [Returning to a task later](/guide/returning-later).

@@ -32,7 +32,7 @@ cat >"$repo/.task/roadmap/api-v2.md" <<'MD'
 MD
 printf '# T\n' >"$repo/.task/task/some-task.md"
 printf '# S\n' >"$repo/.task/spec/event-envelope.md"
-p "$repo" plan
+p "$repo" task
 assert_exit 0 "$P_EXIT" "configured project"
 assert_contains "$P_OUT" "AI_DIR: $repo/.task" "resolved root"
 assert_contains "$P_OUT" "PLUGIN_ROOT: $T_REPO_ROOT" "plugin root for the driver args"
@@ -76,11 +76,15 @@ MD
 p "$repo" roadmap
 assert_contains "$P_OUT" "ROADMAPS: withspace 0/1 unchecked=3" "well-formed heading is offered as open item 3"
 
-t_case "kind architecture prints the same block as the other capture kinds"
+t_case "kind architecture is gone with to-architecture — a usage error"
 p "$repo" architecture
-assert_exit 0 "$P_EXIT" "architecture is a known kind"
-assert_contains "$P_OUT" "CONFIG: present" "config state"
-assert_contains "$P_OUT" "ROADMAPS: api-v2 1/2 unchecked=2" "roadmap list the skill picks its target from"
+assert_exit 2 "$P_EXIT" "unknown kind"
+assert_contains "$P_OUT" "ERROR usage" "usage line names the valid kinds"
+
+t_case "kind plan is gone with to-plan — a usage error, not a silent default"
+p "$repo" plan
+assert_exit 2 "$P_EXIT" "unknown kind"
+assert_contains "$P_OUT" "ERROR usage" "usage line names the valid kinds"
 
 t_case "a configured root missing its .gitignore gets the self-ignoring one back"
 fresh=$(make_repo --config)
@@ -94,7 +98,7 @@ assert_eq "" "$(git -C "$fresh" status --porcelain --untracked-files=all)" ".tas
 t_case "an existing .gitignore is the user's and is left byte-for-byte"
 owned=$(make_repo --config)
 printf 'CLAUDE.md\ntask/\n' >"$owned/.task/.gitignore"
-p "$owned" plan
+p "$owned" task
 assert_eq "$(printf 'CLAUDE.md\ntask/')" "$(cat "$owned/.task/.gitignore")" "untouched"
 
 t_case "an unconfigured root gets no .gitignore — setup owns first run"

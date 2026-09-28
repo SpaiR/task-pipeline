@@ -61,8 +61,8 @@ require_config() {
     # Everything after it is for the human who ran this script by hand, which
     # is the only way to reach this line.
     echo "ERROR precondition: CLAUDE.md not found at $AI_DIR/CLAUDE.md" >&2
-    echo "  The project isn't set up yet. Run /task:to-task, /task:to-plan, /task:to-roadmap," >&2
-    echo "  /task:to-architecture or /task:to-spec once — those five write .task/CLAUDE.md" >&2
+    echo "  The project isn't set up yet. Run /task:to-task, /task:to-roadmap or" >&2
+    echo "  /task:to-spec once — those three write .task/CLAUDE.md" >&2
     echo "  inline on first use." >&2
     exit 2
   fi
@@ -177,11 +177,12 @@ check_spec_refs() {
 }
 
 # ---------------- task.md ----------------
-# One format for both to-task and to-plan output:
+# One format for every task file — to-task's and the driver's plan agent's:
 #   line 1   — `# <Title>` (plain title, no task-id)
 #   `---`    — separator between header and body
 #   `## Description` — always present
-#   `## Plan`  — OPTIONAL (only to-plan writes it); if present, require >=1
+#   `## Plan`  — OPTIONAL (every producer writes it, but a hand-written or
+#                older Description-only file is still a task); if present, require >=1
 #                `### Step N:` block.
 #   `## Tests` — OPTIONAL; if present, require >=1 `### Test N:` block.
 validate_task() {
@@ -201,7 +202,7 @@ validate_task() {
 
   # The separator must sit in the HEADER block — before the first `## ` heading.
   # A `---` thematic break inside the body must not satisfy this check: a deleted
-  # header separator would then pass silently, and to-plan's promote repair
+  # header separator would then pass silently, and write-task.sh's promote repair
   # (which relies on this ERROR firing) would never trigger.
   if ! awk '/^---$/{found=1; exit} /^## /{exit} END{exit !found}' "$file"; then
     err "$label" "missing '---' separator between header and Description (a '---' inside the body does not count)"
@@ -211,7 +212,7 @@ validate_task() {
     err "$label" "missing '## Description' section heading"
   fi
 
-  # `## Plan` is OPTIONAL (only to-plan writes it). If present, it must carry
+  # `## Plan` is OPTIONAL (an older or hand-written file may lack it). If present, it must carry
   # at least one `### Step N:` block. One awk pass does both the presence and
   # the step check: exit non-zero only when a Plan heading is seen with no step.
   if ! awk '/^## Plan[[:space:]]*$/{seen=1; flag=1; next} /^## /{flag=0} flag && /^### Step [0-9]+:/{found=1} END{exit (seen && !found)}' "$file"; then
@@ -479,13 +480,13 @@ validate_roadmap() {
 
     {
       if (in_block) {
-        # The `**Ready description:**` label is required: `to-plan` and the
+        # The `**Ready description:**` label is required: `to-task` and the
         # executing session look for it to find the item body, so an item that
         # carries the sub-headings without it is not pickable. flush_block()
         # errors when this stays 0.
         if ($0 ~ /\*\*Ready description:\*\*/) has_ready = 1
         # Sub-headings MUST be inside the `**Ready description:**` blockquote
-        # (`> ### Goal`, etc.) — to-plan / the executing session strip `> `
+        # (`> ### Goal`, etc.) — to-task / the executing session strip `> `
         # before parsing, so a top-level `### Goal` would not be recognized as
         # the description body. Require the `> ` prefix; do not accept the
         # bare form.
@@ -502,7 +503,7 @@ validate_roadmap() {
     END { flush_block() }
   ' "$file"
 
-  # --- `## Architecture` (optional; written by to-architecture) ---------------
+  # --- `## Architecture` (optional; written by to-roadmap) -------------------
   # WARN only, never ERROR: no parser consumes this section — planners read it as
   # the intended shape — and any roadmap ERROR stops roadmap-to-workflow from
   # launching, which a stale sketch must not do. Three checks:

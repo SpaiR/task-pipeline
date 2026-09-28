@@ -137,7 +137,7 @@ assert_contains "$V_OUT" "CRLF line endings" "names the line endings"
 
 # --- `## Architecture` (optional, WARN-only) ---------------------------------
 # A two-item roadmap; `arch_roadmap <file> <section>` writes it with <section>
-# placed above the first phase, the position to-architecture inserts it at.
+# placed above the first phase, the position to-roadmap drafts it at.
 arch_roadmap() {
   {
     printf '# Arch roadmap\n\nIntro.\n\n## Phase summary\n\n| Phase | Items |\n|---|---|\n| 1 | 1, 2 |\n\n'
@@ -277,7 +277,9 @@ bare=$(make_repo)
 v "$bare" task whatever
 assert_exit 2 "$V_EXIT" "no .task/CLAUDE.md"
 assert_contains "$V_OUT" "CLAUDE.md not found" "the substring the skills branch on"
-assert_contains "$V_OUT" "/task:to-architecture" "the roster names every intake-capable capture skill"
+assert_contains "$V_OUT" "/task:to-roadmap" "the roster names every intake-capable capture skill"
+assert_contains "$V_OUT" "/task:to-spec" "the roster names every intake-capable capture skill"
+assert_eq "0" "$(grep -c -E '/task:to-(plan|architecture)' <<<"$V_OUT")" "the roster names no removed skill"
 
 t_case "a missing slug argument is a usage error (exit 2)"
 v "$repo" task

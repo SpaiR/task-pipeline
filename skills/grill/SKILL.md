@@ -25,7 +25,7 @@ Split what stands between you and the **next** question into two piles:
 
 Resolve facts **lazily** — only the ones that gate the next question, not everything up front — so the first question reaches the user fast. When several independent reads are needed for one question, batch them in parallel. If a supposed decision turns out to have a factual answer, resolve it silently and move on — don't burn a question on it.
 
-**Nothing to grill.** If no genuine decision is left — every fork is already settled, or all of it is factual and answerable from the environment — **stop**. Do not manufacture questions to justify running. Say so plainly and redirect straight to the fitting capture skill (Step 7's routing), e.g. `→ Next: /task:to-plan — nothing left to interrogate; the approach is settled, capture it.`
+**Nothing to grill.** If no genuine decision is left — every fork is already settled, or all of it is factual and answerable from the environment — **stop**. Do not manufacture questions to justify running. Say so plainly and redirect straight to the fitting capture skill (Step 7's routing), e.g. `→ Next: /task:to-task — nothing left to interrogate; the approach is settled, capture it.`
 
 ### Step 3: Grill — one question at a time
 
@@ -76,12 +76,10 @@ grill writes nothing, so there is no file to guard and no "declined" state — a
 Diagnose what was actually grilled and close with the canonical footer (convention (a), flag-free) naming **exactly one** next skill plus a one-line reason. The tests below are **ordered — first match wins**; stop at the first one that holds:
 
 1. **Cross-task technical anchors** — the ledger pins a protocol, a shared data shape's exact form, or a "we chose X over Y" that **more than one future task must honor identically**, and that a later session would plausibly re-derive differently. Each such line names a concrete artifact (a type, a format, a protocol, a boundary rule) **and** the alternative it beat → `→ Next: /task:to-spec — the ledger pins cross-task technical anchors; capture them as a spec.`
-2. **An initiative whose technical shape was settled** — several tasks, and the ledger also fixes which components they build or change and what one hands another, without a rejected alternative to preserve → `→ Next: /task:to-architecture — a multi-task initiative with its technical shape decided; capture the roadmap together with its architecture.`
-3. **An initiative that sprawled into several tasks** → `→ Next: /task:to-roadmap — this grew into a multi-task initiative; capture it as a roadmap.`
-4. **A single implementable task, approach settled** → `→ Next: /task:to-plan — one task with the approach nailed down; capture Description + Plan.`
-5. **A single task, approach still open** → `→ Next: /task:to-task — one task worth recording now; flesh out the plan later.`
+2. **An initiative of several tasks** → `→ Next: /task:to-roadmap — this is a multi-task initiative; capture it as a roadmap, architecture included.` Whether the ledger already fixed the technical shape — which components the tasks build or change, what one hands another — does not change the route: `to-roadmap` harvests settled shape into its `## Architecture` and runs architecture rounds for the rest.
+3. **A single implementable task** → `→ Next: /task:to-task — one task with the approach nailed down; capture Description + Plan.` An approach still open is not a routing outcome: it is a fork the grill should have asked (Step 3's stopping rule). If the user wrapped up with it open anyway, route here all the same — `to-task`'s planner closes it against the code, and the Plan records the choice.
 
-**Test 1 is narrow on purpose.** Step 4 makes *every* ledger line read "{decision} — because {reason}", so the presence of reasoning is not the signal — reasoning that **binds work the ledger itself does not contain** is. One task's own internal reasoning belongs in that task's Description, not a spec: fall through to 4 or 5. Likewise a component layout or "item 2 hands item 4 an event" with no rejected alternative is technical shape, not an anchor: fall through to 2.
+**Test 1 is narrow on purpose.** Step 4 makes *every* ledger line read "{decision} — because {reason}", so the presence of reasoning is not the signal — reasoning that **binds work the ledger itself does not contain** is. One task's own internal reasoning belongs in that task's own file, not a spec: fall through to 3. Likewise a component layout or "item 2 hands item 4 an event" with no rejected alternative is technical shape, not an anchor: fall through to 2.
 
 Pick the one that fits; state the reason in the same language as the dialog. Do not run the capture skill yourself — the footer is the handoff.
 

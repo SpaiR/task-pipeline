@@ -1,14 +1,12 @@
 # Commands overview
 
-Seven user-invocable skills, plus one internal utility. Depth of capture is the skill you pick — there are no flags anywhere. Every argument is optional: the autocomplete shows the hint below, and running a skill bare is the normal case (it drafts from the chat, or asks).
+Five user-invocable skills, plus one internal utility. What you capture — one task, an initiative, or the decisions they must honor — is the skill you pick, never a flag. Every argument is optional: the autocomplete shows the hint below, and running a skill bare is the normal case (it drafts from the chat, or asks).
 
 | Command | Argument | In brief |
 |---|---|---|
 | [`/task:grill`](/reference/grill) | `[topic]` | Pre-capture interrogation: stress-tests a plan one question at a time, keeps a decision-plus-rationale ledger, ends with a pre-mortem, routes to the right capture skill. Writes nothing. Needs no config. |
-| [`/task:to-task`](/reference/to-task) | `[<roadmap-slug>[#N] \| context]` | Fixes the chat (or a roadmap item) into `.task/task/<slug>.md` — Description only, no Plan. The lightest capture. |
-| [`/task:to-plan`](/reference/to-plan) | `[<slug> \| <roadmap-slug>[#N] \| context]` | Fixes the chat (or a roadmap item) into `.task/task/<slug>.md` with Description **+** Plan (and Tests when policy calls for it). The deepest one-task capture. |
-| [`/task:to-roadmap`](/reference/to-roadmap) | `[initiative]` | Fixes a multi-task initiative into `.task/roadmap/<slug>.md` — a phase-grouped backlog of ready-to-pick-up items. |
-| [`/task:to-architecture`](/reference/to-architecture) | `[<roadmap-slug> \| initiative]` | Fixes an initiative's technical shape — components, interfaces between items, per-item sketches — into a roadmap's `## Architecture` section, writing the roadmap too when none exists yet. |
+| [`/task:to-task`](/reference/to-task) | `[<roadmap-slug>[#N] \| context]` | Fixes the chat (or a roadmap item) into `.task/task/<slug>.md` with Description **+** Plan (and Tests when policy calls for it). Always a fresh capture. |
+| [`/task:to-roadmap`](/reference/to-roadmap) | `[initiative]` | Fixes a multi-task initiative into `.task/roadmap/<slug>.md` — a phase-grouped backlog of ready-to-pick-up items, together with its `## Architecture` section. |
 | [`/task:to-spec`](/reference/to-spec) | `[decision area]` | Fixes load-bearing technical decisions into a standalone `.task/spec/<slug>.md`, cited by tasks/roadmaps via a `Spec:` header. |
 | [`/task:roadmap-to-workflow`](/reference/roadmap-to-workflow) | `[<roadmap-slug>]` | Autopilot over an approved roadmap: invokes the plugin's shipped Workflow driver, which runs unchecked items in dependency-ordered waves — parallel planning, then serialized implement-and-review per item. |
 | [`validate`](/reference/validate) *(utility)* | `task \| roadmap \| spec \| all` | Optional format checker for `.task/` artifacts. Not a slash command, not a gate. |

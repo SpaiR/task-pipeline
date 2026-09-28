@@ -5,7 +5,7 @@ title: Plan files for Claude Code
 hero:
   name: task-pipeline
   text: Freeze a Claude Code chat into one Markdown plan file any session can implement.
-  tagline: Talk it through, grill the plan, capture it at the depth you pick. Any later session reads the file and runs it. A free plugin — no server, no hooks, no MCP.
+  tagline: Talk it through, grill the plan, capture it as a task, a roadmap or a spec. Any later session reads the file and runs it. A free plugin — no server, no hooks, no MCP.
   image:
     src: /logo.svg
     alt: task-pipeline
@@ -28,8 +28,8 @@ features:
     title: The plan gets grilled first
     details: An optional grill step interrogates the plan one question at a time and ends on a pre-mortem. It's allowed to disagree with you.
   - icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg>'
-    title: You pick the depth, not a flag
-    details: A quick fix and a month-long migration don't deserve the same paperwork. Capture is the skill you reach for — to-task, to-plan, to-roadmap, to-architecture, to-spec — not a template to fill out.
+    title: You pick what you capture, not a flag
+    details: A quick fix and a month-long migration don't deserve the same paperwork. What you capture — one task, an initiative, or the decisions they must honor — is the skill you reach for, to-task, to-roadmap, to-spec — not a template to fill out.
   - icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>'
     title: Any session can run it
     details: Tell any session `implement &lt;path&gt;`. It reads the file, works the plan, runs your project's own checks, and commits. Just a chat instruction — you already know how.
@@ -58,10 +58,10 @@ features:
     <div class="tp-comment"># 2. grill the plan first (optional) — one question at a time</div>
     <div class="tp-prompt">/task:grill</div>
     <div class="tp-out">  → Retry the 429s too, or only 5xx and timeouts?  [recommended: 429s too]</div>
-    <div class="tp-out">    decision ledger → route to /task:to-plan</div>
+    <div class="tp-out">    decision ledger → route to /task:to-task</div>
     <div class="tp-sp"></div>
     <div class="tp-comment"># 3. freeze the discussion into a file</div>
-    <div class="tp-prompt">/task:to-plan</div>
+    <div class="tp-prompt">/task:to-task</div>
     <div class="tp-out">  → wrote .task/task/http-retry-backoff.md</div>
     <div class="tp-out">    ## Description + ## Plan (Goal / Touches / Logic steps)</div>
     <div class="tp-sp"></div>
@@ -74,7 +74,7 @@ features:
 </div>
 
 ::: details Here's the actual file it writes
-This is an example of what `/task:to-plan` produces for the run above — a plain Markdown file under `.task/`, not a screenshot. Header, `---`, `## Description`, a step-by-step `## Plan`, and the stamped `## Execution` block that tells any session what to do next.
+This is an example of what `/task:to-task` produces for the run above — a plain Markdown file under `.task/`, not a screenshot. Header, `---`, `## Description`, a step-by-step `## Plan`, and the stamped `## Execution` block that tells any session what to do next.
 
 ```markdown
 # HTTP retry with backoff
