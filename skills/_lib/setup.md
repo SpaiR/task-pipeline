@@ -9,7 +9,7 @@ Read and followed by a capture skill's Step 0 (`to-task` / `to-roadmap` / `to-sp
    bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/detect-project.sh" "$ROOT"
    ```
 
-   It prints the manifests, the commands the project already declares (`package.json` scripts, `Makefile` targets), the commit-format doc in the same order this file used to check by hand, any documented TDD convention with its file and line, and whether the project's own README prose and commit subjects are ASCII or carry non-ASCII script. Read `CLAUDE.md` yourself when `PROJECT_CLAUDE_MD: present` — that one needs judgement, not a listing.
+   It prints the manifests, the commands the project already declares (`package.json` scripts, `Makefile` targets), the commit-format doc, any documented TDD convention with its file and line, and whether the project's own README prose and commit subjects are ASCII or carry non-ASCII script. Read `CLAUDE.md` yourself when `PROJECT_CLAUDE_MD: present` — that one needs judgement, not a listing.
 
    Then decide, from the block:
    - **Build and Tests** — compose the invocation from a declared command (`COMMANDS: package.json scripts: test build` → `npm test`, `npm run build`). Never invent a runner the project does not declare; with `COMMANDS: none` and nothing in `CLAUDE.md`, write the literal `None declared.`
