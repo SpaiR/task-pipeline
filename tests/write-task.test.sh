@@ -62,6 +62,31 @@ w "$repo" --fresh --slug beta --title "Beta task" --description "$body/desc.md"
 assert_exit 2 "$W_EXIT" "missing --plan"
 assert_eq "no" "$([[ -f "$repo/.task/task/beta.md" ]] && echo yes || echo no)" "nothing created"
 
+t_case "a value flag given last with no value is a usage error, not a hang"
+# `shift 2` with one argument left fails without shifting, and the parse loop
+# once spun on the trailing flag forever. Run under a watchdog, so a regression
+# fails this case instead of hanging the suite (stock macOS has no `timeout`).
+w_bounded() { # <repo> <args…> → $W_OUT, $W_EXIT ("hung" when killed)
+  local dir="$1" out pid i=0
+  shift
+  out=$(t_tmpdir)/out
+  (cd "$dir" && exec env -u AI_DIR -u CLAUDE_PROJECT_DIR bash "$WRITE" "$@") >"$out" 2>&1 &
+  pid=$!
+  while kill -0 "$pid" 2>/dev/null && (( i < 50 )); do sleep 0.1; i=$((i + 1)); done
+  if kill -0 "$pid" 2>/dev/null; then
+    kill "$pid"; wait "$pid" 2>/dev/null; W_EXIT=hung
+  else
+    wait "$pid"; W_EXIT=$?
+  fi
+  W_OUT=$(cat "$out")
+}
+w_bounded "$repo" --fresh --slug beta --title "Beta task" --description "$body/desc.md" --plan
+assert_eq "2" "$W_EXIT" "trailing --plan"
+assert_contains "$W_OUT" "--plan needs a value" "names the flag"
+w_bounded "$repo" --fresh --slug beta --title "Beta task" --description "$body/desc.md" --plan "$body/plan.md" --spec
+assert_eq "2" "$W_EXIT" "trailing --spec"
+assert_eq "no" "$([[ -f "$repo/.task/task/beta.md" ]] && echo yes || echo no)" "nothing created"
+
 t_case "a mode other than --fresh is a usage error"
 w "$repo" --revise --slug alpha --plan "$body/plan.md"
 assert_exit 2 "$W_EXIT" "no revise mode"

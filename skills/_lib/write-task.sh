@@ -3,8 +3,8 @@
 #
 # The one owner of task.md assembly: the header link forms, the `---`
 # separator, the section order and the stamped `## Execution` pointer all live
-# here, so `to-task` and the driver's plan agent stop hand-building
-# the same file three times. See docs/contract.md § task.md format.
+# here, so neither `to-task` nor the driver's plan agent builds the file by
+# hand. See docs/contract.md § task.md format.
 #
 # Usage:
 #   write-task.sh --fresh --slug <slug> --title <title> --description <file>
@@ -44,20 +44,23 @@ SCRIPT_DIR=$(cd "$(dirname "$SRC")" && pwd)
 EXECUTION_POINTER='> Read [.task/CLAUDE.md](../CLAUDE.md) and follow its `## Executing a task` section.'
 
 die() { echo "ERROR write-task: $1" >&2; exit "${2:-2}"; }
+# A value flag given last has nothing to shift: `shift 2` then fails without
+# shifting, and the loop below would spin on that flag forever.
+need() { [[ $# -ge 2 ]] || die "$1 needs a value"; }
 
 fresh=0 slug="" title="" roadmap="" item="" desc="" plan="" tests="" force=0
 specs=()
 while (( $# )); do
   case "$1" in
     --fresh)       fresh=1;          shift ;;
-    --slug)        slug="${2:-}";    shift 2 ;;
-    --title)       title="${2:-}";   shift 2 ;;
-    --roadmap)     roadmap="${2:-}"; shift 2 ;;
-    --item)        item="${2:-}";    shift 2 ;;
-    --spec)        specs+=("${2:-}"); shift 2 ;;
-    --description) desc="${2:-}";    shift 2 ;;
-    --plan)        plan="${2:-}";    shift 2 ;;
-    --tests)       tests="${2:-}";   shift 2 ;;
+    --slug)        need "$@"; slug="$2";    shift 2 ;;
+    --title)       need "$@"; title="$2";   shift 2 ;;
+    --roadmap)     need "$@"; roadmap="$2"; shift 2 ;;
+    --item)        need "$@"; item="$2";    shift 2 ;;
+    --spec)        need "$@"; specs+=("$2"); shift 2 ;;
+    --description) need "$@"; desc="$2";    shift 2 ;;
+    --plan)        need "$@"; plan="$2";    shift 2 ;;
+    --tests)       need "$@"; tests="$2";   shift 2 ;;
     --force)       force=1;          shift ;;
     -h | --help)   sed -n '2,35p' "$SRC" >&2; exit 2 ;;
     *)             die "unknown argument '$1'" ;;
