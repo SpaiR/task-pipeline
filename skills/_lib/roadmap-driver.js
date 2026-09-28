@@ -193,8 +193,8 @@ async function runImplement(n, itemSlug, model, phase) {
   const r = await agent(
     `Implement ${aiDir}/task/${itemSlug}.md. Follow its ## Execution pointer —
      it sends you to .task/CLAUDE.md → ## Executing a task — with two carve-outs:
-     implement the ## Plan (or ## Description if no Plan) plus any ## Tests it
-     carries, then commit per .task/CLAUDE.md → Commit Format — and do NOT
+     implement the ## Plan plus any ## Tests it carries, then commit per
+     .task/CLAUDE.md → Commit Format — and do NOT
      spawn the task:code-reviewer agent, and do NOT tick the roadmap
      checkbox. The driver runs the review as its own stage right after this
      call, and the review ticks the checkbox when it passes.
@@ -253,16 +253,25 @@ for (const [wIdx, items] of waves.entries()) {
   //    wrong shape — stops the run before any implement of this wave starts
   //    (plans are cheap to rerun).
   const plans = await parallel(items.map(({ n, title, model }, i) => () => runPlan(n, title, model, phases[i])))
+  // Every digest is logged before any is judged, so a stop on one item still
+  // shows how its wave-mates' plans came out.
+  for (const [i, status] of plans.entries())
+    log(`[W${w} plan] ${status || `FAIL #${items[i].n} plan agent returned nothing`}`)
   const itemSlugs = []
   for (const [i, status] of plans.entries()) {
     const n = items[i].n
-    log(`[W${w} plan] ${status || `FAIL #${n} plan agent returned nothing`}`)
     if (!status || status.startsWith('FAIL'))
       return runReport(`roadmap-to-workflow stopped in wave ${w} (planning), item #${n}: ${status || 'plan agent returned nothing'}`, landed)
     // The digest is LLM output — assert its shape, never index into it blindly.
     const m = status.match(/^OK #(\d+) (\S+) planned$/)
     if (!m || Number(m[1]) !== n)
       return runReport(`roadmap-to-workflow stopped in wave ${w} (planning), item #${n}: unparsable plan digest: ${status}`, landed)
+    // Each planner derives its slug alone, and parallel ones cannot see each
+    // other's file. Two items on one slug share one task file: implementing
+    // both would build one plan twice and tick the other item unbuilt.
+    const owner = landed.find((l) => l.slug === m[2]) || items.find((_, j) => j < i && itemSlugs[j] === m[2])
+    if (owner)
+      return runReport(`roadmap-to-workflow stopped in wave ${w} (planning), item #${n}: #${owner.n} and #${n} both planned ${m[2]} — one task file for two items; give one of them a more distinct title, then rerun /task:roadmap-to-workflow ${slug}`, landed)
     itemSlugs.push(m[2])
   }
 
