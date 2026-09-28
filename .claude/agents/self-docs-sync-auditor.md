@@ -68,7 +68,7 @@ Any count, roster, or inventory a doc states is checked against these lists. Do 
 ## Do not flag
 
 - **Non-skill reference pages.** `website/reference/commands.md`, `configuration.md` and `task-layout.md` describe no single skill; they are not an extra skill page.
-- **Repo-local maintainer tooling.** `.claude/agents/`, `.claude/hooks/`, `.claude/skills/` and `.claude/settings.json` are not part of the plugin. The docs that say the plugin ships no hook — `README.md`'s "No hook gate" bullet, `docs/contract.md` § Hook — are about the plugin, so a repo-local hook does not contradict them.
+- **Repo-local maintainer tooling.** `.claude/agents/`, `.claude/hooks/`, `.claude/skills/` and `.claude/settings.json` are not part of the plugin. The docs that say the plugin ships no hook — `README.md`'s trust section, `docs/contract.md` § Hook — are about the plugin, so a repo-local hook does not contradict them.
 - **Changelog history.** `CHANGELOG.md` (and `website/changelog.md`, which includes it) names skills, flags and files as they were at each release.
 - **Links `ignoreDeadLinks` exempts.** The patterns in `website/.vitepress/config.mts` point out of the site on purpose.
 - **Thin pointer docs.** `docs/usage.md` and `docs/troubleshooting.md` are short by design; flag one only for a missing target page or regrown usage prose (see above).
