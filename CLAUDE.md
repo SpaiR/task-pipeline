@@ -58,7 +58,7 @@ task:code-reviewer                    ← the plugin's own review pass, spawned 
 
 ## Repo-local tooling
 
-`.claude/` never ships. `/self-audit` fans out to four lens agents in `.claude/agents/`, read-only by instruction (no Edit or Write tools; Bash for reading), which nothing enforces. `.claude/settings.json` wires the release-file hook `.claude/hooks/guard-release-files.sh` and pre-approves the suite, `validate.sh`, the plugin validator and the site build. The lenses, the hook and `CONTRIBUTING.md` cite this file's headings by name: keep `## Quick orient`, `## Invariants — …`, `## Editing protocol — quick rules` and `## Release procedure` byte-identical.
+`.claude/` never ships. `/self-audit` fans out to five lens agents in `.claude/agents/`, read-only by instruction (no Edit or Write tools; Bash for reading), which nothing enforces. `.claude/settings.json` wires the release-file hook `.claude/hooks/guard-release-files.sh` and pre-approves the suite, `validate.sh`, the plugin validator and the site build. The lenses, the hook and `CONTRIBUTING.md` cite this file's headings by name: keep `## Quick orient`, `## Invariants — …`, `## Editing protocol — quick rules` and `## Release procedure` byte-identical.
 
 ## Commits and pull requests
 
