@@ -47,11 +47,11 @@ Walk back from `HEAD` one commit at a time, checking each commit's files against
 git show --name-only --format='%h %an %s' <sha>
 ```
 
-Include a commit while its files intersect the Touches set, and stop at the first one that does not. The base is the parent of the oldest included commit; with only `HEAD` included, the base is `HEAD~1` (`git show --stat HEAD` when `HEAD` has no parent). Three bounds on the walk, so it cannot swallow unrelated history:
+Include a commit while its files intersect the Touches set, and stop at the first one that does not. The base is the parent of the oldest included commit; with only `HEAD` included, the base is `HEAD~1` (`git show --stat HEAD` when `HEAD` has no parent). Two bounds keep the walk from swallowing unrelated history, and two edge cases fix the base without a walk:
 
 - **Cap it at 10 commits.** A longer run of touching commits means the tree holds more than this task's work; take the 10 and say so.
 - **Stop at a commit that is plainly not this task's** — a different author, or a subject describing unrelated work — even when its files intersect.
-- **Touches set empty** (no `## Plan`) → do not walk at all: the base is `HEAD~1`, exactly as before, since there is no scope to match commits against.
+- **Touches set empty** (no `## Plan`) → do not walk at all: the base is `HEAD~1`, since there is no scope to match commits against.
 - **`HEAD` itself does not intersect** → nothing is included and there is no oldest commit to take a parent of. The base is `HEAD~1` and `<K>` is `0`, which is precisely the `implementation commit: none` case the check below records — the change is uncommitted, so the working tree is the whole diff.
 
 Then read the **full patch**, not only the stat — per file, both of:
