@@ -248,13 +248,21 @@ for (const [wIdx, items] of waves.entries()) {
   const phases = items.map(({ n, title }) => itemPhase(w, n, title))
   log(`Wave ${w}/${waves.length} — planning #${items.map((it) => it.n).join(', #')}${items.length > 1 ? ' in parallel' : ''}`)
 
-  // 1) PLAN the whole wave in parallel. A single plan FAIL stops the run before
-  //    any implement of this wave starts (plans are cheap to rerun).
+  // 1) PLAN the whole wave in parallel. A single plan FAIL — or a digest of the
+  //    wrong shape — stops the run before any implement of this wave starts
+  //    (plans are cheap to rerun).
   const plans = await parallel(items.map(({ n, title, model }, i) => () => runPlan(n, title, model, phases[i])))
+  const itemSlugs = []
   for (const [i, status] of plans.entries()) {
-    log(`[W${w} plan] ${status || `FAIL #${items[i].n} plan agent returned nothing`}`)
+    const n = items[i].n
+    log(`[W${w} plan] ${status || `FAIL #${n} plan agent returned nothing`}`)
     if (!status || status.startsWith('FAIL'))
-      return runReport(`roadmap-to-workflow stopped in wave ${w} (planning), item #${items[i].n}: ${status || 'plan agent returned nothing'}`, landed)
+      return runReport(`roadmap-to-workflow stopped in wave ${w} (planning), item #${n}: ${status || 'plan agent returned nothing'}`, landed)
+    // The digest is LLM output — assert its shape, never index into it blindly.
+    const m = status.match(/^OK #(\d+) (\S+) planned$/)
+    if (!m || Number(m[1]) !== n)
+      return runReport(`roadmap-to-workflow stopped in wave ${w} (planning), item #${n}: unparsable plan digest: ${status}`, landed)
+    itemSlugs.push(m[2])
   }
 
   // 2) IMPLEMENT → REVIEW strictly one item at a time — both inside this one
@@ -262,11 +270,7 @@ for (const [wIdx, items] of waves.entries()) {
   //    one writer, and item N never starts implementing while item N−1 is
   //    still under review.
   for (const [i, { n, model }] of items.entries()) {
-    // The digest is LLM output — assert its shape, never index into it blindly.
-    const m = plans[i].match(/^OK #(\d+) (\S+) planned$/)
-    if (!m || Number(m[1]) !== n)
-      return runReport(`roadmap-to-workflow stopped in wave ${w} (planning), item #${n}: unparsable plan digest: ${plans[i]}`, landed)
-    const itemSlug = m[2]
+    const itemSlug = itemSlugs[i]
 
     const status = await runImplement(n, itemSlug, model, phases[i])
     log(`[W${w} implement] ${status || `FAIL #${n} ${itemSlug} implement agent returned nothing`}`)
