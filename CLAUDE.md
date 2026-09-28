@@ -26,7 +26,7 @@ task:code-reviewer                    ← the plugin's own review pass, spawned 
 
 - `bash tests/run.sh [filter]` is the gate, green before every commit. Driver cases need `node`, some hook checks `jq`; a SKIP line is not a pass.
 - `claude plugin validate --strict .` checks the marketplace manifest; `npm --prefix website ci && npm --prefix website run docs:build` builds the site.
-- `claude plugin eval .` runs the prompt evals (early access, not in CI: a signal only); `/self-audit` checks the repo against its own rules.
+- `claude plugin eval .` runs the prompt evals (not in CI: a signal only); `/self-audit` checks the repo against its own rules.
 - CI: `.github/workflows/tests.yml` runs the suite and shellcheck; `docs-check.yml` builds the site on PRs; `docs.yml` deploys it.
 
 ## Invariants — don't break these when editing skills

@@ -1,14 +1,20 @@
 # Eval suite
 
 Prompt-level cases for all five skills —
-run with `claude plugin eval` (early access, see below). They cover what `tests/` cannot: the bash layer has unit
+run with `claude plugin eval`. They cover what `tests/` cannot: the bash layer has unit
 tests, but whether a *skill* actually fires, writes the artifact it promises and
 prints the conventions is a property of the prompt, and only a real run shows it.
 
 ```bash
 claude plugin eval .                                  # every case, this plugin
-claude plugin eval --case 'to-task*' .                # one case
-claude plugin eval --tag capture .                    # by tag
+claude plugin eval . --case 'to-task*'                # one case
+claude plugin eval . --tag capture                    # by tag
+```
+
+A full run:
+
+```bash
+claude plugin eval . --ablation none --scaffold --no-publish --allow-tools Bash Write Edit
 ```
 
 Each case is a directory: `prompt.md` (frontmatter plus the user prompt in its
@@ -25,26 +31,9 @@ project with no `.task/`, so the capture cases also exercise first-run setup.
 
 ## Status
 
-`to-roadmap-fresh` passed under its previous name, when the architecture layer was
-still a skill of its own; the case has not been re-run since it moved to
-`to-roadmap` (`claude plugin eval --case 'to-roadmap*' --ablation none
---allow-tools Bash Write Edit .`).
-`to-task-from-chat` was rebuilt to the same format but has not been executed yet.
-The other three cases were written against the documented case format before the
-runner was available, and running the architecture case showed three things they get wrong:
-
-- **The Skill tool must be listed.** Runs are in don't-ask mode, so a case whose
-  `allowed_tools` omits `Skill` has the skill call denied and the run stops
-  before writing anything — only the `tool_used: Skill` grader passes.
-- **No inline regex flags.** Patterns are JavaScript regexes: `(?m)` throws, and
-  multiline goes in a `flags: m` key instead.
-- **A file target takes one literal path**, relative to the run's workspace — a
-  glob fails with "does not exist". Name the slug in the prompt (as
-  `to-roadmap-fresh` does) or grade the digest instead; `file_exists` is the
-  grader that accepts a glob.
-
-Until those are fixed, a red result on the other cases says nothing about the
-prompts.
+All five cases follow the runner's format. `to-roadmap-fresh` passed under its
+previous name, when the architecture layer was still a skill of its own; the
+others await their first run.
 
 `to-roadmap-fresh` grades the architecture layer and the dependency lines, not the
 items themselves: each needs a `**Ready description:**` blockquote, so a useful

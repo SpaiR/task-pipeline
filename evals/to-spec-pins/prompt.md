@@ -3,7 +3,7 @@ name: to-spec-pins
 tags: [capture, to-spec]
 runs: 2
 max_turns: 20
-allowed_tools: [Bash, Read, Write, Edit, Glob, Grep]
+allowed_tools: [Skill, Bash, Read, Write, Edit, Glob, Grep]
 ---
 We settled the event envelope: every event carries id, type, occurred_at in UTC
 RFC 3339, a monotonically increasing per-stream sequence, and an opaque payload.
@@ -12,4 +12,4 @@ versioned by adding fields only — never renaming or removing one. We chose thi
 over a per-event-type schema because consumers have to route without parsing the
 payload.
 
-/task:to-spec write that up
+/task:to-spec write that up — call it event-envelope
