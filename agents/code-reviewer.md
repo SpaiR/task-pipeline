@@ -52,9 +52,10 @@ Include a commit while its files intersect the Touches set, and stop at the firs
 - **Cap it at 10 commits.** A longer run of touching commits means the tree holds more than this task's work; take the 10 and say so.
 - **Stop at a commit that is plainly not this task's** — a different author, or a subject describing unrelated work — even when its files intersect.
 - **Touches set empty** (no `## Plan`) → do not walk at all: the base is `HEAD~1`, since there is no scope to match commits against.
-- **Nothing is included** (`HEAD` itself does not intersect, or is plainly not this task's) → there is no oldest commit to take a parent of. Decide from `git status --porcelain`:
-  - **The working tree holds changes** → the implementation was never committed. The base is `HEAD` and `<K>` is `0`: `<base>..HEAD` is empty, so the unrelated `HEAD` commit stays out of the review, and the working tree is the whole diff. This is the `implementation commit: none` case.
-  - **The working tree is clean** → the implementation can only be `HEAD`, landed in files `Touches` never named — it is a scope hint, not an exact list. The base is `HEAD~1` and `<K>` is `1`; say that `Touches` missed its files, and review `HEAD` whole.
+- **Nothing is included** (`HEAD` itself does not intersect, or is plainly not this task's) → there is no oldest commit to take a parent of. Decide from `git status --porcelain`, counting only the entries that are **this task's change** — a path in the Touches set, or one the plan's steps plainly produce. A user's unrelated edit or a stray untracked file is not the implementation, and does not decide anything here:
+  - **The working tree holds this task's change** → the implementation was never committed. The base is `HEAD` and `<K>` is `0`: `<base>..HEAD` is empty, so the unrelated `HEAD` commit stays out of the review, and the working tree is the whole diff. This is the `implementation commit: none` case.
+  - **It does not, and `HEAD` only missed the Touches set** → the implementation is `HEAD`, landed in files `Touches` never named — it is a scope hint, not an exact list. The base is `HEAD~1` and `<K>` is `1`; say that `Touches` missed its files, and review `HEAD` whole.
+  - **It does not, and `HEAD` is plainly not this task's** → neither a commit nor the working tree holds this task's change. That is the `nothing to review` `FAIL` below — never a review of another task's commit, which would pass it and tick an item nothing implemented.
 
 Then read the **full patch**, not only the stat — per file, both of:
 
@@ -63,9 +64,11 @@ git diff <base> HEAD          # the implementation's commits
 git diff HEAD                 # anything the implementation left uncommitted
 ```
 
-The **diff under review** is `<base>..HEAD` plus any uncommitted working-tree changes. Record `HEAD`'s sha — phase 6 commits on top of it, and every later phase diffs against `<base>`, never `HEAD~1`. When both halves are empty there is nothing to review: that is a `FAIL` (`nothing to review`), never `0 candidates`.
+`git diff HEAD` omits untracked files: read each `??` path from `git status --porcelain` that is this task's change in full — a new file the implementation never committed belongs to the uncommitted half.
 
-Phase 6 depends on one fact the walk settles: record **`implementation commit: none`** exactly when nothing was included and the working tree holds the change, and `implementation commit: <HEAD's sha>` otherwise. Carry it to phase 6 — you must not sweep an uncommitted implementation into a commit of your own.
+The **diff under review** is `<base>..HEAD` plus any uncommitted working-tree changes, untracked files included. Record `HEAD`'s sha — phase 6 commits on top of it, and every later phase diffs against `<base>`, never `HEAD~1`. When both halves are empty there is nothing to review: that is a `FAIL` (`nothing to review`), never `0 candidates`.
+
+Phase 6 depends on one fact the walk settles: record **`implementation commit: none`** exactly when nothing was included and the working tree holds this task's change, and `implementation commit: <HEAD's sha>` otherwise. Carry it to phase 6 — you must not sweep an uncommitted implementation into a commit of your own.
 
 **Mandatory output:** the literal line `reviewed range: <base>..HEAD (<K> commits)`; each reviewed commit's sha and subject; the changed-file list with line counts; the uncommitted-changes list (or `none`); and either `implementation commit: <sha>` or `implementation commit: none — the change is uncommitted`.
 
