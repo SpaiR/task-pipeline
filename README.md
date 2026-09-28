@@ -13,38 +13,38 @@ You:    "Let's cache the API responses in Redis."
 Claude: "Great idea! I'll start implementing."
 ```
 
-That second line is where projects quietly go wrong: the model agrees and starts building before the plan was ever argued. `task-pipeline` keeps the discussion and the doing apart, and sizes the paperwork to the task. Talk it through in chat; when you're ready, one command freezes that discussion into a single Markdown file under `.task/` — `to-task` for one task, what and why plus a stepwise plan, `to-roadmap` for a multi-task initiative together with its technical layer, `to-spec` to pin the load-bearing decisions. Then any session — this one, or a fresh one tomorrow — implements that file the same way: work the plan, commit, then hand the diff to the plugin's own reviewer agent, which proves each finding before it touches anything, runs your build and tests, and commits its fixes as a second commit on top — your implementation commit is never rewritten.
+That second line is where projects quietly go wrong: the model agrees and starts building before the plan was ever argued. `task-pipeline` keeps the discussion and the doing apart. You talk the work through in chat, optionally let `/task:grill` interrogate it, then one command freezes the result into a Markdown file under `.task/`. Any session — this one or a fresh one tomorrow — implements that file, commits, and hands the diff to the plugin's reviewer, which proves each finding before fixing it and commits its fixes on top.
 
-And when "talk it through" needs teeth, `/task:grill` interrogates the plan first (optional): one question at a time, its recommendations allowed to disagree with you, closing on a pre-mortem — so what gets frozen is what survived the questioning, not the first idea that sounded good. It's for tasks longer than one session; a two-file, twenty-minute fix doesn't need any of this, and leaves no trace either way — [here's exactly what it will and won't touch](#why-you-can-trust-this).
+It's for work longer than one session. A twenty-minute fix doesn't need it.
 
 ```text
 discuss in chat
   → grill it (optional — interrogate the plan first)
-  → capture to a file
-  → any session implements it
+  → capture to a file: to-task | to-roadmap | to-spec
+  → any session implements it, then task:code-reviewer reviews and fixes
 ```
 
 ## Quickstart
+
+Requires only [Claude Code](https://docs.claude.com/en/docs/claude-code).
 
 ```text
 /plugin marketplace add https://github.com/SpaiR/task-pipeline.git
 /plugin install task@task-pipeline
 ```
 
-Talk a task through in chat — say, an HTTP retry system with backoff and a dead-letter queue.
+Update later with `/plugin marketplace update task-pipeline`.
 
-Optional first move: grill the plan before you freeze it. It writes nothing and needs no setup, so it works as the very first command in a fresh project — `.task/CLAUDE.md` is only written later, at your first capture:
+Talk a task through in chat — say, an HTTP retry system with backoff and a dead-letter queue. Then, optionally, grill it:
 
 ```text
 /task:grill
 #   → one question at a time, each with a recommended answer:
 #     "Retry the 429s too, or only 5xx and timeouts?"  [recommended: 429s too]
-#   → pushes back when the reasoning is thin; recommendations may disagree with you
-#   → closes with a pre-mortem, prints a decision ledger, and routes you to the
-#     right capture skill — never runs it for you, and touches nothing under .task/
+#   → closes with a pre-mortem and a decision ledger; writes nothing
 ```
 
-Then capture the discussion:
+Capture the discussion:
 
 ```text
 /task:to-task
@@ -53,144 +53,54 @@ Then capture the discussion:
 #     `implement .task/task/http-retry-backoff.md`
 ```
 
-Hand the file to any session — this one or a fresh one:
+Hand the file to any session:
 
 ```text
 "implement .task/task/http-retry-backoff.md"
-#   → follows the artifact's ## Execution pointer into .task/CLAUDE.md
-#   → implements per the plan, commits per .task/CLAUDE.md → Commit Format
-#   → hands that diff to the task:code-reviewer agent: it proves each finding
-#     before fixing it, runs your build and tests, and commits its fixes on top
+#   → implements the plan and commits
+#   → task:code-reviewer proves each finding, fixes it, runs your build and tests,
+#     and commits its fixes as a second commit on top
 ```
 
-That session follows the artifact's `## Execution` pointer into `.task/CLAUDE.md` → `## Executing a task`: implement the plan, commit per `.task/CLAUDE.md` → Commit Format, then spawn `task:code-reviewer` on the resulting diff. The reviewer proves each candidate defect independently, fixes only the confirmed ones inside the files named in **Touches** (plus a regression this change caused outside them), reports the rest instead of quietly widening the diff, runs `.task/CLAUDE.md` → Build and Tests, and commits its fixes as a second commit on top — the implementation's commit is never rewritten, so a task is one commit, plus one more only when the review actually fixed something.
-
-The first capture in a fresh project also writes `.task/CLAUDE.md` inline (detect language + test policy, write, report) — there's no separate setup command to run first, and no confirmation to click through. A task too small to deserve a plan is too small to deserve a file — just do it in chat.
+There is no setup command: the first capture in a project writes `.task/CLAUDE.md` itself.
 
 > [!TIP]
-> More scenarios — roadmap-driven initiatives, `/task:roadmap-to-workflow`, and returning to a task later — live in the **[guide on the docs site](https://spair.github.io/task-pipeline/guide/roadmaps)**.
-
-## Why
-
-`task-pipeline` doesn't fight the one-big-session failure with more machinery — it argues with the plan first, then sizes the record to the task. It leans on what Claude Code already ships (dynamic Workflows, your project's own build and test commands) and adds just enough structure around them: one artifact per task (`.task/task/<slug>.md`) carrying the discussion's "what, why, and how" in your language, plus a fixed `## Execution` block (English, like every parser-stable string) that carries the run from implementation through commit to the review pass.
-
-Concretely, you get:
-
-- **What you capture is the skill you pick, not a flag.** A two-file fix and a month-long migration don't deserve the same ceremony — reach for `to-task`, `to-roadmap`, or `to-spec` and the file carries exactly that much structure. There is no `--plan` or `--deep` switch anywhere.
-- **The plan gets grilled before it gets frozen.** `/task:grill` keeps a decision-plus-rationale ledger, makes recommendations that are allowed to disagree with you, and closes with a pre-mortem — so no "great idea!" rubber-stamp makes it into the file.
-- **Nothing new to learn on the execution side.** There is no extra command to run — any session told `implement .task/task/<slug>.md` reads the artifact and follows its `## Execution` pointer into `.task/CLAUDE.md` → `## Executing a task`, through to a commit.
-- **Invisible to your repo.** `.task/` is git-ignored by its own `.task/.gitignore`, never shows in `git status`, and `rm -rf .task` leaves the repo exactly as before — [the trust section below](#why-you-can-trust-this) spells out precisely what it will and won't touch.
-- **And yes, the discussion survives `/clear`, compaction, and tomorrow's fresh session** — table stakes, but worth saying. The artifact's path is the only handle; there's no active-task state to lose or heal.
-
-## Why you can trust this
-
-It runs bash, edits files, and writes commits — so here is exactly what it will and won't touch:
-
-- **Nothing is committed until the implementing session does so, per `## Executing a task`.** Until then every change is just working-tree edits; back them out with plain `git restore` / `git checkout`. One opt-in exception: `/task:roadmap-to-workflow` (autopilot) commits each roadmap item as it lands — it still never pushes.
-- **Commits stage only task-related files, and never push.** Nothing leaves your machine.
-- **No hidden orchestration.** The capture skills spawn nothing. The plugin ships exactly one subagent — `task:code-reviewer`, the review pass, whose whole prompt is a readable Markdown file in this repo (`agents/code-reviewer.md`) — and `/task:roadmap-to-workflow` runs a static Workflow script shipped with the plugin (`skills/_lib/roadmap-driver.js`), inspectable at any time — the skill only passes it the roadmap's unchecked items, the already-ticked numbers and your chosen scope; the driver derives the run order itself.
-- **The pipeline leaves no trace in the repo.** `.task/` ignores itself through its own `.task/.gitignore` (a single `*`), so it never shows up in `git status` and no tracked file is touched; delete it with `rm -rf .task` and the ignore rule goes with it — the repo is exactly as before.
-
-## Requirements
-
-- [Claude Code](https://docs.claude.com/en/docs/claude-code) — this ships as a Claude Code plugin.
-- Nothing else. Every skill except `grill` opens on its entry state — the resolved `.task/` root, whether the project is set up, the roadmaps/tasks/specs that exist — gathered by the plugin's own `preflight.sh` and substituted into the skill before Claude reads it, so a capture starts without a single tool round-trip. (`grill` reads nothing under `.task/` and runs no bash at all.) Those four skills share one identical `allowed-tools` line that pre-approves the plugin's own helpers one script at a time — `preflight.sh`, `write-task.sh`, `roadmap-items.sh`, `detect-project.sh`, `validate.sh` — never a blanket grant over a directory; `resolve-ws.sh` and `roadmap.sh` get no rule, because those scripts only ever `source` them. Only the `preflight.sh` rule is required: the injected call never prompts, so an unmatched one aborts the skill, while the other rules only pre-approve the model's own helper calls.
-- The review pass is the plugin's own agent (`task:code-reviewer`), so no platform slash command has to be available — it just needs the plugin enabled. Verification uses whatever build/test command your project declares in `.task/CLAUDE.md` → Build and Tests; when there is none, the reviewer says so instead of implying a green run.
-
-## Installation
-
-The pipeline ships as a Claude Code plugin (`task`) inside the `task-pipeline` marketplace. The recommended path is through the marketplace:
-
-```text
-/plugin marketplace add https://github.com/SpaiR/task-pipeline.git
-/plugin install task@task-pipeline
-```
-
-From then on, updates are a single command: `/plugin marketplace update task-pipeline`.
-
-After installation, Claude Code gains the commands `/task:grill`, `/task:to-task`, `/task:to-roadmap`, `/task:to-spec`, `/task:roadmap-to-workflow`, plus the `task:code-reviewer` agent the execution step spawns for you (you never invoke it by hand). There is no hook — enforcement is by convention, not a gate.
-
-In a new project you don't have to run setup by hand first: the first `/task:to-task`, `/task:to-roadmap`, or `/task:to-spec` in an unconfigured project detects language and test policy, writes `.task/CLAUDE.md`, reports what it wrote, and continues with the requested capture. `/task:grill` needs no setup at all — it writes nothing and can run at the discussion stage before any capture exists. `/task:roadmap-to-workflow` presupposes an existing roadmap, so a fresh-project first-use of it hard-stops with a redirect to run a capture skill first.
-
-<details>
-<summary>Local development</summary>
-
-```text
-/plugin marketplace add /path/to/task-pipeline
-/plugin install task@task-pipeline
-```
-
-</details>
-
-## Command reference
-
-**Next-step footer:** every capture skill ends its output with a copy-pasteable `→ Next: ...` line naming the artifact path explicitly, e.g. `implement .task/task/<slug>.md` — the path *is* the handle, so there's nothing else to remember.
-
-`validate` is an internal, optional self-check — not a slash command, not a gate. For a manual check: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`.
-
-### One file per task; a roadmap is a backlog of items
-
-Each capture produces exactly one `.task/task/<slug>.md`, where `<slug>` is both the filename and the identity — no task-id, no umbrella folder. A closed task is just a file that stays in `.task/task/` (or you delete it); git history is the record, there is no archive. A **roadmap** (`.task/roadmap/<slug>.md`) groups several such items into one initiative; `to-task` can open the next unchecked item directly, or `roadmap-to-workflow` fans the whole backlog out at once. A **spec** (`.task/spec/<slug>.md`) is a standalone file of load-bearing technical decisions that tasks and roadmaps point at with a `Spec:` header.
-
-Those cross-references are written as Markdown links — `Spec: [event-envelope](../spec/event-envelope.md)`, `Roadmap: [api-v2](../roadmap/api-v2.md)`, and an `## Execution` pointer at `[.task/CLAUDE.md](../CLAUDE.md)` — so a `.task/` file is navigable in any Markdown viewer or plan-review tool, not just readable by an agent. The link text is the slug that carries the identity; the target is what a viewer follows.
+> Roadmap-driven initiatives, `/task:roadmap-to-workflow`, and returning to a task later are covered in the **[guide](https://spair.github.io/task-pipeline/guide/roadmaps)**.
 
 ## Commands
 
-| Command | In brief |
+What you capture is the skill you pick — there are no flags.
+
+| Command | What it does |
 |--------|--------|
-| `/task:grill [topic]` | Pre-capture interrogation: stress-tests a plan/decision one question at a time, keeps a decision-plus-rationale ledger, ends with a pre-mortem (skipped when it would change nothing), then routes to the right capture skill — `to-spec`, `to-roadmap` or `to-task`. Writes nothing and touches nothing under `.task/` — grill *before* you capture, so `to-spec`/`to-task`/`to-roadmap` serialize something already examined. Needs no config; runs before any capture exists. |
-| `/task:to-task [<roadmap-slug>[#N] \| context]` | Fixes the chat discussion (or a roadmap item) into `.task/task/<slug>.md` with **`## Description` + `## Plan`** (Goal/Touches/Logic steps) and, when the testing policy calls for it, `## Tests` — ready to hand straight to implementation. Always a fresh capture: an existing slug is surfaced first, with a chip to pick another slug or overwrite. From a roadmap item, the Plan follows the roadmap's `## Architecture`. |
-| `/task:to-roadmap [initiative]` | Fixes a multi-task initiative discussed in chat into `.task/roadmap/<slug>.md` — a phase-grouped backlog of ready-to-pick-up items, each with optional `**Dependencies:**` and `**Model:**` hints, referencing standalone specs via `Spec:` headers where a load-bearing technical decision applies — **together with its technical layer**: an `## Architecture` section naming the components the initiative builds or changes (real module paths), what crosses between items, a module-level sketch per item, and technical ordering, mirrored into the items' `**Dependencies:**`. The decomposition comes first and stays behavioral; the architecture is drafted over the fixed items, and both land in one write. Planners follow the architecture as the intended shape, stating a reason where the code forces a deviation. Always a new file; closes with a report-only self-check whose findings are surfaced, never silently rewritten into the file. |
-| `/task:to-spec [decision area]` | Fixes load-bearing technical decisions discussed in chat into a standalone `.task/spec/<slug>.md` — numbered Decision / Rationale / Constrains sections. Orthogonal to the work-capture skills: tasks and roadmaps reference a spec via a `Spec:` header, and the implementing session reads it as a fixed anchor. Capture it before, alongside, or independently of any roadmap. Every section must name a concrete artifact and a rejected alternative — a component map or a restated roadmap item is redirected to a roadmap's `## Architecture`, which `to-roadmap` writes. |
-| `/task:roadmap-to-workflow [<roadmap-slug>]` | Autopilot over an approved roadmap: invokes the plugin's shipped Workflow driver (`skills/_lib/roadmap-driver.js`, registered by the plugin manifest as `task:roadmap-driver`), which sorts the roadmap's unchecked items into dependency-ordered waves itself and runs them (parallel planning, serialized implementation within a wave). Default per-item shape is opus-plans / sonnet-implements / reviewer-reviews — a first agent plans the item per `skills/_lib/plan-driver.md` (on sonnet when the item's `**Model:**` hint is `haiku`), a second implements and commits (using the item's `**Model:**` hint if present), and a third is `task:code-reviewer`, which reviews that commit, fixes what it proves, runs the project's build and tests, commits those fixes on top, and ticks the roadmap checkbox once its review passes. In the Workflow panel each item gets its own group named after its title, with its stages numbered `1/3 plan` to `3/3 review`; the run ends with one line per landed item. Launched with no arguments it asks (via chips) which roadmap and how much to run; hard-stops with a by-hand recipe (`/task:to-task <slug>#N` on one item, then implement it in a fresh session) if the Workflow tool is unavailable. |
-| `validate` *(utility)* | Optional formal validator of the `.task/` task, roadmap and spec formats. No hook calls it; each capture validates the one file it just wrote, and `/task:roadmap-to-workflow` sweeps `all` in its gate. Manual check: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" [task <slug>\|roadmap <slug>\|spec <slug>\|all]`. |
+| `/task:grill [topic]` | Interrogates a plan one question at a time and ends with a pre-mortem. Writes nothing. |
+| `/task:to-task [<roadmap-slug>[#N] \| context]` | Captures one task into `.task/task/<slug>.md`: description plus a stepwise plan. |
+| `/task:to-roadmap [initiative]` | Captures a multi-task initiative into `.task/roadmap/<slug>.md`: a backlog of items plus its `## Architecture`. |
+| `/task:to-spec [decision area]` | Pins load-bearing technical decisions into `.task/spec/<slug>.md`, which tasks and roadmaps cite via `Spec:`. |
+| `/task:roadmap-to-workflow [<roadmap-slug>]` | Autopilot: plans, implements, reviews and ticks each unchecked roadmap item in dependency order. |
+| `validate` *(utility)* | Optional format check: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`. |
+
+Full reference: **[Commands](https://spair.github.io/task-pipeline/reference/commands)**.
+
+## Why you can trust this
+
+It runs bash, edits files, and writes commits, so here is exactly what it will and won't touch:
+
+- **Nothing is committed until the implementing session does so.** Until then every change is a working-tree edit you can `git restore`. The one exception is `/task:roadmap-to-workflow`, which commits each item as it lands.
+- **Commits stage only task-related files, and nothing is ever pushed.**
+- **No hidden orchestration, no hooks.** The plugin ships one agent, `agents/code-reviewer.md`, and one Workflow driver, `skills/_lib/roadmap-driver.js`; both are readable files in this repo.
+- **No trace in your repo.** `.task/` ignores itself through its own `.task/.gitignore`, so it never shows in `git status`. `rm -rf .task` leaves the repo exactly as before.
+
+More in **[Trust](https://spair.github.io/task-pipeline/guide/trust)**.
+
+## Configuration
+
+Settings live in `.task/CLAUDE.md`, written once by the first capture and yours to edit after that. It sets the artifact language, the test policy (`always`, `on-demand` by default, or `never`), the build and test commands the reviewer runs, and the instructions an implementing session follows. All worktrees of a repo share one `.task/`. Details: **[Configuration](https://spair.github.io/task-pipeline/reference/configuration)**.
 
 ## Comparison with alternatives
 
-Most spec-driven tools answer "the model codes before it understands" with volume — more templates, more artifacts, the same ceremony for a rename and a rewrite. task-pipeline answers it with interrogation and proportion instead: a `grill` step that argues with the plan before anything is written, and the capture chosen per piece of work (`to-task` / `to-roadmap` / `to-spec`, never a flag).
-
-Underneath, the plan contract is fixed and validator-checked (`### Step N` — Goal / Touches / Logic), you author it in chat and it serializes to disk — rails that keep a session on the plan you already worked out, not a generator that invents one from a prompt. Load-bearing decisions pin into attachable per-decision specs, roadmaps fan out into a plan per item with auto-ticked checkboxes, and the whole surface stays small: flat Markdown under `.task/`, no MCP server, no API keys, no task database, one reviewer agent, and Workflows delegated to the platform. It is explicitly not for a two-file, twenty-minute fix.
-
-Full head-to-head tables against default Claude Code, superpowers, Matt Pocock's skills, OpenSpec, spec-kit, and Task Master live on the site: **[Comparison with alternatives](https://spair.github.io/task-pipeline/guide/comparison)**.
-
-## Configuration & policy
-
-All of this lives in `.task/CLAUDE.md`, written inline on first use of a capture skill. It is a nested `CLAUDE.md`, so Claude Code loads it by itself in any session that reads a file under `.task/` — which is how an implementing session and the reviewer pick up your settings without being told to:
-
-- **Language** — by default the Description is in your language, everything else (headers, the `## Execution` pointer, commits) is in English, per "Commit Format".
-- **Test policy** — `Testing Policy`: `always` / `on-demand` *(default)* / `never`. In `on-demand`, `## Tests` is written only if the Description explicitly asks for it ("needs tests" / "with tests" / "cover with tests").
-- **Executing a task** — the instructions an implementing session follows, in one copy. Edit them and the change applies to tasks you captured earlier, too.
-- **Yours to edit** — setup writes the file once and never rewrites it. Change any line by hand; to start over, delete the file and run any capture again.
-
-## How it works
-
-```text
-discuss freely in chat
-  ↓
-/task:grill              grill before you capture — interrogate the decision, no artifact
-  ↓
-/task:to-task            capture one task — what and why + a Plan (Goal/Touches/Logic steps)
-/task:to-roadmap          … a whole multi-task initiative + its technical layer (## Architecture)
-/task:to-spec             … pin technical decisions (tasks/roadmaps cite via Spec:)
-  ↓                                          ↓
-implement it now,                /task:roadmap-to-workflow
-in a fresh session:                fans unchecked items out to the
-"implement .task/task/<slug>.md"   shipped Workflow driver, one per item
-  → work the plan → commit → task:code-reviewer reviews, fixes, commits the fixes
-```
-
-`/task:grill` is the optional pre-capture step: point it at a plan or decision and it interrogates one question at a time, keeps a decision-plus-rationale ledger, ends with a pre-mortem, and routes you to the right capture skill — writing nothing itself. Grill *before* you capture, so the artifact serializes a decision that has already been pressure-tested. It descends from Matt Pocock's [grill-me](https://github.com/mattpocock/skills) — the interrogate-before-you-build idea — and adds a decision ledger, recommendations that are allowed to disagree with you, a closing pre-mortem, and the part grill-me leaves open: somewhere to put the answers.
-
-What you capture — one task, an initiative, or the decisions they must honor — is the skill name, never a flag: `to-task` for one task with its approach, `to-roadmap` for a multi-task initiative together with its technical shape — components, interfaces between items, per-item sketches — which every item's planner then follows. `to-spec` is orthogonal — it pins load-bearing technical decisions into `.task/spec/<slug>.md`, which tasks and roadmaps reference via a `Spec:` header and the implementing session honors as a fixed anchor. There is no execution skill — capture ends with a copy-pasteable path, and any session (the same one, a fresh one, or one spawned by `roadmap-to-workflow`) executes the artifact directly.
-
-The pipeline is built on a small set of invariants; the full contract lives in [`docs/contract.md`](docs/contract.md).
-
-- **Artifacts.** `.task/` is flat — one file per task under `.task/task/<slug>.md`, one file per initiative under `.task/roadmap/<slug>.md`, one file per spec under `.task/spec/<slug>.md`. No workspace subfolders, no log, no archive, no active-task pointer — the artifact's path is the only handle there is. Full producer/consumer table: [docs/contract.md](docs/contract.md).
-- **No hook gate.** There is no `hooks/hooks.json` — the plugin ships no hook at all. Enforcement is by convention: `validate.sh` is available as an optional self-check, never wired to a PreToolUse matcher.
-- **Parallel worktrees.** All worktrees of a repo share one `.task/` automatically — its location is recorded in `git config task.root` on first setup, so nested, sibling, and bare-repo worktrees resolve it with zero setup (no symlink, no join step). Run several parallel worktrees of a repo and they all read and write the one `.task/`.
+Most spec-driven tools answer "the model codes before it understands" with more templates and the same ceremony for every task. task-pipeline answers it with a grill step that argues with the plan, and a capture sized to the work — flat Markdown under `.task/`, no MCP server, no API keys, no task database. Head-to-head tables against default Claude Code, superpowers, Matt Pocock's skills, OpenSpec, spec-kit and Task Master: **[Comparison](https://spair.github.io/task-pipeline/guide/comparison)**.
 
 ## Contributing
 
-> *This section is for those editing the tool itself.* Start with [`CONTRIBUTING.md`](CONTRIBUTING.md) — it carries the commit format, the list of allowed scopes, the release procedure, and the repository layout.
-
-Each `SKILL.md` is a prompt contract that another Claude instance will read in someone else's project. The invariants that must not be broken — the `task.md` format, the flat `.task/` layout, the pipeline staying invisible outside `.task/` — are pinned in [`docs/contract.md`](docs/contract.md); a compact checklist is in [`CLAUDE.md`](CLAUDE.md). If you change something, update `docs/contract.md` and this README in the same commit; `CHANGELOG.md` is edited only on explicit request. The bash helpers under `skills/_lib/` and `validate.sh` have a test suite — `bash tests/run.sh`, bash, awk and git — plus node for the driver's wave, digest and display cases and jq for some release-guard checks, each skipped with a SKIP line when absent — which CI runs on ubuntu and macOS; the prompts themselves are still checked by running the skills.
+Start with [`CONTRIBUTING.md`](CONTRIBUTING.md) for commit format, scopes and repository layout. The invariants are in [`docs/contract.md`](docs/contract.md), with a checklist in [`CLAUDE.md`](CLAUDE.md). Run `bash tests/run.sh` before every commit.
