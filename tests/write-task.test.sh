@@ -117,6 +117,39 @@ for tool in mktemp awk mv; do
   assert_eq "" "$(find "$repo/.task/task" -name '.lambda.*')" "$tool: no staging file left"
 done
 
+t_case "a written file gets the umask's mode, not mktemp's 0600"
+# The file is staged with mktemp and renamed into place, which kept 0600.
+(umask 022; w "$repo" --fresh --slug mu --title "Mu task" --description "$body/desc.md" --plan "$body/plan.md")
+assert_eq "-rw-r--r--" "$(ls -l "$repo/.task/task/mu.md" | cut -c1-10)" "readable as a redirect would leave it"
+
+t_case "--force onto a directory exits 5 and writes nothing into it"
+# `mv file dir` moves the file inside the directory and succeeds, so the run
+# once printed `WROTE:` for a path that held no task file.
+mkdir "$repo/.task/task/omicron.md"
+w "$repo" --fresh --force --slug omicron --title "Omicron task" --description "$body/desc.md" --plan "$body/plan.md"
+assert_exit 5 "$W_EXIT" "directory target"
+assert_eq "0" "$(grep -c 'WROTE:' <<<"$W_OUT")" "no success line"
+assert_eq "" "$(ls -A "$repo/.task/task/omicron.md")" "nothing moved inside"
+rmdir "$repo/.task/task/omicron.md"
+
+t_case "a target that appears after the existence check is not clobbered"
+# Parallel plan agents on one slug both pass the check; the later `mv` once
+# replaced the earlier file silently. The shim creates the target just before
+# the real `ln` runs, which is the race.
+real_ln=$(command -v ln)
+racer=$(t_tmpdir)
+printf '#!/bin/sh\nprintf "racer\\n" >"$2"\nexec %s "$@"\n' "$real_ln" >"$racer/ln" && chmod +x "$racer/ln"
+PATH="$racer:$PATH" w "$repo" --fresh --slug pi --title "Pi task" --description "$body/desc.md" --plan "$body/plan.md"
+assert_exit 4 "$W_EXIT" "collision found at publish time"
+assert_eq "racer" "$(cat "$repo/.task/task/pi.md")" "the other writer's file survives"
+assert_eq "" "$(find "$repo/.task/task" -name '.pi.*')" "no staging file left"
+
+t_case "a filesystem without hard links still gets the file"
+printf '#!/bin/sh\nexit 1\n' >"$racer/ln"
+PATH="$racer:$PATH" w "$repo" --fresh --slug rho --title "Rho task" --description "$body/desc.md" --plan "$body/plan.md"
+assert_exit 0 "$W_EXIT" "falls back to the rename"
+assert_contains "$(head -1 "$repo/.task/task/rho.md")" "# Rho task" "written"
+
 t_case "a byte that is not UTF-8 survives a UTF-8 locale"
 # macOS awk decodes by locale and aborts on an invalid byte (`towc: multibyte
 # conversion failure`), which surfaced as a write failure. The helper's awk

@@ -100,6 +100,9 @@ if [[ -e "$target" && "$force" -ne 1 ]]; then
   echo "EXISTS: $target — pass --force to overwrite" >&2
   exit 4
 fi
+# `mv` onto a directory moves the staged file INTO it and still succeeds, so
+# `WROTE:` would name a path that holds no task file. Never one to replace.
+[[ -d "$target" ]] && die "$target is a directory, not a task file" 5
 mkdir -p "$AI_DIR/task" || die "cannot create $AI_DIR/task" 5
 # Stage next to the target, then rename. A redirect straight into `$target`
 # truncates it before the first byte lands, so a failed write would leave
@@ -109,6 +112,9 @@ mkdir -p "$AI_DIR/task" || die "cannot create $AI_DIR/task" 5
 write_failed() { die "cannot write $target" 5; }
 work=$(mktemp "$AI_DIR/task/.$slug.XXXXXX") || write_failed
 trap 'rm -f "$work"' EXIT
+# mktemp creates the file 0600 and the rename keeps that mode: give it the one
+# a plain redirect would, so a task file stays as readable as it always was.
+chmod "$(printf '%o' $(( 0666 & ~0$(umask) )))" "$work" || write_failed
 {
   printf '# %s\n' "$title" || write_failed
   # Cross-artifact references are Markdown links whose LABEL carries the
@@ -133,7 +139,21 @@ trap 'rm -f "$work"' EXIT
   fi
   printf '\n## Execution\n%s\n' "$EXECUTION_POINTER" || write_failed
 } >"$work" || write_failed
-mv "$work" "$target" || write_failed
+if [[ "$force" -eq 1 ]]; then
+  mv "$work" "$target" || write_failed
+else
+  # No clobber. The check above is not atomic: a parallel plan agent on the
+  # same slug may have written it since, and `mv` would replace that file
+  # without a word. A hard link fails when the target exists, atomically; a
+  # filesystem without hard links falls back to the rename.
+  if ! ln "$work" "$target" 2>/dev/null; then
+    if [[ -e "$target" ]]; then
+      echo "EXISTS: $target — pass --force to overwrite" >&2
+      exit 4
+    fi
+    mv "$work" "$target" || write_failed
+  fi
+fi
 
 echo "WROTE: $target (fresh)"
 echo "VALIDATE:"
