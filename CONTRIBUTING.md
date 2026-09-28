@@ -21,7 +21,8 @@ We use [GitHub](https://github.com/SpaiR/task-pipeline) to host code, track issu
 .claude-plugin/marketplace.json  catalog for the `task-pipeline` marketplace
 .claude/                         repo-local maintainer tooling — NOT shipped with the plugin:
   skills/self-audit/             meta-skill: audits this repo for invariant / contract /
-                                   robustness / docs drift (four read-only lens agents)
+                                   robustness / docs drift and overengineering (five
+                                   read-only lens agents)
   agents/self-*.md               the lens agents self-audit fans out to
                                    (read-only by instruction: Read, Grep, Glob, Bash, no
                                    Edit/Write; nothing enforces it at runtime)
