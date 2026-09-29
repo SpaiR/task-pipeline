@@ -120,8 +120,8 @@ Write the file directly — no in-chat preview, no confirmation prompt. Step 2's
 
 1. Slug: kebab-case from the decision-area topic, ≤ 50 chars (`event-envelope`, `auth-token-model`), in English whatever `.task/CLAUDE.md` → Language says — it is a filename, a parser-stable string. Its own identity, independent of any roadmap.
 2. **Slug collision.** If that slug is already in Step 0's `SPECS:` list → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). Never silently overwrite. That list is a snapshot taken before the rounds and no writer script guards this path, so when the slug is *absent* from it, confirm with a file read that nothing is there before writing.
-3. Write `$AI_DIR/spec/<slug>.md` (creating the directory if needed), and nothing else — wiring a `Spec:` header into a task or roadmap is `to-task` / `to-roadmap`'s job when they reference this spec.
-4. Validate it: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" spec <slug>` — surface any WARN/ERROR in the Step 5 digest; only a setup-precondition failure (exit 2) hard-stops.
+3. Write `$AI_DIR/spec/<slug>.md` (creating the directory if needed), and nothing else — wiring a `Spec:` header into a task or roadmap is `to-task` / `to-roadmap`'s job when they reference this spec. If the write fails (unwritable `.task/spec`, full disk), report the failure plainly, skip Step 5's digest — it would name a path that does not exist — and close with `→ Next: fix the write failure (permissions or free space under \`$AI_DIR\`), then rerun \`/task:to-spec\`.` Stop there; there is nothing to validate.
+4. Validate it: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" spec <slug>` — surface any WARN/ERROR in the Step 5 digest; only a setup-precondition failure (exit 2) hard-stops. Report it and close with `→ Next: rerun \`/task:to-spec\` — its setup writes \`.task/CLAUDE.md\` first.`
 
 ### Step 5: Output — digest
 
