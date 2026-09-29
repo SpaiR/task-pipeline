@@ -40,7 +40,6 @@ Each check is grounded in a defect that shipped and was later fixed; the commit 
 - **Mechanical cross-references** — a broken link, anchor, cited path, `§` citation or `Step N` number. Those are mechanical checks, outside this lens.
 - **What another lens owns** — see the hard rules above. When a defect is both, report it once, under the lens whose oracle it breaks first.
 - **A failure the contract already declares as accepted.** A write the contract says is swallowed so the block still prints (`preflight.sh`'s `.gitignore` recreation), a check it marks advisory-only (`validate.sh`'s WARNs), a point it names as an open question.
-- **The eval cases under `evals/`.** They test the prompts and track their own known gaps in `evals/README.md`.
 
 ## Severity scale
 
