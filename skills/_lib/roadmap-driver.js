@@ -169,8 +169,6 @@ async function runPlan(n, title, model, phase) {
      - roadmap-level spec files (read each as a fixed technical anchor, and stamp
        a Spec: header per slug): ${specPaths.join(', ') || '(none)'}
        — their slugs: ${SPEC_SLUGS.join(', ') || '(none)'}
-     Non-interactive: auto-accept every confirmation, make constructive
-     assumptions, never block on a prompt. Do NOT implement or commit.
      Last non-empty line MUST be exactly:
        OK #${n} <item-slug> planned            (on success)
        FAIL #${n} <item-slug> <what failed>    (on failure)`,

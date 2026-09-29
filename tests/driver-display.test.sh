@@ -158,6 +158,10 @@ t_case "the plan prompt names aiDir as the .task directory, not a root above it"
 # .task directory itself here; reading one by the other built .task/.task paths.
 out=$(run_driver "'prompt1'")
 assert_contains "$out" "- .task directory (AI_DIR): /p/.task" "AI_DIR labelled as the .task directory"
+# The ground rules (non-interactive, no implement or commit) live in
+# plan-driver.md § Driver mode; the prompt only points there.
+assert_contains "$out" "/plugin/skills/_lib/plan-driver.md and follow it" "prompt still names plan-driver.md"
+assert_contains "$out" "Last non-empty line MUST be exactly:" "digest contract kept"
 
 t_case "a later wave's slug that matches a landed item's stops too"
 assert_contains "$(run_driver "'dup2'")" \
