@@ -12,7 +12,7 @@
 #   resolve_artifact_path <kind> <arg>  — slug (no `/`) or path → path under
 #                                         $AI_DIR/<kind> (task | roadmap | spec).
 #                                         Callers: validate.sh + roadmap-items.sh.
-#   roadmap_progress_counts <path>      — prints three lines: total / done / unchecked.
+#   roadmap_progress_counts <path>      — prints two lines: total / done.
 #                                         Sole caller: preflight.sh.
 #
 # Conventions:
@@ -43,10 +43,9 @@ resolve_artifact_path() {
 }
 
 # --- roadmap_progress_counts <path> ---
-# Emits three lines on stdout:
+# Emits two lines on stdout:
 #   total: <N>
 #   done: <N>
-#   unchecked: <N>
 # DONE counts the same 5-state class the reviewer's auto-mark treats as "already
 # marked" ([x]/[~]/[>]/[-]); without this, a roadmap with [~]/[>]/[-] items
 # would report done<total even when no [ ] remains, and the wizard's
@@ -57,11 +56,10 @@ resolve_artifact_path() {
 # decode, and the counts came back empty; every pattern here is ASCII.
 roadmap_progress_counts() {
   local file="$1"
-  # One pass, three counters — same regex classes as before, one fork not three.
+  # One pass, two counters — one fork, not one per counter.
   LC_ALL=C awk '
     /^### - \[[ x~>-]\] [0-9]+\. / { t++ }
     /^### - \[[x~>-]\] [0-9]+\. /  { d++ }
-    /^### - \[ \] [0-9]+\. /       { u++ }
-    END { printf "total: %d\ndone: %d\nunchecked: %d\n", t+0, d+0, u+0 }
+    END { printf "total: %d\ndone: %d\n", t+0, d+0 }
   ' "$file"
 }
