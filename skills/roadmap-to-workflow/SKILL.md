@@ -46,11 +46,12 @@ A positional `<roadmap-slug>` in `$ARGUMENTS` is matched against the `ROADMAPS:`
 With no positional argument, pick from the `ROADMAPS:` lines:
 
 - **`ROADMAPS: none`** → stop: "no roadmaps found — create one with `/task:to-roadmap`. → Next: `/task:to-roadmap`"
-- **Exactly one line** → use it (still refuse if it is fully complete, `unchecked=none`).
+- **Exactly one line** → use it (still refuse if it is fully complete — `unchecked=none` with a total above 0 — or if it has no item at all, `0/0`).
+- **A `0/0` roadmap** — `unchecked=none` over zero items — has no item heading that parses, which is not the same as every item being ticked. It is never a pick and never called complete: stop with "no item heading in `.task/roadmap/<slug>.md` parses. → Next: `bash \"${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh\" roadmap <slug>`, fix the headings, rerun", whether it came from the picker or a positional argument.
 - **An `unchecked=unreadable` roadmap** — its file could not be read — is never a pick: stop with "`.task/roadmap/<slug>.md` could not be read. → Next: fix the file's permissions, then rerun `/task:roadmap-to-workflow <slug>`", whether it came from the picker or a positional argument.
-- **More than one** → `AskUserQuestion` (convention (c)), one chip per roadmap labelled `<slug>  (<done>/<total>)`; sort partial roadmaps first, complete ones last with a `(complete)` suffix, and refuse to proceed on a complete pick.
+- **More than one** → `AskUserQuestion` (convention (c)), one chip per roadmap labelled `<slug>  (<done>/<total>)`; sort partial roadmaps first, complete ones (`unchecked=none`, total above 0) last with a `(complete)` suffix, and refuse to proceed on a complete pick. A `0/0` roadmap is labelled `(no items parsed)`, never `(complete)`, and refused the same way as above.
 
-Every refusal on a complete roadmap — picked, the only one, or named positionally — ends the same way: "Every item in `<slug>` is already checked off — nothing left to run. → Next: `/task:to-roadmap` for a new initiative, or uncheck the items you want rerun."
+Every refusal on a complete roadmap (not a `0/0` one, which has its own above) — picked, the only one, or named positionally — ends the same way: "Every item in `<slug>` is already checked off — nothing left to run. → Next: `/task:to-roadmap` for a new initiative, or uncheck the items you want rerun."
 
 Read the roadmap's `Spec:` header lines, if any, and resolve each slug to an **absolute** `$AI_DIR/spec/<slug>.md` — the slug is the link label, or the whole value when it is a bare slug, never the relative target ([contract § Cross-artifact references](../../docs/contract.md#cross-artifact-references)). These become Step 2's `specPaths` and reach every plan agent as fixed anchors; absolute because the sandbox expands nothing.
 
@@ -62,7 +63,7 @@ No flags — always ask, unless there is nothing to ask. The open item numbers a
 - **Only next wave** — `scope: 'next-wave'`. The driver sorts every unchecked item and keeps wave 1, so nothing is filtered or reordered here.
 - **Pick range** — via the free-text ("Other") option, e.g. `1,3-5,8`, expanded to the numbers themselves. A number that is not in `unchecked=` is refused **with the valid set named**, which is what turns a rejection into a second attempt that works: "#9 isn't a runnable item in `<slug>` (already checked, or no such item). Unchecked right now: #2, #3, #5, #7. → Next: rerun `/task:roadmap-to-workflow <slug>` and pick from those."
 
-One open item → skip the question, run it. `unchecked=none` → the complete-roadmap refusal above, word for word.
+One open item → skip the question, run it. `unchecked=none` → the complete-roadmap refusal above, word for word (the `0/0` stop instead, when the total is 0).
 
 ## Step 1: Report the items
 

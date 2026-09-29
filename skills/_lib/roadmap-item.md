@@ -28,7 +28,11 @@ prompt instead, already resolved.
 - Otherwise → the roadmap's `unchecked=` list is the open items; read their
   titles from the file. More than one: ask via `AskUserQuestion` (one chip per
   `#<N> — <title>`, lowest number the default). Exactly one: take it.
-- `unchecked=none` → **stop**: every item is already checked off. Footer:
+- `0/0 unchecked=none` → **stop**: no item heading in `$AI_DIR/roadmap/<slug>.md`
+  parses — this is not a finished roadmap. Footer: `→ Next: \`bash
+  "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" roadmap <slug>\`, fix the
+  headings, rerun \`<the caller's command> <slug>\`.`
+- Any other `unchecked=none` → **stop**: every item is already checked off. Footer:
   `→ Next: \`<the caller's command> <slug>#<a real item number from the file>\`
   to redo a specific item, or describe new work in chat.`
 - `unchecked=unreadable` → **stop**: the roadmap file could not be read. Name
