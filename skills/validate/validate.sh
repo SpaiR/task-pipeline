@@ -210,7 +210,7 @@ validate_task() {
   # The separator must sit in the HEADER block — before the first `## ` heading.
   # A `---` thematic break inside the body must not satisfy this check, or a
   # deleted header separator would pass silently.
-  if ! awk '/^---$/{found=1; exit} /^## /{exit} END{exit !found}' "$file"; then
+  if ! awk '/^---[[:space:]]*$/{found=1; exit} /^## /{exit} END{exit !found}' "$file"; then
     err "$label" "missing '---' separator between header and Description (a '---' inside the body does not count)"
   fi
 
@@ -588,7 +588,11 @@ case "$cmd" in
     fi
     task_path=$(resolve_artifact_path task "$1")
     if [[ -z "$task_path" ]]; then
-      err "task($1)" "file not found (looked at $1, $AI_DIR/task/$1(.md))"
+      if [[ "$1" == */* ]]; then
+        err "task($1)" "file not found at $1"
+      else
+        err "task($1)" "file not found (looked at $AI_DIR/task/$1(.md))"
+      fi
     else
       validate_task "$task_path"
     fi
@@ -609,7 +613,11 @@ case "$cmd" in
     fi
     spec_path=$(resolve_artifact_path spec "$1")
     if [[ -z "$spec_path" ]]; then
-      err "spec($1)" "file not found (looked at $1, $AI_DIR/spec/$1(.md))"
+      if [[ "$1" == */* ]]; then
+        err "spec($1)" "file not found at $1"
+      else
+        err "spec($1)" "file not found (looked at $AI_DIR/spec/$1(.md))"
+      fi
     else
       validate_spec "$spec_path"
     fi
