@@ -42,6 +42,8 @@ Ran `api-v2-migration`: 2 of 2 items landed and ticked, 0 still unchecked.
 → Done. Roadmap complete — .task/roadmap/api-v2-migration.md fully checked.
 ```
 
+`→ Done.` means nothing is left unchecked. A run scoped to the next wave or a picked range ends the same way when its items land, but with the rest still unchecked the footer is `→ Next: /task:roadmap-to-workflow <slug> to run the remaining <n> item(s)` instead.
+
 ## Mixing hand-picked items with autopilot
 
 Nothing forces one mode for a whole roadmap. A common pattern: do the first, riskiest item yourself to validate the approach, then let autopilot take the rest.
