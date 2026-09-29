@@ -148,7 +148,6 @@ function flipReported(text, n) {
 const sorted = computeWaves(items, done, scope)
 if (sorted.error) return `roadmap-to-workflow: ${sorted.error}`
 const waves = sorted.waves
-if (waves.length === 0) return 'roadmap-to-workflow: nothing to run — every item in scope is already marked.'
 
 const ROADMAP = `${aiDir}/roadmap/${slug}.md`
 const SPEC_SLUGS = specPaths.map((p) => p.split('/').pop().replace(/\.md$/, ''))

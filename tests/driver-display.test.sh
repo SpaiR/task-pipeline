@@ -74,7 +74,10 @@ assert_eq "roadmap-to-workflow: all items shipped.
 # to hold every return in the main loop to runReport. The body is wrapped in an
 # async function (it has top-level `return`s), meta stripped. Item #2 depends on
 # #1, so the run is W1: #1, #3 · W2: #2. BREAK names the stage + item to break.
-run_driver() { # <BREAK> → prints the driver's return value
+# The optional second argument is JS run after `args` is built, to override it
+# (e.g. `args.items = []`); a case may set `noAgent = true` to make any agent()
+# call throw, so a return that should precede every agent cannot hide one.
+run_driver() { # <BREAK> [<args override JS>] → prints the driver's return value
   {
     printf 'const BREAK = %s\n' "$1"
     cat <<'JS'
@@ -82,10 +85,12 @@ const args = { slug: 'retry-work', aiDir: '/p/.task', pluginRoot: '/plugin', spe
   items: [{ n: 1, title: 'Retry backoff', model: 'sonnet', deps: [] },
           { n: 2, title: 'Retry metrics', model: 'haiku', deps: [1] },
           { n: 3, title: 'Config loader', model: 'opus', deps: [] }] }
+let noAgent = false
 const SLUG = { 1: 'retry-backoff', 2: 'retry-metrics', 3: 'config-loader' }
 const log = () => {}
 const parallel = (thunks) => Promise.all(thunks.map((t) => t()))
 const agent = async (prompt, opts) => {
+  if (noAgent) throw new Error('agent() called: ' + opts.label)
   const n = Number(prompt.match(/#(\d+)/)[1])
   const stage = opts.label.split(' ')[1]
   const head = `OK #${n} ${SLUG[n]}`
@@ -96,13 +101,24 @@ const agent = async (prompt, opts) => {
   if (BREAK === `prompt${n}` && stage === 'plan') console.log(prompt)
   return { plan: `${head} planned`, implement: `${head} built`, review: `MARK-OK #${n}\n${head} ok, ticked` }[stage]
 }
-console.log(await (async () => {
 JS
+    printf '%s\n' "${2:-}"
+    printf 'console.log(await (async () => {\n'
     sed '/^export const meta = {/,/^}/d' "$DRIVER"
     printf '})())\n'
   } >"$dir/run.mjs"
   node "$dir/run.mjs" 2>&1
 }
+
+t_case "an empty items list is bad args, before any agent runs"
+# With the empty-run return gone from the driver, these two checks are the only
+# guard: relaxing one would let a run that did nothing report "all items shipped".
+assert_eq "roadmap-to-workflow: bad args — items must be a non-empty array of {n, title, model, deps} objects — was it passed as a JSON string instead of a real array?" \
+  "$(run_driver "''" "args.items = []; noAgent = true")" "items: []"
+
+t_case "an empty scope array is bad args, before any agent runs"
+assert_eq "roadmap-to-workflow: bad args — scope must be 'all', 'next-wave', or a non-empty array of item numbers" \
+  "$(run_driver "''" "args.scope = []; noAgent = true")" "scope: []"
 
 t_case "a full run returns the headline plus every item in landing order"
 assert_eq "roadmap-to-workflow: all items shipped.
