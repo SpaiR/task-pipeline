@@ -19,8 +19,7 @@ bare slug the same way.
 The `ROADMAPS:` line for `<slug>` from the caller's Step 0 block names the file:
 `$AI_DIR/roadmap/<slug>.md`. No such line means no such roadmap — **stop**, name
 the slugs that are listed, and close with a runnable footer that carries one of
-them, never a literal `<slug>`. In driver mode the roadmap path arrives in the
-prompt instead, already resolved.
+them, never a literal `<slug>`.
 
 ## 2. Pick the item
 
@@ -38,7 +37,6 @@ prompt instead, already resolved.
 - `unchecked=unreadable` → **stop**: the roadmap file could not be read. Name
   `$AI_DIR/roadmap/<slug>.md`. Footer: `→ Next: fix the file's permissions, then
   rerun \`<the caller's command> <slug>\`.`
-- Driver mode never picks: `#N` and the title arrive in the prompt.
 
 ## 3. Read the ready description
 
