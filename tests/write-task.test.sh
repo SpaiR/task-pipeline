@@ -110,7 +110,7 @@ t_case "a write that fails partway exits 5 and leaves the old file alone"
 w "$repo" --slug lambda --title "Lambda task" --description "$body/desc.md" --plan "$body/plan.md"
 before=$(cat "$repo/.task/task/lambda.md")
 shim=$(t_tmpdir)
-for tool in mktemp awk mv; do
+for tool in mkdir mktemp chmod awk mv; do
   rm -f "$shim"/*
   printf '#!/bin/sh\nexit 1\n' >"$shim/$tool" && chmod +x "$shim/$tool"
   PATH="$shim:$PATH" w "$repo" --force --slug lambda --title "Replaced" \
@@ -120,6 +120,22 @@ for tool in mktemp awk mv; do
   assert_eq "$before" "$(cat "$repo/.task/task/lambda.md")" "$tool: target untouched"
   assert_eq "" "$(find "$repo/.task/task" -name '.lambda.*')" "$tool: no staging file left"
 done
+
+t_case "a staged file that cannot be written exits 5 and leaves the old file alone"
+# The group redirection into the staged file is the one write no tool shim
+# reaches. A umask of 0222 stages the file read-only, so the redirect fails the
+# way a full disk would. As root the write would succeed and prove nothing.
+before=$(cat "$repo/.task/task/lambda.md")
+if [[ "$(id -u)" -eq 0 ]]; then
+  echo "$T_NAME: SKIP — a read-only staged file is still writable (running as root)"
+else
+  (umask 0222; w "$repo" --force --slug lambda --title "Replaced" \
+    --description "$body/desc.md" --plan "$body/plan.md"; printf '%s\n%s\n' "$W_EXIT" "$W_OUT" >"$body/ro.out")
+  assert_eq "5" "$(sed -n 1p "$body/ro.out")" "unwritable staged file"
+  assert_eq "0" "$(grep -c 'WROTE:' "$body/ro.out")" "no success line"
+  assert_eq "$before" "$(cat "$repo/.task/task/lambda.md")" "target untouched"
+  assert_eq "" "$(find "$repo/.task/task" -name '.lambda.*')" "no staging file left"
+fi
 
 t_case "a written file gets the umask's mode, not mktemp's 0600"
 # The file is staged with mktemp and renamed into place, which kept 0600.
