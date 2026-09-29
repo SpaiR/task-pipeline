@@ -32,9 +32,9 @@ If that block arrived unexpanded — the command line itself rather than its out
 
 There is no full-scan validate call here: the save step validates the one file it writes, and pre-existing artifacts are checked on demand with `validate.sh all`, never as an entry gate.
 
-### Steps 1–7: Precondition, context, decomposition, technical context, architecture, draft, save, self-check
+### Steps 1–7: Context, decomposition, technical context, architecture, draft, save, self-check
 
-Read `${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap-capture.md` § **Core** and follow it — its too-small precondition, then steps 1 (context) through 7 (the post-save self-check). It is the single owner of the roadmap capture flow: the decomposition's harvest-or-brainstorm branch, the module-level read of the code, the architecture's harvest-or-rounds branch, the decision routing, the drafting self-check, the slug-collision guard, the one write and the validate call. Step 0's `AI_DIR:`, `ROADMAPS:` and `SPECS:` are the inputs it expects from you; the digest below is yours.
+Read `${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap-capture.md` § **Core** and follow it — steps 1 (context) through 7 (the post-save self-check). It is the single owner of the roadmap capture flow: the decomposition's harvest-or-brainstorm branch, the module-level read of the code, the architecture's harvest-or-rounds branch, the decision routing, the drafting self-check, the slug-collision guard, the one write and the validate call. Step 0's `AI_DIR:`, `ROADMAPS:` and `SPECS:` are the inputs it expects from you; the digest below is yours.
 
 ### Step 8: Output — digest
 
