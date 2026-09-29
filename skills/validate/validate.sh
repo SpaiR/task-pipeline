@@ -478,12 +478,12 @@ validate_roadmap() {
     {
       if (in_block) {
         # The `**Ready description:**` label is required: `to-task` and the
-        # executing session look for it to find the item body, so an item that
-        # carries the sub-headings without it is not pickable. flush_block()
-        # errors when this stays 0.
+        # plan agent of the driver (both via roadmap-item.md step 3) look for it to
+        # find the item body, so an item that carries the sub-headings without
+        # it is not pickable. flush_block() errors when this stays 0.
         if ($0 ~ /\*\*Ready description:\*\*/) has_ready = 1
         # Sub-headings MUST be inside the `**Ready description:**` blockquote
-        # (`> ### Goal`, etc.) — to-task / the executing session strip `> `
+        # (`> ### Goal`, etc.) — to-task / the driver plan agent strip `> `
         # before parsing, so a top-level `### Goal` would not be recognized as
         # the description body. Require the `> ` prefix; do not accept the
         # bare form.
