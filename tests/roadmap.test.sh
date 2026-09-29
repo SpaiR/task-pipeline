@@ -22,14 +22,20 @@ cat >"$dir/r.md" <<'MD'
 MD
 counts=$(roadmap_progress_counts "$dir/r.md")
 assert_eq "total: 6
-done: 4" "$counts" "five-state tally"
+done: 4
+open: 1,6" "$counts" "five-state tally and open item numbers"
 
 t_case "roadmap_progress_counts counts past a non-UTF-8 byte, and fails on a missing file"
 # macOS awk decodes by locale and aborts on an invalid byte; the counts came
 # back empty, which preflight.sh printed as a finished roadmap.
 printf '### - [x] 1. Caf\351\n### - [ ] 2. open\n' >"$dir/latin1.md"
 assert_eq "total: 2
-done: 1" "$(LC_ALL=en_US.UTF-8 roadmap_progress_counts "$dir/latin1.md")" "tally survives the byte"
+done: 1
+open: 2" "$(LC_ALL=en_US.UTF-8 roadmap_progress_counts "$dir/latin1.md")" "tally and open list survive the byte"
+printf '### - [x] 1. shipped\n### - [-] 2. dropped\n' >"$dir/none-open.md"
+assert_eq "total: 2
+done: 2
+open: " "$(roadmap_progress_counts "$dir/none-open.md")" "no open item leaves the list empty"
 roadmap_progress_counts "$dir/nosuch.md" >/dev/null 2>&1
 assert_eq "no" "$([[ $? -eq 0 ]] && echo yes || echo no)" "a failed read is a non-zero status"
 

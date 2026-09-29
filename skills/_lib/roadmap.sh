@@ -12,7 +12,7 @@
 #   resolve_artifact_path <kind> <arg>  — slug (no `/`) or path → path under
 #                                         $AI_DIR/<kind> (task | roadmap | spec).
 #                                         Callers: validate.sh + roadmap-items.sh.
-#   roadmap_progress_counts <path>      — prints two lines: total / done.
+#   roadmap_progress_counts <path>      — prints three lines: total / done / open.
 #                                         Sole caller: preflight.sh.
 #
 # Conventions:
@@ -43,23 +43,30 @@ resolve_artifact_path() {
 }
 
 # --- roadmap_progress_counts <path> ---
-# Emits two lines on stdout:
+# Emits three lines on stdout:
 #   total: <N>
 #   done: <N>
+#   open: <n,n,…>     (the item numbers whose checkbox is `[ ]`; empty after the
+#                      colon when none)
 # DONE counts the same 5-state class the reviewer's auto-mark treats as "already
 # marked" ([x]/[~]/[>]/[-]); without this, a roadmap with [~]/[>]/[-] items
 # would report done<total even when no [ ] remains, and the wizard's
-# (complete) flag would never fire for it.
+# (complete) flag would never fire for it. OPEN is the one state outside the
+# done class, so this pass is the only place the heading grammar is written.
 #
 # Returns awk's status, so a caller can tell an unreadable file from an empty
 # one. Byte-wise: in a UTF-8 locale macOS awk aborts on a byte it cannot
 # decode, and the counts came back empty; every pattern here is ASCII.
 roadmap_progress_counts() {
   local file="$1"
-  # One pass, two counters — one fork, not one per counter.
+  # One pass, three results — one fork, not one per counter.
   LC_ALL=C awk '
     /^### - \[[ x~>-]\] [0-9]+\. / { t++ }
     /^### - \[[x~>-]\] [0-9]+\. /  { d++ }
-    END { printf "total: %d\ndone: %d\n", t+0, d+0 }
+    match($0, /^### - \[ \] [0-9]+\. /) {
+      s = substr($0, RSTART, RLENGTH); gsub(/[^0-9]/, "", s)
+      o = (o == "" ? s : o "," s)
+    }
+    END { printf "total: %d\ndone: %d\nopen: %s\n", t+0, d+0, o }
   ' "$file"
 }
