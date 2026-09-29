@@ -74,7 +74,10 @@ assert_eq "roadmap-to-workflow: all items shipped.
 # to hold every return in the main loop to runReport. The body is wrapped in an
 # async function (it has top-level `return`s), meta stripped. Item #2 depends on
 # #1, so the run is W1: #1, #3 · W2: #2. BREAK names the stage + item to break.
-run_driver() { # <BREAK> → prints the driver's return value
+# The optional second argument is JS run after `args` is built, to override it
+# (e.g. `args.items = []`); a case may set `noAgent = true` to make any agent()
+# call throw, so a return that should precede every agent cannot hide one.
+run_driver() { # <BREAK> [<args override JS>] → prints the driver's return value
   {
     printf 'const BREAK = %s\n' "$1"
     cat <<'JS'
@@ -82,10 +85,12 @@ const args = { slug: 'retry-work', aiDir: '/p/.task', pluginRoot: '/plugin', spe
   items: [{ n: 1, title: 'Retry backoff', model: 'sonnet', deps: [] },
           { n: 2, title: 'Retry metrics', model: 'haiku', deps: [1] },
           { n: 3, title: 'Config loader', model: 'opus', deps: [] }] }
+let noAgent = false
 const SLUG = { 1: 'retry-backoff', 2: 'retry-metrics', 3: 'config-loader' }
 const log = () => {}
 const parallel = (thunks) => Promise.all(thunks.map((t) => t()))
 const agent = async (prompt, opts) => {
+  if (noAgent) throw new Error('agent() called: ' + opts.label)
   const n = Number(prompt.match(/#(\d+)/)[1])
   const stage = opts.label.split(' ')[1]
   const head = `OK #${n} ${SLUG[n]}`
@@ -93,15 +98,28 @@ const agent = async (prompt, opts) => {
   if (BREAK === `nomark${n}` && stage === 'review') return `${head} done`
   if (BREAK === `drift${n}` && stage === 'plan') return 'Plan written.'
   if (BREAK === `dup${n}` && stage === 'plan') return `OK #${n} ${SLUG[1]} planned`
+  if (BREAK === `prompt${n}` && stage === 'plan') console.log(prompt)
+  if (BREAK === `implprompt${n}` && stage === 'implement') console.log(prompt)
   return { plan: `${head} planned`, implement: `${head} built`, review: `MARK-OK #${n}\n${head} ok, ticked` }[stage]
 }
-console.log(await (async () => {
 JS
+    printf '%s\n' "${2:-}"
+    printf 'console.log(await (async () => {\n'
     sed '/^export const meta = {/,/^}/d' "$DRIVER"
     printf '})())\n'
   } >"$dir/run.mjs"
   node "$dir/run.mjs" 2>&1
 }
+
+t_case "an empty items list is bad args, before any agent runs"
+# With the empty-run return gone from the driver, these two checks are the only
+# guard: relaxing one would let a run that did nothing report "all items shipped".
+assert_eq "roadmap-to-workflow: bad args — items must be a non-empty array of {n, title, model, deps} objects — was it passed as a JSON string instead of a real array?" \
+  "$(run_driver "''" "args.items = []; noAgent = true")" "items: []"
+
+t_case "an empty scope array is bad args, before any agent runs"
+assert_eq "roadmap-to-workflow: bad args — scope must be 'all', 'next-wave', or a non-empty array of item numbers" \
+  "$(run_driver "''" "args.scope = []; noAgent = true")" "scope: []"
 
 t_case "a full run returns the headline plus every item in landing order"
 assert_eq "roadmap-to-workflow: all items shipped.
@@ -135,6 +153,24 @@ t_case "two items of one wave planned on the same slug stop before either is imp
 # one task file for two items, and the second implement would rebuild the first.
 assert_eq "roadmap-to-workflow stopped in wave 1 (planning), item #3: #1 and #3 both planned retry-backoff — one task file for two items; give one of them a more distinct title, then rerun /task:roadmap-to-workflow retry-work" \
   "$(run_driver "'dup3'")" "headline only, nothing landed"
+
+t_case "the plan prompt names aiDir as the .task directory, not a root above it"
+# "pipeline root" meant the directory holding .task/ in .task/CLAUDE.md and the
+# .task directory itself here; reading one by the other built .task/.task paths.
+out=$(run_driver "'prompt1'")
+assert_contains "$out" "- .task directory (AI_DIR): /p/.task" "AI_DIR labelled as the .task directory"
+# The ground rules (non-interactive, no implement or commit) live in
+# plan-driver.md § Driver mode; the prompt only points there.
+assert_contains "$out" "/plugin/skills/_lib/plan-driver.md and follow it" "prompt still names plan-driver.md"
+assert_contains "$out" "Last non-empty line MUST be exactly:" "digest contract kept"
+
+t_case "the implement prompt names aiDir/CLAUDE.md, not a cwd-relative .task/CLAUDE.md"
+# A linked worktree shares the main root's .task/ through git config task.root, so
+# a cwd-relative .task/CLAUDE.md does not exist there and both the Executing a
+# task section and Commit Format would silently go unread.
+out=$(run_driver "'implprompt1'")
+assert_contains "$out" "sends you to /p/.task/CLAUDE.md → ## Executing a task" "Executing a task by absolute path"
+assert_contains "$out" "/p/.task/CLAUDE.md → Commit Format" "Commit Format by absolute path"
 
 t_case "a later wave's slug that matches a landed item's stops too"
 assert_contains "$(run_driver "'dup2'")" \

@@ -67,6 +67,18 @@ i "$repo" nosuchthing
 assert_exit 1 "$I_EXIT" "no such roadmap"
 assert_contains "$I_OUT" "roadmap not found" "says so"
 
+t_case "a roadmap that resolves but cannot be read is an error, never an empty item list"
+# The resolve step only checks the file exists; awk is what fails on the read.
+chmod a-r "$repo/.task/roadmap/shipped.md"
+if [[ -r "$repo/.task/roadmap/shipped.md" ]]; then
+  echo "$T_NAME: SKIP — the roadmap stays readable after chmod (running as root)"
+else
+  i "$repo" shipped
+  assert_exit 1 "$I_EXIT" "unreadable roadmap"
+  assert_contains "$I_OUT" "cannot read roadmap" "says so"
+fi
+chmod u+r "$repo/.task/roadmap/shipped.md"
+
 t_case "a byte that is not UTF-8 does not truncate the item list"
 # macOS awk decodes by locale and aborts on an invalid byte: the list once
 # stopped at that item, with no DONE line and an exit code no caller handles.

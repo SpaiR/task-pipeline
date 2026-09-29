@@ -50,6 +50,16 @@ Ran `api-v2-migration`: 2 of 2 items landed and ticked, 0 still unchecked.
 → Done. Roadmap complete — `.task/roadmap/api-v2-migration.md` fully checked.
 ```
 
+The `→ Done.` footer appears only when nothing is left unchecked. A run scoped to **Only next wave** or a picked range also ends on "all items shipped", but with unchecked items outside its scope, so the footer points at the rest instead:
+
+```text
+Ran `api-v2-migration`: 1 of 1 items landed and ticked, 1 still unchecked.
+  Commits: a1b2c3d..e4f5a6b.
+→ Next: `/task:roadmap-to-workflow api-v2-migration` to run the remaining 1 item(s)
+```
+
+`Commits:` is the range of commits the run made, read from `git log`; a stop before anything was committed prints `Commits: none`.
+
 On failure, the items that landed before the stop are still listed:
 
 ```text
@@ -65,6 +75,8 @@ Stopped at #3 <item-slug> in wave 2. Its work is left in the working tree —
   then rerun `/task:roadmap-to-workflow api-v2-migration` — already-ticked items
   stay ticked, only the unchecked remainder reruns.
 ```
+
+A stop during **planning** (the headline says `(planning)`, for example two items that plan to the same task slug) happens before any implement of that wave ran, so nothing of it is in the tree. The footer relays the headline's own remedy, or says to edit the item in the roadmap, then rerun.
 
 Two stops get a different footer, because re-planning the item would be wrong there:
 

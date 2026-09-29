@@ -7,23 +7,23 @@
 # hand. See docs/contract.md § task.md format.
 #
 # Usage:
-#   write-task.sh --fresh --slug <slug> --title <title> --description <file>
-#                         --plan <file> [--tests <file>]
-#                         [--roadmap <slug>] [--item <N>] [--spec <slug>]…
-#                         [--force]
+#   write-task.sh --slug <slug> --title <title> --description <file>
+#                 --plan <file> [--tests <file>]
+#                 [--roadmap <slug>] [--item <N>] [--spec <slug>]…
+#                 [--force]
 #
 # `--description` / `--plan` / `--tests` take a file holding the section BODY
 # ONLY — no `## Description` / `## Plan` / `## Tests` heading. Every heading is
 # emitted here, which is what keeps them parser-stable. Repeat `--spec` once per
 # cited spec.
 #
-# `--fresh` is the one mode: the file is always written whole, never edited in
-# place. An existing file is left untouched and the run exits 4 unless
-# `--force` is given — the caller's collision guard is what earns the `--force`
-# (to-task's overwrite chip; the driver's header match on its own item's file).
+# The file is always written whole, never edited in place. An existing file is
+# left untouched and the run exits 4 unless `--force` is given — the caller's
+# collision guard is what earns the `--force` (to-task's overwrite chip; the
+# driver's header match on its own item's file).
 #
 # Output (two parser-stable lines; the second may span several):
-#   WROTE: <abs path> (fresh)
+#   WROTE: <abs path>
 #   VALIDATE: <validate.sh output>
 #
 # Exit codes:
@@ -50,11 +50,10 @@ die() { echo "ERROR write-task: $1" >&2; exit "${2:-2}"; }
 # shifting, and the loop below would spin on that flag forever.
 need() { [[ $# -ge 2 ]] || die "$1 needs a value"; }
 
-fresh=0 slug="" title="" roadmap="" item="" desc="" plan="" tests="" force=0
+slug="" title="" roadmap="" item="" desc="" plan="" tests="" force=0
 specs=()
 while (( $# )); do
   case "$1" in
-    --fresh)       fresh=1;          shift ;;
     --slug)        need "$@"; slug="$2";    shift 2 ;;
     --title)       need "$@"; title="$2";   shift 2 ;;
     --roadmap)     need "$@"; roadmap="$2"; shift 2 ;;
@@ -69,7 +68,6 @@ while (( $# )); do
   esac
 done
 
-[[ "$fresh" -eq 1 ]] || die "--fresh is required"
 [[ -n "$slug" ]]  || die "--slug is required"
 [[ "$slug" == */* ]] && die "--slug is a slug, not a path: '$slug'"
 [[ -n "$title" ]] || die "--title is required"
@@ -84,7 +82,6 @@ done
 
 # shellcheck source=./resolve-ws.sh
 source "$SCRIPT_DIR/resolve-ws.sh"     # exports AI_DIR
-: "${AI_DIR:?AI_DIR unresolved}"
 target="$AI_DIR/task/$slug.md"
 
 # --- body helper: emit a section body with trailing blank lines trimmed ------
@@ -155,7 +152,7 @@ else
   fi
 fi
 
-echo "WROTE: $target (fresh)"
+echo "WROTE: $target"
 echo "VALIDATE:"
 bash "$SCRIPT_DIR/../validate/validate.sh" task "$slug" 2>&1 | sed 's/^/  /'
 exit 0

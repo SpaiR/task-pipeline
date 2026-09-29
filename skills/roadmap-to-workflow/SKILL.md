@@ -46,11 +46,12 @@ A positional `<roadmap-slug>` in `$ARGUMENTS` is matched against the `ROADMAPS:`
 With no positional argument, pick from the `ROADMAPS:` lines:
 
 - **`ROADMAPS: none`** → stop: "no roadmaps found — create one with `/task:to-roadmap`. → Next: `/task:to-roadmap`"
-- **Exactly one line** → use it (still refuse if it is fully complete, `unchecked=none`).
+- **Exactly one line** → use it (still refuse if it is fully complete — `unchecked=none` with a total above 0 — or if it has no item at all, `0/0`).
+- **A `0/0` roadmap** — `unchecked=none` over zero items — has no item heading that parses, which is not the same as every item being ticked. It is never a pick and never called complete: stop with "no item heading in `.task/roadmap/<slug>.md` parses. → Next: `bash \"${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh\" roadmap <slug>`, fix the headings, rerun", whether it came from the picker or a positional argument.
 - **An `unchecked=unreadable` roadmap** — its file could not be read — is never a pick: stop with "`.task/roadmap/<slug>.md` could not be read. → Next: fix the file's permissions, then rerun `/task:roadmap-to-workflow <slug>`", whether it came from the picker or a positional argument.
-- **More than one** → `AskUserQuestion` (convention (c)), one chip per roadmap labelled `<slug>  (<done>/<total>)`; sort partial roadmaps first, complete ones last with a `(complete)` suffix, and refuse to proceed on a complete pick.
+- **More than one** → `AskUserQuestion` (convention (c)), one chip per roadmap labelled `<slug>  (<done>/<total>)`; sort partial roadmaps first, complete ones (`unchecked=none`, total above 0) last with a `(complete)` suffix, and refuse to proceed on a complete pick. A `0/0` roadmap is labelled `(no items parsed)`, never `(complete)`, and refused the same way as above.
 
-Every refusal on a complete roadmap — picked, the only one, or named positionally — ends the same way: "Every item in `<slug>` is already checked off — nothing left to run. → Next: `/task:to-roadmap` for a new initiative, or uncheck the items you want rerun."
+Every refusal on a complete roadmap (not a `0/0` one, which has its own above) — picked, the only one, or named positionally — ends the same way: "Every item in `<slug>` is already checked off — nothing left to run. → Next: `/task:to-roadmap` for a new initiative, or uncheck the items you want rerun."
 
 Read the roadmap's `Spec:` header lines, if any, and resolve each slug to an **absolute** `$AI_DIR/spec/<slug>.md` — the slug is the link label, or the whole value when it is a bare slug, never the relative target ([contract § Cross-artifact references](../../docs/contract.md#cross-artifact-references)). These become Step 2's `specPaths` and reach every plan agent as fixed anchors; absolute because the sandbox expands nothing.
 
@@ -62,7 +63,7 @@ No flags — always ask, unless there is nothing to ask. The open item numbers a
 - **Only next wave** — `scope: 'next-wave'`. The driver sorts every unchecked item and keeps wave 1, so nothing is filtered or reordered here.
 - **Pick range** — via the free-text ("Other") option, e.g. `1,3-5,8`, expanded to the numbers themselves. A number that is not in `unchecked=` is refused **with the valid set named**, which is what turns a rejection into a second attempt that works: "#9 isn't a runnable item in `<slug>` (already checked, or no such item). Unchecked right now: #2, #3, #5, #7. → Next: rerun `/task:roadmap-to-workflow <slug>` and pick from those."
 
-One open item → skip the question, run it. `unchecked=none` → the complete-roadmap refusal above, word for word.
+One open item → skip the question, run it. `unchecked=none` → the complete-roadmap refusal above, word for word (the `0/0` stop instead, when the total is 0).
 
 ## Step 1: Report the items
 
@@ -79,12 +80,11 @@ The driver's `computeWaves` sorts them and hard-stops **before spawning anything
 - `out of scope: #4 depends on #2, …` → `→ Next: rerun \`/task:roadmap-to-workflow <slug>\` with a scope that includes #2`
 - `dependency cycle among #1, #2 …` → `→ Next: edit \`.task/roadmap/<slug>.md\` to break the cycle, then rerun \`/task:roadmap-to-workflow <slug>\``
 - `not runnable in this roadmap …: #9` → name the valid set, as Step 0's bad-range pick does: `Unchecked right now: #2, #3. → Next: rerun \`/task:roadmap-to-workflow <slug>\` and pick from those`
-- `nothing to run — every item in scope is already marked.` → `→ Done.`
 - `bad args — …` → this skill built the args wrong, not the user: `→ Next: rerun \`/task:roadmap-to-workflow <slug>\` (the args are rebuilt from the roadmap file)`
 
 ## Step 2: Invoke the Workflow driver
 
-**Do not author a Workflow script.** The driver ships at `skills/_lib/roadmap-driver.js`, declared in the plugin manifest under `"workflows"`, so the platform registers it as `task:roadmap-driver` and reads the file itself. It is reached **by name, never by path** — a `scriptPath` into the plugin is checked for read permission against this session's working directory, which a plugin is never inside. Assemble its `args` from Steps 0–1 and invoke it:
+**Do not author a Workflow script.** The driver ships at `skills/_lib/roadmap-driver.js`, declared in the plugin manifest under `"workflows"`, so the platform registers it as `task:roadmap-driver` and reads the file itself. It is reached **by name, never by path** — a `scriptPath` into the plugin is checked for read permission against this session's working directory, which a plugin is never inside. Assemble its `args` from Steps 0–1, record `git rev-parse HEAD` (Output's `Commits:` range starts there), and invoke it:
 
 ```javascript
 Workflow({
@@ -107,7 +107,7 @@ Workflow({
 
 **Args are real JSON values, every path absolute** — `items` an actual array of objects, `done` an actual array of numbers, never JSON-encoded strings. The driver asserts all of it up front and returns one explanatory line instead of launching an agent against garbage.
 
-Per wave the driver plans every item in `parallel()` — each plan agent follows `plan-driver.md` and writes only its own task file — then runs **implement → review strictly one item at a time** (the review ticks the checkbox), so the shared tree and the roadmap file keep one writer each and each implement sees its wave-mates' reviewed commits. A `FAIL` digest from any stage stops the run, and a barrier separates waves. The stage details are the driver's ([contract § execution shape](../../docs/contract.md#roadmap-to-workflow-execution-shape-driver-contract)); nothing here has to restate them.
+The stage details are the driver's ([contract § execution shape](../../docs/contract.md#roadmap-to-workflow-execution-shape-driver-contract)).
 
 **Rerun / resume.** The workflow name and args are static, so `resumeFromRunId` replays completed stages from cache — use it only for a run **interrupted before the driver returned**, in the same session. After a stop the driver did return, the stage that failed is itself a completed stage: a resume would replay its cached `FAIL` and stop at the same place, however the item was fixed. Rerun plainly instead — Step 1 reports only unchecked items, and ticked ones never rerun.
 
@@ -134,9 +134,16 @@ Autopilot needs the Workflow tool, and it isn't available in this environment, s
   Ran `<slug>`: <K> of <M> items landed and ticked, <R> still unchecked. Commits: <first-sha>..<last-sha>.
   ```
 
+  The driver's return carries none of the numbers past `<K>`, so take them from the tree and the roadmap:
+  - `<M>` is the count of item lines Step 1 reported, before the run.
+  - `<R>` is the count of item lines a second `bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap-items.sh" "<slug>"` prints after the run — the roadmap file is the truth about what is still unchecked, an item reviewed but not ticked included. If that call exits 1, use `<M> − <K>`.
+  - `Commits:` comes from the `HEAD` recorded before Step 2's Workflow call: `git log --oneline <start>..HEAD` lists every commit the run made, implement commits and reviewer fix commits alike. Print the oldest and newest as `<first-sha>..<last-sha>` (a single commit: just its sha). An empty range — a stop before anything was committed, `<K>` = 0 — prints `Commits: none`. A stop can leave commits from the failing item in the range too; the range is what `git log` shows, not only the `#N` lines.
+
 - End with the canonical next-step footer (convention (a), flag-free):
-  - All items shipped → `→ Done. Roadmap complete — \`.task/roadmap/<slug>.md\` fully checked; review the landed commits with \`git log\`.`
-  - Stopped on a `FAIL` → surface the failing digest, then say **where** it stopped and **what state the tree is in**: `Stopped at #<N> <item-slug> in wave <W>. Its work is left in the working tree — inspect it with \`git status\` and \`git log --oneline -3\`. → Next: fix #<N> by hand and tick it, or edit the item in \`.task/roadmap/<slug>.md\` so the rerun re-plans it from the new text, then rerun \`/task:roadmap-to-workflow <slug>\` — already-ticked items stay ticked, only the unchecked remainder reruns.` Never suggest re-planning it with `to-task` before the rerun: the rerun's plan agent regenerates an unchecked item's task file from the roadmap, and that plan would be lost.
+  - All items shipped, `<R>` = 0 → `→ Done. Roadmap complete — \`.task/roadmap/<slug>.md\` fully checked; review the landed commits with \`git log\`.`
+  - All items shipped, `<R>` > 0 — the headline speaks for the run's scope (Only next wave, or a picked range), not the roadmap → `→ Next: \`/task:roadmap-to-workflow <slug>\` to run the remaining <R> item(s)`. Never say "Roadmap complete" while `<R>` is above 0.
+  - Stopped in **planning** — the headline says `(planning)` → no implement of that wave ran, so none of its work is in the tree, and there may be no `<item-slug>`: do not invent one. Relay the headline's own remedy when it names one (the duplicate-slug stop says to give one of the two items a more distinct title), else "edit the item in `.task/roadmap/<slug>.md`": `Stopped in wave <W> while planning #<N>: nothing of that wave was implemented. → Next: <the headline's remedy, or edit #<N> in \`.task/roadmap/<slug>.md\`>, then rerun \`/task:roadmap-to-workflow <slug>\`.`
+  - Stopped on a `FAIL` in an implement or review stage → surface the failing digest, then say **where** it stopped and **what state the tree is in**: `Stopped at #<N> <item-slug> in wave <W>. Its work is left in the working tree — inspect it with \`git status\` and \`git log --oneline -3\`. → Next: fix #<N> by hand and tick it, or edit the item in \`.task/roadmap/<slug>.md\` so the rerun re-plans it from the new text, then rerun \`/task:roadmap-to-workflow <slug>\` — already-ticked items stay ticked, only the unchecked remainder reruns.` Never suggest re-planning it with `to-task` before the rerun: the rerun's plan agent regenerates an unchecked item's task file from the roadmap, and that plan would be lost.
   - Stopped on the **tick** — the headline says `no unique` or `never reported MARK-OK` → the item's reviewed work is committed and only its checkbox is behind, so re-planning it would re-implement work that already landed: `Stopped at #<N> <item-slug> in wave <W>: its review passed and its work is committed, but the checkbox was not flipped. → Next: tick #<N> in \`.task/roadmap/<slug>.md\` by hand if it is still unchecked, then rerun \`/task:roadmap-to-workflow <slug>\`.`
   - Stopped because the implementation **was never committed** — the headline says `implementation never committed` → `Stopped at #<N> <item-slug> in wave <W>: its work is in the working tree, uncommitted. → Next: commit it (\`git status\` shows what), tick #<N> in \`.task/roadmap/<slug>.md\` by hand, then rerun \`/task:roadmap-to-workflow <slug>\`.`
 

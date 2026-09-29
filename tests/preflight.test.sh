@@ -14,7 +14,7 @@ p() { # <dir> <kind> → $P_OUT, $P_EXIT
 
 t_case "an unconfigured project reports CONFIG: absent and still exits 0"
 bare=$(make_repo)
-p "$bare" task
+p "$bare" capture
 assert_exit 0 "$P_EXIT" "no config is not a failure"
 assert_contains "$P_OUT" "CONFIG: absent" "config state"
 assert_contains "$P_OUT" "ROADMAPS: none" "no roadmaps"
@@ -32,7 +32,7 @@ cat >"$repo/.task/roadmap/api-v2.md" <<'MD'
 MD
 printf '# T\n' >"$repo/.task/task/some-task.md"
 printf '# S\n' >"$repo/.task/spec/event-envelope.md"
-p "$repo" task
+p "$repo" capture
 assert_exit 0 "$P_EXIT" "configured project"
 assert_contains "$P_OUT" "AI_DIR: $repo/.task" "resolved root"
 assert_contains "$P_OUT" "PLUGIN_ROOT: $T_REPO_ROOT" "plugin root for the driver args"
@@ -43,7 +43,7 @@ assert_contains "$P_OUT" "SPECS: event-envelope" "spec slugs"
 
 t_case "a fully ticked roadmap reports unchecked=none"
 sed 's/^### - \[ \] 2\./### - [x] 2./' "$repo/.task/roadmap/api-v2.md" >"$repo/.task/roadmap/shipped.md"
-p "$repo" roadmap
+p "$repo" capture
 assert_contains "$P_OUT" "ROADMAPS: shipped 2/2 unchecked=none" "no open items"
 
 t_case "kind 'workflow' folds in the full validate sweep"
@@ -64,7 +64,7 @@ cat >"$repo/.task/roadmap/nospace.md" <<'MD'
 
 ### - [ ] 3.Title with no space after the dot
 MD
-p "$repo" roadmap
+p "$repo" capture
 assert_contains "$P_OUT" "ROADMAPS: nospace 0/0 unchecked=none" "malformed heading counts as zero items, not an open one"
 
 t_case "a well-formed heading with the required space is counted as unchecked"
@@ -73,8 +73,15 @@ cat >"$repo/.task/roadmap/withspace.md" <<'MD'
 
 ### - [ ] 3. Title with the required space
 MD
-p "$repo" roadmap
+p "$repo" capture
 assert_contains "$P_OUT" "ROADMAPS: withspace 0/1 unchecked=3" "well-formed heading is offered as open item 3"
+
+t_case "the per-skill kinds task, roadmap and spec are gone — one capture kind replaced them"
+for old in task roadmap spec; do
+  p "$repo" "$old"
+  assert_exit 2 "$P_EXIT" "old kind '$old' is a usage error"
+  assert_contains "$P_OUT" "ERROR usage: preflight.sh <capture|workflow>" "usage line names the valid kinds"
+done
 
 t_case "kind architecture is gone with to-architecture — a usage error"
 p "$repo" architecture
@@ -88,7 +95,7 @@ assert_contains "$P_OUT" "ERROR usage" "usage line names the valid kinds"
 
 t_case "a configured root missing its .gitignore gets the self-ignoring one back"
 fresh=$(make_repo --config)
-p "$fresh" task
+p "$fresh" capture
 assert_exit 0 "$P_EXIT" "restoring is not a failure"
 assert_eq "# task-pipeline: keeps .task/ out of git
 *" "$(cat "$fresh/.task/.gitignore" 2>/dev/null)" "restored contents"
@@ -98,13 +105,13 @@ assert_eq "" "$(git -C "$fresh" status --porcelain --untracked-files=all)" ".tas
 t_case "an existing .gitignore is the user's and is left byte-for-byte"
 owned=$(make_repo --config)
 printf 'CLAUDE.md\ntask/\n' >"$owned/.task/.gitignore"
-p "$owned" task
+p "$owned" capture
 assert_eq "$(printf 'CLAUDE.md\ntask/')" "$(cat "$owned/.task/.gitignore")" "untouched"
 
 t_case "an unconfigured root gets no .gitignore — setup owns first run"
 # The folder must exist, or a wrongful write would fail anyway and prove nothing.
 mkdir -p "$bare/.task"
-p "$bare" task
+p "$bare" capture
 assert_contains "$P_OUT" "CONFIG: absent" "still unconfigured"
 assert_eq "no" "$([[ -e "$bare/.task/.gitignore" ]] && echo yes || echo no)" "nothing written before setup"
 
@@ -115,7 +122,7 @@ if [[ -w "$locked/.task" ]]; then
   # As root a chmod does not bite: the write would succeed and prove nothing.
   echo "$T_NAME: SKIP — .task/ stays writable after chmod (running as root)"
 else
-  p "$locked" task
+  p "$locked" capture
   assert_exit 0 "$P_EXIT" "a failed restore is swallowed"
   assert_contains "$P_OUT" "CONFIG: present" "block still printed"
   assert_eq "no" "$([[ "$P_OUT" == *ermission* ]] && echo yes || echo no)" "no write error leaks into the block"
@@ -129,7 +136,7 @@ t_case "a byte that is not UTF-8 in a roadmap keeps its progress"
 latin=$(make_repo --config)
 mkdir -p "$latin/.task/roadmap"
 printf '# L\n\n### - [x] 1. Caf\351\n\n### - [ ] 2. Open\n' >"$latin/.task/roadmap/latin1.md"
-LC_ALL=en_US.UTF-8 p "$latin" task
+LC_ALL=en_US.UTF-8 p "$latin" capture
 assert_contains "$P_OUT" "ROADMAPS: latin1 1/2 unchecked=2" "progress survives the byte"
 
 t_case "an unreadable roadmap is never reported as complete"
@@ -137,7 +144,7 @@ chmod a-r "$latin/.task/roadmap/latin1.md"
 if [[ -r "$latin/.task/roadmap/latin1.md" ]]; then
   echo "$T_NAME: SKIP — the roadmap stays readable after chmod (running as root)"
 else
-  p "$latin" task
+  p "$latin" capture
   assert_exit 0 "$P_EXIT" "block still printed"
   assert_contains "$P_OUT" "ROADMAPS: latin1 ?/? unchecked=unreadable" "a failed read is its own value"
 fi

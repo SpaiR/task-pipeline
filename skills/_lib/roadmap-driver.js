@@ -148,7 +148,6 @@ function flipReported(text, n) {
 const sorted = computeWaves(items, done, scope)
 if (sorted.error) return `roadmap-to-workflow: ${sorted.error}`
 const waves = sorted.waves
-if (waves.length === 0) return 'roadmap-to-workflow: nothing to run — every item in scope is already marked.'
 
 const ROADMAP = `${aiDir}/roadmap/${slug}.md`
 const SPEC_SLUGS = specPaths.map((p) => p.split('/').pop().replace(/\.md$/, ''))
@@ -165,13 +164,11 @@ async function runPlan(n, title, model, phase) {
      - roadmap file: ${ROADMAP}
      - roadmap slug: ${slug}
      - item: #${n} — ${title}
-     - pipeline root: ${aiDir}
+     - .task directory (AI_DIR): ${aiDir}
      - plugin root: ${pluginRoot}
      - roadmap-level spec files (read each as a fixed technical anchor, and stamp
        a Spec: header per slug): ${specPaths.join(', ') || '(none)'}
        — their slugs: ${SPEC_SLUGS.join(', ') || '(none)'}
-     Non-interactive: auto-accept every confirmation, make constructive
-     assumptions, never block on a prompt. Do NOT implement or commit.
      Last non-empty line MUST be exactly:
        OK #${n} <item-slug> planned            (on success)
        FAIL #${n} <item-slug> <what failed>    (on failure)`,
@@ -192,9 +189,9 @@ async function runPlan(n, title, model, phase) {
 async function runImplement(n, itemSlug, model, phase) {
   const r = await agent(
     `Implement ${aiDir}/task/${itemSlug}.md. Follow its ## Execution pointer —
-     it sends you to .task/CLAUDE.md → ## Executing a task — with two carve-outs:
+     it sends you to ${aiDir}/CLAUDE.md → ## Executing a task — with two carve-outs:
      implement the ## Plan plus any ## Tests it carries, then commit per
-     .task/CLAUDE.md → Commit Format — and do NOT
+     ${aiDir}/CLAUDE.md → Commit Format — and do NOT
      spawn the task:code-reviewer agent, and do NOT tick the roadmap
      checkbox. The driver runs the review as its own stage right after this
      call, and the review ticks the checkbox when it passes.

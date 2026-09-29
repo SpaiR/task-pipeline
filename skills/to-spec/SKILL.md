@@ -19,13 +19,13 @@ Fix **load-bearing technical decisions** — a protocol, a cross-cutting data sh
 
 The entry state, gathered before this skill reached you — no tool call of your own:
 
-!`bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/preflight.sh" spec`
+!`bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/preflight.sh" capture`
 
 [docs/contract.md § Helpers](../../docs/contract.md#helpers) owns that block's shape. Read it, then act:
 
-1. `AI_DIR:` is the pipeline root: `.task/spec/<slug>.md` below means `$AI_DIR/spec/<slug>.md`, **never a cwd-relative path** ([contract § Setup-gate categories](../../docs/contract.md#setup-gate-categories)).
-2. **`CONFIG: absent`** → this skill is intake-capable: read `${CLAUDE_PLUGIN_ROOT}/skills/_lib/setup.md` and follow it — it owns the sub-steps and the `.task/CLAUDE.md` template — then continue. No confirmation chip; a wrong detected value is fixed by editing the file.
-3. **`CONFIG: present`** → leave the file untouched: it is user-owned, and only a missing `.task/.gitignore` is recreated, by the preflight above itself; `task.root` is written by first-run setup and not restored afterwards.
+1. `AI_DIR:` is the `.task` directory: `.task/spec/<slug>.md` below means `$AI_DIR/spec/<slug>.md`, **never a cwd-relative path** ([contract § Setup-gate categories](../../docs/contract.md#setup-gate-categories)).
+2. **`CONFIG: absent`** → this skill is intake-capable: read `${CLAUDE_PLUGIN_ROOT}/skills/_lib/setup.md` and follow it — it owns the sub-steps and the `.task/CLAUDE.md` template — then continue.
+3. **`CONFIG: present`** → leave the file untouched: never rewrite it, re-detect its values or "repair" a missing section ([contract § `.task/CLAUDE.md` format](../../docs/contract.md#taskclaudemd-format)).
 4. `SPECS:` lists the specs that already exist — Step 1 matches structural style against them and avoids re-pinning a decision one of them already carries; Step 4's slug-collision check reads the same list. Neither needs a listing call of its own.
 
 If that block arrived unexpanded — the command line itself rather than its output — the preprocessing did not fire: run that command yourself and continue exactly as above.
@@ -120,8 +120,8 @@ Write the file directly — no in-chat preview, no confirmation prompt. Step 2's
 
 1. Slug: kebab-case from the decision-area topic, ≤ 50 chars (`event-envelope`, `auth-token-model`), in English whatever `.task/CLAUDE.md` → Language says — it is a filename, a parser-stable string. Its own identity, independent of any roadmap.
 2. **Slug collision.** If that slug is already in Step 0's `SPECS:` list → **stop** and pose an `AskUserQuestion` (**Overwrite** / **Pick different slug**). Never silently overwrite. That list is a snapshot taken before the rounds and no writer script guards this path, so when the slug is *absent* from it, confirm with a file read that nothing is there before writing.
-3. Write `$AI_DIR/spec/<slug>.md` (creating the directory if needed), and nothing else — wiring a `Spec:` header into a task or roadmap is `to-task` / `to-roadmap`'s job when they reference this spec.
-4. Validate it: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" spec <slug>` — surface any WARN/ERROR in the Step 5 digest; only a setup-precondition failure (exit 2) hard-stops.
+3. Write `$AI_DIR/spec/<slug>.md` (creating the directory if needed), and nothing else — wiring a `Spec:` header into a task or roadmap is `to-task` / `to-roadmap`'s job when they reference this spec. If the write fails (unwritable `.task/spec`, full disk), report the failure plainly, skip Step 5's digest — it would name a path that does not exist — and close with `→ Next: fix the write failure (permissions or free space under \`$AI_DIR\`), then rerun \`/task:to-spec\`.` Stop there; there is nothing to validate.
+4. Validate it: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" spec <slug>` — surface any WARN/ERROR in the Step 5 digest; only a setup-precondition failure (exit 2) hard-stops. Report it and close with `→ Next: rerun \`/task:to-spec\` — its setup writes \`.task/CLAUDE.md\` first.`
 
 ### Step 5: Output — digest
 

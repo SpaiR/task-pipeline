@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # preflight.sh — print a capture skill's entry state as one parser-stable block.
 #
-# Usage: bash preflight.sh <task|roadmap|spec|workflow>
+# Usage: bash preflight.sh <capture|workflow>
 #
 # Exists so a skill's Step 0 costs zero tool round-trips: the block is
 # substituted into the skill body by SKILL.md's `!`-preprocessing, before the
@@ -21,6 +21,9 @@
 #   TASKS: <slug> <slug> … | none
 #   SPECS: <slug> <slug> … | none
 #   VALIDATE: …                                         (kind `workflow` only)
+#
+# `capture` is what to-task, to-roadmap and to-spec pass: they print the same
+# block, so they share one kind; only `workflow` adds the sweep.
 #
 # `unchecked=` lists the ITEM NUMBERS still open, not a count — the pickers in
 # `to-task <slug>#N` / `roadmap-to-workflow` need the numbers.
@@ -43,9 +46,9 @@ SCRIPT_DIR=$(cd "$(dirname "$SRC")" && pwd)
 
 kind="${1:-}"
 case "$kind" in
-  task | roadmap | spec | workflow) ;;
+  capture | workflow) ;;
   *)
-    echo "ERROR usage: preflight.sh <task|roadmap|spec|workflow>" >&2
+    echo "ERROR usage: preflight.sh <capture|workflow>" >&2
     exit 2
     ;;
 esac
@@ -84,21 +87,16 @@ else
       printf 'ROADMAPS: %s ?/? unchecked=unreadable\n' "$(basename "$f" .md)"
       continue
     fi
-    total=$(awk -F': ' '/^total/{print $2}' <<<"$counts")
-    done_n=$(awk -F': ' '/^done/{print $2}' <<<"$counts")
-    # The item numbers still open. The 5-state checkbox class this keys on is
-    # owned by `roadmap.sh` (see its header) — an unchecked item is the one
-    # state that is NOT in the done class. Byte-wise, as roadmap.sh's pass is.
-    if ! open=$(LC_ALL=C awk '
-      match($0, /^### - \[ \] [0-9]+\. /) {
-        s = substr($0, RSTART, RLENGTH); gsub(/[^0-9]/, "", s)
-        out = (out == "" ? s : out "," s)
-      }
-      END { print out }
-    ' "$f"); then
-      printf 'ROADMAPS: %s ?/? unchecked=unreadable\n' "$(basename "$f" .md)"
-      continue
-    fi
+    # The item numbers still open come from the same pass as the counts, so the
+    # heading grammar stays owned by `roadmap.sh`. Parsed with builtins, no fork.
+    total="" done_n="" open=""
+    while IFS= read -r line; do
+      case "$line" in
+        "total: "*) total="${line#total: }" ;;
+        "done: "*)  done_n="${line#done: }" ;;
+        "open:"*)   open="${line#open:}"; open="${open# }" ;;
+      esac
+    done <<<"$counts"
     printf 'ROADMAPS: %s %s/%s unchecked=%s\n' \
       "$(basename "$f" .md)" "$done_n" "$total" "${open:-none}"
   done

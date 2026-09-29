@@ -36,9 +36,9 @@ set -u
 # exact string match, so bytes lose nothing.
 export LC_ALL=C
 
-# AI_DIR is resolved by `find_ai_dir` (defined in resolve-ws.sh, sourced below)
-# — a git-style upward walk so validation works from any subdir, not only the
-# project root. It is deliberately NOT hardcoded to `.task` here: pinning it
+# AI_DIR is resolved once, when resolve-ws.sh is sourced below, by its
+# `find_ai_dir` — an upward walk so validation works from any subdir, not only
+# the project root. It is deliberately NOT hardcoded to `.task` here: pinning it
 # would pre-empt the walk.
 ERRORS=0
 WARNS=0
@@ -61,9 +61,6 @@ source "$SCRIPT_DIR/../_lib/roadmap.sh"
 
 # --- Precondition: .task/CLAUDE.md ---
 require_config() {
-  # Resolve AI_DIR via the upward walk before reading CLAUDE.md. find_ai_dir
-  # is idempotent (no-op once AI_DIR is set).
-  find_ai_dir
   if [[ ! -f "$AI_DIR/CLAUDE.md" ]]; then
     # Keep the literal substring `CLAUDE.md not found` — roadmap-to-workflow
     # Step 0 matches it in the VALIDATE: block, and so do the capture skills,
@@ -143,7 +140,6 @@ awk_report() {
 # Runs in the caller's shell (not a subshell), so WARNS is updated directly.
 check_spec_refs() {
   local file="$1" label="$2" slug target
-  [[ -f "$file" ]] || return
   while IFS=$'\t' read -r slug target; do
     [[ -z "$slug" ]] && continue
     if [[ ! -f "$AI_DIR/spec/$slug.md" ]]; then
@@ -196,11 +192,6 @@ validate_task() {
   local file="$1"
   local label="task($file)"
 
-  if [[ ! -f "$file" ]]; then
-    err "$label" "file not found at $file"
-    return
-  fi
-
   local first_line
   first_line=$(head -1 "$file")
   if ! [[ "$first_line" =~ ^\#\ .+$ ]]; then
@@ -210,7 +201,7 @@ validate_task() {
   # The separator must sit in the HEADER block — before the first `## ` heading.
   # A `---` thematic break inside the body must not satisfy this check, or a
   # deleted header separator would pass silently.
-  if ! awk '/^---$/{found=1; exit} /^## /{exit} END{exit !found}' "$file"; then
+  if ! awk '/^---[[:space:]]*$/{found=1; exit} /^## /{exit} END{exit !found}' "$file"; then
     err "$label" "missing '---' separator between header and Description (a '---' inside the body does not count)"
   fi
 
@@ -254,11 +245,6 @@ validate_task() {
 validate_spec() {
   local file="$1"
   local label="spec($file)"
-
-  if [[ ! -f "$file" ]]; then
-    err "$label" "file not found at $file"
-    return
-  fi
 
   local first_line
   first_line=$(head -1 "$file")
@@ -492,12 +478,12 @@ validate_roadmap() {
     {
       if (in_block) {
         # The `**Ready description:**` label is required: `to-task` and the
-        # executing session look for it to find the item body, so an item that
-        # carries the sub-headings without it is not pickable. flush_block()
-        # errors when this stays 0.
+        # plan agent of the driver (both via roadmap-item.md step 3) look for it to
+        # find the item body, so an item that carries the sub-headings without
+        # it is not pickable. flush_block() errors when this stays 0.
         if ($0 ~ /\*\*Ready description:\*\*/) has_ready = 1
         # Sub-headings MUST be inside the `**Ready description:**` blockquote
-        # (`> ### Goal`, etc.) — to-task / the executing session strip `> `
+        # (`> ### Goal`, etc.) — to-task / the driver plan agent strip `> `
         # before parsing, so a top-level `### Goal` would not be recognized as
         # the description body. Require the `> ` prefix; do not accept the
         # bare form.
@@ -588,7 +574,11 @@ case "$cmd" in
     fi
     task_path=$(resolve_artifact_path task "$1")
     if [[ -z "$task_path" ]]; then
-      err "task($1)" "file not found (looked at $1, $AI_DIR/task/$1(.md))"
+      if [[ "$1" == */* ]]; then
+        err "task($1)" "file not found at $1"
+      else
+        err "task($1)" "file not found (looked at $AI_DIR/task/$1(.md))"
+      fi
     else
       validate_task "$task_path"
     fi
@@ -609,7 +599,11 @@ case "$cmd" in
     fi
     spec_path=$(resolve_artifact_path spec "$1")
     if [[ -z "$spec_path" ]]; then
-      err "spec($1)" "file not found (looked at $1, $AI_DIR/spec/$1(.md))"
+      if [[ "$1" == */* ]]; then
+        err "spec($1)" "file not found at $1"
+      else
+        err "spec($1)" "file not found (looked at $AI_DIR/spec/$1(.md))"
+      fi
     else
       validate_spec "$spec_path"
     fi

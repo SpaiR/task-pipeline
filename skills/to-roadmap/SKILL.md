@@ -19,13 +19,13 @@ Fix a **multi-task initiative** (phases, dependencies, or more than a couple of 
 
 The entry state, gathered before this skill reached you — no tool call of your own:
 
-!`bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/preflight.sh" roadmap`
+!`bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/preflight.sh" capture`
 
 [docs/contract.md § Helpers](../../docs/contract.md#helpers) owns that block's shape. Read it, then act:
 
-1. `AI_DIR:` is the pipeline root: `.task/roadmap/<slug>.md` below means `$AI_DIR/roadmap/<slug>.md`, **never a cwd-relative path** ([contract § Setup-gate categories](../../docs/contract.md#setup-gate-categories)).
-2. **`CONFIG: absent`** → this skill is intake-capable: read `${CLAUDE_PLUGIN_ROOT}/skills/_lib/setup.md` and follow it — it owns the sub-steps and the `.task/CLAUDE.md` template — then continue. No confirmation chip; a wrong detected value is fixed by editing the file.
-3. **`CONFIG: present`** → leave the file untouched: it is user-owned, and only a missing `.task/.gitignore` is recreated, by the preflight above itself; `task.root` is written by first-run setup and not restored afterwards.
+1. `AI_DIR:` is the `.task` directory: `.task/roadmap/<slug>.md` below means `$AI_DIR/roadmap/<slug>.md`, **never a cwd-relative path** ([contract § Setup-gate categories](../../docs/contract.md#setup-gate-categories)).
+2. **`CONFIG: absent`** → this skill is intake-capable: read `${CLAUDE_PLUGIN_ROOT}/skills/_lib/setup.md` and follow it — it owns the sub-steps and the `.task/CLAUDE.md` template — then continue.
+3. **`CONFIG: present`** → leave the file untouched: never rewrite it, re-detect its values or "repair" a missing section ([contract § `.task/CLAUDE.md` format](../../docs/contract.md#taskclaudemd-format)).
 4. `ROADMAPS:` lists the roadmaps that already exist, with progress — the capture flow's context step matches structural style against them and its save step's slug-collision check reads the same list. `SPECS:` lists the specs its architecture may cite. Neither needs a listing call of its own.
 
 If that block arrived unexpanded — the command line itself rather than its output — the preprocessing did not fire: run that command yourself and continue exactly as above.

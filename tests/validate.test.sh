@@ -49,6 +49,26 @@ v "$repo" task nosep
 assert_exit 1 "$V_EXIT" "missing separator"
 assert_contains "$V_OUT" "missing '---' separator" "names the separator"
 
+t_case "a '---' separator with trailing whitespace still bounds the header"
+# check_spec_refs and the roadmap parsers accept `---[[:space:]]*`; the task
+# separator check must agree, or one hand-edited `--- ` is both a header bound
+# and a missing separator.
+sed '2s/$/  /' "$repo/.task/task/good.md" >"$repo/.task/task/sepspace.md"
+v "$repo" task sepspace
+assert_exit 0 "$V_EXIT" "trailing-space separator"
+assert_contains "$V_OUT" "OK 0 errors" "no separator error"
+
+t_case "a not-found slug names the .task lookup, never the cwd; a path is named as given"
+for kind in task spec; do
+  v "$repo" "$kind" ghost
+  assert_exit 1 "$V_EXIT" "$kind: unknown slug"
+  assert_contains "$V_OUT" "looked at $repo/.task/$kind/ghost(.md)" "$kind: names the .task lookup"
+  assert_eq "0" "$(grep -c 'looked at ghost,' <<<"$V_OUT")" "$kind: no cwd lookup claimed"
+  v "$repo" "$kind" ./ghost.md
+  assert_exit 1 "$V_EXIT" "$kind: unknown path"
+  assert_contains "$V_OUT" "file not found at ./ghost.md" "$kind: path named as given"
+done
+
 t_case "'## Plan' with no '### Step N:' block is an error"
 cat >"$repo/.task/task/emptyplan.md" <<'MD'
 # Planless plan

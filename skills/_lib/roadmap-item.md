@@ -19,8 +19,7 @@ bare slug the same way.
 The `ROADMAPS:` line for `<slug>` from the caller's Step 0 block names the file:
 `$AI_DIR/roadmap/<slug>.md`. No such line means no such roadmap — **stop**, name
 the slugs that are listed, and close with a runnable footer that carries one of
-them, never a literal `<slug>`. In driver mode the roadmap path arrives in the
-prompt instead, already resolved.
+them, never a literal `<slug>`.
 
 ## 2. Pick the item
 
@@ -28,13 +27,16 @@ prompt instead, already resolved.
 - Otherwise → the roadmap's `unchecked=` list is the open items; read their
   titles from the file. More than one: ask via `AskUserQuestion` (one chip per
   `#<N> — <title>`, lowest number the default). Exactly one: take it.
-- `unchecked=none` → **stop**: every item is already checked off. Footer:
+- `0/0 unchecked=none` → **stop**: no item heading in `$AI_DIR/roadmap/<slug>.md`
+  parses — this is not a finished roadmap. Footer: `→ Next: \`bash
+  "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" roadmap <slug>\`, fix the
+  headings, rerun \`<the caller's command> <slug>\`.`
+- Any other `unchecked=none` → **stop**: every item is already checked off. Footer:
   `→ Next: \`<the caller's command> <slug>#<a real item number from the file>\`
   to redo a specific item, or describe new work in chat.`
 - `unchecked=unreadable` → **stop**: the roadmap file could not be read. Name
   `$AI_DIR/roadmap/<slug>.md`. Footer: `→ Next: fix the file's permissions, then
   rerun \`<the caller's command> <slug>\`.`
-- Driver mode never picks: `#N` and the title arrive in the prompt.
 
 ## 3. Read the ready description
 

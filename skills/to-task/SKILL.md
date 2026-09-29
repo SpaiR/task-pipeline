@@ -20,13 +20,13 @@ Distil the chat discussion so far (or a roadmap item) into `.task/task/<slug>.md
 
 The entry state, gathered before this skill reached you — no tool call of your own:
 
-!`bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/preflight.sh" task`
+!`bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/preflight.sh" capture`
 
 [docs/contract.md § Helpers](../../docs/contract.md#helpers) owns that block's shape. Read it, then act:
 
-1. `AI_DIR:` is the pipeline root: `.task/task/<slug>.md` below means `$AI_DIR/task/<slug>.md`, **never a cwd-relative path** ([contract § Setup-gate categories](../../docs/contract.md#setup-gate-categories)).
-2. **`CONFIG: absent` → inline setup.** Read `${CLAUDE_PLUGIN_ROOT}/skills/_lib/setup.md` and follow it — it owns the sub-steps and the `.task/CLAUDE.md` template, and there is no separate setup command. **No confirmation chip:** the file is written first, and a wrong detected value is fixed by editing it. Then continue with the original `$ARGUMENTS` unchanged. (A relative `AI_DIR: .task` means no git repository and no `.task/` yet; setup establishes `<ROOT>/.task`.)
-3. **`CONFIG: present` → leave the file alone.** It is user-owned: never rewrite it, never re-detect its values, never "repair" a missing section. Only a missing `.task/.gitignore` is recreated, by the preflight above itself; `task.root` is written by first-run setup and not restored afterwards. Regenerating it is the user's move — delete, then re-run any capture.
+1. `AI_DIR:` is the `.task` directory: `.task/task/<slug>.md` below means `$AI_DIR/task/<slug>.md`, **never a cwd-relative path** ([contract § Setup-gate categories](../../docs/contract.md#setup-gate-categories)).
+2. **`CONFIG: absent` → inline setup.** Read `${CLAUDE_PLUGIN_ROOT}/skills/_lib/setup.md` and follow it — it owns the sub-steps and the `.task/CLAUDE.md` template, and there is no separate setup command. Then continue with the original `$ARGUMENTS` unchanged. (A relative `AI_DIR: .task` means no git repository and no `.task/` yet; setup establishes `<ROOT>/.task`.)
+3. **`CONFIG: present`** → leave the file untouched: never rewrite it, re-detect its values or "repair" a missing section ([contract § `.task/CLAUDE.md` format](../../docs/contract.md#taskclaudemd-format)).
 4. `ROADMAPS:` / `TASKS:` / `SPECS:` are what already exists. Step 1 branches on the roadmap lines and the slug-collision guards check `TASKS:` — neither lists a directory of its own.
 
 If that block arrived unexpanded — the command line itself rather than its output — the preprocessing did not fire: run that command yourself and continue exactly as above.
@@ -67,10 +67,11 @@ One thing Core leaves to this skill, because it needs a user: **`tests_required`
 
 ## Step 7: Write
 
-`plan-driver.md` § Core step 6 is the write: `skills/_lib/write-task.sh`, one Bash call, bodies through quoted heredocs, always `--fresh` — plus `--roadmap <roadmap-slug> --item <N>` from a roadmap item and one `--spec` per cited spec. No in-chat draft and no confirmation prompt — the chat discussion was the review, and Step 8's digest lets the user judge whether to open the file.
+`plan-driver.md` § Core step 6 is the write: `skills/_lib/write-task.sh`, one Bash call, bodies through quoted heredocs — plus `--roadmap <roadmap-slug> --item <N>` from a roadmap item and one `--spec` per cited spec. No in-chat draft and no confirmation prompt — the chat discussion was the review, and Step 8's digest lets the user judge whether to open the file.
 
-- **exit 4** — `--fresh` on a slug that already exists, and nothing was written. That is the collision guard's job (Step 1a.2 / Step 2.1), so the file appeared after Step 0 listed `TASKS:`: go back to your mode's collision guard for that slug, exactly as if it had been listed, and write again from its answer. From a roadmap item that is `roadmap-item.md` step 5's header check, then Step 1a.2's chip when the file is this item's own — an unrelated namesake is disambiguated, never overwritten; from chat it is Step 2.1's chip. `--force` only after an overwrite or regenerate chip, and that chip's **Decline** footer when the user stops.
-- **exit 5** — the write itself could not happen (unwritable `.task/`, full disk). No `WROTE:` line was printed, so report the failure plainly, never print Step 8's digest for a path that does not exist, and close with `→ Next: fix the write failure (permissions or free space under \`$AI_DIR\`), then rerun \`/task:to-task\`.`
+- **exit 4** — the slug already exists, and nothing was written. That is the collision guard's job (Step 1a.2 / Step 2.1), so the file appeared after Step 0 listed `TASKS:`: go back to your mode's collision guard for that slug, exactly as if it had been listed, and write again from its answer. From a roadmap item that is `roadmap-item.md` step 5's header check, then Step 1a.2's chip when the file is this item's own — an unrelated namesake is disambiguated, never overwritten; from chat it is Step 2.1's chip. `--force` only after an overwrite or regenerate chip, and that chip's **Decline** footer when the user stops.
+- **exit 5** — the write itself could not happen (unwritable `.task/`, full disk, or the recipe's temp files could not be created or written). No `WROTE:` line was printed, so report the failure plainly, never print Step 8's digest for a path that does not exist, and close with `→ Next: fix the write failure (permissions or free space under \`$AI_DIR\` or the temp directory), then rerun \`/task:to-task\`.`
+- **any other non-zero exit** (a usage error, an unexpected failure) — nothing was written. Relay the `ERROR write-task:` line as it came, print no Step 8 digest, and close with `→ Next: fix the cause named above, then rerun \`/task:to-task\`.`
 
 The `WROTE:` / `VALIDATE:` lines it prints are what Step 8's digest reports; only a setup-precondition failure hard-stops. Its signal is the line `ERROR precondition: CLAUDE.md not found` inside the `VALIDATE:` block — `write-task.sh` exits 0 once the file is written, so validate's own exit code never reaches you. Report it and close with `→ Next: rerun \`/task:to-task\` — its setup writes \`.task/CLAUDE.md\` first.`
 

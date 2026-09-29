@@ -103,7 +103,9 @@ echo "COMMIT_FORMAT_DOC: $commit_doc"
 conv="none"
 for f in CLAUDE.md CONTRIBUTING.md docs/CONTRIBUTING.md .github/CONTRIBUTING.md README.md; do
   [[ -f "$f" ]] || continue
-  hit=$(grep -n -i -m1 -E 'test[- ]driven|write the test first|tests? (are|is) (mandatory|required)|TDD' "$f" 2>/dev/null)
+  # LC_ALL=C: GNU grep >= 3.5 in a UTF-8 locale calls a file with an invalid
+  # byte (a Latin-1 README) binary and prints no matching line.
+  hit=$(LC_ALL=C grep -n -i -m1 -E 'test[- ]driven|write the test first|tests? (are|is) (mandatory|required)|TDD' "$f" 2>/dev/null)
   [[ -n "$hit" ]] && { conv="$f: $hit"; break; }
 done
 echo "TEST_CONVENTION: $conv"
@@ -119,7 +121,7 @@ lang_of() { # <text> → "ascii" | "non-ascii"
 }
 readme_sample=""
 for f in README.md readme.md; do
-  [[ -f "$f" ]] && { readme_sample=$(grep -v '^[[:space:]]*$' "$f" | grep -v '^#' | head -3 | tr '\n' ' '); break; }
+  [[ -f "$f" ]] && { readme_sample=$(LC_ALL=C grep -v '^[[:space:]]*$' "$f" | LC_ALL=C grep -v '^#' | head -3 | LC_ALL=C tr '\n' ' '); break; }
 done
 if [[ -n "$readme_sample" ]]; then
   echo "README_LANG: $(lang_of "$readme_sample") — ${readme_sample:0:120}"
@@ -127,7 +129,7 @@ else
   echo "README_LANG: none"
 fi
 if git rev-parse --git-dir >/dev/null 2>&1; then
-  log_sample=$(git log -10 --pretty=%s 2>/dev/null | tr '\n' ' ')
+  log_sample=$(git log -10 --pretty=%s 2>/dev/null | LC_ALL=C tr '\n' ' ')
   if [[ -n "$log_sample" ]]; then
     echo "COMMIT_LANG: $(lang_of "$log_sample") — ${log_sample:0:120}"
   else
