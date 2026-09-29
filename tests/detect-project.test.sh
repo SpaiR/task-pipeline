@@ -81,6 +81,27 @@ printf '# Project\n\nA plain english description.\n' >"$empty/README.md"
 d "$empty"
 assert_contains "$D_OUT" "README_LANG: ascii" "latin prose"
 
+t_case "a Latin-1 README and CONTRIBUTING are read as text, not skipped as binary"
+# GNU grep >= 3.5 in a UTF-8 locale treats a file holding an invalid byte as
+# binary and suppresses the line, so a Latin-1 README came back `README_LANG:
+# none` and a TDD rule on such a line was dropped. The helper pins LC_ALL=C.
+# The failure needs a UTF-8 locale and a GNU grep; without either, the case
+# still runs but cannot show the regression.
+utf8=""
+for cand in en_US.UTF-8 C.UTF-8 en_US.utf8 C.utf8; do
+  LC_ALL=$cand locale charmap 2>/dev/null | grep -qi 'utf-8' && locale -a 2>/dev/null | grep -qix "$cand" && { utf8=$cand; break; }
+done
+if [[ -z "$utf8" ]]; then
+  echo "detect-project.test.sh: SKIP the UTF-8 locale override — no UTF-8 locale installed; the Latin-1 case runs in the ambient locale" >&2
+  utf8=${LC_ALL:-C}
+fi
+latin=$(t_tmpdir)
+printf '# Proyecto\n\nDescripci\363n en espa\361ol.\n' >"$latin/README.md"
+printf '# Reglas\n\nEste proyecto es test-driven: escribe la prueba primero (\361).\n' >"$latin/CONTRIBUTING.md"
+L_OUT=$(LC_ALL=$utf8 bash "$DETECT" "$latin" 2>&1)
+assert_contains "$L_OUT" "README_LANG: non-ascii" "Latin-1 README is non-ascii, not none"
+assert_contains "$L_OUT" "TEST_CONVENTION: CONTRIBUTING.md: 3:" "TDD rule on a Latin-1 line is found"
+
 t_case "the verdict is there on every run, not on most of them"
 # It vanished on roughly one run in twenty: `lang_of` fed a here-string to a
 # `grep -q` that exits at the first match, and bash 5.x killed the
