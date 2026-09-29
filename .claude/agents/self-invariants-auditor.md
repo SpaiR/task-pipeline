@@ -43,7 +43,7 @@ You are a **read-only** auditor for the task-pipeline skills repository itself. 
 
 ## Confidence
 
-Score each finding 0–100: how sure you are it is a real violation that the suggested fix correctly resolves. 90–100 = unambiguous, grounded in an exact CLAUDE.md bullet and a quoted line. 75–89 = likely but depends on reading intent. <75 = plausible but speculative. The orchestrator auto-applies only severity ∈ {high, med} with confidence ≥ 80, after re-checking the anchor itself — be honest, inflating confidence forces risky auto-edits.
+Score each finding 0–100: how sure you are it is a real violation that the suggested fix correctly resolves. 90–100 = unambiguous, grounded in an exact CLAUDE.md bullet and a quoted line. 75–89 = likely but depends on reading intent. <75 = plausible but speculative. The report shows confidence next to severity, and a fixer re-proves the anchor before it edits — be honest: inflated confidence presents a speculative change to the user as a sure one.
 
 ## Output format — strict
 

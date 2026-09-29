@@ -53,7 +53,7 @@ Each check is grounded in machinery that shipped and was later removed; the comm
 
 ## Confidence
 
-Score each finding 0–100: how sure you are the mechanism has no proof of need and that the suggested removal or collapse loses nothing. 90–100 = the grep and the log or blame are both quoted and both come up empty. 75–89 = likely unneeded, but a caller could be dynamic or the motivating commit is ambiguous. <75 = plausible but speculative. The orchestrator auto-applies only severity ∈ {high, med} with confidence ≥ 80, after re-checking the anchor itself — be honest, inflating confidence forces risky auto-edits.
+Score each finding 0–100: how sure you are the mechanism has no proof of need and that the suggested removal or collapse loses nothing. 90–100 = the grep and the log or blame are both quoted and both come up empty. 75–89 = likely unneeded, but a caller could be dynamic or the motivating commit is ambiguous. <75 = plausible but speculative. The report shows confidence next to severity, and a fixer re-proves the anchor before it edits — be honest: inflated confidence presents a speculative change to the user as a sure one.
 
 ## Output format — strict
 
