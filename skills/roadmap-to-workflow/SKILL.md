@@ -106,7 +106,7 @@ Workflow({
 
 **Args are real JSON values, every path absolute** — `items` an actual array of objects, `done` an actual array of numbers, never JSON-encoded strings. The driver asserts all of it up front and returns one explanatory line instead of launching an agent against garbage.
 
-Per wave the driver plans every item in `parallel()` — each plan agent follows `plan-driver.md` and writes only its own task file — then runs **implement → review strictly one item at a time** (the review ticks the checkbox), so the shared tree and the roadmap file keep one writer each and each implement sees its wave-mates' reviewed commits. A `FAIL` digest from any stage stops the run, and a barrier separates waves. The stage details are the driver's ([contract § execution shape](../../docs/contract.md#roadmap-to-workflow-execution-shape-driver-contract)); nothing here has to restate them.
+The stage details are the driver's ([contract § execution shape](../../docs/contract.md#roadmap-to-workflow-execution-shape-driver-contract)).
 
 **Rerun / resume.** The workflow name and args are static, so `resumeFromRunId` replays completed stages from cache — use it only for a run **interrupted before the driver returned**, in the same session. After a stop the driver did return, the stage that failed is itself a completed stage: a resume would replay its cached `FAIL` and stop at the same place, however the item was fixed. Rerun plainly instead — Step 1 reports only unchecked items, and ticked ones never rerun.
 
