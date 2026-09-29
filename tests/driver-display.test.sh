@@ -93,6 +93,7 @@ const agent = async (prompt, opts) => {
   if (BREAK === `nomark${n}` && stage === 'review') return `${head} done`
   if (BREAK === `drift${n}` && stage === 'plan') return 'Plan written.'
   if (BREAK === `dup${n}` && stage === 'plan') return `OK #${n} ${SLUG[1]} planned`
+  if (BREAK === `prompt${n}` && stage === 'plan') console.log(prompt)
   return { plan: `${head} planned`, implement: `${head} built`, review: `MARK-OK #${n}\n${head} ok, ticked` }[stage]
 }
 console.log(await (async () => {
@@ -135,6 +136,12 @@ t_case "two items of one wave planned on the same slug stop before either is imp
 # one task file for two items, and the second implement would rebuild the first.
 assert_eq "roadmap-to-workflow stopped in wave 1 (planning), item #3: #1 and #3 both planned retry-backoff — one task file for two items; give one of them a more distinct title, then rerun /task:roadmap-to-workflow retry-work" \
   "$(run_driver "'dup3'")" "headline only, nothing landed"
+
+t_case "the plan prompt names aiDir as the .task directory, not a root above it"
+# "pipeline root" meant the directory holding .task/ in .task/CLAUDE.md and the
+# .task directory itself here; reading one by the other built .task/.task paths.
+out=$(run_driver "'prompt1'")
+assert_contains "$out" "- .task directory (AI_DIR): /p/.task" "AI_DIR labelled as the .task directory"
 
 t_case "a later wave's slug that matches a landed item's stops too"
 assert_contains "$(run_driver "'dup2'")" \

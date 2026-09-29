@@ -165,7 +165,7 @@ async function runPlan(n, title, model, phase) {
      - roadmap file: ${ROADMAP}
      - roadmap slug: ${slug}
      - item: #${n} — ${title}
-     - pipeline root: ${aiDir}
+     - .task directory (AI_DIR): ${aiDir}
      - plugin root: ${pluginRoot}
      - roadmap-level spec files (read each as a fixed technical anchor, and stamp
        a Spec: header per slug): ${specPaths.join(', ') || '(none)'}

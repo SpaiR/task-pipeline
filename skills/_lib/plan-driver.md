@@ -106,7 +106,7 @@ The `WROTE:` / `VALIDATE:` lines it prints are what the caller's digest reports.
 
 Instructions for `roadmap-to-workflow`'s per-item **plan agent**, spawned by `skills/_lib/roadmap-driver.js`. Same output contract as the `to-task` skill, none of the interactive machinery.
 
-**Inputs (from your prompt):** the roadmap file (absolute path), the roadmap slug, the item `#N` and its title, the pipeline root (`AI_DIR`), the plugin root, and the roadmap-level spec file paths + slugs.
+**Inputs (from your prompt):** the roadmap file (absolute path), the roadmap slug, the item `#N` and its title, the `.task` directory (`AI_DIR`), the plugin root, and the roadmap-level spec file paths + slugs.
 
 **Ground rules:** you are non-interactive — never ask, never block on a prompt, make constructive assumptions. Do **not** implement, commit, tick any checkbox, or modify any file other than the one task file you write. Your final text is parsed by a driver, not read by a human.
 
