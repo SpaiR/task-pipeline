@@ -121,7 +121,8 @@ Run the command(s) from `$AI_DIR/CLAUDE.md` → **Build and Tests** (read in pha
 
 Your fixes land as their own commit on top of the implementation's. You never rewrite what is already committed:
 
-- **`implementation commit: <sha>`** (phase 1) and you changed files → stage only the files you actually changed — never `git add -A` — and commit them per `.task/CLAUDE.md` → **Commit Format**, in the review-fix shape below.
+- **Phase 5 ended red** (not fixable in scope, or a pre-existing failure) → leave your fixes in the working tree, uncommitted, whatever the implementation commit says: output `fixes left uncommitted`, and the digest is `FAIL` as phase 5 set. Do not create a commit — a fix commit must not sit on a tree that fails its own build and tests.
+- Otherwise, **`implementation commit: <sha>`** (phase 1) and you changed files → stage only the files you actually changed — never `git add -A` — and commit them per `.task/CLAUDE.md` → **Commit Format**, in the review-fix shape below.
 - **`implementation commit: <sha>`** and you changed nothing → do not commit. The implementation commit stands alone.
 - **`implementation commit: none`** → leave your fixes in the working tree, uncommitted, and say so plainly in the digest. Do not create a commit — staging a file here would sweep the implementation's own uncommitted work into your message. When phase 0 resolved a roadmap item, the verdict is `FAIL <reference string> implementation never committed — commit it, then tick #N`: an item ticked over uncommitted work would land in the next item's commit, and the checkbox would claim work no commit holds.
 
@@ -191,7 +192,7 @@ Refuted / unproven: <N> candidate(s) dropped — <one line each, or "none raised
 
 Build and Tests: <command> → <result>       (or: skipped — no command declared in .task/CLAUDE.md)
 Implementation: <sha> <subject>
-Review fixes: <sha> <subject>   (or: none — nothing to fix | left uncommitted — implementation was never committed)
+Review fixes: <sha> <subject>   (or: none — nothing to fix | left uncommitted — implementation was never committed | left uncommitted — Build and Tests red)
 MARK-OK #N                       (or: Roadmap: not applicable — no roadmap item | Roadmap: skipped — verdict is FAIL)
 
 OK <reference string> <one-line summary>
