@@ -43,7 +43,7 @@ Each check is grounded in machinery that shipped and was later removed; the comm
 - **A legacy form the contract still accepts.** A bare-slug reference, a roadmap with its `Spec:` lines above the `# <Title>`: consumers keep reading them on purpose.
 - **What an invariant requires, however heavy it looks.** The setup gate, the Step 0 preflight `!`-injection, the reviewer's phase-0 read of `.task/CLAUDE.md`.
 - **Lint-class findings and mechanical cross-references** — a linter's job and `tests/xref.test.sh`'s.
-- **`evals/`, `CHANGELOG.md` and `.task/`.** Eval cases track their own gaps; the changelog is history; `.task/` holds working artifacts.
+- **`CHANGELOG.md` and `.task/`.** The changelog is history; `.task/` holds working artifacts.
 
 ## Severity scale
 

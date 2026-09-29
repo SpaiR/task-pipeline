@@ -29,7 +29,7 @@ We use [GitHub](https://github.com/SpaiR/task-pipeline) to host code, track issu
   hooks/guard-release-files.sh   PreToolUse hook: Claude Code asks before an Edit, Write or
                                    MultiEdit of CHANGELOG.md or .claude-plugin/plugin.json
                                    (a reminder for honest edits, not a sandbox)
-  rules/*.md                     path-scoped how-to (skills, bash helpers, tests, evals,
+  rules/*.md                     path-scoped how-to (skills, bash helpers, tests,
                                    website, agents, driver, manifests); each loads when a
                                    file matching its `paths:` is read
   settings.json                  shared project settings: wires that hook, and pre-approves
@@ -92,10 +92,6 @@ tests/                           the bash-layer test suite — run.sh + lib.sh +
                                    some release-guard checks, each skipped with a SKIP line
                                    when absent — run on ubuntu and macOS by
                                    .github/workflows/tests.yml
-evals/                           prompt-level `claude plugin eval` cases (prompt.md + graders/
-                                   per case) — a quality signal for the skills, NOT in CI;
-                                   see evals/README.md for status; run output goes to the
-                                   gitignored evals/results/
 CLAUDE.md                        maintainer rules: invariants linking the contract, verify
                                    commands, editing protocol, release procedure
 docs/
@@ -126,7 +122,7 @@ LICENSE                          MIT license text
 1. Fork the project (or branch off `main`, if you have direct push access).
 2. Make sure the artifact validator still passes against any `.task/` snapshot you used while developing: `bash skills/validate/validate.sh all`.
 3. Run the bash-layer suite: `bash tests/run.sh` (one case file per helper under `tests/`, bash, awk and git — plus node for the driver's wave, digest and display cases and jq for some release-guard checks, each skipped with a SKIP line when absent — no bats). It must be green, and a change to a helper's behaviour comes with a case that covers it.
-4. Manually run the affected skill in a real project before opening the PR. For a prompt change, the eval suite under `evals/` is the closest thing to an automated check — `claude plugin eval .`, or `--case '<name>*'` for one case; it needs the early-access `plugin eval` feature, and it is not wired into CI. See [`evals/README.md`](evals/README.md), including which graders are still unverified.
+4. Manually run the affected skill in a real project before opening the PR.
 5. Open the pull request against `main`.
 
 This project is a collection of Markdown skills plus a handful of bash helpers. There is no compile step. The bash layer is linted in CI only: `.github/workflows/tests.yml` runs a pinned shellcheck at `-S warning` over `skills/_lib/*.sh`, `skills/validate/validate.sh`, `tests/*.sh` and `.claude/hooks/*.sh`. The automated tests are the bash-layer suite under `tests/` (`bash tests/run.sh`, also run on ubuntu and macOS by `.github/workflows/tests.yml`), which covers the helpers rather than the prompts. The bar for "it works" is: `tests/run.sh` green, skills run end-to-end, invariants in [`CLAUDE.md`](CLAUDE.md) still hold, and the `validate.sh` script accepts the new artifact shapes.
@@ -224,7 +220,7 @@ The `footer` is optional. The [Commit Message Footer](#commit-message-footer) fo
   │       │             │
   │       │             └─⫸ Summary in imperative, present tense. Not capitalized. No period at the end.
   │       │
-  │       └─⫸ Commit Scope: skill name | skills | agents | lib | plugin | github | website | readme | claudemd | contract | changelog | contributing | tests | evals
+  │       └─⫸ Commit Scope: skill name | skills | agents | lib | plugin | github | website | readme | claudemd | contract | changelog | contributing | tests
   │
   └─⫸ Commit Type: feat | fix | refactor | perf | docs | test | chore | revert
 ```
@@ -240,7 +236,7 @@ Must be one of the following:
 * **refactor** — Internal change that does not add a feature or fix a bug (rename, restructure, extract).
 * **perf** — A change whose primary goal is to shrink a skill/agent's token or context footprint (or its latency) **without** changing behavior. Distinct from `refactor`: the win is measured in tokens/context, not readability.
 * **docs** — Documentation only: `README.md`, `CLAUDE.md`, `CHANGELOG.md`, `docs/`, this file, or prose inside skills.
-* **test** — Changes to an executable QA surface: the bash-layer suite under `tests/`, the prompt eval cases under `evals/`, or the artifact validator (`skills/validate/validate.sh`).
+* **test** — Changes to an executable QA surface: the bash-layer suite under `tests/` or the artifact validator (`skills/validate/validate.sh`).
 * **chore** — Tooling, repo housekeeping, plugin manifest fields that do not affect users (keywords, description tweaks), and repo automation under `.github/`.
 * **revert** — Reverts a previous commit. The body must name the reverted commit (`Reverts <sha>`) and say why.
 
@@ -254,7 +250,6 @@ Must be one of the following:
 * **`lib`** — every shared helper under `skills/_lib/` (see the repository structure above) and `skills/validate/validate.sh`, plus their templates.
 * **`plugin`** — `.claude-plugin/plugin.json` and install-path concerns.
 * **`tests`** — the bash-layer suite under `tests/` and its CI workflow.
-* **`evals`** — the prompt-level eval cases under `evals/`.
 * **`github`** — files under `.github/` (PR/issue templates, any repo automation).
 * **`website`** — the VitePress docs site under `website/` (landing, guide, reference pages, theme, config).
 * **`readme` / `claudemd` / `changelog` / `contributing` / `contract`** — single-doc edits (use `docs:` as the type for these; `contract` = `docs/contract.md`).

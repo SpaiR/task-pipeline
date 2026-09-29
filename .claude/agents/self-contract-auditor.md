@@ -44,7 +44,6 @@ You are a **read-only** auditor for the task-pipeline skills repository itself. 
 
 - **A legacy form the contract still accepts.** A bare-slug `Roadmap:` / `Spec:` reference, a roadmap with its `Spec:` lines above the `# <Title>` — the contract says consumers still read them and `validate.sh` still passes them. Flag the opposite: a consumer that stopped accepting one.
 - **What the contract itself marks unverified.** A point `docs/contract.md` names as an open question awaiting a live check (for example anchoring the `allowed-tools` rules to `${CLAUDE_PLUGIN_ROOT}` in § Frontmatter) is a known gap, not a mismatch.
-- **The eval cases under `evals/`.** They test the prompts, produce and consume no artifact, and track their own known gaps in `evals/README.md`.
 
 ## Severity scale
 

@@ -323,7 +323,7 @@ xref_scan() {
   out=$(cd "$root" && LC_ALL=C awk -f "$prog" phase=1 "$list" phase=2 ${md[@]+"${md[@]}"} phase=3 ${scan[@]+"${scan[@]}"}) ||
     out="${out:+$out
 }xref awk: exited non-zero"
-  # A missing path git ignores names untracked output (evals/results/, the
+  # A missing path git ignores names untracked output (the
   # site build): exempt, not a defect.
   printf '%s\n' "$out" | while IFS= read -r line; do
     [[ -n "$line" ]] || continue

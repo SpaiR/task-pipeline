@@ -1,6 +1,6 @@
 ---
 name: self-docs-sync-auditor
-description: Read-only auditor for the Docs-sync lens of /self-audit — flags drift between the actual skills/, skills/_lib/ and agents/ directories and the docs that describe them — README.md, CLAUDE.md, docs/, CONTRIBUTING.md, the website/ docs site, evals/README.md and any .claude/rules/ (rosters, pipeline diagrams, command tables, skill counts, helper inventories, producer/consumer table, sidebar).
+description: Read-only auditor for the Docs-sync lens of /self-audit — flags drift between the actual skills/, skills/_lib/ and agents/ directories and the docs that describe them — README.md, CLAUDE.md, docs/, CONTRIBUTING.md, the website/ docs site and any .claude/rules/ (rosters, pipeline diagrams, command tables, skill counts, helper inventories, producer/consumer table, sidebar).
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
@@ -22,7 +22,6 @@ Build the reality you compare against at run time, before reading any doc:
 - **Helpers** — `ls skills/_lib/ skills/_lib/templates/`. Every file there is part of the inventory.
 - **Agents** — `ls agents/`. That is the plugin's agent roster; `.claude/agents/` is repo-local maintainer tooling and never part of it.
 - **Docs** — `ls docs/ website/guide/ website/reference/`.
-- **Eval cases** — `ls evals/`: every directory except `results/` (gitignored run output) is one case; the skill it drives is the `/task:<skill>` line in its `prompt.md`.
 - **Path rules** — `ls .claude/rules/`, when that directory exists.
 - **Version** — `.claude-plugin/plugin.json` → `version`.
 
@@ -56,10 +55,6 @@ Any count, roster, or inventory a doc states is checked against these lists. Do 
 - The sidebar in `website/.vitepress/config.mts` links every reference page and no missing one; its version label matches `plugin.json`.
 - Guide pages name only skills that exist and describe the flag-free model.
 
-**`evals/README.md`**:
-- Its case table lists exactly the case directories on disk, each under the skill it really drives.
-- Eval coverage: a user skill with no case is a **low** finding — unless `evals/README.md` already names that skill as missing a case.
-
 **`.claude/rules/*.md`** (only when the directory exists):
 - Every skill, helper, file or command a rule names exists on disk.
 
@@ -77,7 +72,7 @@ Any count, roster, or inventory a doc states is checked against these lists. Do 
 
 - **high** — a skill or agent exists on disk but is missing from a load-bearing section (pipeline diagram, command table, producer/consumer table, reference sidebar), or a section names one that does not exist; a wrong hardcoded count.
 - **med**  — correct in spirit but stale in detail: a comparison table missing a skill, a helper-inventory row missing or stale, an example artifact whose shape differs from what the producer writes, a wrong version label, a pointer to a page that does not exist.
-- **low**  — wording drift that is not strictly wrong but inconsistent across docs (e.g. "capture skill" here, "intake skill" there); a user skill with no eval case that `evals/README.md` does not already name as missing.
+- **low**  — wording drift that is not strictly wrong but inconsistent across docs (e.g. "capture skill" here, "intake skill" there).
 
 ## Confidence
 
@@ -102,4 +97,4 @@ Every `/self-audit` lens returns this one schema, field for field, and `/self-au
   consumer: <optional — <file>:<line> of the side that reads>
 ```
 
-**This lens** puts the on-disk fact in `evidence` — the command that shows it and its output — next to the quoted doc line; it uses none of the optional fields. `location` is the doc line that should change. Categories such as "missing in diagram", "removed skill referenced", "stale count", "table entry missing", "stale helper row", "sidebar drift", "missing eval case".
+**This lens** puts the on-disk fact in `evidence` — the command that shows it and its output — next to the quoted doc line; it uses none of the optional fields. `location` is the doc line that should change. Categories such as "missing in diagram", "removed skill referenced", "stale count", "table entry missing", "stale helper row", "sidebar drift".
