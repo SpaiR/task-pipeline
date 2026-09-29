@@ -99,6 +99,7 @@ const agent = async (prompt, opts) => {
   if (BREAK === `drift${n}` && stage === 'plan') return 'Plan written.'
   if (BREAK === `dup${n}` && stage === 'plan') return `OK #${n} ${SLUG[1]} planned`
   if (BREAK === `prompt${n}` && stage === 'plan') console.log(prompt)
+  if (BREAK === `implprompt${n}` && stage === 'implement') console.log(prompt)
   return { plan: `${head} planned`, implement: `${head} built`, review: `MARK-OK #${n}\n${head} ok, ticked` }[stage]
 }
 JS
@@ -162,6 +163,14 @@ assert_contains "$out" "- .task directory (AI_DIR): /p/.task" "AI_DIR labelled a
 # plan-driver.md § Driver mode; the prompt only points there.
 assert_contains "$out" "/plugin/skills/_lib/plan-driver.md and follow it" "prompt still names plan-driver.md"
 assert_contains "$out" "Last non-empty line MUST be exactly:" "digest contract kept"
+
+t_case "the implement prompt names aiDir/CLAUDE.md, not a cwd-relative .task/CLAUDE.md"
+# A linked worktree shares the main root's .task/ through git config task.root, so
+# a cwd-relative .task/CLAUDE.md does not exist there and both the Executing a
+# task section and Commit Format would silently go unread.
+out=$(run_driver "'implprompt1'")
+assert_contains "$out" "sends you to /p/.task/CLAUDE.md → ## Executing a task" "Executing a task by absolute path"
+assert_contains "$out" "/p/.task/CLAUDE.md → Commit Format" "Commit Format by absolute path"
 
 t_case "a later wave's slug that matches a landed item's stops too"
 assert_contains "$(run_driver "'dup2'")" \

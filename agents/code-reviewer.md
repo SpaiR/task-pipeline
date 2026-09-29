@@ -27,7 +27,7 @@ A roadmap driver also names the **roadmap item to tick** — `#N` in an absolute
 1. Read the task artifact named in the invocation.
 2. Extract every `**Touches:**` path from `## Plan`. Union them into the **Touches set**. If the artifact has no `## Plan`, the Touches set is empty — say so, and treat the changed files of the diff (phase 1) as the review scope instead.
 3. If the artifact carries `Spec:` header lines, read each referenced spec. A header is a Markdown link — `Spec: [<slug>](../spec/<slug>.md)` — so take `<slug>` from the link **text** and open `$AI_DIR/spec/<slug>.md`, where `$AI_DIR` is the `.task` directory holding the artifact's `task/` directory; never follow the relative link target, which resolves against your cwd rather than the artifact's directory. An older or hand-edited artifact may carry a bare `Spec: <slug>`; read it the same way. Spec decisions are **fixed anchors**: code that follows a spec decision you personally disagree with is not a defect. Re-litigating a spec is out of scope.
-4. Read `.task/CLAUDE.md` — note **Build and Tests** (the command(s) phase 5 runs) and **Commit Format** (phase 6 writes its commit to it). Reading the artifact in step 1 above usually pulls this file into context on its own, since the platform loads a nested `CLAUDE.md` when you read a file under its directory; read it explicitly anyway, so the phase never depends on that.
+4. Read `$AI_DIR/CLAUDE.md`, with `$AI_DIR` as in step 3 — never a cwd-relative `.task/CLAUDE.md`, which a linked worktree does not have. Note **Build and Tests** (the command(s) phase 5 runs) and **Commit Format** (phase 6 writes its commit to it). Reading the artifact in step 1 above usually pulls this file into context on its own, since the platform loads a nested `CLAUDE.md` when you read a file under its directory; read it explicitly anyway, so the phase never depends on that.
 5. Resolve the **roadmap item** phase 7 ticks. When the invocation named one, take it verbatim. Otherwise read the artifact's header lines above `---`: it needs both `Roadmap:` and `Source item: #N`. `Roadmap:` is a Markdown link, `Roadmap: [<slug>](../roadmap/<slug>.md)` — take `<slug>` from the link text, the same rule as `Spec:` above (a bare `Roadmap: <slug>` reads the same), and the path is `$AI_DIR/roadmap/<slug>.md`, with `$AI_DIR` as in step 3. Only one of the two headers present, or neither → there is no item to tick; that is not a defect.
 
 **Mandatory output:** the artifact path; the Touches set as a list (or `Touches: none — no ## Plan`); the spec slugs read (or `Specs: none`); the Build and Tests command you will run (or `Build and Tests: none declared`); the roadmap item as `Roadmap item: #N in <absolute path>` (or `Roadmap item: none`).
@@ -109,11 +109,11 @@ Fix minimally and in the codebase's own idiom. Do not refactor around a defect, 
 
 You are about to commit. An agent that commits what it never ran is not reviewing, it is guessing.
 
-Run the command(s) from `.task/CLAUDE.md` → **Build and Tests**, end to end.
+Run the command(s) from `$AI_DIR/CLAUDE.md` → **Build and Tests** (read in phase 0), end to end.
 
 - **Green** → continue to phase 6.
 - **Red** → trace the failure. A failure **this diff caused** is self-proving: the failing run is the evidence, so it needs no phase-3 candidate — record it as `CONFIRMED (phase 5) — <the failing check>`, re-enter phase 4 with it, fix within scope, and re-run. Repeat until green, then continue to phase 6. If it is not fixable in scope (it needs a design decision, or the plan itself is wrong), or the failure is pre-existing and unrelated to this diff, stop: do **not** commit your fixes — leave them in the working tree — and report `FAIL` in phase 6's digest with the failing output quoted and the trace stated either way.
-- **No command declared** (`.task/CLAUDE.md` says there is no build/test pipeline, or the section is absent) → report the skip **explicitly and in words**. Never imply a green run you did not get, and never treat an undeclared command as a pass.
+- **No command declared** (`$AI_DIR/CLAUDE.md` says there is no build/test pipeline, or the section is absent) → report the skip **explicitly and in words**. Never imply a green run you did not get, and never treat an undeclared command as a pass.
 
 **Mandatory output:** the exact command(s) run and their result — or the literal line `Build and Tests: skipped — no command declared in .task/CLAUDE.md.`
 

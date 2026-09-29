@@ -189,9 +189,9 @@ async function runPlan(n, title, model, phase) {
 async function runImplement(n, itemSlug, model, phase) {
   const r = await agent(
     `Implement ${aiDir}/task/${itemSlug}.md. Follow its ## Execution pointer —
-     it sends you to .task/CLAUDE.md → ## Executing a task — with two carve-outs:
+     it sends you to ${aiDir}/CLAUDE.md → ## Executing a task — with two carve-outs:
      implement the ## Plan plus any ## Tests it carries, then commit per
-     .task/CLAUDE.md → Commit Format — and do NOT
+     ${aiDir}/CLAUDE.md → Commit Format — and do NOT
      spawn the task:code-reviewer agent, and do NOT tick the roadmap
      checkbox. The driver runs the review as its own stage right after this
      call, and the review ticks the checkbox when it passes.
