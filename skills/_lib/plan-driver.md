@@ -77,28 +77,31 @@ Against the draft, before writing — fix inline rather than writing something a
 `skills/_lib/write-task.sh` writes the file and validates it in one call. It owns the header link forms, the `---` separator, the section order and the single stamped `## Execution` pointer, and it resolves `$AI_DIR` itself — so nothing here assembles the artifact or re-resolves the root. Bodies go in through **quote-delimited** heredocs, written flush-left (so backticks and `$` reach the file verbatim), each holding the section body **without** its `## …` heading:
 
 ```bash
-d=$(mktemp); p=$(mktemp); t=$(mktemp)
-cat >"$d" <<'DESC'
+fail() { echo "ERROR write-task: $1" >&2; rm -f "$d" "$p" "$t"; exit 5; }
+d=$(mktemp) && p=$(mktemp) && t=$(mktemp) || fail "cannot create temp files"
+cat >"$d" <<'DESC' || fail "cannot write the description"
 {drafted Description body}
 DESC
-cat >"$p" <<'PLAN'
+cat >"$p" <<'PLAN' || fail "cannot write the plan"
 {drafted ### Step N: blocks}
 PLAN
-cat >"$t" <<'TESTS'
+cat >"$t" <<'TESTS' || fail "cannot write the tests"
 {drafted ### Test N: blocks — omit this heredoc and --tests when tests_required is false}
 TESTS
+# --roadmap and --item: from a roadmap item only
 bash "<plugin root>/skills/_lib/write-task.sh" --fresh \
   --slug <slug> --title "{Title}" \
   --description "$d" --plan "$p" --tests "$t" \
-  --roadmap <roadmap-slug> --item <N> --spec <spec-slug>   # from a roadmap item only; repeat --spec per cited spec
-rm -f "$d" "$p" "$t"
+  --roadmap <roadmap-slug> --item <N> \
+  --spec <spec-slug>   # one per cited spec, any source
+rc=$?; rm -f "$d" "$p" "$t"; exit "$rc"
 ```
 
 `--fresh` is the one mode: the file is always written whole, never edited in place. `--title`, `--description` and `--plan` are required; drop `--roadmap` / `--item` when the source is the chat, and `--spec` when nothing is cited.
 
 It refuses to overwrite rather than guessing, and writes nothing when it does: **exit 4** — the slug already exists. `--force` overrides, and is only ever earned by a caller's collision guard: `to-task`'s overwrite chip, or the driver's header match on its own item's file (D2).
 
-**Exit 5** is the one write failure that is not a refusal — an unwritable `$AI_DIR` or a full disk. Nothing was written and no `WROTE:` line was printed: report that plainly instead of a digest, and never claim a path that does not exist.
+**Exit 5** is the one write failure that is not a refusal — an unwritable `$AI_DIR`, a full disk, or the recipe's own temp files that could not be created or written (`ERROR write-task: cannot …`). Nothing was written and no `WROTE:` line was printed: report that plainly instead of a digest, and never claim a path that does not exist. The recipe ends in `exit "$rc"` so the Bash call carries `write-task.sh`'s own status; a trailing `rm` would report 0 whatever happened. Any other non-zero exit is a failure too, never a write.
 
 The `WROTE:` / `VALIDATE:` lines it prints are what the caller's digest reports. Only a setup-precondition failure is fatal — in driver mode a `FAIL` in D3. Its signal is the line `ERROR precondition: CLAUDE.md not found` inside the `VALIDATE:` block: `write-task.sh` exits 0 once the file is written, so validate's own exit code never reaches the caller.
 
@@ -124,7 +127,7 @@ Follow `skills/_lib/roadmap-item.md` — steps 3 to 6 (read the ready descriptio
 
 ### D3. Run `## Core`, then the digest
 
-Work `## Core` steps 1–6 with the item's ready description as the Description source. Then print a 2–4 line digest — path written, step count, validate result. **No `→ Next:` footer, nothing after the last line.** The last non-empty line MUST be exactly one of:
+Work `## Core` steps 1–6 with the item's ready description as the Description source. A write that exits non-zero — 4 above, 5, or any other status — is a `FAIL` naming the `ERROR write-task:` line, with no digest above it. Otherwise print a 2–4 line digest — path written, step count, validate result. **No `→ Next:` footer, nothing after the last line.** The last non-empty line MUST be exactly one of:
 
 ```
 OK #{N} {item-slug} planned
