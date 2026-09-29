@@ -14,7 +14,7 @@ See the [roadmaps guide](/guide/roadmaps) for the end-to-end flow.
 
 ## When to use it
 
-For work with phases, inter-task dependencies, or more than ~3 atomic steps. If the initiative is smaller than that, `to-roadmap` **stops and redirects** you to `to-task` — one file per task is the better fit.
+For work with phases, inter-task dependencies, or more than ~3 atomic steps. For a single task, `to-task` is usually the better fit — but the choice is yours: `to-roadmap` captures whatever you hand it.
 
 ## The flow
 

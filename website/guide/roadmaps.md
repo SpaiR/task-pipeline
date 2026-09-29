@@ -2,7 +2,7 @@
 
 A **roadmap** groups several tasks into one initiative. Where [`to-task`](/reference/to-task) captures one task, [`/task:to-roadmap`](/reference/to-roadmap) captures a whole phase-grouped backlog of ready-to-pick-up items — together with its technical layer — into `.task/roadmap/<slug>.md`.
 
-Reach for it when the work has phases, inter-task dependencies, or more than a couple of atomic steps. For anything smaller, a single task is the better fit — `to-roadmap` will actually stop and redirect you if the initiative is too small.
+Reach for it when the work has phases, inter-task dependencies, or more than a couple of atomic steps. For anything smaller, a single task is usually the better fit — but the choice is yours: `to-roadmap` never refuses on size.
 
 ## Capture the initiative
 

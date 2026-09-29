@@ -1,16 +1,10 @@
 # Capture a roadmap
 
-The roadmap capture flow, in one place. `to-roadmap` owns its Step 0 setup gate and its digest; everything between — the precondition, context, the decomposition, the technical context, the architecture, the draft, the save and the post-save self-check — is `## Core` below, and `to-roadmap` Steps 1–7 point here. Every roadmap it writes carries its `## Architecture` section, drafted in the same pass and written in the same single write. [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd) is the artifact shape it produces, and [§ Roadmap architecture section](../../docs/contract.md#roadmap-architecture-section) the section's.
+The roadmap capture flow, in one place. `to-roadmap` owns its Step 0 setup gate and its digest; everything between — context, the decomposition, the technical context, the architecture, the draft, the save and the post-save self-check — is `## Core` below, and `to-roadmap` Steps 1–7 point here. Every roadmap it writes carries its `## Architecture` section, drafted in the same pass and written in the same single write. [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd) is the artifact shape it produces, and [§ Roadmap architecture section](../../docs/contract.md#roadmap-architecture-section) the section's.
 
 **From the caller:** Step 0's `AI_DIR:` (every `.task/roadmap/<slug>.md` below means `$AI_DIR/roadmap/<slug>.md`, never a cwd-relative path), its `ROADMAPS:` list, which step 1 reads for structural style and step 6 for the slug collision, and its `SPECS:` list, which steps 3 and 5 may cite — none needs a listing call of its own. The digest printed after step 7 is the caller's.
 
 ## Core
-
-### Precondition
-
-- **Too small for a roadmap** — no obvious phases, no inter-task dependencies, fewer than ~3 atomic steps → **stop and suggest** `/task:to-task`. Say plainly that nothing was written; after several brainstorm rounds the user cannot otherwise tell whether a half-roadmap now exists. Carry the reason: "This is one task, not an initiative — no phases, no cross-item dependencies. Nothing was written. `→ Next: \`/task:to-task\` to capture it as a task with a plan.`"
-
-(The slug-collision check runs at save time, once the slug is derived — see step 6.)
 
 ### 1. Load context
 
