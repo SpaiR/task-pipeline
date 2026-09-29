@@ -89,7 +89,7 @@ cat >"$t" <<'TESTS' || fail "cannot write the tests"
 {drafted ### Test N: blocks — omit this heredoc and --tests when tests_required is false}
 TESTS
 # --roadmap and --item: from a roadmap item only
-bash "<plugin root>/skills/_lib/write-task.sh" --fresh \
+bash "<plugin root>/skills/_lib/write-task.sh" \
   --slug <slug> --title "{Title}" \
   --description "$d" --plan "$p" --tests "$t" \
   --roadmap <roadmap-slug> --item <N> \
@@ -97,7 +97,7 @@ bash "<plugin root>/skills/_lib/write-task.sh" --fresh \
 rc=$?; rm -f "$d" "$p" "$t"; exit "$rc"
 ```
 
-`--fresh` is the one mode: the file is always written whole, never edited in place. `--title`, `--description` and `--plan` are required; drop `--roadmap` / `--item` when the source is the chat, and `--spec` when nothing is cited.
+The file is always written whole, never edited in place. `--title`, `--description` and `--plan` are required; drop `--roadmap` / `--item` when the source is the chat, and `--spec` when nothing is cited.
 
 It refuses to overwrite rather than guessing, and writes nothing when it does: **exit 4** — the slug already exists. `--force` overrides, and is only ever earned by a caller's collision guard: `to-task`'s overwrite chip, or the driver's header match on its own item's file (D2).
 
@@ -119,7 +119,7 @@ Follow `skills/_lib/roadmap-item.md` — steps 3 to 6 (read the ready descriptio
 
 ### D2. Slug collision, without anyone to ask
 
-`roadmap-item.md` step 5 already separates the two cases. Your prompt carries no `TASKS:` list, so check whether `$AI_DIR/task/<item-slug>.md` exists before writing — a rerun after a failed implement finds this item's own file there, and `--fresh` on it without `--force` would exit 4. In driver mode:
+`roadmap-item.md` step 5 already separates the two cases. Your prompt carries no `TASKS:` list, so check whether `$AI_DIR/task/<item-slug>.md` exists before writing — a rerun after a failed implement finds this item's own file there, and writing it without `--force` would exit 4. In driver mode:
 
 - **This item's earlier capture** → regenerate it: write fresh with `--force`. The Description is re-derived from the item's ready description, exactly as `to-task`'s regenerate chip does, so an item edited since the failed run is planned from its new text. The header match in `roadmap-item.md` step 5 is the collision guard that earns the `--force`.
 - **An unrelated task on the same kebab-case** → disambiguate the slug per `roadmap-item.md` step 5, which checks the new slug the same way — an earlier run of this item may already have written its file under that disambiguated slug, and then it is this item's own capture after all. Write fresh; `--force` only on that header match, never over a namesake.
