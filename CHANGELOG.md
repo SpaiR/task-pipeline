@@ -4,12 +4,12 @@ All notable changes to this project are documented here. Format — [Keep a Chan
 
 This file is maintained in **English** — see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-policy).
 
-## [Unreleased]
+## [4.0.0] — 2026-09-29
 
 Two capture skills fold into the two that remain: a task is always captured with its plan, and a roadmap always with its architecture. Five skills instead of seven, and the promote / revise / enrich branches that served two capture depths are gone — in `write-task.sh` too, which now only writes whole files, so every task file carries a `## Plan`. Breaking — see **Migration** below.
 
 ### Removed (breaking)
-- **`write-task.sh --promote` / `--revise`.** With a Description-only capture gone, nothing adds a Plan to an existing file or replaces one in place. `--fresh` is the one mode and `--plan` is required; a driver rerun regenerates an unchecked item's own task file from the roadmap with `--force`, earned by the header match on that file.
+- **`write-task.sh --promote` / `--revise` / `--fresh`.** With a Description-only capture gone, nothing adds a Plan to an existing file or replaces one in place, and a single mode needs no flag: all three are now unknown arguments (exit 2). `--plan` is required; a driver rerun regenerates an unchecked item's own task file from the roadmap with `--force`, earned by the header match on that file.
 - **`/task:to-plan`.** A Description-only capture turned out not to earn its file: a task too vague to plan is quicker done in chat, and every task worth an artifact was being deepened into a plan anyway. `to-task` now does what `to-plan` did.
 - **`/task:to-architecture`.** The architecture section is what every planner follows, too useful to leave as an optional second skill that could be skipped. `to-roadmap` now writes it with every roadmap.
 - **The preflight kinds `plan` and `architecture`.** `preflight.sh` now rejects them as a usage error.
