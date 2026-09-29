@@ -38,9 +38,9 @@ while read -r skill kind; do
     "$(body "$f" | grep -oE '(^|[[:space:]])!`[^`]+`' | sed 's/^[[:space:]]*//')" \
     "$skill: and it is the preflight call for kind '$kind'"
 done <<'PAIRS'
-to-task task
-to-roadmap roadmap
-to-spec spec
+to-task capture
+to-roadmap capture
+to-spec capture
 roadmap-to-workflow workflow
 PAIRS
 
@@ -74,7 +74,7 @@ cat >"$probe" <<'MD'
 ---
 name: probe
 ---
-Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/preflight.sh" task` yourself.
+Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/preflight.sh" capture` yourself.
 A `!`-preprocessed command aborts the skill when it fails.
 MD
 assert_eq "0" "$(injections "$probe")" "an ordinary code span is not a command"
@@ -84,7 +84,7 @@ cat >"$probe" <<'MD'
 name: probe
 ---
 ```!
-bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/preflight.sh" task
+bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/preflight.sh" capture
 ```
 MD
 assert_eq "1" "$(injections "$probe")" "the fenced form counts as well"

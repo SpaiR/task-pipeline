@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # preflight.sh — print a capture skill's entry state as one parser-stable block.
 #
-# Usage: bash preflight.sh <task|roadmap|spec|workflow>
+# Usage: bash preflight.sh <capture|workflow>
 #
 # Exists so a skill's Step 0 costs zero tool round-trips: the block is
 # substituted into the skill body by SKILL.md's `!`-preprocessing, before the
@@ -21,6 +21,9 @@
 #   TASKS: <slug> <slug> … | none
 #   SPECS: <slug> <slug> … | none
 #   VALIDATE: …                                         (kind `workflow` only)
+#
+# `capture` is what to-task, to-roadmap and to-spec pass: they print the same
+# block, so they share one kind; only `workflow` adds the sweep.
 #
 # `unchecked=` lists the ITEM NUMBERS still open, not a count — the pickers in
 # `to-task <slug>#N` / `roadmap-to-workflow` need the numbers.
@@ -43,9 +46,9 @@ SCRIPT_DIR=$(cd "$(dirname "$SRC")" && pwd)
 
 kind="${1:-}"
 case "$kind" in
-  task | roadmap | spec | workflow) ;;
+  capture | workflow) ;;
   *)
-    echo "ERROR usage: preflight.sh <task|roadmap|spec|workflow>" >&2
+    echo "ERROR usage: preflight.sh <capture|workflow>" >&2
     exit 2
     ;;
 esac

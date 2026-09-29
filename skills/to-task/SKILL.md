@@ -20,7 +20,7 @@ Distil the chat discussion so far (or a roadmap item) into `.task/task/<slug>.md
 
 The entry state, gathered before this skill reached you — no tool call of your own:
 
-!`bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/preflight.sh" task`
+!`bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/preflight.sh" capture`
 
 [docs/contract.md § Helpers](../../docs/contract.md#helpers) owns that block's shape. Read it, then act:
 
