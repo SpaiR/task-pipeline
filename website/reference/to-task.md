@@ -78,7 +78,9 @@ Sections: Description, Plan (3 steps), Execution
 Plan:
 - Step 1: {short title}
 - Step 2: …
+
 architecture: followed | deviated in step N — {reason} | none
+
 validate: OK — 0 errors, 0 warnings
 
 → Next: implement it now, or in a fresh session run:

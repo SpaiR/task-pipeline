@@ -45,10 +45,13 @@ The digest lists **every** pin in full — a spec is read downstream as a fixed 
 ```text
 Wrote `.task/spec/event-envelope.md`
 # Spec: Event envelope
+
 Pins:
-- 1. {decision, one line}
-- 2. …
-Left for a roadmap's ## Architecture: {technical shape dropped by the decision test, one line | omitted when none}
+1. {decision, one line}
+2. …
+
+Left for a roadmap's `## Architecture`: {technical shape dropped by the decision test, one line | omitted when none}
+
 validate: OK — 0 errors, 0 warnings
 
 → Next: `/task:to-task` for a task that leans on `.task/spec/event-envelope.md` —

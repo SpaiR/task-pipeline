@@ -130,10 +130,13 @@ Print the structural digest (convention (b)) as message text. A spec is read by 
 ```
 Wrote `.task/spec/<slug>.md`
 # Spec: {Title}
+
 Pins:
-- 1. {decision, one line}
-- 2. {…}
-Left for a roadmap's ## Architecture: {technical shape dropped by the decision test, one line | omit when none}
+1. {decision, one line}
+2. {…}
+
+Left for a roadmap's `## Architecture`: {technical shape dropped by the decision test, one line | omit when none}
+
 validate: {OK — 0 errors, N warning(s) | the FAIL lines}
 ```
 
