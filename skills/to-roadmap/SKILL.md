@@ -44,12 +44,16 @@ Print the structural digest of what was written (convention (b)) as message text
 Wrote `.task/roadmap/<slug>.md`
 {Title}
 Items: {N} tasks across {M} phases — recommended order: 1 → 2 → 4 → 3 → 5 …
-- 1. {item title}
-- 2. {…}
+1. {item title}
+2. {…}
+
 Architecture: {C} components, {I} interfaces, {S} item sketches
 - `{component}` — {new | existing}, {role in a few words}
+
 Interfaces: {#2 → #4, #5 `Name`; … | none}
+
 Specs referenced: {slug, …}   (or "none"; plus any decision flagged for a `/task:to-spec` follow-up)
+
 validate: {OK — 0 errors, N warning(s) | the FAIL lines}
 ```
 

@@ -80,14 +80,18 @@ A digest, a report-only self-check (coverage / decomposition / clarity / archite
 Wrote `.task/roadmap/api-v2-migration.md`
 API v2 migration
 Items: 5 tasks across 2 phases — recommended order: 1 → 2 → 4 → 3 → 5
-- 1. {item title}
-- 2. …
+1. {item title}
+2. …
+
 Architecture: 3 components, 2 interfaces, 5 item sketches
 - `AuthGateway` — new, terminates the v2 auth handshake
 - `LegacyAuthAdapter` — existing, bridges v1 sessions during the migration
 - `SessionStore` — existing, holds tokens both adapters read
+
 Interfaces: #2 → #4 `SessionToken`
+
 Specs referenced: event-envelope
+
 validate: OK — 0 errors, 0 warnings
 
 → Next: `/task:roadmap-to-workflow api-v2-migration` (run the whole roadmap —
