@@ -20,9 +20,11 @@
 #     sourcing this file — every caller (validate.sh, preflight.sh,
 #     roadmap-items.sh) sources resolve-ws.sh first, which exports AI_DIR. This
 #     file does no resolution of its own.
-#   - Task heading shape: `### - [ x~>-] N. <title>`. The 5-state checkbox
-#     class is the contract `task:code-reviewer`'s auto-mark and
-#     `to-task <slug>#N` item-pick both depend on; do not narrow it to `[ x]` only.
+#   - Item shape: a `### N. <title>` heading whose first non-blank line is the
+#     status line `- [ x~>-] Done`. The 5-state checkbox class is the contract
+#     `task:code-reviewer`'s auto-mark and `to-task <slug>#N` item-pick both
+#     depend on; do not narrow it to `[ x]` only. A heading with no status line
+#     under it is an item to no parser; `validate.sh` names it.
 
 # --- resolve_artifact_path <kind> <arg> ---
 # Echoes the resolved artifact path on stdout, or empty string if no match.
@@ -52,7 +54,8 @@ resolve_artifact_path() {
 # marked" ([x]/[~]/[>]/[-]); without this, a roadmap with [~]/[>]/[-] items
 # would report done<total even when no [ ] remains, and the wizard's
 # (complete) flag would never fire for it. OPEN is the one state outside the
-# done class, so this pass is the only place the heading grammar is written.
+# done class. The heading arms the pass and the first non-blank line after it
+# settles the item, so a heading with no status line is counted nowhere.
 #
 # Returns awk's status, so a caller can tell an unreadable file from an empty
 # one. Byte-wise: in a UTF-8 locale macOS awk aborts on a byte it cannot
@@ -61,12 +64,16 @@ roadmap_progress_counts() {
   local file="$1"
   # One pass, three results — one fork, not one per counter.
   LC_ALL=C awk '
-    /^### - \[[ x~>-]\] [0-9]+\. / { t++ }
-    /^### - \[[x~>-]\] [0-9]+\. /  { d++ }
-    match($0, /^### - \[ \] [0-9]+\. /) {
-      s = substr($0, RSTART, RLENGTH); gsub(/[^0-9]/, "", s)
-      o = (o == "" ? s : o "," s)
+    wait && /^[[:space:]]*$/ { next }
+    wait {
+      wait = 0
+      if ($0 ~ /^- \[[ x~>-]\]([[:space:]]|$)/) {
+        t++
+        if ($0 ~ /^- \[ \]/) o = (o == "" ? n : o "," n)
+        else d++
+      }
     }
+    match($0, /^### [0-9]+\. /) { n = substr($0, 5, RLENGTH - 6); wait = 1 }
     END { printf "total: %d\ndone: %d\nopen: %s\n", t+0, d+0, o }
   ' "$file"
 }

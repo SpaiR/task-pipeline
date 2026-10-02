@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Contract under test: skills/_lib/roadmap.sh — `roadmap_progress_counts` over
-# the 5-state checkbox class, and `resolve_artifact_path`'s three lookup
+# the 5-state checkbox class of each item's status line, and `resolve_artifact_path`'s three lookup
 # branches.
 source "$(dirname "$0")/lib.sh"
 
@@ -8,31 +8,55 @@ AI_DIR=""            # roadmap.sh reads it; each case sets it explicitly
 # shellcheck source=../skills/_lib/roadmap.sh
 source "$T_REPO_ROOT/skills/_lib/roadmap.sh"
 
-t_case "roadmap_progress_counts treats [x] [~] [>] [-] as done, [ ] as unchecked"
+t_case "roadmap_progress_counts reads the status line: [x] [~] [>] [-] are done, [ ] is unchecked"
 dir=$(t_tmpdir)
 cat >"$dir/r.md" <<'MD'
 # Roadmap
-### - [ ] 1. open one
-### - [x] 2. shipped
-### - [~] 3. in progress
-### - [>] 4. deferred
-### - [-] 5. dropped
-### - [ ] 6. open two
-### Spec references → [s](../spec/s.md) §1
+
+### 1. open one
+
+- [ ] Done
+
+### 2. shipped
+
+- [x] Done
+
+### 3. in progress
+- [~] Done
+
+### 4. deferred
+
+- [>] Done
+
+### 5. dropped
+
+- [-] Done
+
+**Dependencies:** —
+
+### 6. open two
+
+- [ ] Done
+
+> **Spec references:** [s](../spec/s.md) §1
+
+### 7. a heading with no status line
+
+**Dependencies:** —
 MD
 counts=$(roadmap_progress_counts "$dir/r.md")
 assert_eq "total: 6
 done: 4
-open: 1,6" "$counts" "five-state tally and open item numbers"
+open: 1,6" "$counts" "five-state tally and open item numbers; no status line, no item"
 
 t_case "roadmap_progress_counts counts past a non-UTF-8 byte, and fails on a missing file"
 # macOS awk decodes by locale and aborts on an invalid byte; the counts came
 # back empty, which preflight.sh printed as a finished roadmap.
-printf '### - [x] 1. Caf\351\n### - [ ] 2. open\n' >"$dir/latin1.md"
+printf '### 1. Caf\351\n\n- [x] Done\n\n### 2. open\n\n- [ ] Done\n' >"$dir/latin1.md"
 assert_eq "total: 2
 done: 1
 open: 2" "$(LC_ALL=en_US.UTF-8 roadmap_progress_counts "$dir/latin1.md")" "tally and open list survive the byte"
-printf '### - [x] 1. shipped\n### - [-] 2. dropped\n' >"$dir/none-open.md"
+printf '### 1. shipped\n\n- [x] Done\n\n### 2. dropped\n\n- [-] Done\n' >"$dir/none-open.md"
 assert_eq "total: 2
 done: 2
 open: " "$(roadmap_progress_counts "$dir/none-open.md")" "no open item leaves the list empty"

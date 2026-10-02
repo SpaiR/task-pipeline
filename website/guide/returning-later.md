@@ -25,10 +25,10 @@ The artifact is plain Markdown. Edit `## Description` and `## Plan` by hand, or 
 
 ## Where a roadmap stands
 
-Grep its checkboxes directly:
+Read its status lines directly:
 
 ```text
-grep '^### - \[ \]' .task/roadmap/api-v2-migration.md
+awk '/^### [0-9]+\. /{h=$0} /^- \[ \] Done/{print h}' .task/roadmap/api-v2-migration.md
 # every item still unchecked
 ```
 

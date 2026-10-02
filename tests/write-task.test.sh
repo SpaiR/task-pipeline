@@ -19,8 +19,12 @@ body=$(t_tmpdir)
 printf 'Why this exists, and what it changes.\n' >"$body/desc.md"
 cat >"$body/plan.md" <<'MD'
 ### Step 1: do the thing
+
 **Goal:** it is done
-**Touches:** `src/a.ts`
+
+**Touches:**
+
+- `src/a.ts`
 MD
 cat >"$body/tests.md" <<'MD'
 ### Test 1: it works
@@ -42,6 +46,29 @@ assert_eq "## Description ## Plan ## Tests ## Execution" \
   "$(grep '^## ' "$repo/.task/task/alpha.md" | tr '\n' ' ' | sed 's/ $//')" "section order"
 # The dangling spec reference is a WARN, never an error, so the file is valid.
 assert_contains "$W_OUT" "OK 0 errors" "validate is clean"
+
+t_case "the header renders as separate paragraphs, never a setext heading"
+# A line directly above `---` makes the header block a setext H2 in a Markdown
+# preview, and adjacent header lines merge into one paragraph.
+w "$repo" --slug header --title "Header task" --description "$body/desc.md" \
+  --plan "$body/plan.md" --roadmap api-v2 --item 3 --spec one --spec two
+assert_exit 0 "$W_EXIT" "write with a full header"
+assert_eq "# Header task
+
+Roadmap: [api-v2](../roadmap/api-v2.md)
+
+Source item: #3
+
+Spec: [one](../spec/one.md)
+
+Spec: [two](../spec/two.md)
+
+---" "$(sed -n '1,/^---$/p' "$repo/.task/task/header.md")" "blank line after every header line"
+assert_contains "$W_OUT" "OK 0 errors" "validate still reads the spaced header"
+w "$repo" --slug bare --title "Bare task" --description "$body/desc.md" --plan "$body/plan.md"
+assert_eq "# Bare task
+
+---" "$(sed -n '1,/^---$/p' "$repo/.task/task/bare.md")" "no header: title, blank line, separator"
 
 t_case "a second write without --force exits 4 and changes nothing"
 before=$(cat "$repo/.task/task/alpha.md")

@@ -27,8 +27,13 @@ mkdir -p "$repo/.task/roadmap" "$repo/.task/task" "$repo/.task/spec"
 cat >"$repo/.task/roadmap/api-v2.md" <<'MD'
 # API v2
 
-### - [x] 1. Shipped item
-### - [ ] 2. Open item
+### 1. Shipped item
+
+- [x] Done
+
+### 2. Open item
+
+- [ ] Done
 MD
 printf '# T\n' >"$repo/.task/task/some-task.md"
 printf '# S\n' >"$repo/.task/spec/event-envelope.md"
@@ -42,7 +47,7 @@ assert_contains "$P_OUT" "TASKS: some-task" "task slugs"
 assert_contains "$P_OUT" "SPECS: event-envelope" "spec slugs"
 
 t_case "a fully ticked roadmap reports unchecked=none"
-sed 's/^### - \[ \] 2\./### - [x] 2./' "$repo/.task/roadmap/api-v2.md" >"$repo/.task/roadmap/shipped.md"
+sed 's/^- \[ \] Done$/- [x] Done/' "$repo/.task/roadmap/api-v2.md" >"$repo/.task/roadmap/shipped.md"
 p "$repo" capture
 assert_contains "$P_OUT" "ROADMAPS: shipped 2/2 unchecked=none" "no open items"
 
@@ -56,13 +61,15 @@ assert_contains "$P_OUT" "ERROR" "sweep output is passed through"
 
 t_case "a heading with no space after the item dot is not counted as unchecked"
 # Same heading grammar `roadmap_progress_counts` (roadmap.sh), roadmap-items.sh
-# and validate.sh's item regex all require: `### - [ ] N. ` (dot THEN space).
+# and validate.sh's item regex all require: `### N. ` (dot THEN space).
 # A heading missing that space is not a valid item to any of them, so it must
 # not surface here either — else the picker offers an item no other parser sees.
 cat >"$repo/.task/roadmap/nospace.md" <<'MD'
 # No space
 
-### - [ ] 3.Title with no space after the dot
+### 3.Title with no space after the dot
+
+- [ ] Done
 MD
 p "$repo" capture
 assert_contains "$P_OUT" "ROADMAPS: nospace 0/0 unchecked=none" "malformed heading counts as zero items, not an open one"
@@ -71,7 +78,9 @@ t_case "a well-formed heading with the required space is counted as unchecked"
 cat >"$repo/.task/roadmap/withspace.md" <<'MD'
 # With space
 
-### - [ ] 3. Title with the required space
+### 3. Title with the required space
+
+- [ ] Done
 MD
 p "$repo" capture
 assert_contains "$P_OUT" "ROADMAPS: withspace 0/1 unchecked=3" "well-formed heading is offered as open item 3"
@@ -135,7 +144,7 @@ t_case "a byte that is not UTF-8 in a roadmap keeps its progress"
 # back empty and the open list fell back to `none`, a finished roadmap.
 latin=$(make_repo --config)
 mkdir -p "$latin/.task/roadmap"
-printf '# L\n\n### - [x] 1. Caf\351\n\n### - [ ] 2. Open\n' >"$latin/.task/roadmap/latin1.md"
+printf '# L\n\n### 1. Caf\351\n\n- [x] Done\n\n### 2. Open\n\n- [ ] Done\n' >"$latin/.task/roadmap/latin1.md"
 LC_ALL=en_US.UTF-8 p "$latin" capture
 assert_contains "$P_OUT" "ROADMAPS: latin1 1/2 unchecked=2" "progress survives the byte"
 

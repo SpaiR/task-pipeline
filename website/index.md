@@ -78,6 +78,7 @@ This is an example of what `/task:to-task` produces for the run above — a plai
 
 ```markdown
 # HTTP retry with backoff
+
 ---
 ## Description
 
@@ -93,17 +94,29 @@ dead-letter queue for later inspection instead of being silently lost.
 ## Plan
 
 ### Step 1: Wrap the payments client in a retry policy
+
 **Goal:** Every outbound payments call retries transient failures with
 exponential backoff plus jitter, giving up after 5 attempts.
-**Touches:** `src/payments/client.ts` `src/payments/retry.ts`
+
+**Touches:**
+
+- `src/payments/client.ts`
+- `src/payments/retry.ts`
+
 **Logic:** Classify the error — timeout / 5xx / 429 are retryable, other 4xx
 fail fast. Sleep `base * 2 ** attempt` plus random jitter between tries; surface
 the last error once the cap is hit.
 
 ### Step 2: Route exhausted retries to a dead-letter queue
+
 **Goal:** A call that fails all 5 attempts is written to the DLQ with its payload
 and last error, instead of surfacing as an unhandled failure.
-**Touches:** `src/payments/client.ts` `src/payments/dead-letter.ts`
+
+**Touches:**
+
+- `src/payments/client.ts`
+- `src/payments/dead-letter.ts`
+
 **Logic:** After the retry cap, enqueue `{ request, lastError, attempts }` and
 return a typed `RetriesExhausted` result the caller can branch on.
 

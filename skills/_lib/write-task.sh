@@ -113,18 +113,21 @@ trap 'rm -f "$work"' EXIT
 # a plain redirect would, so a task file stays as readable as it always was.
 chmod "$(printf '%o' $(( 0666 & ~0$(umask) )))" "$work" || write_failed
 {
-  printf '# %s\n' "$title" || write_failed
+  printf '# %s\n\n' "$title" || write_failed
   # Cross-artifact references are Markdown links whose LABEL carries the
   # identity; `Source item:` is a number, not a reference, so it stays bare.
+  # Every header line is its own paragraph, followed by a blank line: adjacent
+  # lines merge into one paragraph in a Markdown preview, and a line directly
+  # above `---` turns the whole block into a setext heading.
   if [[ -n "$roadmap" ]]; then
-    printf 'Roadmap: [%s](../roadmap/%s.md)\n' "$roadmap" "$roadmap" || write_failed
+    printf 'Roadmap: [%s](../roadmap/%s.md)\n\n' "$roadmap" "$roadmap" || write_failed
   fi
   if [[ -n "$item" ]]; then
-    printf 'Source item: #%s\n' "${item#\#}" || write_failed
+    printf 'Source item: #%s\n\n' "${item#\#}" || write_failed
   fi
   for sp in "${specs[@]:-}"; do
     if [[ -n "$sp" ]]; then
-      printf 'Spec: [%s](../spec/%s.md)\n' "$sp" "$sp" || write_failed
+      printf 'Spec: [%s](../spec/%s.md)\n\n' "$sp" "$sp" || write_failed
     fi
   done
   printf '%s\n' '---' || write_failed

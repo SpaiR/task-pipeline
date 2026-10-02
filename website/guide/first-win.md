@@ -44,6 +44,7 @@ On a fresh project this detects your language and test policy, writes `.task/CLA
 
 ```markdown
 # Add a --quiet flag to the CLI
+
 ---
 ## Description
 
@@ -58,9 +59,15 @@ but genuine errors still print to stderr. No config file — just the flag.
 ## Plan
 
 ### Step 1: Add the flag and gate log output on it
+
 **Goal:** `mycli --quiet` runs with info/debug silenced while errors still reach
 stderr; without the flag, output is unchanged.
-**Touches:** `src/cli.ts` `src/logger.ts`
+
+**Touches:**
+
+- `src/cli.ts`
+- `src/logger.ts`
+
 **Logic:** Register `--quiet` (boolean, default false). Thread it into the
 logger as a min-level: quiet raises the floor to `error`, so info/debug are
 dropped but `error` still writes to stderr.

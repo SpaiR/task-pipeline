@@ -73,7 +73,7 @@ It is a **recap** of decisions the user already reached: print it, no confirmati
 
 Always **2–3 decomposition options** with different phase boundaries — behavioral milestones, observable state changes, not technical layers like "substrate" vs "UI". Iterate as `Round N`, same structure, narrowed to the fork in focus. A round is **content dialogue, not a path fork**: print it as message text and close on the open question, because convention (c)'s chips would flatten the pros and cons the round exists to show. Typical depth 3–6 rounds; past 6, say the initiative is too big and suggest splitting. Stop when the user says "write it", or when another round would only restate conclusions.
 
-**Track decisions as you go, not in your head.** Three kinds surface: **behavioral** ones, observable properties the user locked in, which land in an item's `### Outcomes` / `### Acceptance criteria`; **technical anchors** — a protocol, a cross-cutting data shape, a "we picked X over Y because…" whose reasoning would not survive re-derivation — which belong in a standalone spec, never in an item body; and **technical shape** — which components the initiative builds or changes, what one item hands another — which is neither, and is held for step 4's `## Architecture`. Step 5 routes all three.
+**Track decisions as you go, not in your head.** Three kinds surface: **behavioral** ones, observable properties the user locked in, which land in an item's `**Outcomes**` / `**Acceptance criteria**`; **technical anchors** — a protocol, a cross-cutting data shape, a "we picked X over Y because…" whose reasoning would not survive re-derivation — which belong in a standalone spec, never in an item body; and **technical shape** — which components the initiative builds or changes, what one item hands another — which is neither, and is held for step 4's `## Architecture`. Step 5 routes all three.
 
 Before moving on, reprint the full list as message text — the cold-start twin of 2H's inventory, no confirmation chip. Topics the user said to skip stay skipped.
 
@@ -155,25 +155,27 @@ Two options per fork at least, or a stated reason why only one is viable. Like 2
 
 Once the architecture inventory is **printed** — no reply is awaited; a correction arrives as chat, and you reprint before drafting — draft the whole file per [contract § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd), which owns the section skeleton, the item grammar and the link rules. `## Architecture` is part of this draft, per [§ Roadmap architecture section](../../docs/contract.md#roadmap-architecture-section): directly above the first `## Phase <N> — …` heading (after `## Phase summary`) — in a file without numbered phases, above the `## ` section holding the first item — with the intro blockquote, `### Components` (required), `### Interfaces between items` (omit when none), `### Item sketches` (one bullet per item), `### Technical ordering` (omit when none).
 
-Two things it is easy to get wrong:
+Things it is easy to get wrong:
 
+- The item heading is `### N. <title>`, and the first line under it is the status line `- [ ] Done`. The checkbox never goes into the heading: a Markdown preview renders it there as literal text.
 - `**Dependencies:**` is an em dash `—` for none, otherwise a comma-separated list of item numbers, ASCII digits. Any other word reads as a dependency on a missing item and hard-stops the autopilot. When a technical ordering line gives an item its first dependency, the em dash is **replaced** by the number, never appended to — `—, 3` is unparsable.
-- A `**Ready description:**` blockquote must stand alone, and its sub-headings are **quoted** (`> ### Context`, …). `validate.sh` treats a bare unquoted one as a hard error, because `to-task` and the driver's plan agent strip the `> ` prefix to find the body.
+- A `**Ready description:**` blockquote must stand alone, and its sub-headings are **quoted bold lines** (`> **Context**`, …), never headings. `validate.sh` treats a missing or unquoted one as a hard error, because `to-task` and the driver's plan agent strip the `> ` prefix to find the body. The item's spec citation, `> **Spec references:** [<spec-slug>](../spec/<spec-slug>.md) §N`, closes the same quote.
+- **A blank line between blocks.** The status line, each `**Field:**`, each `Spec:` header line, and each quoted sub-heading (with a bare `>` line before and after it) is its own paragraph. Adjacent lines merge into one paragraph in a Markdown preview.
 
 **Route every confirmed decision to a home:**
 
-- Observable behavior / user-facing effect → the item's `### Outcomes`, or `### Acceptance criteria` when it's a testable assertion.
-- Cross-item technical decision → a standalone spec. One that already exists gets a `Spec:` header line **directly under `# <Title>`**, above the intro, plus a `### Spec references → [<spec-slug>](../spec/<spec-slug>.md) §N` citation in each steered item; the architecture cites it inline as `[<slug>](../spec/<slug>.md) §N`. A spec reaches the driver's plan agents only through those header lines, so every spec the architecture cites gets one too. One that does not exist is **not written here**: surface the decision with a one-line recommendation to capture it via `/task:to-spec`; once the spec exists, the user adds `Spec: [<slug>](../spec/<slug>.md)` directly under the roadmap's `# <Title>` by hand, as `to-spec`'s footer says — this flow never edits an existing roadmap.
+- Observable behavior / user-facing effect → the item's `**Outcomes**`, or `**Acceptance criteria**` when it's a testable assertion.
+- Cross-item technical decision → a standalone spec. One that already exists gets a `Spec:` header line **directly under `# <Title>`**, above the intro, plus a `> **Spec references:** [<spec-slug>](../spec/<spec-slug>.md) §N` citation in each steered item; the architecture cites it inline as `[<slug>](../spec/<slug>.md) §N`. A spec reaches the driver's plan agents only through those header lines, so every spec the architecture cites gets one too. One that does not exist is **not written here**: surface the decision with a one-line recommendation to capture it via `/task:to-spec`; once the spec exists, the user adds `Spec: [<slug>](../spec/<slug>.md)` directly under the roadmap's `# <Title>` by hand, as `to-spec`'s footer says — this flow never edits an existing roadmap.
 - Technical shape — a component, a boundary, what crosses between items, a module-level sketch → `## Architecture`, never an item body. Real module paths and symbol names are expected there.
 - A technical ordering constraint → a `### Technical ordering` line **and** the dependent item's `**Dependencies:**`, since that field is what the driver's waves read.
 - Scope exclusion → `## Out of scope`, with the reason.
 - Anything else → drop it, but say so to the user with a one-line reason — never a silent omission.
 
-Reserve specs for choices that would break cross-item consistency if a later `/task:to-task` re-derived them differently. A single-item detail is that item's `### Outcomes` / `### Acceptance criteria`, never a spec. Observable behavior already lives in the items; restating it in `## Architecture` is drift — drop it there.
+Reserve specs for choices that would break cross-item consistency if a later `/task:to-task` re-derived them differently. A single-item detail is that item's `**Outcomes**` / `**Acceptance criteria**`, never a spec. Observable behavior already lives in the items; restating it in `## Architecture` is drift — drop it there.
 
 **`**Model:**` is optional** — only with a real basis: pure content editing → `haiku`, a new subsystem or cross-module change → `sonnet`. Leave it off rather than guess.
 
-Behavioral discipline: `### Outcomes` / `### Goal` / `### Invariants` state observable properties only, with no project-specific file or symbol names (normative names from a spec or `CLAUDE.md` are fine). The names belong in `## Architecture`; if design work would be free to pick a different symbol, the name is `/task:to-task`'s call, not this file's.
+Behavioral discipline: `**Outcomes**` / `**Goal**` / `**Invariants**` state observable properties only, with no project-specific file or symbol names (normative names from a spec or `CLAUDE.md` are fine). The names belong in `## Architecture`; if design work would be free to pick a different symbol, the name is `/task:to-task`'s call, not this file's.
 
 Before saving, self-check and fix inline (drafting hygiene; step 7 is the post-save pass):
 
@@ -184,11 +186,12 @@ Before saving, self-check and fix inline (drafting hygiene; step 7 is the post-s
 5. Every item heading produces a unique kebab-case slug.
 6. Item numbers unique across the whole file — the reviewer's auto-mark keys on the number, so two items sharing one would be ticked together.
 7. Every confirmed decision (step 2) and every piece of technical shape (step 4) has a concrete home, or was explicitly dropped with a stated reason.
-8. Every cross-artifact reference is a Markdown link — `Spec:` headers, `### Spec references` citations, `## Prerequisites`, `## Backlinks`, the architecture's inline spec citations.
+8. Every cross-artifact reference is a Markdown link — `Spec:` headers, `**Spec references:**` citations, `## Prerequisites`, `## Backlinks`, the architecture's inline spec citations.
 9. Every `#N` in `## Architecture` names an item heading in this file, and every item has exactly one `### Item sketches` bullet.
 10. Nothing in `## Architecture` contradicts a cited or header-named spec.
-11. No `### <digits>.` sub-heading and no copy of a `### - [ ] N.` item heading inside `## Architecture` — items are referenced as `#N` inside bullets.
+11. No `### <digits>.` sub-heading and no copy of a `### N.` item heading inside `## Architecture` — items are referenced as `#N` inside bullets.
 12. No `file:line`, no step list, no code block over 5 lines in `## Architecture` — plan-level detail is the planner's.
+13. Every item heading has its `- [ ] Done` status line as the first line under it, and no two blocks — status line, fields, `Spec:` header lines, quoted sub-headings — sit on adjacent lines.
 
 ### 6. Save
 
@@ -205,7 +208,7 @@ Skim the **saved file** (not the in-chat draft) yourself — no subagent fanout,
 
 - **Coverage** — phase and fork coverage, dependency integrity (dangling or cyclic).
 - **Decomposition** — any item reading as compound: two unrelated concerns, or far more outcomes than its neighbours.
-- **Clarity** — behavioral discipline held, descriptions self-contained, and each `### Spec references` citation naming a `Spec:`-referenced `$AI_DIR/spec/<spec-slug>.md` that really has that `§N`, with a target matching its label (a copied citation pointing at the previous spec still resolves for an agent and misleads the human).
+- **Clarity** — behavioral discipline held, descriptions self-contained, and each `**Spec references:**` citation naming a `Spec:`-referenced `$AI_DIR/spec/<spec-slug>.md` that really has that `§N`, with a target matching its label (a copied citation pointing at the previous spec still resolves for an agent and misleads the human).
 - **Architecture** — every item has its sketch, every interface names two real items, and each component carries a module path a planner can open.
 
 Report a count per lens plus the obvious issues, a few lines, in the caller's digest. **Never rewrite the saved file** — findings are for the user to fix or discuss; there is no auto-apply.
@@ -214,7 +217,7 @@ Report a count per lens plus the obvious issues, a few lines, in the caller's di
 
 Binding on every roadmap this flow writes:
 
-- Naming project-specific files, modules, functions, types, or constants in `### Outcomes` / `### Goal` / `### Invariants` — normative names from spec/CLAUDE.md are the only exception; the real names live in `## Architecture`.
+- Naming project-specific files, modules, functions, types, or constants in `**Outcomes**` / `**Goal**` / `**Invariants**` — normative names from spec/CLAUDE.md are the only exception; the real names live in `## Architecture`.
 - Planning implementation details — in the items: file lists, function signatures, code blocks > 5 lines; in `## Architecture`, where real module paths and symbol names are expected: `file:line` references, step lists, code blocks > 5 lines. That depth is `/task:to-task`'s job when the item is picked up.
 - Modifying any file other than `.task/roadmap/<slug>.md` — specs live at `.task/spec/<slug>.md` and are authored only by `to-spec`, never written or edited here.
 - Editing an existing roadmap in place — this flow only writes new files; an existing one is overwritten only through step 6's chip.

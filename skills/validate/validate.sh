@@ -287,7 +287,10 @@ validate_roadmap() {
     err "$label" "file has CRLF line endings — the driver keeps the trailing CR in **Dependencies:** / **Model:** values, turning a dependency into a phantom one and dropping the model hint; convert the file to LF"
   fi
 
-  # --- Item-heading shape ---------------------------------------------------
+  # --- Item shape ------------------------------------------------------------
+  # An item is a `### N. <title>` heading whose first non-blank line is its
+  # status line, `- [ ] Done` with a state from the 5-state class `[ x~>-]`.
+  #
   # Runs BEFORE the required-heading guard below, on purpose: when EVERY heading
   # has drifted, that guard returns early, and this is the only check that can
   # tell the operator WHY the file looks itemless.
@@ -297,32 +300,55 @@ validate_roadmap() {
   # roadmap-items.sh (the driver's item source) skips it, and the block parser
   # opens no block for it, so its missing sub-headings go unreported too.
   # Unflagged, the file validates clean while an item silently vanishes and the
-  # autopilot reports "all items shipped" having never run it. Two shapes count
-  # as an attempt:
-  #   - a checkbox-ish bracket (`[ ]`, `[X]`, `[]`) anywhere a checkbox belongs.
-  #     The bracket body is capped at ONE character so a legitimate heading that
-  #     opens with a Markdown link (`### [text](url)`) is not swept up;
-  #   - a bullet followed by a number, i.e. the checkbox was deleted outright.
-  # `### N.` with no bullet is left to the block parser, which already names it.
-  # `### Spec references → [slug](target) §N` is a citation inside an item.
+  # autopilot reports "all items shipped" having never run it. Three shapes
+  # count as an attempt: a checkbox-ish bracket in the heading (`[ ]`, `[X]`,
+  # `[]` — the body capped at ONE character so a heading that opens with a
+  # Markdown link, `### [text](url)`, is not swept up), a bullet before the
+  # number, and a `###` number that misses the `### N. <title>` spacing. A heading with no status line under it is the
+  # same silent vanishing, so it is named too; inside `## Architecture` a
+  # numbered heading is the block parser's to name, with its own message.
+  # The reverse holds as well: a `- [ ] Done` line no item heading owns is an
+  # item whose heading drifted out of the grammar entirely — `#### N.`, `## N.`,
+  # a bold line — so the status line it left behind is named.
   awk_report '
-    /^### - \[[ x~>-]\] [0-9]+\. .+$/ { next }
-    /^### Spec references/              { next }
+    /^## / { in_arch = ($0 ~ /^## Architecture([[:space:]]|$)/) }
+    wait && /^[[:space:]]*$/ { next }
+    wait {
+      wait = 0
+      if ($0 ~ /^- \[[ x~>-]\]([[:space:]]|$)/) next
+      print "ERROR " label ": Task " item " has no status line — the first line under its heading must be `- [ ] Done` (or [x], [~], [>], [-]); got: " $0
+    }
+    /^- \[[ x~>-]\] Done[[:space:]]*$/ {
+      print "ERROR " label ": status line with no `### N. <title>` item heading directly above it — the item it belongs to is invisible to every parser: " $0
+      next
+    }
+    /^### [0-9]+\. .+$/ {
+      if (in_arch) next
+      item = $0; sub(/^### /, "", item); sub(/\..*$/, "", item); wait = 1
+      next
+    }
     /^#+[[:space:]]*[-*+]?[[:space:]]*\[[^]]?\]/ {
-      print "ERROR " label ": item heading does not match the required `### - [ ] N. <title>` form: " $0
+      print "ERROR " label ": item heading carries a checkbox; the heading is `### N. <title>` and the checkbox goes on the `- [ ] Done` status line under it: " $0
       next
     }
     /^#+[[:space:]]*[-*+][[:space:]]*[0-9]/ {
-      print "ERROR " label ": item heading is missing its `[ ]` checkbox; required form is `### - [ ] N. <title>`: " $0
+      print "ERROR " label ": item heading carries a bullet; required form is `### N. <title>`: " $0
       next
+    }
+    /^###[[:space:]]*[0-9]+\./ {
+      print "ERROR " label ": item heading does not match the required `### N. <title>` form: " $0
+      next
+    }
+    END {
+      if (wait)
+        print "ERROR " label ": Task " item " has no status line — the first line under its heading must be `- [ ] Done` (or [x], [~], [>], [-]); got: end of file"
     }
   ' "$file"
 
-  # Find task headings: `### - [x] | - [ ] | - [~] | - [>] | - [-] N. <title>`.
-  # Checkbox prefix is REQUIRED — task:code-reviewer's auto-mark
-  # and item selection both rely on it.
-  if ! grep -qE '^### - \[[ x~>-]\] [0-9]+\. .+$' "$file"; then
-    err "$label" "no task headings matching '### - [ ] N. <title>' — every item must carry a checkbox prefix (roadmap-to-workflow auto-mark and item selection rely on it)"
+  # Find item headings. The status line under each is what auto-mark flips and
+  # what item selection reads; the pass above names any heading without one.
+  if ! grep -qE '^### [0-9]+\. .+$' "$file"; then
+    err "$label" "no item headings matching '### N. <title>' — every item is that heading plus a '- [ ] Done' status line (roadmap-to-workflow auto-mark and item selection rely on both)"
     return
   fi
 
@@ -331,9 +357,12 @@ validate_roadmap() {
   # review FAIL and stops the wave outright. Flag any number that appears on more than
   # one item heading. Compare numerically — `1.` and `01.` are the same item to
   # every other consumer (the Dependencies check below, the driver's `0*` match).
+  # A numbered heading inside `## Architecture` is the block parser's error, not
+  # a second copy of the item.
   local dup
   dup=$(awk '
-    match($0, /^### - \[[ x~>-]\] [0-9]+\./) {
+    /^## / { in_arch = ($0 ~ /^## Architecture([[:space:]]|$)/) }
+    !in_arch && match($0, /^### [0-9]+\./) {
       s = substr($0, RSTART, RLENGTH); gsub(/[^0-9]/, "", s); cnt[s + 0]++
     }
     END { for (n in cnt) if (cnt[n] > 1) print n }
@@ -350,7 +379,8 @@ validate_roadmap() {
   # launch fail with `bad args`. The Dependencies check below rejects a `0`
   # dependency for the same reason.
   awk_report '
-    match($0, /^### - \[[ x~>-]\] [0-9]+\./) {
+    /^## / { in_arch = ($0 ~ /^## Architecture([[:space:]]|$)/) }
+    !in_arch && match($0, /^### [0-9]+\./) {
       s = substr($0, RSTART, RLENGTH); gsub(/[^0-9]/, "", s)
       if (s + 0 == 0) print "ERROR " label ": item number " s " — item numbers start at 1 (the roadmap-to-workflow driver rejects 0): " $0
     }
@@ -363,16 +393,18 @@ validate_roadmap() {
   # by format after an item is tidied away.
   # Item state is closed by the same terminators the collector uses, so a stray
   # `**Dependencies:**` under `## Out of scope` is not billed to the last item.
+  # The status line settles `open`; an item without one is never open.
   awk_report '
-    /^### - \[[ x~>-]\] [0-9]+\. / {
-      m = $0; sub(/^### - \[[ x~>-]\] /, "", m); sub(/\..*$/, "", m)
-      item = m; open = ($0 ~ /^### - \[ \] /); items[m + 0] = 1; next
+    wait && /^[[:space:]]*$/ { next }
+    wait { wait = 0; if ($0 ~ /^- \[ \]([[:space:]]|$)/) { open = 1; next } }
+    !in_arch && /^### [0-9]+\. / {
+      m = $0; sub(/^### /, "", m); sub(/\..*$/, "", m)
+      item = m; open = 0; wait = 1; items[m + 0] = 1; next
     }
-    /^### Spec references/ { next }                       # lives inside an item
     /^#+[[:space:]]*[-*+]?[[:space:]]*\[[^]]?\]/ { item = ""; next }
     /^#+[[:space:]]*[-*+][[:space:]]*[0-9]/       { item = ""; next }
     /^### /             { item = ""; next }
-    /^## /              { item = ""; next }
+    /^## /              { in_arch = ($0 ~ /^## Architecture([[:space:]]|$)/); item = ""; next }
     /^---[[:space:]]*$/ { item = ""; next }
     /^\*\*Dependencies:\*\*/ {
       if (item == "" || !open) next
@@ -415,34 +447,23 @@ validate_roadmap() {
   ' "$file"
 
   # The per-item block parser: requires the `**Ready description:**` label and
-  # its quoted sub-headings. Reported through `awk_report`, like the two checks
-  # above it.
+  # its quoted bold sub-headings. Reported through `awk_report`, like the
+  # checks above it.
   awk_report '
     function flush_block() {
       if (in_block == 0) return
       if (!has_ready)    print "ERROR " label ": Task " task_no " missing '\''**Ready description:**'\'' label"
-      if (!has_context)  print "ERROR " label ": Task " task_no " missing '\''### Context'\'' sub-heading"
-      if (!has_goal)     print "ERROR " label ": Task " task_no " missing '\''### Goal'\'' sub-heading"
-      if (!has_outcomes) print "ERROR " label ": Task " task_no " missing '\''### Outcomes'\'' sub-heading"
-      if (!has_accept)   print "ERROR " label ": Task " task_no " missing '\''### Acceptance criteria'\'' sub-heading"
+      if (!has_context)  print "ERROR " label ": Task " task_no " missing '\''> **Context**'\'' sub-heading"
+      if (!has_goal)     print "ERROR " label ": Task " task_no " missing '\''> **Goal**'\'' sub-heading"
+      if (!has_outcomes) print "ERROR " label ": Task " task_no " missing '\''> **Outcomes**'\'' sub-heading"
+      if (!has_accept)   print "ERROR " label ": Task " task_no " missing '\''> **Acceptance criteria**'\'' sub-heading"
       in_block = 0
       has_ready = has_context = has_goal = has_outcomes = has_accept = 0
       task_no = ""
     }
 
-    /^### - \[[ x~>-]\] [0-9]+\. / {
-      flush_block()
-      in_block = 1
-      m = $0
-      sub(/^### - \[[ x~>-]\] /, "", m)
-      sub(/\..*$/, "", m)
-      task_no = m
-      next
-    }
-
     # Track `## Architecture` without consuming the line — the `## ` flush rule
-    # below must still see it. Only the message of the numbered-heading rule
-    # depends on it: the heading is an error either way.
+    # below must still see it.
     /^## / { in_arch = ($0 ~ /^## Architecture([[:space:]]|$)/) }
 
     /^### [0-9]+\. / {
@@ -451,26 +472,22 @@ validate_roadmap() {
       sub(/^### /, "", m)
       sub(/\..*$/, "", m)
       if (in_arch)
-        print "ERROR " label ": numbered sub-heading in ## Architecture reads as item " m " missing its checkbox — write a `- #" m " — …` bullet instead: " $0
-      else
-        print "ERROR " label ": Task " m " missing checkbox prefix '\''- [ ]'\''; roadmap-to-workflow auto-mark and item selection require every item to carry a checkbox"
+        print "ERROR " label ": numbered sub-heading in ## Architecture reads as item " m " — write a `- #" m " — …` bullet instead: " $0
+      else {
+        in_block = 1
+        task_no = m
+      }
       next
     }
-
-    # A top-level `### Spec references → <slug> §N` citation may appear inside an
-    # item (per docs/contract.md); it is NOT a block terminator. Skip it so it
-    # never prematurely flushes the item and triggers false missing-sub-heading
-    # errors — must come before the generic `^### ` flush rule below.
-    /^### Spec references/ { next }
 
     # A drifted item-heading ATTEMPT closes the block too, so this parser and
     # the driver'"'"'s Step 1 collector agree on what ends an item.
     /^#+[[:space:]]*[-*+]?[[:space:]]*\[[^]]?\]/ { flush_block(); next }
     /^#+[[:space:]]*[-*+][[:space:]]*[0-9]/       { flush_block(); next }
 
-    # Stop at next `### ` heading that is NOT a sub-heading of this block.
-    # Sub-headings inside the blockquote start with `> ### `, so they do not
-    # match `^### `. Other top-level `### ` headings end the block.
+    # Stop at the next `### ` heading: sub-headings inside the blockquote are
+    # bold lines (`> **Goal**`), never headings, so any top-level `### ` ends
+    # the block.
     /^### / { flush_block(); next }
     /^## /  { flush_block(); next }
     /^---[[:space:]]*$/ { flush_block(); next }
@@ -483,17 +500,16 @@ validate_roadmap() {
         # it is not pickable. flush_block() errors when this stays 0.
         if ($0 ~ /\*\*Ready description:\*\*/) has_ready = 1
         # Sub-headings MUST be inside the `**Ready description:**` blockquote
-        # (`> ### Goal`, etc.) — to-task / the driver plan agent strip `> `
-        # before parsing, so a top-level `### Goal` would not be recognized as
-        # the description body. Require the `> ` prefix; do not accept the
-        # bare form.
-        if ($0 ~ /^>[[:space:]]+### Context[[:space:]]*$/) has_context = 1
-        if ($0 ~ /^>[[:space:]]+### Goal[[:space:]]*$/) has_goal = 1
-        if ($0 ~ /^>[[:space:]]+### Outcomes[[:space:]]*$/) has_outcomes = 1
-        # `### Invariants` is an OPTIONAL sub-heading — not every item carries an
+        # (`> **Goal**`, etc.) — to-task / the driver plan agent strip `> `
+        # before parsing, so a bare `**Goal**` line outside the quote would not
+        # be recognized as the description body. Require the `> ` prefix.
+        if ($0 ~ /^>[[:space:]]+\*\*Context\*\*[[:space:]]*$/) has_context = 1
+        if ($0 ~ /^>[[:space:]]+\*\*Goal\*\*[[:space:]]*$/) has_goal = 1
+        if ($0 ~ /^>[[:space:]]+\*\*Outcomes\*\*[[:space:]]*$/) has_outcomes = 1
+        # `**Invariants**` is an OPTIONAL sub-heading — not every item carries an
         # invariant, so it is deliberately not tracked or required here (the
         # other four are mandatory). See docs/contract.md § Roadmap file format.
-        if ($0 ~ /^>[[:space:]]+### Acceptance criteria[[:space:]]*$/) has_accept = 1
+        if ($0 ~ /^>[[:space:]]+\*\*Acceptance criteria\*\*[[:space:]]*$/) has_accept = 1
       }
     }
 
@@ -517,10 +533,11 @@ validate_roadmap() {
   # has no `\b`, hence the match() loop. Items may sit below the section, so
   # refs resolve at END.
   awk_report '
-    /^### - \[[ x~>-]\] [0-9]+\. / {
-      m = $0; sub(/^### - \[[ x~>-]\] /, "", m); sub(/\..*$/, "", m)
-      items[m + 0] = 1
-      if ($0 ~ /^### - \[ \] /) open++
+    wait && /^[[:space:]]*$/ { next }
+    wait { wait = 0; if ($0 ~ /^- \[ \]([[:space:]]|$)/) { open++; next } }
+    !in_arch && /^### [0-9]+\. / {
+      m = $0; sub(/^### /, "", m); sub(/\..*$/, "", m)
+      items[m + 0] = 1; wait = 1
       next
     }
     /^## / {

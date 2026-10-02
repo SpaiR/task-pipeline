@@ -25,25 +25,44 @@ Behavioral decomposition first — items, phases, dependencies, settled with no 
 An item backlog, each item shaped like:
 
 ```markdown
-### - [ ] 1. <Task title>
+### 1. <Task title>
+
+- [ ] Done
 
 **Dependencies:** — / 1, 2, …
+
 **Model:** haiku | sonnet | opus      (optional per-item hint)
 
 **Ready description:**
 
-> ### Context
-> ### Goal
-> ### Outcomes
-> ### Invariants          (optional)
-> ### Acceptance criteria
+> **Context**
+>
+> …
+>
+> **Goal**
+>
+> …
+>
+> **Outcomes**
+>
+> …
+>
+> **Invariants**          (optional)
+>
+> …
+>
+> **Acceptance criteria**
+>
+> …
 ```
+
+Every block is its own paragraph, so the roadmap reads cleanly in a Markdown preview: the `- [ ] Done` status line renders as a checkbox, and the Ready description's sub-headings are bold lines inside one quote.
 
 Items describe **observable behavior** — no project-specific file or symbol names; those are decided when the item is picked up in [`to-task`](/reference/to-task).
 
 ## Specs
 
-If a load-bearing cross-item technical decision surfaces, `to-roadmap` does **not** inline it — it surfaces a recommendation to capture it via [`/task:to-spec`](/reference/to-spec), then the roadmap references it with a `Spec: [<slug>](../spec/<slug>.md)` header directly under its `# <Title>`, and items cite `### Spec references → [<slug>](../spec/<slug>.md) §N`. Both are Markdown links, so the reference is clickable in a viewer; the link text is the slug that carries the identity.
+If a load-bearing cross-item technical decision surfaces, `to-roadmap` does **not** inline it — it surfaces a recommendation to capture it via [`/task:to-spec`](/reference/to-spec), then the roadmap references it with a `Spec: [<slug>](../spec/<slug>.md)` header directly under its `# <Title>`, and items cite `> **Spec references:** [<slug>](../spec/<slug>.md) §N` on the last line of their Ready description. Both are Markdown links, so the reference is clickable in a viewer; the link text is the slug that carries the identity.
 
 ## Architecture
 
@@ -68,7 +87,7 @@ Every roadmap `to-roadmap` writes carries an `## Architecture` section — there
 - #3 before #6 — reason. Mirrored in item #6's `**Dependencies:**`.
 ```
 
-Real module paths and symbol names are expected here — the behavioral discipline binds only an item's `### Outcomes` / `### Goal` / `### Invariants`. A choice whose **reasoning** must survive re-derivation still belongs in a spec; this section cites it as `[<slug>](../spec/<slug>.md) §N` rather than restating it. From then on, `to-task` on an item — interactive or through `roadmap-to-workflow`'s per-item plan agent — reads the section as the **intended shape**: its Plan follows the named components and interfaces by default, and a step is free to depart when the real code disagrees, as long as it says why.
+Real module paths and symbol names are expected here — the behavioral discipline binds only an item's `**Outcomes**` / `**Goal**` / `**Invariants**`. A choice whose **reasoning** must survive re-derivation still belongs in a spec; this section cites it as `[<slug>](../spec/<slug>.md) §N` rather than restating it. From then on, `to-task` on an item — interactive or through `roadmap-to-workflow`'s per-item plan agent — reads the section as the **intended shape**: its Plan follows the named components and interfaces by default, and a step is free to depart when the real code disagrees, as long as it says why.
 
 **Specs vs. architecture** — the two divide cleanly. A spec says *why this form over that one*; the architecture section says *what goes where*. A component map that drifts into a spec is really architecture wearing the wrong hat.
 
@@ -101,7 +120,7 @@ validate: OK — 0 errors, 0 warnings
 
 ## Does not
 
-- Name project-specific files/symbols in `### Outcomes` / `### Goal` / `### Invariants`.
+- Name project-specific files/symbols in `**Outcomes**` / `**Goal**` / `**Invariants**`.
 - Plan implementation details — that's [`to-task`](/reference/to-task)'s job when the item is picked up.
 - Auto-check / auto-uncheck item checkboxes — `task:code-reviewer` ticks an item once its review passes, whether in a plain session or a [`roadmap-to-workflow`](/reference/roadmap-to-workflow) run, never here.
 - Modify any file other than the roadmap — specs are authored only by `to-spec`.

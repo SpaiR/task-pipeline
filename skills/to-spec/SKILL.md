@@ -106,13 +106,16 @@ Once the Step 2H inventory (or the Step 2C recap) is **printed** — no reply is
 - **Rationale:** the reasoning that must survive, so a later plan or executing session doesn't re-litigate it.
 - **Constrains:** what this pins for consumers, and what it deliberately leaves free.
 
+Each part starts its own paragraph, after a blank line: adjacent `**Decision:**` / `**Rationale:**` / `**Constrains:**` lines merge into one paragraph in a Markdown preview. The quoted intro under `# Spec: <Title>` is one sentence of your own on what this spec pins — never the contract's placeholder wording copied as-is.
+
 Keep one decision per section. Before saving, a quick self-check, fixed inline:
 
 1. Every decision is load-bearing: work would come out different if it were re-derived. No single-task details, no restated behavioral outcomes.
 2. **Every section passes the decision test.** Its **Decision** names a concrete technical artifact — a type, a format, a protocol, a boundary rule — and its **Rationale** names at least one alternative that was rejected, with why. A section that fails it is not a decision: one that restates a roadmap item ("a module will handle X") or lays out components and how items connect belongs in that roadmap's `## Architecture` section, which `to-roadmap` writes — drop it here and name it in the digest.
 3. Each `## N.` section stands alone — a reader who hasn't seen this chat understands the decision and why.
 4. No placeholders (`TBD`, `TODO`, `???`, `fill in`).
-5. Section numbers contiguous from 1 — the `### Spec references → [<slug>](../spec/<slug>.md) §N` citations that other artifacts carry depend on stable numbering.
+5. Section numbers contiguous from 1 — the `**Spec references:** [<slug>](../spec/<slug>.md) §N` citations that other artifacts carry depend on stable numbering.
+6. Each `**Decision:**` / `**Rationale:**` / `**Constrains:**` starts after a blank line, and the intro is a real sentence about this spec.
 
 ### Step 4: Save
 
@@ -147,7 +150,7 @@ The file is already written — to change any pin, just say so. Then the handoff
 ## Forbidden
 
 - Writing a `## Plan`, a step list, paths with line numbers, or implementation code. A spec pins decisions; it neither plans nor implements.
-- Capturing behavioral outcomes or single-task details — those belong in a task's `### Outcomes` / `### Acceptance criteria`.
+- Capturing behavioral outcomes or single-task details — those belong in a task's `**Outcomes**` / `**Acceptance criteria**`.
 - Capturing a component map, a module layout, or how an initiative's items connect — that is a roadmap's `## Architecture` section, written by `to-roadmap`.
 - Modifying any file but `.task/spec/<slug>.md`, or overwriting one silently. Stamping a `Spec:` header onto a task or roadmap is the referencing skill's job.
 - Writing a filler spec when no load-bearing decision was settled — stop and redirect instead.

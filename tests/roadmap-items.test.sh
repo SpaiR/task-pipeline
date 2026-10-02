@@ -22,22 +22,45 @@ Spec: [event-envelope](../spec/event-envelope.md)
 
 ## Phase 1
 
-### - [x] 1. Already shipped
+### 1. Already shipped
+
+- [x] Done
+
 **Dependencies:** —
 
-### - [~] 2. In progress elsewhere
+### 2. In progress elsewhere
+
+- [~] Done
+
 **Dependencies:** —
 
-### - [ ] 3. Open, depends on one
+### 3. Open, depends on one
+
+- [ ] Done
+
 **Dependencies:** 1, 2
-**Model:** haiku
-### Spec references → [event-envelope](../spec/event-envelope.md) §2
-**Ready description:**
-> ### Context
-> c
 
-### - [ ] 4. Open, no deps, no model hint
+**Model:** haiku
+
+**Ready description:**
+
+> **Context**
+>
+> c
+>
+> **Spec references:** [event-envelope](../spec/event-envelope.md) §2
+
+### 4. Open, no deps, no model hint
+- [ ] Done
 **Dependencies:** —
+
+### 5. No status line, never runs
+
+**Dependencies:** —
+
+### - [ ] 6. Checkbox left in the heading
+
+**Dependencies:** 4
 
 ## Out of scope
 
@@ -56,8 +79,12 @@ assert_contains "$I_OUT" "$(printf 'DONE\t1,2')" "5-state class counts as marked
 t_case "a stray Dependencies line outside an item is not billed to the last item"
 assert_eq "3" "$(grep -c . <<<"$I_OUT")" "two items plus the DONE line"
 
+t_case "a heading without a status line, or with a checkbox in it, is no item and steals no Dependencies"
+assert_eq "0" "$(grep -c -e '^5' -e '^6' <<<"$I_OUT")" "neither is reported"
+assert_contains "$I_OUT" "$(printf '4\t\tsonnet\tOpen, no deps, no model hint')" "item 4 keeps its own deps, not item 6's"
+
 t_case "a checked-off roadmap reports no items and a full DONE line"
-sed 's/^### - \[ \] /### - [x] /' "$repo/.task/roadmap/api-v2.md" >"$repo/.task/roadmap/shipped.md"
+sed 's/^- \[ \] Done$/- [x] Done/' "$repo/.task/roadmap/api-v2.md" >"$repo/.task/roadmap/shipped.md"
 i "$repo" shipped
 assert_exit 0 "$I_EXIT" "all marked"
 assert_eq "$(printf 'DONE\t1,2,3,4')" "$I_OUT" "only the DONE line"
@@ -82,7 +109,7 @@ chmod u+r "$repo/.task/roadmap/shipped.md"
 t_case "a byte that is not UTF-8 does not truncate the item list"
 # macOS awk decodes by locale and aborts on an invalid byte: the list once
 # stopped at that item, with no DONE line and an exit code no caller handles.
-printf '# L\n\n### - [x] 1. Done\n**Dependencies:** \342\200\224\n\n### - [ ] 2. Caf\351\n**Dependencies:** 1\n\n### - [ ] 3. After\n**Dependencies:** \342\200\224\n' \
+printf '# L\n\n### 1. Done\n\n- [x] Done\n\n**Dependencies:** \342\200\224\n\n### 2. Caf\351\n\n- [ ] Done\n\n**Dependencies:** 1\n\n### 3. After\n\n- [ ] Done\n\n**Dependencies:** \342\200\224\n' \
   >"$repo/.task/roadmap/latin1.md"
 LC_ALL=en_US.UTF-8 i "$repo" latin1
 assert_exit 0 "$I_EXIT" "collector ran"

@@ -25,7 +25,7 @@ A roadmap driver also names the **roadmap item to tick** — `#N` in an absolute
 ## Phase 0 — Intake
 
 1. Read the task artifact named in the invocation.
-2. Extract every `**Touches:**` path from `## Plan`. Union them into the **Touches set**. If the artifact has no `## Plan`, the Touches set is empty — say so, and treat the changed files of the diff (phase 1) as the review scope instead.
+2. Extract every `**Touches:**` path from `## Plan` — one per bullet under the label (older files list them inline on the label's line). Union them into the **Touches set**. If the artifact has no `## Plan`, the Touches set is empty — say so, and treat the changed files of the diff (phase 1) as the review scope instead.
 3. If the artifact carries `Spec:` header lines, read each referenced spec. A header is a Markdown link — `Spec: [<slug>](../spec/<slug>.md)` — so take `<slug>` from the link **text** and open `$AI_DIR/spec/<slug>.md`, where `$AI_DIR` is the `.task` directory holding the artifact's `task/` directory; never follow the relative link target, which resolves against your cwd rather than the artifact's directory. An older or hand-edited artifact may carry a bare `Spec: <slug>`; read it the same way. Spec decisions are **fixed anchors**: code that follows a spec decision you personally disagree with is not a defect. Re-litigating a spec is out of scope.
 4. Read `$AI_DIR/CLAUDE.md`, with `$AI_DIR` as in step 3 — never a cwd-relative `.task/CLAUDE.md`, which a linked worktree does not have. Note **Build and Tests** (the command(s) phase 5 runs) and **Commit Format** (phase 6 writes its commit to it). Reading the artifact in step 1 above usually pulls this file into context on its own, since the platform loads a nested `CLAUDE.md` when you read a file under its directory; read it explicitly anyway, so the phase never depends on that.
 5. Resolve the **roadmap item** phase 7 ticks. When the invocation named one, take it verbatim. Otherwise read the artifact's header lines above `---`: it needs both `Roadmap:` and `Source item: #N`. `Roadmap:` is a Markdown link, `Roadmap: [<slug>](../roadmap/<slug>.md)` — take `<slug>` from the link text, the same rule as `Spec:` above (a bare `Roadmap: <slug>` reads the same), and the path is `$AI_DIR/roadmap/<slug>.md`, with `$AI_DIR` as in step 3. Only one of the two headers present, or neither → there is no item to tick; that is not a defect.
@@ -155,8 +155,11 @@ N=<item number>
 ROADMAP="<absolute roadmap path>"
 N=${N#\#}
 awk -v n="$N" '
-  $0 ~ ("^### - \\[[ x~>-]\\] 0*" n "\\. ") { hits++; sub(/^### - \[ \]/, "### - [x]") } { print }
-  END { exit (hits == 1 ? 0 : 1) }
+  armed && /^[[:space:]]*$/ { print; next }
+  armed { armed = 0; if ($0 ~ /^- \[[ x~>-]\]([[:space:]]|$)/) { flips++; sub(/^- \[ \]/, "- [x]") } }
+  $0 ~ ("^### 0*" n "\\. ") { hits++; armed = 1 }
+  { print }
+  END { exit (hits == 1 && flips == 1 ? 0 : 1) }
 ' "$ROADMAP" > "$ROADMAP.tmp" \
   && mv "$ROADMAP.tmp" "$ROADMAP" && echo "MARK-OK #$N" \
   || { rm -f "$ROADMAP.tmp"; echo "MARK-FAIL #$N"; exit 1; }
@@ -166,7 +169,7 @@ awk -v n="$N" '
 It prints exactly one line; decide from **that line**, never from the exit code. The command is idempotent — an item already ticked is the desired end state and prints `MARK-OK` again — so a re-run can never turn a success into a failure.
 
 - **`MARK-OK #N`** → the item is ticked; the verdict stands.
-- **`MARK-FAIL #N`** → the roadmap has no unique heading for item N (renumbered, retitled, duplicated, or the file is missing). The file is left untouched. Your verdict becomes `FAIL <reference string> roadmap item #N: no unique '### - [ ] N.' heading — the work is in the tree, tick it by hand`: the code is fine, but a silent miss would make the next roadmap run re-implement work that already landed.
+- **`MARK-FAIL #N`** → the roadmap has no unique `### N.` heading with a `- [ ] Done` status line under it (renumbered, duplicated, status line missing, or the file is missing). The file is left untouched. Your verdict becomes `FAIL <reference string> roadmap item #N: no unique '### N.' heading with a status line — the work is in the tree, tick it by hand`: the code is fine, but a silent miss would make the next roadmap run re-implement work that already landed.
 
 **Mandatory output:** the command's stdout line, verbatim and on a line of its own, or `Roadmap: not applicable — no roadmap item` / `Roadmap: skipped — verdict is FAIL`.
 
