@@ -24,11 +24,14 @@ For a protocol, a cross-cutting data shape, or a "we picked X over Y because…"
 ```markdown
 # Spec: <Title>
 
-> One-line purpose.
+> <One sentence: which decisions this spec pins, and for what.>
 
 ## 1. <decision title>
+
 **Decision:** <what was chosen — concrete, real symbols/shapes expected here>
+
 **Rationale:** <the reasoning that must survive re-derivation>
+
 **Constrains:** <what this pins for consumers; what it leaves free>
 
 ## 2. …
@@ -63,7 +66,7 @@ validate: OK — 0 errors, 0 warnings
 ## Does not
 
 - Write a Plan, a step list, or implementation code — a spec pins decisions, it doesn't plan.
-- Capture behavioral outcomes or single-task details — those belong in a task's `### Outcomes` / `### Acceptance criteria`.
+- Capture behavioral outcomes or single-task details — those belong in a task's `**Outcomes**` / `**Acceptance criteria**`.
 - Capture a component map, a module layout, or how an initiative's items connect — that's a roadmap's `## Architecture` section, written by [`to-roadmap`](/reference/to-roadmap).
 - Wire the `Spec:` header into a task or roadmap — that's the referencing skill's job.
 - Write a filler spec when no real decision was settled — it stops and redirects instead.

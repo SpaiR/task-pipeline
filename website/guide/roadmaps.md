@@ -59,7 +59,7 @@ implement .task/task/<item-2-slug>.md
 The checkboxes are the source of truth. To see what's left:
 
 ```text
-grep '^### - \[ \]' .task/roadmap/api-v2-migration.md
+awk '/^### [0-9]+\. /{h=$0} /^- \[ \] Done/{print h}' .task/roadmap/api-v2-migration.md
 # every item still unchecked
 ```
 

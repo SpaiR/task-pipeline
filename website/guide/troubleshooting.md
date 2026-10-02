@@ -89,7 +89,7 @@ Nothing was written when this fires, so re-running the command after fixing the 
 
 **Symptom** — `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all` ends with `FAIL <N> error(s)`, preceded by `ERROR <label>: <message>` lines.
 
-**Cause** — a task or roadmap file drifted from the expected format: a missing `# <Title>` first line, no `---` separator, no `## Description`, a `## Plan` with zero `### Step N:` blocks, a roadmap item missing its checkbox prefix or a required sub-heading, a roadmap item heading that *nearly* matches the required form (`[X]` uppercase, a double space around the checkbox, `####`, or the checkbox deleted), a `**Dependencies:**` value that doesn't parse (use an em dash for none, or a comma-separated list of item numbers), one that cites a number with no matching item, one that lists its own item, or a file saved with CRLF line endings.
+**Cause** — a task or roadmap file drifted from the expected format: a missing `# <Title>` first line, no `---` separator, no `## Description`, a `## Plan` with zero `### Step N:` blocks, a roadmap item missing its `- [ ] Done` status line or a required sub-heading, a roadmap item heading that *nearly* matches the required form (a bullet before the number, or no space after the dot), a roadmap still in the pre-5.0 grammar (see [below](#migrate-roadmap)), a `**Dependencies:**` value that doesn't parse (use an em dash for none, or a comma-separated list of item numbers), one that cites a number with no matching item, one that lists its own item, or a file saved with CRLF line endings.
 
 **Fix** — read each `ERROR <label>:` line (it names the file and the exact problem) and fix the artifact by hand — these are plain Markdown files. Re-check with `validate.sh all`. It's an optional self-check, not a gate — only genuine structural `ERROR`s are worth fixing before you hand the file to an implementing session; a `WARN` never blocks anything.
 
@@ -115,7 +115,7 @@ Nothing was written when this fires, so re-running the command after fixing the 
 
 **Cause** — the auto-mark step is conditional on the task file carrying both `Roadmap:` and `Source item: #N` header lines, above the `---`. If the file was hand-created, those headers were edited out, or the item number doesn't match, `task:code-reviewer` has nothing to key the flip off of. (A `roadmap-to-workflow` run doesn't depend on the headers — the driver hands the reviewer the item number directly.) The reviewer also ticks nothing when its review fails.
 
-**Fix** — check the top of `.task/task/<item-slug>.md` for both header lines and a correct `#N`. Add them if missing (ASCII, above `---`, `Roadmap: [<slug>](../roadmap/<slug>.md)`) and re-run, or just tick the box yourself — it's a plain `- [ ]` → `- [x]` edit.
+**Fix** — check the top of `.task/task/<item-slug>.md` for both header lines and a correct `#N`. Add them if missing (ASCII, above `---`, `Roadmap: [<slug>](../roadmap/<slug>.md)`) and re-run, or just tick the box yourself — it's a plain `- [ ] Done` → `- [x] Done` edit on the status line under the item's heading.
 
 ### A roadmap-to-workflow run stops on a failed item
 
@@ -123,7 +123,50 @@ Nothing was written when this fires, so re-running the command after fixing the 
 
 **Fix** — read the failure digest, fix the item (edit `.task/task/<item-slug>.md`, or re-implement it by hand), tick its checkbox, then rerun `/task:roadmap-to-workflow <slug>`. Completed items stay checked, so the rerun only picks up the unchecked remainder. An item left unchecked is re-planned from the roadmap, and its task file regenerated — hand edits to it are lost, so change the item in the roadmap instead.
 
-One digest is worth reading closely: a review `FAIL` that says `no unique '### - [ ] N.' heading` means the item's work already landed and was committed, and only the checkbox is behind. The flip is idempotent, so this is never "the box was already ticked" — it means the roadmap has no unique `### - [ ] N.` heading for that item, because it was renumbered, retitled, or duplicated. Tick it by hand and rerun; there is nothing to re-implement.
+One digest is worth reading closely: a review `FAIL` that says `no unique '### N.' heading with a status line` means the item's work already landed and was committed, and only the checkbox is behind. The flip is idempotent, so this is never "the box was already ticked" — it means the roadmap has no unique `### N.` heading with a `- [ ] Done` line under it for that item, because it was renumbered, duplicated, or lost its status line. Tick it by hand and rerun; there is nothing to re-implement.
+
+### Migrating a roadmap to the 5.0 item grammar {#migrate-roadmap}
+
+**Symptom** — `validate.sh` reports `roadmap uses the pre-5.0 item grammar`, and `/task:roadmap-to-workflow` stops before running anything.
+
+**Cause** — the roadmap was captured before 5.0. Back then an item kept its checkbox inside the heading (`### - [ ] 1. Title`), its Ready description used quoted headings (`> ### Context`), and a spec citation was a `### Spec references → …` heading. A Markdown preview rendered that badly — a literal `- [ ]` in the heading, a grey box of big headings — so 5.0 moved the checkbox to a status line under the heading and turned the sub-headings into bold lines. No parser reads the old form any more.
+
+**Fix** — convert the file once, from the project root, then validate it:
+
+```bash
+ROADMAP=.task/roadmap/<slug>.md
+LC_ALL=C awk '
+  function out(s) { print s; last = s }
+  function quoted_text(s) { return s ~ /^>/ && s !~ /^>[[:space:]]*$/ }
+  # The checkbox leaves the heading for a status line under it.
+  match($0, /^### - \[[ x~>-]\] [0-9]+\. /) {
+    out("### " substr($0, 11)); out(""); out("- [" substr($0, 8, 1) "] Done")
+    next
+  }
+  # The spec citation becomes a bold label, quoted or not as it was.
+  /^(>[[:space:]]*)?### Spec references/ {
+    p = ($0 ~ /^>/) ? "> " : ""
+    if (p != "" && quoted_text(last)) out(">")
+    sub(/^(>[[:space:]]*)?### Spec references[[:space:]]*(→)?[[:space:]]*/, "")
+    out(p "**Spec references:** " $0)
+    next
+  }
+  # A quoted sub-heading becomes a bold line, its own paragraph.
+  /^>[[:space:]]*### / {
+    sub(/^>[[:space:]]*### /, ""); sub(/[[:space:]]+$/, "")
+    if (quoted_text(last)) out(">")
+    out("> **" $0 "**"); out(">")
+    next
+  }
+  # Fields and Spec: headers each get a paragraph of their own.
+  /^\*\*(Dependencies|Model|Ready description):\*\*/ { if (last != "") out(""); out($0); next }
+  /^Spec:[[:space:]]/ && last ~ /^Spec:[[:space:]]/ { out("") }
+  { out($0) }
+' "$ROADMAP" > "$ROADMAP.tmp" && mv "$ROADMAP.tmp" "$ROADMAP"
+bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" roadmap "$ROADMAP"
+```
+
+Every item keeps its number, title, state and text; only the layout around them changes. `.task/` is not under version control, so copy the file aside first if you want something to diff against. Task files need no migration: their format only gained blank lines, and the old layout still reads.
 
 ### A worktree can't find .task/ {#a-worktree-cant-find-task}
 
@@ -144,7 +187,7 @@ ls .task/task/
 grep -L '^## Plan' .task/task/*.md
 # task files with no Plan — validate rejects them; recapture with /task:to-task
 
-grep '^### - \[ \]' .task/roadmap/<slug>.md
+awk '/^### [0-9]+\. /{h=$0} /^- \[ \] Done/{print h}' .task/roadmap/<slug>.md
 # every item still unchecked in that roadmap
 ```
 

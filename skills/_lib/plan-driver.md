@@ -40,20 +40,26 @@ Two remaining `on-demand` cases, resolved distinctly:
 
 ### 4. Draft the Description, Plan and Tests
 
-- `## Description` — the why + the what, per `.task/CLAUDE.md` → Language (section labels themselves stay English). From a roadmap item: the why from `### Context`, the what from Goal / Outcomes / Invariants / Acceptance criteria. Fabricate nothing that was not actually discussed or written down.
+- `## Description` — the why + the what, per `.task/CLAUDE.md` → Language (section labels themselves stay English). From a roadmap item: the why from `**Context**`, the what from Goal / Outcomes / Invariants / Acceptance criteria. Fabricate nothing that was not actually discussed or written down.
 - `## Plan` — `### Step N:` blocks, three layers:
 
   ```markdown
   ### Step 1: {short action title}
+
   **Goal:** {the observable end state this step reaches — detailed enough to
   execute against without guessing. Do not compress a nuanced step into one
   line; do not pad a simple one either.}
-  **Touches:** `{full path}` `{full path}` {…every file this step changes}
+
+  **Touches:**
+
+  - `{full path}`
+  - `{full path}` ({symbol}, {symbol})
+
   **Logic:** {optional — pseudocode for non-obvious branching only. Omit
   entirely when Goal + Touches leave no ambiguity.}
   ```
 
-  Full paths from the project root in `Touches`, and where a file holds more than one unrelated concern, name the symbol(s) touched beside the path. A new file: `Goal` states its role, `Touches` still names it. `Logic` is the only place a pseudocode block or a `...` placeholder belongs. Order steps so none depends on a fact only a later step establishes.
+  Each field starts its own paragraph, after a blank line — adjacent lines merge into one paragraph in a Markdown preview. `Touches` is a bulleted list, one file per bullet: full paths from the project root, and where a file holds more than one unrelated concern, the symbol(s) touched in parentheses after the path. A new file: `Goal` states its role, `Touches` still names it. `Logic` is the only place a pseudocode block or a `...` placeholder belongs. Order steps so none depends on a fact only a later step establishes.
 - `## Tests` — only when `tests_required`. `### Test N: {what is asserted}` plus one line: the file path and the arrange/act/assert in prose, no code (the implementing session writes the real test). Each Plan step that satisfies a test references it by number in its `Goal`. When `tests_required` is `false`, omit the heading entirely — never leave an empty one.
 
 **Not part of the format:** no `Implement-Model:` stamp (model hints live only on roadmap items, as `**Model:**`), no `## Verification`, no `## Risks`.
@@ -63,7 +69,8 @@ Two remaining `on-demand` cases, resolved distinctly:
 Against the draft, before writing — fix inline rather than writing something already known to be broken:
 
 - [ ] Does `## Description` state the why, not just the what? (Fresh capture only.)
-- [ ] Does every `### Step N:` carry a non-empty `**Touches:**` with at least one real path?
+- [ ] Does every `### Step N:` carry a non-empty `**Touches:**` list with at least one real path?
+- [ ] Does each `**Goal:**` / `**Touches:**` / `**Logic:**` start after a blank line, with `Touches` as one bullet per file?
 - [ ] Is `**Logic:**` present only where Goal + Touches genuinely leave ambiguity?
 - [ ] `tests_required` true → is `## Tests` present, and does every step that satisfies a test name it by number?
 - [ ] `tests_required` false → is `## Tests` fully absent, with no empty heading?

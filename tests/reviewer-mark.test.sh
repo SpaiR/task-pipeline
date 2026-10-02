@@ -23,25 +23,54 @@ flip() {
   echo "exit=$?"
 }
 
-roadmap() { # <file> — a small roadmap with a title carrying a literal `[ ]`
+roadmap() { # <file> — a small roadmap with a title and a body carrying a literal `[ ]`
   cat >"$1" <<'EOF'
 # Roadmap
 
-### - [ ] 1. First item
-### - [x] 2. Already done
-### - [ ] 03. Zero-padded item
-### - [ ] 4. Handle the [ ] literal in titles
-### - [ ] 11. Eleventh item
+### 1. First item
+
+- [ ] Done
+
+**Dependencies:** —
+
+- [ ] a body checklist line, never the status
+
+### 2. Already done
+
+- [x] Done
+
+### 03. Zero-padded item
+- [ ] Done
+
+### 4. Handle the [ ] literal in titles
+
+- [ ] Done
+
+### 5. No status line
+
+**Dependencies:** —
+
+- [ ] a body checklist line, never the status
+
+### 11. Eleventh item
+
+- [ ] Done
 EOF
 }
 
+# status <n> <file> — the first non-blank line under heading N
+status() {
+  awk -v n="$1" 'go && NF { print; exit } $0 ~ ("^### 0*" n "\\. ") { go = 1 }' "$2"
+}
+
 t_case "an unchecked item is ticked and reports OK"
-f="$dir/a.md"; roadmap "$f"
+f="$dir/a.md"; roadmap "$f"; before=$(cat "$f")
 out=$(flip 1 "$f")
 assert_contains "$out" "MARK-OK #1" "stdout outcome"
 assert_contains "$out" "exit=0" "exit code"
-assert_contains "$(cat "$f")" "### - [x] 1. First item" "heading ticked"
-assert_contains "$(cat "$f")" "### - [ ] 11. Eleventh item" "#11 untouched by #1"
+assert_eq "- [x] Done" "$(status 1 "$f")" "status line ticked"
+assert_eq "- [ ] Done" "$(status 11 "$f")" "#11 untouched by #1"
+assert_eq "1" "$(diff <(printf '%s\n' "$before") "$f" | grep -c '^>')" "exactly one line changed"
 assert_eq "no" "$([ -e "$f.tmp" ] && echo yes || echo no)" "no temp file left"
 
 t_case "an already-ticked item is a no-op that still reports OK"
@@ -60,19 +89,26 @@ t_case "a zero-padded heading counts as the same item"
 f="$dir/d.md"; roadmap "$f"
 out=$(flip 3 "$f")
 assert_contains "$out" "MARK-OK #3" "matched 03."
-assert_contains "$(cat "$f")" "### - [x] 03. Zero-padded item" "heading ticked"
+assert_eq "- [x] Done" "$(status 3 "$f")" "status line directly under the heading ticked"
 
 t_case "a literal [ ] inside the title is left alone"
 f="$dir/e.md"; roadmap "$f"
 flip 4 "$f" >/dev/null
-assert_contains "$(cat "$f")" "### - [x] 4. Handle the [ ] literal in titles" "only the checkbox flipped"
+assert_contains "$(cat "$f")" "### 4. Handle the [ ] literal in titles" "heading untouched"
+assert_eq "- [x] Done" "$(status 4 "$f")" "only the status line flipped"
 
 t_case "a pasted #N still ticks the right item and echoes the bare number"
 f="$dir/h.md"; roadmap "$f"
 out=$(flip "#1" "$f")
 assert_contains "$out" "MARK-OK #1" "stdout outcome"
 assert_eq "no" "$(grep -q "##1" <<<"$out" && echo yes || echo no)" "no doubled hash"
-assert_contains "$(cat "$f")" "### - [x] 1. First item" "heading ticked"
+assert_eq "- [x] Done" "$(status 1 "$f")" "status line ticked"
+
+t_case "a heading with no status line fails, and a later checklist line is never ticked"
+f="$dir/i.md"; roadmap "$f"; before=$(cat "$f")
+out=$(flip 5 "$f")
+assert_contains "$out" "MARK-FAIL #5" "stdout outcome"
+assert_eq "$before" "$(cat "$f")" "file unchanged"
 
 t_case "a path with a space works"
 mkdir -p "$dir/with space"; f="$dir/with space/r.md"; roadmap "$f"
@@ -88,7 +124,7 @@ assert_eq "$before" "$(cat "$f")" "file unchanged"
 assert_eq "no" "$([ -e "$f.tmp" ] && echo yes || echo no)" "temp file removed"
 
 t_case "a duplicated item number fails and leaves the file untouched"
-f="$dir/g.md"; roadmap "$f"; printf '### - [ ] 1. Duplicate first\n' >>"$f"; before=$(cat "$f")
+f="$dir/g.md"; roadmap "$f"; printf '\n### 1. Duplicate first\n\n- [ ] Done\n' >>"$f"; before=$(cat "$f")
 out=$(flip 1 "$f")
 assert_contains "$out" "MARK-FAIL #1" "stdout outcome"
 assert_eq "$before" "$(cat "$f")" "file unchanged"

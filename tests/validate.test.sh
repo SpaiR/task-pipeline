@@ -112,7 +112,7 @@ assert_contains "$V_OUT" "Spec: nosuch" "dangling spec still warned"
 
 t_case "duplicate item numbers are still caught past a non-UTF-8 byte"
 mkdir -p "$repo/.task/roadmap"
-printf '# R\n\n### - [ ] 1. Caf\351\n\n### - [ ] 1. Again\n' >"$repo/.task/roadmap/latin1.md"
+printf '# R\n\n### 1. Caf\351\n\n- [ ] Done\n\n### 1. Again\n\n- [ ] Done\n' >"$repo/.task/roadmap/latin1.md"
 LC_ALL=en_US.UTF-8 v "$repo" roadmap latin1
 assert_exit 1 "$V_EXIT" "duplicate is an error"
 assert_contains "$V_OUT" "duplicate" "names the duplicate"
@@ -121,6 +121,81 @@ t_case "a roadmap with a duplicate item number is an error"
 mkdir -p "$repo/.task/roadmap"
 cat >"$repo/.task/roadmap/dup.md" <<'MD'
 # Dup roadmap
+
+### 1. First
+
+- [ ] Done
+
+**Dependencies:** —
+
+**Ready description:**
+
+> **Context**
+>
+> c
+>
+> **Goal**
+>
+> g
+>
+> **Outcomes**
+>
+> o
+>
+> **Acceptance criteria**
+>
+> a
+
+### 1. Also first
+
+- [ ] Done
+
+**Dependencies:** —
+
+**Ready description:**
+
+> **Context**
+>
+> c
+>
+> **Goal**
+>
+> g
+>
+> **Outcomes**
+>
+> o
+>
+> **Acceptance criteria**
+>
+> a
+MD
+v "$repo" roadmap dup
+assert_exit 1 "$V_EXIT" "duplicate number"
+assert_contains "$V_OUT" "duplicate item number 1" "names the number"
+
+t_case "a roadmap in the 5.0 item grammar validates clean"
+sed 's/^### 1\. Also first/### 2. Second/' "$repo/.task/roadmap/dup.md" >"$repo/.task/roadmap/clean.md"
+v "$repo" roadmap clean
+assert_exit 0 "$V_EXIT" "clean"
+assert_contains "$V_OUT" "OK 0 errors, 0 warning(s)" "no finding"
+
+t_case "a missing bold sub-heading is named in its new form"
+grep -v '^> \*\*Goal\*\*$' "$repo/.task/roadmap/clean.md" >"$repo/.task/roadmap/nogoal.md"
+v "$repo" roadmap nogoal
+assert_exit 1 "$V_EXIT" "missing Goal"
+assert_contains "$V_OUT" "missing '> **Goal**' sub-heading" "names the bold marker"
+
+t_case "an item heading with no status line under it is an error"
+grep -v '^- \[ \] Done$' "$repo/.task/roadmap/clean.md" >"$repo/.task/roadmap/nostatus.md"
+v "$repo" roadmap nostatus
+assert_exit 1 "$V_EXIT" "missing status"
+assert_contains "$V_OUT" "Task 1 has no status line" "names item 1"
+assert_contains "$V_OUT" "Task 2 has no status line" "names item 2"
+
+t_case "a pre-5.0 roadmap is one error that points at the migration"
+cat >"$repo/.task/roadmap/old.md" <<'MD'
+# Old roadmap
 
 ### - [ ] 1. First
 **Dependencies:** —
@@ -133,53 +208,43 @@ cat >"$repo/.task/roadmap/dup.md" <<'MD'
 > o
 > ### Acceptance criteria
 > a
-
-### - [ ] 1. Also first
-**Dependencies:** —
-**Ready description:**
-> ### Context
-> c
-> ### Goal
-> g
-> ### Outcomes
-> o
-> ### Acceptance criteria
-> a
 MD
-v "$repo" roadmap dup
-assert_exit 1 "$V_EXIT" "duplicate number"
-assert_contains "$V_OUT" "duplicate item number 1" "names the number"
+v "$repo" roadmap old
+assert_exit 1 "$V_EXIT" "old grammar"
+assert_contains "$V_OUT" "pre-5.0 item grammar" "names the grammar"
+assert_contains "$V_OUT" "#migrate-roadmap" "points at the migration"
+assert_contains "$V_OUT" "FAIL 1 error(s)" "one error, no follow-on noise"
 
 t_case "item numbers compare numerically — 1. and 01. are a duplicate"
-sed 's/^### - \[ \] 1\. Also first/### - [ ] 01. Also first/' \
+sed 's/^### 1\. Also first/### 01. Also first/' \
   "$repo/.task/roadmap/dup.md" >"$repo/.task/roadmap/dup01.md"
 v "$repo" roadmap dup01
 assert_exit 1 "$V_EXIT" "leading-zero duplicate"
 assert_contains "$V_OUT" "duplicate item number 1" "names the number once"
 
 t_case "an item numbered 0 is an error — item numbers start at 1"
-sed 's/^### - \[ \] 1\. Also first/### - [ ] 0. Zeroth/' \
+sed 's/^### 1\. Also first/### 0. Zeroth/' \
   "$repo/.task/roadmap/dup.md" >"$repo/.task/roadmap/zero.md"
 v "$repo" roadmap zero
 assert_exit 1 "$V_EXIT" "item 0"
 assert_contains "$V_OUT" "item numbers start at 1" "names the rule"
 
 t_case "a dependency on item 0 is an error"
-sed 's/^### - \[ \] 1\. Also first/### - [ ] 2. Second/; s/^\*\*Dependencies:\*\* —$/**Dependencies:** 0/' \
+sed 's/^### 1\. Also first/### 2. Second/; s/^\*\*Dependencies:\*\* —$/**Dependencies:** 0/' \
   "$repo/.task/roadmap/dup.md" >"$repo/.task/roadmap/zerodep.md"
 v "$repo" roadmap zerodep
 assert_exit 1 "$V_EXIT" "dependency 0"
 assert_contains "$V_OUT" "depends on item 0 — item numbers start at 1" "names the dependency"
 
 t_case "a dependency on a number with no item heading is an error"
-sed 's/^### - \[ \] 1\. Also first/### - [ ] 2. Second/; s/^\*\*Dependencies:\*\* —$/**Dependencies:** 9/' \
+sed 's/^### 1\. Also first/### 2. Second/; s/^\*\*Dependencies:\*\* —$/**Dependencies:** 9/' \
   "$repo/.task/roadmap/dup.md" >"$repo/.task/roadmap/dangling.md"
 v "$repo" roadmap dangling
 assert_exit 1 "$V_EXIT" "dangling dependency"
 assert_contains "$V_OUT" "which has no item heading in this file" "names the missing item"
 
 t_case "CRLF line endings in a roadmap are an error"
-sed 's/^### - \[ \] 1\. Also first/### - [ ] 2. Second/' "$repo/.task/roadmap/dup.md" \
+sed 's/^### 1\. Also first/### 2. Second/' "$repo/.task/roadmap/dup.md" \
   | awk '{ printf "%s\r\n", $0 }' >"$repo/.task/roadmap/crlf.md"
 v "$repo" roadmap crlf
 assert_exit 1 "$V_EXIT" "CRLF"
@@ -195,28 +260,52 @@ arch_roadmap() {
     cat <<'MD'
 ## Phase 1 — Core
 
-### - [ ] 1. First
+### 1. First
+
+- [ ] Done
+
 **Dependencies:** —
+
 **Ready description:**
-> ### Context
+
+> **Context**
+>
 > c
-> ### Goal
+>
+> **Goal**
+>
 > g
-> ### Outcomes
+>
+> **Outcomes**
+>
 > o
-> ### Acceptance criteria
+>
+> **Acceptance criteria**
+>
 > a
 
-### - [ ] 2. Second
+### 2. Second
+
+- [ ] Done
+
 **Dependencies:** 1
+
 **Ready description:**
-> ### Context
+
+> **Context**
+>
 > c
-> ### Goal
+>
+> **Goal**
+>
 > g
-> ### Outcomes
+>
+> **Outcomes**
+>
 > o
-> ### Acceptance criteria
+>
+> **Acceptance criteria**
+>
 > a
 
 ## Out of scope
@@ -285,7 +374,7 @@ arch_roadmap "$repo/.task/roadmap/arch-done.md" '## Architecture
 ### Components
 - `Bus` — new · `src/bus` — events.
 '
-sed -i.bak 's/^### - \[ \] /### - [x] /' "$repo/.task/roadmap/arch-done.md" && rm -f "$repo/.task/roadmap/arch-done.md.bak"
+sed -i.bak 's/^- \[ \] Done$/- [x] Done/' "$repo/.task/roadmap/arch-done.md" && rm -f "$repo/.task/roadmap/arch-done.md.bak"
 v "$repo" roadmap arch-done
 assert_exit 0 "$V_EXIT" "all items checked"
 assert_contains "$V_OUT" "OK 0 errors, 0 warning(s)" "no sketches WARN once nothing is left to plan"

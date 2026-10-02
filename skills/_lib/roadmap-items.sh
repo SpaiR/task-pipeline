@@ -40,24 +40,29 @@ ROADMAP=$(resolve_artifact_path roadmap "$arg")
 # fails (an unreadable file) is exit 1 too: its partial list must never run.
 LC_ALL=C awk '
   function flush() { if (pend) { print n "\t" deps "\t" (model==""?"sonnet":model) "\t" title; pend=0 } }
-  /^### - \[[ x~>-]\] [0-9]+\. / {
-    flush()
-    if ($0 ~ /^### - \[ \] /) {                     # unchecked item — start capturing
-      n=$0;     sub(/^### - \[ \] /,"",n); sub(/\..*/,"",n)
-      title=$0; sub(/^### - \[ \] [0-9]+\. /,"",title)
-      model=""; deps=""; pend=1
-    } else {                                        # already marked — the driver
-      m=$0; sub(/^### - \[[x~>-]\] /,"",m); sub(/\..*/,"",m)   # needs these to know
-      donelist = (donelist=="" ? m : donelist "," m)             # which deps are met
+  # An item is a `### N. <title>` heading plus its status line, the first
+  # non-blank line under it. The heading arms the pass; the status line decides
+  # whether the item is captured or only counted as met. A heading with no
+  # status line is neither: validate.sh names it, and it never runs.
+  wait && /^[[:space:]]*$/ { next }
+  wait {
+    wait=0
+    if ($0 ~ /^- \[ \]([[:space:]]|$)/) { model=""; deps=""; pend=1; next }   # unchecked — capture
+    if ($0 ~ /^- \[[x~>-]\]([[:space:]]|$)/) {                                # marked — the driver
+      donelist = (donelist=="" ? n : donelist "," n)                          # needs these to know
+      next                                                                    # which deps are met
     }
+  }
+  /^### [0-9]+\. / {
+    flush()
+    n=$0;     sub(/^### /,"",n); sub(/\..*/,"",n)
+    title=$0; sub(/^### [0-9]+\. /,"",title)
+    wait=1
     next
   }
-  # `### Spec references → …` is a top-level heading that lives INSIDE an item
-  # (the same tolerance validate.sh grants it), so it is NOT a terminator — it
-  # may sit above **Dependencies:**, and flushing here would drop them.
-  /^### Spec references/ { next }
-  # A heading that ATTEMPTED to be an item and drifted (`[X]`, a double space
-  # after the checkbox, `####`, a missing `- `) closes the current item.
+  # A heading that ATTEMPTED to be an item and drifted (a checkbox left in the
+  # heading as in the pre-5.0 grammar, a bullet before the number) closes the
+  # current item.
   # Otherwise its Dependencies/Model are attributed to the item ABOVE it — a
   # phantom dependency, a wrong wave, or the wrong model, with no signal.
   # Matched the same way `validate.sh` reports it, so both parsers agree on what

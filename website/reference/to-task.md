@@ -26,7 +26,9 @@ Any task that gets its own file. `to-task` is fresh-only — it always drafts a 
 
 ```markdown
 # {Short task title}
+
 Spec: [{spec-slug}](../spec/{spec-slug}.md)   (one line per relevant spec; omitted if none)
+
 ---
 ## Description
 
@@ -35,8 +37,14 @@ Spec: [{spec-slug}](../spec/{spec-slug}.md)   (one line per relevant spec; omitt
 ## Plan
 
 ### Step 1: {short action title}
+
 **Goal:** {the observable end state this step reaches}
-**Touches:** `path/one` `path/two`
+
+**Touches:**
+
+- `path/one`
+- `path/two`
+
 **Logic:** {optional — pseudocode, only when the how is non-obvious}
 
 ## Tests                 (optional; per Testing Policy)

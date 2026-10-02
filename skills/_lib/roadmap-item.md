@@ -41,19 +41,19 @@ them, never a literal `<slug>`.
 ## 3. Read the ready description
 
 Read the item's `**Ready description:**` blockquote. Its sub-headings are
-quoted — `> ### Context` / `> ### Goal` / `> ### Outcomes` / `> ### Invariants` /
-`> ### Acceptance criteria` — so strip the `> ` prefix as you read. `### Context`
+quoted bold lines — `> **Context**` / `> **Goal**` / `> **Outcomes**` / `> **Invariants**` /
+`> **Acceptance criteria**` — so strip the `> ` prefix as you read. `**Context**`
 becomes the Description's "why"; the rest folds into the "what".
-`### Acceptance criteria` entries carry into `## Tests` verbatim as test intents
+`**Acceptance criteria**` entries carry into `## Tests` verbatim as test intents
 when tests are required.
 
 `validate.sh` makes both the label and the blockquote a hard ERROR, so a bare
-unquoted `### Context` means the roadmap is malformed — not that the shape is
+unquoted `**Context**` means the roadmap is malformed — not that the shape is
 optional.
 
 ## 4. Collect the specs
 
-Two sources, both slugs: the item's own `### Spec references → [<slug>](../spec/<slug>.md) §N`
+Two sources, both slugs: the item's own `> **Spec references:** [<slug>](../spec/<slug>.md) §N`
 citations, and the roadmap's own `Spec:` header lines. Hold the distinct slugs —
 they become the task's `Spec:` headers, and each `$AI_DIR/spec/<slug>.md` is read
 as a fixed anchor before drafting.

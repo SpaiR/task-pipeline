@@ -110,7 +110,7 @@ Every reference from one `.task/` artifact to another is written as a **Markdown
 | `task.md` header | `Roadmap: [<slug>](../roadmap/<slug>.md)` |
 | `task.md` header | `Spec: [<slug>](../spec/<slug>.md)` |
 | roadmap header | `Spec: [<slug>](../spec/<slug>.md)` |
-| roadmap item citation | `### Spec references → [<slug>](../spec/<slug>.md) §N` |
+| roadmap item citation | `> **Spec references:** [<slug>](../spec/<slug>.md) §N` |
 | roadmap `## Architecture` citation | `[<slug>](../spec/<slug>.md) §N`, inline in a bullet |
 | `## Execution` pointer | `> Read [.task/CLAUDE.md](../CLAUDE.md) and follow its …` |
 
@@ -130,17 +130,27 @@ One format, produced by `to-task` and by the driver's per-item plan agent — bo
 
 ```markdown
 # <Title>
+
 Roadmap: [<slug>](../roadmap/<slug>.md)   (optional; roadmap items only — load-bearing)
+
 Source item: #N                           (optional; the item number in the roadmap)
+
 Spec: [<slug>](../spec/<slug>.md)         (optional, repeatable; each cites a spec anchor)
+
 ---
 ## Description
 Why + what, distilled from the chat.
 
 ## Plan                  (always written; see the rule below)
 ### Step 1: <short title>
+
 **Goal:** <the observable end state this step reaches>
-**Touches:** `path/one` `path/two`
+
+**Touches:**
+
+- `path/one`
+- `path/two` (<symbol>)
+
 **Logic:** <optional — how, only when non-obvious>
 
 ### Step 2: ...
@@ -160,8 +170,9 @@ Rules:
 - **`Spec:`** is an optional, **repeatable** header line above `---`. Each one names a `.task/spec/<slug>.md` the executing session reads as a fixed technical anchor before implementing (see `## Executing a task`). Load-bearing; keep it **ASCII and above `---`**. One task may carry several.
 - **Cross-artifact headers are Markdown links** — see [§ Cross-artifact references](#cross-artifact-references) for the form and the one rule that keeps them safe.
 - **`---`** on its own line separates the header block from the body.
+- **Every header line is its own paragraph**, with a blank line after it — the title's included. A Markdown preview merges adjacent lines into one paragraph, and a line directly above `---` turns the whole header block into a setext heading. The parsers read the header line by line, so the blank lines cost them nothing.
 - **`## Description`** is mandatory. It carries the "why + what" from the chat.
-- **`## Plan`** is mandatory: every producer writes it, and `validate.sh` errors on a task file without one. It uses the three-layer step contract — **Goal / Touches / Logic**. `Goal` is the observable target; `Touches` lists the files (and scopes review fixes); `Logic` is optional guidance. Each step is a `### Step N:` block.
+- **`## Plan`** is mandatory: every producer writes it, and `validate.sh` errors on a task file without one. It uses the three-layer step contract — **Goal / Touches / Logic**. `Goal` is the observable target; `Touches` lists the files (and scopes review fixes), one bullet per file; `Logic` is optional guidance. Each step is a `### Step N:` block, and each field in it starts its own paragraph after a blank line, for the same preview reason.
 - **`## Tests`** is optional. When present, each `### Test N:` block states one assertion. `.task/CLAUDE.md` → Testing Policy governs whether the task warrants tests.
 - **`## Execution`** is a **one-line pointer stamped verbatim by every `to-task` run and by the driver's per-item plan agent** (both through `write-task.sh`; roadmaps and specs carry none) — the exact blockquote shown above, agent-facing English, never translated and never expanded back into instructions. The instructions themselves live once in `.task/CLAUDE.md` → `## Executing a task`, so editing them there reaches artifacts written earlier. The pointer is still load-bearing: the platform auto-loads `.task/CLAUDE.md` only for file-read tools, so a session that opens the artifact with `cat` would see no instructions without it.
 
@@ -183,13 +194,14 @@ The `--force` is earned by the header match of `roadmap-item.md` step 5: `Roadma
 
 ## Roadmap file format (`.task/roadmap/<slug>.md`)
 
-Produced by `to-roadmap`, `## Architecture` section included, in one write; user-edited thereafter. `roadmap-to-workflow` reads it through `roadmap-items.sh` to find the unchecked items for the driver, and `task:code-reviewer`'s last phase flips one `- [ ]` → `- [x]` per item once its review passes (auto-mark — see [§ Agent layer](#agent-layer-agents)).
+Produced by `to-roadmap`, `## Architecture` section included, in one write; user-edited thereafter. `roadmap-to-workflow` reads it through `roadmap-items.sh` to find the unchecked items for the driver, and `task:code-reviewer`'s last phase flips one status line `- [ ] Done` → `- [x] Done` per item once its review passes (auto-mark — see [§ Agent layer](#agent-layer-agents)).
 
 Whole-file skeleton, in this order:
 
 ```markdown
 # <Title>                     ← line 1, the document's own H1
-Spec: [<slug>](../spec/<slug>.md)     (0..n, directly under the title, above the intro)
+Spec: [<slug>](../spec/<slug>.md)     (0..n, directly under the title, above the intro;
+                                       a blank line between two of them)
 
 <intro prose: what the initiative is, in a paragraph or two>
 
@@ -207,34 +219,48 @@ Item numbers run **continuously across the whole file** — never restarted per 
 Each item:
 
 ```markdown
-### - [ ] 1. <Task title>
+### 1. <Task title>
+
+- [ ] Done
 
 **Dependencies:** — / 1, 2, ...
+
 **Model:** haiku | sonnet | opus      (optional per-item hint)
 
 **Ready description:**
 
-> ### Context
+> **Context**
+>
 > Why this task, what it unblocks. Distinct from Goal.
 >
-> ### Goal
+> **Goal**
+>
 > The target state. Behavioral — no project file/symbol names.
 >
-> ### Outcomes
+> **Outcomes**
+>
 > - Observable property of the system after this task.
 >
-> ### Invariants          (optional — omit when the item has none)
+> **Invariants**          (optional — omit when the item has none)
+>
 > - Contract that must hold across the change.
 >
-> ### Acceptance criteria
+> **Acceptance criteria**
+>
 > - Testable assertion.
+>
+> **Spec references:** [<slug>](../spec/<slug>.md) §N      (optional, repeatable)
 ```
 
-Field labels and blockquote sub-headings (`### Context` / `### Goal` / `### Outcomes` / `### Invariants` / `### Acceptance criteria`, `**Dependencies:**`, `**Model:**`) stay English; prose follows `.task/CLAUDE.md` → Language. The same split applies to the surrounding file structure (`## Prerequisites`, phase summary table, `## Out of scope`, `## Backlinks`).
+The item is the heading **plus its status line**: the first non-blank line under `### N. <title>` is `- [ ] Done`, a checkbox a Markdown preview renders as one. The checkbox never sits in the heading itself, where a preview prints it as literal text. The Ready description's sub-headings are quoted **bold lines**, never headings, each its own paragraph between bare `>` lines; every field outside the quote is its own paragraph too, since a preview merges adjacent lines.
+
+Field labels, the status line and blockquote sub-headings (`- [ ] Done`, `**Context**` / `**Goal**` / `**Outcomes**` / `**Invariants**` / `**Acceptance criteria**`, `**Spec references:**`, `**Dependencies:**`, `**Model:**`) stay English; prose follows `.task/CLAUDE.md` → Language. The same split applies to the surrounding file structure (`## Prerequisites`, phase summary table, `## Out of scope`, `## Backlinks`).
+
+**The pre-5.0 grammar is not read.** Before 5.0 the checkbox sat in the heading (`### - [ ] N. <title>`), the sub-headings were quoted `### ` headings, and the citation was a `### Spec references → …` heading. No parser accepts that form: `validate.sh` names it in one error and points at the migration recipe on the docs site (guide › troubleshooting, `#migrate-roadmap`).
 
 Load-bearing item fields for `roadmap-to-workflow`:
 
-- **Checkbox state** — the item heading's checkbox is a **5-state** class, `[ x~>-]`. `[ ]` is unchecked (eligible to run); `[x]` / `[~]` / `[>]` / `[-]` all count as **already-marked / not-eligible** — for progress counting (`roadmap.sh:roadmap_progress_counts`), the reviewer's auto-mark, and wave dependency-satisfaction. Do **not** narrow it to `[ x]` only: `roadmap.sh`, `validate.sh`, and `roadmap-items.sh` (whose `DONE` line feeds `computeWaves`) all key on the full class.
+- **Checkbox state** — the status line's checkbox is a **5-state** class, `[ x~>-]`. `[ ]` is unchecked (eligible to run); `[x]` / `[~]` / `[>]` / `[-]` all count as **already-marked / not-eligible** — for progress counting (`roadmap.sh:roadmap_progress_counts`), the reviewer's auto-mark, and wave dependency-satisfaction. Do **not** narrow it to `[ x]` only: `roadmap.sh`, `validate.sh`, and `roadmap-items.sh` (whose `DONE` line feeds `computeWaves`) all key on the full class.
 - **`**Dependencies:**`** — `—` (none) or a comma-separated list of item numbers. `—` is the form `to-roadmap` emits; `roadmap-items.sh` — the parser that feeds the driver — also tolerates `-`, `none`, and `n/a` as "no dependency", since roadmaps are hand-edited. Anything else is read as a dependency on an item number, so an unrecognised word becomes a phantom dependency and a hard stop — `validate.sh roadmap` now catches both that and a number with no matching item, before a run can trip on it. The driver **topologically sorts** items into dependency-ordered **waves** (`computeWaves`): items in the same wave have no unmet dependency and run in parallel; a barrier separates waves.
 - **`**Model:**`** — optional per-item hint (`haiku` / `sonnet` / `opus`). The driver passes it as `opts.model` to the per-item implement agent, and scales the plan stage down for a `haiku` hint (sonnet planner at low effort instead of opus). It is **not** validated — a missing or off-list value simply means no hint (defaults apply).
 
@@ -253,7 +279,7 @@ Spec: [<slug>](../spec/<slug>.md)
 
 Line 1 of a roadmap is therefore always its `# <Title>`, as in every other artifact. (Earlier versions put the `Spec:` lines *above* the title, which left a Markdown viewer rendering a stray line before the document's own H1. `validate.sh` never checked a roadmap's line 1, so files in the old shape still validate — nothing needs migrating.)
 
-Items cite specific decisions as `### Spec references → [<slug>](../spec/<slug>.md) §N` — the slug qualifier is required, since several specs may be reachable. Both the header and the citation follow [§ Cross-artifact references](#cross-artifact-references): the label is the identity, the href is for viewers.
+Items cite specific decisions as `> **Spec references:** [<slug>](../spec/<slug>.md) §N`, the last line of the Ready description — the slug qualifier is required, since several specs may be reachable. Both the header and the citation follow [§ Cross-artifact references](#cross-artifact-references): the label is the identity, the href is for viewers.
 
 When `roadmap-to-workflow` runs the roadmap, it passes these spec paths to each item's plan agent; when `to-task` opens an item by hand, they carry the relevant `Spec:` headers onto the task file so the executing session reads them per `## Executing a task`.
 
@@ -280,12 +306,12 @@ Every roadmap `to-roadmap` writes carries one `## Architecture` section — an o
 - #3 before #6 — reason. Mirrored in item #6's `**Dependencies:**`.
 ```
 
-- **Real names are expected here** — the behavioral rule binds only an item's `### Outcomes` / `### Goal` / `### Invariants`. What stays out is plan-level detail: no `file:line`, no step lists, no code block over 5 lines. A choice whose *reasoning* must survive re-derivation belongs in a spec, which the section then cites.
-- **Items are referenced as `#N` inside bullets, never as headings.** A `### <digits>.` sub-heading reads as an item missing its checkbox, and a repeated `### - [ ] N.` heading breaks the driver's one-heading-per-item mark gate.
+- **Real names are expected here** — the behavioral rule binds only an item's `**Outcomes**` / `**Goal**` / `**Invariants**`. What stays out is plan-level detail: no `file:line`, no step lists, no code block over 5 lines. A choice whose *reasoning* must survive re-derivation belongs in a spec, which the section then cites.
+- **Items are referenced as `#N` inside bullets, never as headings.** A `### <digits>.` sub-heading reads as a second copy of item N, which breaks the reviewer's one-heading-per-item mark gate.
 - **It is intended shape, not a fixed anchor.** A spec is honored verbatim; this section is what the planner follows unless the code forces otherwise, and a deviation carries its reason in the plan.
 - **Who reads it:** the planners — `to-task` on an item and the driver's per-item plan agent, both through `skills/_lib/plan-driver.md` § Core step 1, which takes the roadmap `roadmap-item.md` resolved (or the driver's prompt names). The executing session and `task:code-reviewer` do not: by then the section is embodied in the Plan's `Touches` and `Goal`s, and the reviewer's fixed anchors stay the specs. The Description stays behavioral either way: technical shape enters only through the Plan.
 - Headings (`## Architecture`, `### Components`, `### Interfaces between items`, `### Item sketches`, `### Technical ordering`) stay English; prose, the intro blockquote included, follows `.task/CLAUDE.md` → Language.
-- No parser consumes the section: item counting, `roadmap-items.sh` and the reviewer's roadmap flip all key on `### - [ ] N.` headings and pass it by, wherever it sits. `validate.sh` checks it advisory-only (see [§ validate.sh](#validatesh-optional-self-check-not-a-gate)).
+- No parser consumes the section: item counting, `roadmap-items.sh` and the reviewer's roadmap flip all key on `### N.` headings with a status line and pass it by, wherever it sits. `validate.sh` checks it advisory-only (see [§ validate.sh](#validatesh-optional-self-check-not-a-gate)).
 
 ### Roadmap link sections
 
@@ -303,18 +329,20 @@ Produced by `to-spec`; user-edited thereafter. A **standalone** home for load-be
 ```markdown
 # Spec: <Title>
 
-> One-line purpose. Load-bearing technical decisions for <topic> — NOT a full
-> implementation plan (the plan owns that). One numbered section per decision;
-> tasks and roadmap items cite sections as
-> `### Spec references → [<slug>](../spec/<slug>.md) §N`.
+> <One sentence of your own: which technical decisions this spec pins, and for what.>
 
 ## 1. <decision title>
+
 **Decision:** <what was chosen>
+
 **Rationale:** <why — the reasoning that must survive, not be re-litigated>
+
 **Constrains:** <what this pins for consumers; what it leaves free>
 
 ## 2. ...
 ```
+
+The intro is written for this spec, never this template's wording. Each section has one numbered decision; tasks and roadmap items cite it as `**Spec references:** [<slug>](../spec/<slug>.md) §N`. Each of the three parts starts its own paragraph after a blank line — a Markdown preview merges adjacent lines into one paragraph.
 
 **The decision test.** Every section's **Decision** names a concrete technical artifact — a type, a format, a protocol, a boundary rule — and its **Rationale** names at least one rejected alternative. A section that fails it is not a decision: a restated roadmap item or a component layout is an initiative's technical shape, which lives in the roadmap's `## Architecture` section ([§ Roadmap architecture section](#roadmap-architecture-section)) and is written by `to-roadmap`, never by `to-spec`. The two divide cleanly — the section says *what goes where*, the spec says *why this form over that one* — and the section cites the spec where a shape it describes is pinned.
 
@@ -368,12 +396,13 @@ Keeps the `.task/CLAUDE.md` precondition and English parser-stable strings. **No
   - each `Spec:` header's slug resolves to an existing `.task/spec/<slug>.md` — a miss is a **`WARN`** (dangling reference), not an error (`validate.sh` is advisory, not a gate). The slug is read from the **link label**, so the canonical `Spec: [<slug>](../spec/<slug>.md)` and the legacy bare `Spec: <slug>` check identically (see [§ Cross-artifact references](#cross-artifact-references)). Only header-block `Spec:` lines are scanned — the check stops at the first `---` separator (task) or the first `## ` heading (roadmap), so a `Spec:`-shaped line quoted in a body never WARNs;
   - a `Spec:` header whose link target is not `../spec/<label>.md` is a second **`WARN`** — label/target disagreement, the drift a rename leaves behind. Intra-line only; the bare form has no target and is never flagged.
 - **`roadmap <slug>`** — validate `.task/roadmap/<slug>.md`:
-  - ≥1 item heading matching `^### - \[[ x~>-]\] N\. <title>` — the checkbox prefix is **required** (an item with a bare `### N.` heading and no checkbox is an error, since the reviewer's auto-mark and item selection both rely on it);
-  - a heading that **near-misses** the canonical form is an error of its own — a checkbox-ish bracket in the wrong shape (`[X]`, a double space, `####`) or a bullet-plus-number with the checkbox deleted. Such a heading is not an item to any consumer (`roadmap_progress_counts` under-counts it, `roadmap-items.sh` skips it, the block parser opens no block for it), so without this check the file validates clean while an item silently vanishes from the run. This check runs **before** the required-heading guard, so it still speaks when *every* heading has drifted. A `### Spec references → …` citation and a heading opening with a Markdown link are both structurally excluded;
+  - a roadmap in the **pre-5.0 grammar** — a checkbox-ish bracket in a heading, a quoted `> ### ` sub-heading, or a `### Spec references` heading — is **one** error naming the first such line and pointing at the migration recipe on the docs site; validation of that file stops there, since every later check would only repeat it. A heading opening with a Markdown link (`### [text](url)`) is excluded: the bracket body is capped at one character;
+  - ≥1 item heading matching `^### N\. <title>`, and under **each** one outside `## Architecture`, a status line `- [<state>] Done` as the first non-blank line — a heading without it is an error, since the reviewer's auto-mark and item selection both read the status line;
+  - a heading that **near-misses** the canonical form is an error of its own — a bullet before the number, or a `###` number without the `### N. ` spacing. Such a heading is not an item to any consumer (`roadmap_progress_counts` under-counts it, `roadmap-items.sh` skips it, the block parser opens no block for it), so without this check the file validates clean while an item silently vanishes from the run. This check runs **before** the required-heading guard, so it still speaks when *every* heading has drifted;
   - **`**Dependencies:**` values are checked against the same file**, for **unchecked items only** (a shipped item's dependency is history no consumer reads, so erroring on it would make a completed roadmap unfixable). The value must be a no-dependency token (`—`, `-`, `none`, `n/a`) or a comma-separated list of item numbers; a number that names no item in the file, and an item that lists **itself**, are errors. The raw value is tested *before* whitespace is stripped, so a hand-written `1 2` is reported as space-separated rather than silently fused into item `12`. Item numbers compare numerically, so `01.` and a dependency written `1` are the same item;
   - **CRLF line endings** are an error: `roadmap-items.sh` strips only `[ \t]`, so a trailing CR survives into the `**Dependencies:**` / `**Model:**` values it hands the driver, becoming a phantom dependency and a dropped model hint. Flagged once per file rather than normalized in every parser;
   - item numbers are unique, since the reviewer's auto-mark keys on the number, and start at 1 — an item `0.` or a `0` dependency is an error, because the driver asserts `n >= 1` and would otherwise refuse a roadmap that validated clean — numbering runs continuously across the whole file and never restarts per phase;
-  - each item block carries the `**Ready description:**` label (required — `to-task` and the driver's plan agent, both through `skills/_lib/roadmap-item.md` step 3, key on it to find the item body) and, inside its blockquote, the sub-headings `### Context`, `### Goal`, `### Outcomes`, `### Acceptance criteria` (matched as `> ### <name>`); `### Invariants` is **optional** and not required;
+  - each item block carries the `**Ready description:**` label (required — `to-task` and the driver's plan agent, both through `skills/_lib/roadmap-item.md` step 3, key on it to find the item body) and, inside its blockquote, the sub-headings `**Context**`, `**Goal**`, `**Outcomes**`, `**Acceptance criteria**` (matched as a whole quoted line, `> **<name>**`); `**Invariants**` is **optional** and not required;
   - dangling `Spec:` headers `WARN` as for `task`;
   - an optional `## Architecture` section is checked **advisory-only** — every finding is a `WARN`, since no parser consumes the section and any roadmap `ERROR` stops `roadmap-to-workflow` from launching: more than one such section; a missing `### Components`, or a missing `### Item sketches` while unchecked items remain; an `#N` reference with no item heading (scanned inside the section only, code spans dropped, skipped when glued to a word, path or entity character so a link anchor like `.md#2-x` never reads as item 2, while `#2→#4` counts both). Any `## Architecture` heading counts as the section, trailing text included. The one `ERROR` inside it is the existing bare-`### N.` check, whose message there names the section and points at a `- #N —` bullet instead. `WARN` lines from these awk checks count toward the summary's warning total.
 - **`spec <slug>`** — validate `.task/spec/<slug>.md`: line 1 matches `^# .+`; ≥1 `## N.` numbered decision section. (No `---` separator check — a spec has no parser-stable header block above a body, so there is nothing to separate.)
@@ -419,7 +448,7 @@ Contract:
 - **Implement commits, the reviewer commits its fixes on top.** The implementation commits its own work; the reviewer stages only the files it changed and writes its own `fix(<scope>): address review findings` commit per `.task/CLAUDE.md` → Commit Format, one body bullet per fix. Nothing already committed is ever rewritten — no amend, no rebase, no reset — so history is one item = the implementation's commits, plus at most one review-fix commit on top. A clean review commits nothing, and neither does one whose Build and Tests ended red: the fixes stay in the working tree under a `FAIL`. If the implementation was never committed, the reviewer leaves its fixes uncommitted rather than sweeping someone else's work into its own commit — and when the task has a roadmap item, the verdict is `FAIL` and nothing is ticked, since the next item's commit would absorb the work the checkbox claims.
 - **Explicit phases with a mandatory output each** (intake → diff → find → prove → fix → Build and Tests → commit → tick the roadmap item). `0 findings` is a declared state, and a report that does not enumerate what was checked per `Touches` file is a failed review, not a passed one.
 - **Parser-stable digest last line:** `OK|FAIL <reference string> <summary>` — the same shape the roadmap driver already parses for its implement stage.
-- **Auto-mark is its last phase (7).** Once the verdict is OK and a roadmap item is known — named by the driver, or read from the artifact's `Roadmap:` + `Source item: #N` — it runs one fully-baked `awk` flip, verbatim bar the two value lines, and never edits the roadmap by hand. The flip must find **exactly one** heading for item N, matching on the full 5-state checkbox class so `hits` counts *the item exists*, not *the item is unchecked*; zero or two leave the file untouched and turn the verdict into `FAIL`, since a silent miss would let the next run re-implement work already committed. It is **idempotent** (an already-ticked item is a no-op that reports OK, so a re-run or an `agent()` retry cannot turn a landed item into a hard stop) and **self-reporting** (both branches echo `MARK-OK #N` / `MARK-FAIL #N`, so the agent reads the outcome off stdout, not an exit code it cannot see). The rewrite is anchored to `^### - [ ]`, never a bare `[ ]`, so a literal `[ ]` in the title is safe. `tests/reviewer-mark.test.sh` extracts the command between its marker comments and runs it against fixtures.
+- **Auto-mark is its last phase (7).** Once the verdict is OK and a roadmap item is known — named by the driver, or read from the artifact's `Roadmap:` + `Source item: #N` — it runs one fully-baked `awk` flip, verbatim bar the two value lines, and never edits the roadmap by hand. The flip must find **exactly one** `### N.` heading for item N with a status line as the first non-blank line under it, matching that line on the full 5-state checkbox class so the count means *the item exists*, not *the item is unchecked*; zero headings, two, or one without a status line leave the file untouched and turn the verdict into `FAIL`, since a silent miss would let the next run re-implement work already committed. It is **idempotent** (an already-ticked item is a no-op that reports OK, so a re-run or an `agent()` retry cannot turn a landed item into a hard stop) and **self-reporting** (both branches echo `MARK-OK #N` / `MARK-FAIL #N`, so the agent reads the outcome off stdout, not an exit code it cannot see). The rewrite touches only that status line, anchored to `^- [ ]`, so a literal `[ ]` in the title, or a checklist further down the item, is safe. `tests/reviewer-mark.test.sh` extracts the command between its marker comments and runs it against fixtures.
 - It writes **nothing else** under `.task/`: the artifact, specs and config are read-only to it, and so is every other line of the roadmap.
 
 Plugin agents ignore `permissionMode`, `hooks` and `mcpServers`; `model`, `effort`, `tools`, `disallowedTools`, `skills`, `maxTurns` and `isolation` are honored. `isolation` is deliberately **absent** — the reviewer must see and edit the same working tree the implementation used. `model` / `effort` are pinned in the frontmatter so a `haiku` roadmap item does not get a `haiku` review.

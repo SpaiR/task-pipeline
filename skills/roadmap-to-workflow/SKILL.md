@@ -15,7 +15,7 @@ Drive an approved roadmap through a dynamic Workflow. This skill reports the roa
 
 **Input:** `$ARGUMENTS` — optional. A single positional `<roadmap-slug>` (or its path under `.task/roadmap/`) to skip the roadmap picker. No flags — item scope is chosen interactively (Step 0).
 
-**Format contract:** [contract § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd) owns the item grammar (`### - [ ] N.`, `**Dependencies:**`, `**Model:**`), and [§ execution shape](../../docs/contract.md#roadmap-to-workflow-execution-shape-driver-contract) the driver's stages.
+**Format contract:** [contract § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd) owns the item grammar (`### N.` plus its `- [ ] Done` status line, `**Dependencies:**`, `**Model:**`), and [§ execution shape](../../docs/contract.md#roadmap-to-workflow-execution-shape-driver-contract) the driver's stages.
 
 ## Step 0: Setup gate, pick roadmap, pick scope
 
