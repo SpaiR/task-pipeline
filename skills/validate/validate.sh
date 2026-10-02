@@ -287,25 +287,6 @@ validate_roadmap() {
     err "$label" "file has CRLF line endings — the driver keeps the trailing CR in **Dependencies:** / **Model:** values, turning a dependency into a phantom one and dropping the model hint; convert the file to LF"
   fi
 
-  # --- Pre-5.0 grammar -----------------------------------------------------
-  # Before 5.0 an item carried its checkbox in the heading (`### - [ ] N.`), its
-  # Ready description quoted `### ` sub-headings, and its spec citation was a
-  # `### Spec references` heading. No parser reads that form any more, so a
-  # roadmap written in it would look itemless and drown in follow-on errors.
-  # Name it once, point at the migration, and stop. The bracket body is capped
-  # at ONE character so a heading that opens with a Markdown link
-  # (`### [text](url)`) is not swept up.
-  local old
-  old=$(awk '
-    /^#+[[:space:]]*[-*+]?[[:space:]]*\[[^]]?\]/ || /^>[[:space:]]*### / || /^### Spec references/ {
-      print NR; exit
-    }
-  ' "$file")
-  if [[ -n "$old" ]]; then
-    err "$label" "roadmap uses the pre-5.0 item grammar (a checkbox in the item heading, \`> ###\` sub-headings or a \`### Spec references\` heading; first at line $old) — migrate it: https://spair.github.io/task-pipeline/guide/troubleshooting#migrate-roadmap"
-    return
-  fi
-
   # --- Item shape ------------------------------------------------------------
   # An item is a `### N. <title>` heading whose first non-blank line is its
   # status line, `- [ ] Done` with a state from the 5-state class `[ x~>-]`.
@@ -319,9 +300,11 @@ validate_roadmap() {
   # roadmap-items.sh (the driver's item source) skips it, and the block parser
   # opens no block for it, so its missing sub-headings go unreported too.
   # Unflagged, the file validates clean while an item silently vanishes and the
-  # autopilot reports "all items shipped" having never run it. Two shapes count
-  # as an attempt: a bullet before the number, and a `###` number that misses
-  # the `### N. <title>` spacing. A heading with no status line under it is the
+  # autopilot reports "all items shipped" having never run it. Three shapes
+  # count as an attempt: a checkbox-ish bracket in the heading (`[ ]`, `[X]`,
+  # `[]` — the body capped at ONE character so a heading that opens with a
+  # Markdown link, `### [text](url)`, is not swept up), a bullet before the
+  # number, and a `###` number that misses the `### N. <title>` spacing. A heading with no status line under it is the
   # same silent vanishing, so it is named too; inside `## Architecture` a
   # numbered heading is the block parser's to name, with its own message.
   # The reverse holds as well: a `- [ ] Done` line no item heading owns is an
@@ -342,6 +325,10 @@ validate_roadmap() {
     /^### [0-9]+\. .+$/ {
       if (in_arch) next
       item = $0; sub(/^### /, "", item); sub(/\..*$/, "", item); wait = 1
+      next
+    }
+    /^#+[[:space:]]*[-*+]?[[:space:]]*\[[^]]?\]/ {
+      print "ERROR " label ": item heading carries a checkbox; the heading is `### N. <title>` and the checkbox goes on the `- [ ] Done` status line under it: " $0
       next
     }
     /^#+[[:space:]]*[-*+][[:space:]]*[0-9]/ {
@@ -414,6 +401,7 @@ validate_roadmap() {
       m = $0; sub(/^### /, "", m); sub(/\..*$/, "", m)
       item = m; open = 0; wait = 1; items[m + 0] = 1; next
     }
+    /^#+[[:space:]]*[-*+]?[[:space:]]*\[[^]]?\]/ { item = ""; next }
     /^#+[[:space:]]*[-*+][[:space:]]*[0-9]/       { item = ""; next }
     /^### /             { item = ""; next }
     /^## /              { in_arch = ($0 ~ /^## Architecture([[:space:]]|$)/); item = ""; next }
@@ -494,7 +482,8 @@ validate_roadmap() {
 
     # A drifted item-heading ATTEMPT closes the block too, so this parser and
     # the driver'"'"'s Step 1 collector agree on what ends an item.
-    /^#+[[:space:]]*[-*+][[:space:]]*[0-9]/ { flush_block(); next }
+    /^#+[[:space:]]*[-*+]?[[:space:]]*\[[^]]?\]/ { flush_block(); next }
+    /^#+[[:space:]]*[-*+][[:space:]]*[0-9]/       { flush_block(); next }
 
     # Stop at the next `### ` heading: sub-headings inside the blockquote are
     # bold lines (`> **Goal**`), never headings, so any top-level `### ` ends

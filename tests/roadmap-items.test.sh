@@ -58,7 +58,7 @@ Spec: [event-envelope](../spec/event-envelope.md)
 
 **Dependencies:** —
 
-### - [ ] 6. Pre-5.0 heading
+### - [ ] 6. Checkbox left in the heading
 
 **Dependencies:** 4
 
@@ -79,7 +79,7 @@ assert_contains "$I_OUT" "$(printf 'DONE\t1,2')" "5-state class counts as marked
 t_case "a stray Dependencies line outside an item is not billed to the last item"
 assert_eq "3" "$(grep -c . <<<"$I_OUT")" "two items plus the DONE line"
 
-t_case "a heading without a status line, or in the pre-5.0 form, is no item and steals no Dependencies"
+t_case "a heading without a status line, or with a checkbox in it, is no item and steals no Dependencies"
 assert_eq "0" "$(grep -c -e '^5' -e '^6' <<<"$I_OUT")" "neither is reported"
 assert_contains "$I_OUT" "$(printf '4\t\tsonnet\tOpen, no deps, no model hint')" "item 4 keeps its own deps, not item 6's"
 

@@ -106,7 +106,7 @@ Each item:
 > …
 ```
 
-The `- [ ] Done` line directly under the heading is the progress marker, and a Markdown preview renders it as a checkbox; `**Dependencies:**` drives the wave ordering in [`roadmap-to-workflow`](/reference/roadmap-to-workflow). Write `—` (or `-` / `none` / `n/a`) when an item has none — any other word is read as an item number and stops the run. A roadmap written before 5.0 keeps the checkbox in the heading; [migrate it](/guide/troubleshooting#migrate-roadmap) once.
+The `- [ ] Done` line directly under the heading is the progress marker, and a Markdown preview renders it as a checkbox; `**Dependencies:**` drives the wave ordering in [`roadmap-to-workflow`](/reference/roadmap-to-workflow). Write `—` (or `-` / `none` / `n/a`) when an item has none — any other word is read as an item number and stops the run.
 
 An item that leans on a spec decision cites it on the last line of its Ready description, as `> **Spec references:** [<slug>](../spec/<slug>.md) §N`. `## Prerequisites` and `## Backlinks` hold Markdown links too — a sibling roadmap is `[<slug>](<slug>.md)`, a spec `[<slug>](../spec/<slug>.md)`.
 

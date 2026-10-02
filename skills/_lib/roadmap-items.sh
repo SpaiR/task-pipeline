@@ -61,8 +61,7 @@ LC_ALL=C awk '
     next
   }
   # A heading that ATTEMPTED to be an item and drifted (a checkbox left in the
-  # heading as in the pre-5.0 grammar, a bullet before the number) closes the
-  # current item.
+  # heading, a bullet before the number) closes the current item.
   # Otherwise its Dependencies/Model are attributed to the item ABOVE it — a
   # phantom dependency, a wrong wave, or the wrong model, with no signal.
   # Matched the same way `validate.sh` reports it, so both parsers agree on what

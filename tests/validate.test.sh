@@ -174,7 +174,7 @@ v "$repo" roadmap dup
 assert_exit 1 "$V_EXIT" "duplicate number"
 assert_contains "$V_OUT" "duplicate item number 1" "names the number"
 
-t_case "a roadmap in the 5.0 item grammar validates clean"
+t_case "a roadmap in the item grammar validates clean"
 sed 's/^### 1\. Also first/### 2. Second/' "$repo/.task/roadmap/dup.md" >"$repo/.task/roadmap/clean.md"
 v "$repo" roadmap clean
 assert_exit 0 "$V_EXIT" "clean"
@@ -205,27 +205,14 @@ v "$repo" roadmap h2
 assert_exit 1 "$V_EXIT" "## drift"
 assert_contains "$V_OUT" "status line with no \`### N. <title>\` item heading" "names the orphaned status line"
 
-t_case "a pre-5.0 roadmap is one error that points at the migration"
-cat >"$repo/.task/roadmap/old.md" <<'MD'
-# Old roadmap
-
-### - [ ] 1. First
-**Dependencies:** —
-**Ready description:**
-> ### Context
-> c
-> ### Goal
-> g
-> ### Outcomes
-> o
-> ### Acceptance criteria
-> a
-MD
-v "$repo" roadmap old
-assert_exit 1 "$V_EXIT" "old grammar"
-assert_contains "$V_OUT" "pre-5.0 item grammar" "names the grammar"
-assert_contains "$V_OUT" "#migrate-roadmap" "points at the migration"
-assert_contains "$V_OUT" "FAIL 1 error(s)" "one error, no follow-on noise"
+t_case "an item heading that carries a checkbox is an error, not a silently dropped item"
+{
+  cat "$repo/.task/roadmap/clean.md"
+  printf '\n#### - [ ] 3. Third, checkbox in the heading\n\n**Dependencies:** 1\n'
+} >"$repo/.task/roadmap/boxed.md"
+v "$repo" roadmap boxed
+assert_exit 1 "$V_EXIT" "checkbox in the heading"
+assert_contains "$V_OUT" "item heading carries a checkbox" "names the near-miss"
 
 t_case "item numbers compare numerically — 1. and 01. are a duplicate"
 sed 's/^### 1\. Also first/### 01. Also first/' \
