@@ -154,7 +154,7 @@ Run the command below once, with the two values on its first lines substituted �
 N=<item number>
 ROADMAP="<absolute roadmap path>"
 N=${N#\#}
-awk -v n="$N" '
+LC_ALL=C awk -v n="$N" '
   armed && /^[[:space:]]*$/ { print; next }
   armed { armed = 0; if ($0 ~ /^- \[[ x~>-]\]([[:space:]]|$)/) { flips++; sub(/^- \[ \]/, "- [x]") } }
   $0 ~ ("^### 0*" n "\\. ") { hits++; armed = 1 }
@@ -169,7 +169,7 @@ awk -v n="$N" '
 It prints exactly one line; decide from **that line**, never from the exit code. The command is idempotent — an item already ticked is the desired end state and prints `MARK-OK` again — so a re-run can never turn a success into a failure.
 
 - **`MARK-OK #N`** → the item is ticked; the verdict stands.
-- **`MARK-FAIL #N`** → the roadmap has no unique `### N.` heading with a `- [ ] Done` status line under it (renumbered, duplicated, status line missing, or the file is missing). The file is left untouched. Your verdict becomes `FAIL <reference string> roadmap item #N: no unique '### N.' heading with a status line — the work is in the tree, tick it by hand`: the code is fine, but a silent miss would make the next roadmap run re-implement work that already landed.
+- **`MARK-FAIL #N`** → the roadmap has no unique `### N.` heading with a status line (`- [ ] Done`, or any of `[x]`/`[~]`/`[>]`/`[-]`) as the first non-blank line under it (renumbered, duplicated, status line missing, or the file is missing or unreadable). The file is left untouched. Your verdict becomes `FAIL <reference string> roadmap item #N: no unique '### N.' heading with a status line — the work is in the tree, tick it by hand`: the code is fine, but a silent miss would make the next roadmap run re-implement work that already landed.
 
 **Mandatory output:** the command's stdout line, verbatim and on a line of its own, or `Roadmap: not applicable — no roadmap item` / `Roadmap: skipped — verdict is FAIL`.
 
