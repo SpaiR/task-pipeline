@@ -1,6 +1,6 @@
 # Commands overview
 
-Five user-invocable skills, plus one internal utility. What you capture — one task, an initiative, or the decisions they must honor — is the skill you pick, never a flag. Every argument is optional: the autocomplete shows the hint below, and running a skill bare is the normal case (it drafts from the chat, or asks).
+Five user-invocable skills, plus one optional bash utility (`validate`). What you capture — one task, an initiative, or the decisions they must honor — is the skill you pick, never a flag. Every argument is optional: the autocomplete shows the hint below, and running a skill bare is the normal case (it drafts from the chat, or asks).
 
 | Command | Argument | In brief |
 |---|---|---|
