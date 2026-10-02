@@ -58,7 +58,7 @@ Ran `api-v2-migration`: 1 of 1 items landed and ticked, 1 still unchecked.
 → Next: `/task:roadmap-to-workflow api-v2-migration` to run the remaining 1 item(s)
 ```
 
-`Commits:` is the range of commits the run made, read from `git log`; a stop before anything was committed prints `Commits: none`.
+`Commits:` is the range of commits the run made, read from `git log`; a stop before anything was committed prints `Commits: none`. In a repository with no commit yet, every commit counts as the run's.
 
 On failure, the items that landed before the stop are still listed:
 
@@ -84,6 +84,8 @@ Two stops get a different footer, because re-planning the item would be wrong th
 - **The implementation was never committed** — the footer says to commit it, tick the item by hand, and rerun.
 
 Rerun a stopped run plainly. Resuming it from its run id replays the cached failing stage and stops at the same place; that is only for a run interrupted before it returned.
+
+If the Workflow call itself errors or is interrupted, there is no headline and no run summary. The skill quotes the tool's error, prints the `Commits:` range the run made before it died, and closes with a footer that resumes the run in the same session or reruns `/task:roadmap-to-workflow <slug>`.
 
 ## No Workflow tool
 

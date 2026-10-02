@@ -9,7 +9,8 @@
 #   DONE\t<n,n,…>                       the already-marked numbers ("" if none)
 #
 # `roadmap-to-workflow` Step 1 turns those lines into the driver's `items` and
-# `done` args verbatim. Nothing here sorts or filters: the driver's own
+# `done` args verbatim, and its Output counts the lines again after the run for
+# the unchecked total. Nothing here sorts or filters: the driver's own
 # computeWaves() decides the order and the scope.
 #
 # Exit codes: 0 printed, 1 no such roadmap (or one that could not be read),

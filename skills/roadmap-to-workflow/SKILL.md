@@ -47,7 +47,7 @@ With no positional argument, pick from the `ROADMAPS:` lines:
 
 - **`ROADMAPS: none`** → stop: "no roadmaps found — create one with `/task:to-roadmap`. → Next: `/task:to-roadmap`"
 - **Exactly one line** → use it (still refuse if it is fully complete — `unchecked=none` with a total above 0 — or if it has no item at all, `0/0`).
-- **A `0/0` roadmap** — `unchecked=none` over zero items — has no item heading that parses, which is not the same as every item being ticked. It is never a pick and never called complete: stop with "no item heading in `.task/roadmap/<slug>.md` parses. → Next: `bash \"${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh\" roadmap <slug>`, fix the headings, rerun", whether it came from the picker or a positional argument.
+- **A `0/0` roadmap** — `unchecked=none` over zero items — has no item heading that parses, which is not the same as every item being ticked. It is never a pick and never called complete: stop with "no item heading in `.task/roadmap/<slug>.md` parses. → Next: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" roadmap <slug>`, fix the headings, then rerun `/task:roadmap-to-workflow <slug>`", whether it came from the picker or a positional argument.
 - **An `unchecked=unreadable` roadmap** — its file could not be read — is never a pick: stop with "`.task/roadmap/<slug>.md` could not be read. → Next: fix the file's permissions, then rerun `/task:roadmap-to-workflow <slug>`", whether it came from the picker or a positional argument.
 - **More than one** → `AskUserQuestion` (convention (c)), one chip per roadmap labelled `<slug>  (<done>/<total>)`; sort partial roadmaps first, complete ones (`unchecked=none`, total above 0) last with a `(complete)` suffix, and refuse to proceed on a complete pick. A `0/0` roadmap is labelled `(no items parsed)`, never `(complete)`, and refused the same way as above.
 
@@ -84,7 +84,7 @@ The driver's `computeWaves` sorts them and hard-stops **before spawning anything
 
 ## Step 2: Invoke the Workflow driver
 
-**Do not author a Workflow script.** The driver ships at `skills/_lib/roadmap-driver.js`, declared in the plugin manifest under `"workflows"`, so the platform registers it as `task:roadmap-driver` and reads the file itself. It is reached **by name, never by path** — a `scriptPath` into the plugin is checked for read permission against this session's working directory, which a plugin is never inside. Assemble its `args` from Steps 0–1, record `git rev-parse HEAD` (Output's `Commits:` range starts there), and invoke it:
+**Do not author a Workflow script.** The driver ships at `skills/_lib/roadmap-driver.js`, declared in the plugin manifest under `"workflows"`, so the platform registers it as `task:roadmap-driver` and reads the file itself. It is reached **by name, never by path** — a `scriptPath` into the plugin is checked for read permission against this session's working directory, which a plugin is never inside. Assemble its `args` from Steps 0–1, record `git rev-parse --verify -q HEAD` (Output's `Commits:` range starts there; it prints nothing on a repository with no commit yet), and invoke it:
 
 ```javascript
 Workflow({
@@ -127,6 +127,7 @@ Autopilot needs the Workflow tool, and it isn't available in this environment, s
 
 ## Output
 
+- **No driver return** — the Workflow call errored or was interrupted before the driver returned, so there is no headline. Quote the tool's error verbatim, print the `Commits:` range below from the recorded start `HEAD` (the run may have committed before it died), and close with `→ Next:` either resuming through `resumeFromRunId` in this same session (see Step 2's rerun / resume) or a plain rerun of `/task:roadmap-to-workflow <slug>`. Skip the `Ran` line: its `<K>` counts `#N` lines of a return that does not exist. The bullets below assume a return.
 - The driver's return value, surfaced as-is. Its **first line is the headline** — `roadmap-to-workflow: all items shipped.` or `roadmap-to-workflow stopped in wave <W> …: <failing digest>` — and it alone decides done versus stopped. Below it comes one line per item that landed (reviewed **and** ticked), in landing order, on a stop too: `#N <item-slug> — <implement summary>; review: <review summary>`. The per-stage digest lines (`OK|FAIL #N <item-slug> <summary>`) went to the Workflow progress view as the run went; they are not repeated in the return value.
 - **One run-summary line above the footer, in both outcomes** — after an unattended run, nobody should have to count `OK` lines to learn how much landed. `<K>` is the number of `#N` lines under the headline:
 
@@ -137,7 +138,7 @@ Autopilot needs the Workflow tool, and it isn't available in this environment, s
   The driver's return carries none of the numbers past `<K>`, so take them from the tree and the roadmap:
   - `<M>` is the count of item lines Step 1 reported, before the run.
   - `<R>` is the count of item lines a second `bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap-items.sh" "<slug>"` prints after the run — the roadmap file is the truth about what is still unchecked, an item reviewed but not ticked included. If that call exits 1, use `<M> − <K>`.
-  - `Commits:` comes from the `HEAD` recorded before Step 2's Workflow call: `git log --oneline <start>..HEAD` lists every commit the run made, implement commits and reviewer fix commits alike. Print the oldest and newest as `<first-sha>..<last-sha>` (a single commit: just its sha). An empty range — a stop before anything was committed, `<K>` = 0 — prints `Commits: none`. A stop can leave commits from the failing item in the range too; the range is what `git log` shows, not only the `#N` lines.
+  - `Commits:` comes from the `HEAD` recorded before Step 2's Workflow call: `git log --oneline <start>..HEAD` lists every commit the run made, implement commits and reviewer fix commits alike. When nothing was recorded because the repository had no commit yet, every commit is the run's: take the range from `git log --oneline HEAD`, and print `Commits: none` when `HEAD` is still unborn after the run. Print the oldest and newest as `<first-sha>..<last-sha>` (a single commit: just its sha). An empty range — a stop before anything was committed, `<K>` = 0 — prints `Commits: none`. A stop can leave commits from the failing item in the range too; the range is what `git log` shows, not only the `#N` lines.
 
 - End with the canonical next-step footer (convention (a), flag-free):
   - All items shipped, `<R>` = 0 → `→ Done. Roadmap complete — \`.task/roadmap/<slug>.md\` fully checked; review the landed commits with \`git log\`.`

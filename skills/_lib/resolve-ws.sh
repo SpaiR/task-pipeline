@@ -12,48 +12,17 @@
 #   source "$SCRIPT_DIR/../_lib/resolve-ws.sh"
 #   # now $AI_DIR is set
 
-# find_ai_dir — discover the pipeline root that holds `.task/`.
-#
-# Resolution order (first hit wins):
-#   1. `git config --local task.root` — the anchor recorded by the capture
-#      skills' inline Step 0 setup, accepted only on evidence, as in step 4:
-#      the path ALREADY holds a `CLAUDE.md`, and it belongs to THIS repo — its
-#      git common dir is ours, or it is exactly `dirname(our common dir)` (a
-#      bare repo's container). A stale anchor left by a moved repo (path gone)
-#      or a copied one (path is the original repo) is ignored, not trusted.
-#      Lives in the repo-local (common) git config, so it is shared by EVERY
-#      worktree of the repo: all
-#      worktrees resolve the same `.task/` with zero setup — no symlink, no
-#      join mode.
-#      `--local --get` scopes to the repo config so a stray global `task.root`
-#      cannot leak in. This is what lets user-created parallel worktrees of a
-#      repo share one `.task/` — no skill spawns worktrees of its own
-#      (`roadmap-to-workflow` runs its items in the shared tree, and the
-#      reviewer must see and commit into that same tree, so neither sets
-#      `isolation`).
-#   2. Upward walk from $PWD for a `.task/CLAUDE.md` ancestor — the
-#      pre-anchor fallback. Covers a main worktree, a nested worktree, or a
-#      `.task` created in a subdir, for repos bootstrapped before the anchor
-#      existed. CEILINGED at the highest directory that still belongs to this
-#      project — the highest of this checkout's top level, the main worktree
-#      root, and the superproject's working tree that is still an ancestor of
-#      $PWD. That directory is checked; above it is someone else's project, so
-#      the walk cannot claim a neighbouring `.task/`.
-#   3. Parent of the git common dir — the main worktree root (normal / nested /
-#      sibling worktrees) or the bare repo's container (bare). Catches sibling
-#      worktrees and bare repos that the ceilinged walk in (2) misses; reuses
-#      the value (2) already computed.
-#   4. `$CLAUDE_PROJECT_DIR/.task` when that path ALREADY holds a
-#      `CLAUDE.md` — like steps 1 and 2, this step claims a root only on
-#      evidence, never on the variable being set alone. (Step 3 is the one
-#      that does not: it takes the git root it finds without looking for a
-#      `CLAUDE.md` there.) Otherwise the relative
-#      `.task`: the historical default, so a call from outside any project
-#      still fails cleanly on the setup gate with "CLAUDE.md not found".
+# find_ai_dir — discover the pipeline root that holds `.task/`, in four
+# steps, first hit wins: the `task.root` anchor, a ceilinged ancestor walk, the
+# parent of the git common dir, then `$CLAUDE_PROJECT_DIR`. The order, the
+# evidence each step needs and the why live in docs/contract.md § Root
+# resolution; the comments beside each step below only explain the code.
 #
 # AI_DIR is exported as `<root>/.task` with the `.task` component appended
-# literally (never `cd`'d into). Only acts when AI_DIR is unset, so a caller
-# that pins AI_DIR keeps control. macOS-safe: no `realpath` / `readlink -f`.
+# literally (never `cd`'d into). It only acts when AI_DIR is unset, so a caller
+# that pins AI_DIR keeps control; write-task.sh and preflight.sh rely on that
+# to hand their root to the validate.sh child. macOS-safe: no `realpath` /
+# `readlink -f`.
 find_ai_dir() {
   [[ -n "${AI_DIR:-}" ]] && { export AI_DIR; return 0; }
 

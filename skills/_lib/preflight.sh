@@ -18,12 +18,13 @@
 #   ROADMAPS: <slug> <done>/<total> unchecked=<n,n>|none  (one line per roadmap)
 #   ROADMAPS: <slug> ?/? unchecked=unreadable           (a roadmap that could not be read)
 #   ROADMAPS: none                                      (when there are none)
-#   TASKS: <slug> <slug> … | none
-#   SPECS: <slug> <slug> … | none
+#   TASKS: <slug> <slug> … | none                       (kind `capture` only)
+#   SPECS: <slug> <slug> … | none                       (kind `capture` only)
 #   VALIDATE: …                                         (kind `workflow` only)
 #
 # `capture` is what to-task, to-roadmap and to-spec pass: they print the same
-# block, so they share one kind; only `workflow` adds the sweep.
+# block, so they share one kind; `workflow` swaps the TASKS / SPECS lists for
+# the sweep.
 #
 # `unchecked=` lists the ITEM NUMBERS still open, not a count — the pickers in
 # `to-task <slug>#N` / `roadmap-to-workflow` need the numbers.
@@ -102,8 +103,8 @@ else
   done
 fi
 
-# TASKS / SPECS are slug lists: the capture skills use them for the
-# slug-collision check and for "is the chat continuing an existing task".
+# TASKS / SPECS are slug lists the capture skills read for the slug-collision
+# check; kind `workflow` has no reader for them, so it prints neither.
 list_slugs() { # <label> <dir>
   local label="$1" dir="$2" f out=""
   for f in "$dir"/*.md; do
@@ -111,8 +112,10 @@ list_slugs() { # <label> <dir>
   done
   printf '%s:%s\n' "$label" "${out:- none}"
 }
-list_slugs TASKS "$AI_DIR/task"
-list_slugs SPECS "$AI_DIR/spec"
+if [[ "$kind" == capture ]]; then
+  list_slugs TASKS "$AI_DIR/task"
+  list_slugs SPECS "$AI_DIR/spec"
+fi
 
 # `roadmap-to-workflow` is the one caller that gates on the whole `.task/` tree
 # being well-formed, so it gets the full sweep folded into the same call. Its
