@@ -14,7 +14,7 @@ See the [single-task guide](/guide/single-task) for how it fits the everyday flo
 
 | Form | Behavior |
 |---|---|
-| *(empty)* | Draft from the chat discussion so far. |
+| *(empty)* | Draft from the chat discussion so far. With no chat to draft from, open an item from a roadmap that has open items. |
 | `<roadmap-slug>` or `<roadmap-slug>#<N>` | Open from that roadmap item instead of the chat. |
 | anything else | Free-form context folded into the draft alongside the chat. |
 

@@ -40,7 +40,7 @@ Two remaining `on-demand` cases, resolved distinctly:
 
 ### 4. Draft the Description, Plan and Tests
 
-- `## Description` — the why + the what, per `.task/CLAUDE.md` → Language (section labels themselves stay English). From a roadmap item: the why from `**Context**`, the what from Goal / Outcomes / Invariants / Acceptance criteria. Fabricate nothing that was not actually discussed or written down.
+- `## Description` — the why + the what, per `.task/CLAUDE.md` → Language (section labels themselves stay English). From a roadmap item: derive it from the item's ready description as `roadmap-item.md` step 3 maps it. Fabricate nothing that was not actually discussed or written down.
 - `## Plan` — `### Step N:` blocks, three layers:
 
   ```markdown
@@ -68,7 +68,7 @@ Two remaining `on-demand` cases, resolved distinctly:
 
 Against the draft, before writing — fix inline rather than writing something already known to be broken:
 
-- [ ] Does `## Description` state the why, not just the what? (Fresh capture only.)
+- [ ] Does `## Description` state the why, not just the what?
 - [ ] Does every `### Step N:` carry a non-empty `**Touches:**` list with at least one real path?
 - [ ] Does each `**Goal:**` / `**Touches:**` / `**Logic:**` start after a blank line, with `Touches` as one bullet per file?
 - [ ] Is `**Logic:**` present only where Goal + Touches genuinely leave ambiguity?
