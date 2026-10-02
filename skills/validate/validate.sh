@@ -324,13 +324,20 @@ validate_roadmap() {
   # the `### N. <title>` spacing. A heading with no status line under it is the
   # same silent vanishing, so it is named too; inside `## Architecture` a
   # numbered heading is the block parser's to name, with its own message.
+  # The reverse holds as well: a `- [ ] Done` line no item heading owns is an
+  # item whose heading drifted out of the grammar entirely — `#### N.`, `## N.`,
+  # a bold line — so the status line it left behind is named.
   awk_report '
     /^## / { in_arch = ($0 ~ /^## Architecture([[:space:]]|$)/) }
     wait && /^[[:space:]]*$/ { next }
     wait {
       wait = 0
-      if ($0 !~ /^- \[[ x~>-]\]([[:space:]]|$)/)
-        print "ERROR " label ": Task " item " has no status line — the first line under its heading must be `- [ ] Done` (or [x], [~], [>], [-]); got: " $0
+      if ($0 ~ /^- \[[ x~>-]\]([[:space:]]|$)/) next
+      print "ERROR " label ": Task " item " has no status line — the first line under its heading must be `- [ ] Done` (or [x], [~], [>], [-]); got: " $0
+    }
+    /^- \[[ x~>-]\] Done[[:space:]]*$/ {
+      print "ERROR " label ": status line with no `### N. <title>` item heading directly above it — the item it belongs to is invisible to every parser: " $0
+      next
     }
     /^### [0-9]+\. .+$/ {
       if (in_arch) next

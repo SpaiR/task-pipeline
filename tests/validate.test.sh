@@ -193,6 +193,18 @@ assert_exit 1 "$V_EXIT" "missing status"
 assert_contains "$V_OUT" "Task 1 has no status line" "names item 1"
 assert_contains "$V_OUT" "Task 2 has no status line" "names item 2"
 
+t_case "an item heading at the wrong level is named through its orphaned status line"
+# `#### 2.` and `## 2.` are not item headings to any parser, so without this
+# the item vanishes from the run while the file validates clean.
+sed 's/^### 2\. Second/#### 2. Second/' "$repo/.task/roadmap/clean.md" >"$repo/.task/roadmap/h4.md"
+v "$repo" roadmap h4
+assert_exit 1 "$V_EXIT" "#### drift"
+assert_contains "$V_OUT" "status line with no \`### N. <title>\` item heading" "names the orphaned status line"
+sed 's/^### 2\. Second/## 2. Second/' "$repo/.task/roadmap/clean.md" >"$repo/.task/roadmap/h2.md"
+v "$repo" roadmap h2
+assert_exit 1 "$V_EXIT" "## drift"
+assert_contains "$V_OUT" "status line with no \`### N. <title>\` item heading" "names the orphaned status line"
+
 t_case "a pre-5.0 roadmap is one error that points at the migration"
 cat >"$repo/.task/roadmap/old.md" <<'MD'
 # Old roadmap
