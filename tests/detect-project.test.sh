@@ -101,6 +101,13 @@ printf '# Reglas\n\nEste proyecto es test-driven: escribe la prueba primero (\36
 L_OUT=$(LC_ALL=$utf8 bash "$DETECT" "$latin" 2>&1)
 assert_contains "$L_OUT" "README_LANG: non-ascii" "Latin-1 README is non-ascii, not none"
 assert_contains "$L_OUT" "TEST_CONVENTION: CONTRIBUTING.md: 3:" "TDD rule on a Latin-1 line is found"
+# The awk passes over package.json and Makefile abort on an invalid byte in a
+# UTF-8 locale before END prints, which read as `COMMANDS: none`.
+printf '# Autor: Jos\351\nall:\n\techo\n' >"$latin/Makefile"
+printf '{\n  "description": "Caf\351",\n  "scripts": {\n    "test": "jest"\n  }\n}\n' >"$latin/package.json"
+L_OUT=$(LC_ALL=$utf8 bash "$DETECT" "$latin" 2>&1)
+assert_contains "$L_OUT" "COMMANDS: Makefile targets: all" "Makefile with a Latin-1 comment still lists its targets"
+assert_contains "$L_OUT" "COMMANDS: package.json scripts: test" "package.json with a Latin-1 description still lists its scripts"
 
 t_case "the verdict is there on every run, not on most of them"
 # It vanished on roughly one run in twenty: `lang_of` fed a here-string to a

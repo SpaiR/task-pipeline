@@ -57,7 +57,9 @@ if [[ -f package.json ]]; then
   # names instead of dropping them and then harvesting the next object's keys as
   # if they were scripts — which is how a `npm run <a-dependency-name>` reached
   # `.task/CLAUDE.md` → Build and Tests.
-  scripts=$(awk '
+  # LC_ALL=C: a UTF-8 awk aborts on an invalid byte (a Latin-1 description)
+  # before END prints, and the project then reads as declaring no commands.
+  scripts=$(LC_ALL=C awk '
     !inb && match($0, /"scripts"[[:space:]]*:[[:space:]]*\{/) {
       inb = 1; $0 = substr($0, RSTART + RLENGTH)
     }
@@ -78,7 +80,7 @@ fi
 if [[ -f Makefile ]]; then
   # Real targets only: a name at line start followed by `:`, skipping pattern
   # rules, variable assignments and `.PHONY`-style specials.
-  targets=$(awk '
+  targets=$(LC_ALL=C awk '
     # `:$` as well as `:[^=]`, so a target with no prerequisites still counts;
     # `[^=]` keeps `VAR := value` assignments out.
     /^[a-zA-Z0-9_.\/-]+[[:space:]]*:([^=]|$)/ {
