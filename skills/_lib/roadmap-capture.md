@@ -227,4 +227,3 @@ Binding on every roadmap this flow writes:
 - Generic risks ("watch out for bugs") — risks must be specific to the initiative and project.
 - More than one initiative per file — split and pick one for this run. More than one `## Architecture` section in a file.
 - Persisting topics the user asked to skip; placeholders anywhere.
-- Writing a `.refine.md` sidecar, a `.spec.md` sidecar, or a `.lock` file — none of those exists in the pipeline.

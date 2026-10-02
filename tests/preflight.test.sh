@@ -159,6 +159,12 @@ else
 fi
 chmod u+r "$latin/.task/roadmap/latin1.md"
 
+t_case "kind workflow prints neither TASKS: nor SPECS:, kind capture prints both"
+p "$repo" workflow
+assert_eq "0" "$(grep -c '^TASKS:\|^SPECS:' <<<"$P_OUT")" "no unread slug lists for the workflow"
+p "$repo" capture
+assert_eq "2" "$(grep -c '^TASKS:\|^SPECS:' <<<"$P_OUT")" "the capture skills still get both"
+
 t_case "an unknown kind is a usage error"
 p "$repo" nonsense
 assert_exit 2 "$P_EXIT" "bad kind"
