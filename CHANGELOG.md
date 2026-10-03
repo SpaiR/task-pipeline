@@ -4,7 +4,7 @@ All notable changes to this project are documented here. Format — [Keep a Chan
 
 This file is maintained in **English** — see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-policy).
 
-## [Unreleased]
+## [5.0.0] — 2026-10-03
 
 Captured artifacts now read cleanly in a Markdown preview. A roadmap item's checkbox moves out of its heading onto a status line under it, the Ready description trades quoted headings for bold lines, and fields that used to merge into one paragraph each get their own. The parsers read only the new roadmap grammar, so a roadmap captured before this release needs a one-time conversion. Breaking — see **Migration** below.
 
