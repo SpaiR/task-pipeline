@@ -12,7 +12,7 @@ d() { # <dir> → $D_OUT, $D_EXIT
   D_EXIT=$?
 }
 
-t_case "manifests, package.json scripts and Makefile targets are all listed"
+t_case "package.json scripts and Makefile targets are both listed"
 proj=$(t_tmpdir)
 cat >"$proj/package.json" <<'JSON'
 {
@@ -34,7 +34,6 @@ MK
 printf '# Contributing\n\nUse conventional commits.\n' >"$proj/CONTRIBUTING.md"
 d "$proj"
 assert_exit 0 "$D_EXIT" "detection"
-assert_contains "$D_OUT" "MANIFEST: package.json Makefile" "manifests"
 assert_contains "$D_OUT" "COMMANDS: package.json scripts: test build" "npm scripts"
 assert_contains "$D_OUT" "COMMANDS: Makefile targets: lint test" "make targets"
 # Paths are relative to ROOT, which the block's first line names.
@@ -57,7 +56,6 @@ t_case "an empty project reports 'none' on every line rather than omitting it"
 empty=$(t_tmpdir)
 d "$empty"
 assert_exit 0 "$D_EXIT" "empty project"
-assert_contains "$D_OUT" "MANIFEST: none" "no manifests"
 assert_contains "$D_OUT" "COMMANDS: none" "no commands"
 assert_contains "$D_OUT" "COMMIT_FORMAT_DOC: none" "no doc"
 assert_contains "$D_OUT" "TEST_CONVENTION: none" "no TDD rule"
@@ -87,25 +85,18 @@ t_case "a Latin-1 README and CONTRIBUTING are read as text, not skipped as binar
 # none` and a TDD rule on such a line was dropped. The helper pins LC_ALL=C.
 # The failure needs a UTF-8 locale and a GNU grep; without either, the case
 # still runs but cannot show the regression.
-utf8=""
-for cand in en_US.UTF-8 C.UTF-8 en_US.utf8 C.utf8; do
-  LC_ALL=$cand locale charmap 2>/dev/null | grep -qi 'utf-8' && locale -a 2>/dev/null | grep -qix "$cand" && { utf8=$cand; break; }
-done
-if [[ -z "$utf8" ]]; then
-  echo "detect-project.test.sh: SKIP the UTF-8 locale override — no UTF-8 locale installed; the Latin-1 case runs in the ambient locale" >&2
-  utf8=${LC_ALL:-C}
-fi
+t_utf8_locale
 latin=$(t_tmpdir)
 printf '# Proyecto\n\nDescripci\363n en espa\361ol.\n' >"$latin/README.md"
 printf '# Reglas\n\nEste proyecto es test-driven: escribe la prueba primero (\361).\n' >"$latin/CONTRIBUTING.md"
-L_OUT=$(LC_ALL=$utf8 bash "$DETECT" "$latin" 2>&1)
+L_OUT=$(LC_ALL=$T_UTF8 bash "$DETECT" "$latin" 2>&1)
 assert_contains "$L_OUT" "README_LANG: non-ascii" "Latin-1 README is non-ascii, not none"
 assert_contains "$L_OUT" "TEST_CONVENTION: CONTRIBUTING.md: 3:" "TDD rule on a Latin-1 line is found"
 # The awk passes over package.json and Makefile abort on an invalid byte in a
 # UTF-8 locale before END prints, which read as `COMMANDS: none`.
 printf '# Autor: Jos\351\nall:\n\techo\n' >"$latin/Makefile"
 printf '{\n  "description": "Caf\351",\n  "scripts": {\n    "test": "jest"\n  }\n}\n' >"$latin/package.json"
-L_OUT=$(LC_ALL=$utf8 bash "$DETECT" "$latin" 2>&1)
+L_OUT=$(LC_ALL=$T_UTF8 bash "$DETECT" "$latin" 2>&1)
 assert_contains "$L_OUT" "COMMANDS: Makefile targets: all" "Makefile with a Latin-1 comment still lists its targets"
 assert_contains "$L_OUT" "COMMANDS: package.json scripts: test" "package.json with a Latin-1 description still lists its scripts"
 

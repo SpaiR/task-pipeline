@@ -3,9 +3,7 @@
 The shared from-roadmap block: resolve the roadmap, pick the item, read its
 ready description, collect the specs it cites, and derive the task slug. Read by
 `to-task` (Step 1a) and the driver's plan agent (`plan-driver.md` § Driver mode) —
-one copy, so the item-picking rules cannot drift between them. Both are planners,
-so both run steps 3–6, step 6 included; steps 1–2 are `to-task`'s — the driver's
-plan agent receives their results in its prompt.
+one copy, so the item-picking rules cannot drift between them.
 
 [docs/contract.md § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd)
 is the item grammar; [§ Cross-artifact references](../../docs/contract.md#cross-artifact-references)
@@ -23,20 +21,28 @@ them, never a literal `<slug>`.
 
 ## 2. Pick the item
 
-- `#<N>` given → use it.
-- Otherwise → the roadmap's `unchecked=` list is the open items; read their
-  titles from the file. More than one: ask via `AskUserQuestion` (one chip per
-  `#<N> — <title>`, lowest number the default). Exactly one: take it.
+Two stops come first, whether or not `#<N>` was given — neither can be read past:
+
 - `0/0 unchecked=none` → **stop**: no item heading in `$AI_DIR/roadmap/<slug>.md`
   parses — this is not a finished roadmap. Footer: `→ Next: \`bash
   "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" roadmap <slug>\`, fix the
   headings, rerun \`<the caller's command> <slug>\`.`
-- Any other `unchecked=none` → **stop**: every item is already checked off. Footer:
-  `→ Next: \`<the caller's command> <slug>#<a real item number from the file>\`
-  to redo a specific item, or describe new work in chat.`
 - `unchecked=unreadable` → **stop**: the roadmap file could not be read. Name
   `$AI_DIR/roadmap/<slug>.md`. Footer: `→ Next: fix the file's permissions, then
   rerun \`<the caller's command> <slug>\`.`
+
+Then:
+
+- `#<N>` given → the file must hold a `### <N>.` heading. If it does not,
+  **stop**: name the item numbers the file does have, and close with `→ Next:
+  \`<the caller's command> <slug>#<a real item number from the file>\``. Otherwise
+  use it.
+- Otherwise → the roadmap's `unchecked=` list is the open items; read their
+  titles from the file. More than one: ask via `AskUserQuestion` (one chip per
+  `#<N> — <title>`, lowest number the default). Exactly one: take it.
+- Any other `unchecked=none` → **stop**: every item is already checked off. Footer:
+  `→ Next: \`<the caller's command> <slug>#<a real item number from the file>\`
+  to redo a specific item, or describe new work in chat.`
 
 ## 3. Read the ready description
 
@@ -78,12 +84,3 @@ exists — do not assume that file is this item's. Read its header:
   the new slug: a rerun derives the same qualifier, so the file there may be this
   item's own earlier capture (the first bullet) or another namesake (this one,
   again). Repeat until the slug is free or is this item's own file.
-
-## 6. Note the architecture
-
-If the roadmap carries an `## Architecture` section, note it and this item's
-`#<N>` bullet under `### Item sketches`: `plan-driver.md` § Core step 1 reads them
-as the intended shape before drafting the Plan. Hold nothing for the write — the
-section stays in the roadmap, and the task file gains no header for it. The
-Description stays behavioral all the same: technical shape enters only through
-the Plan.

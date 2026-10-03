@@ -16,6 +16,11 @@
 #                                       throwaway root, PHYSICAL path
 #   make_repo [--config]              — a git repo in a temp dir, PHYSICAL path;
 #                                       `--config` also writes .task/CLAUDE.md
+#   t_utf8_locale                     — set T_UTF8 to an installed UTF-8 locale
+#                                       for the locale-pin cases (`LC_ALL=$T_UTF8
+#                                       …`); with none installed, print a SKIP
+#                                       line once and fall back to the ambient
+#                                       locale, where those cases prove nothing
 #   t_summary                         — print the file's tally, exit 0/1
 #
 # Paths are physical (`pwd -P`) on purpose: on macOS `mktemp -d` hands back a
@@ -23,8 +28,8 @@
 # applies its ancestor-walk ceiling when the logical and physical cwd agree.
 # A logical temp path would silently exercise the unbounded-walk branch.
 
-# The suite must not inherit the caller's pipeline state: `AI_DIR` short-circuits
-# `find_ai_dir` entirely, and `CLAUDE_PROJECT_DIR` is resolution step 4.
+# The suite must not inherit the caller's pipeline state: an `AI_DIR` holding a
+# `CLAUDE.md` short-circuits `find_ai_dir`, and `CLAUDE_PROJECT_DIR` is resolution step 4.
 unset AI_DIR CLAUDE_PROJECT_DIR
 
 # Unused here on purpose: the case files that source this one read it.
@@ -97,6 +102,22 @@ _t_cleanup() {
   [[ -n "$d" && "$d" == /* && "$d" != "/" && -d "$d" ]] && rm -rf "$d"
 }
 trap _t_cleanup EXIT
+
+# Call it in the case file's own shell, never inside `$(…)`: it sets T_UTF8.
+T_UTF8=""
+t_utf8_locale() {
+  [[ -z "$T_UTF8" ]] || return 0
+  local cand
+  for cand in en_US.UTF-8 C.UTF-8 en_US.utf8 C.utf8; do
+    if LC_ALL=$cand locale charmap 2>/dev/null | grep -qi 'utf-8' \
+      && locale -a 2>/dev/null | grep -qix "$cand"; then
+      T_UTF8=$cand
+      return 0
+    fi
+  done
+  echo "$T_NAME: SKIP — no UTF-8 locale installed; the byte cases below run in the ambient locale and cannot show a locale regression"
+  T_UTF8=${LC_ALL:-${LANG:-C}}
+}
 
 t_summary() {
   if (( T_FAILS > 0 )); then

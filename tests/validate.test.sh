@@ -97,6 +97,7 @@ assert_contains "$V_OUT" "missing '## Plan' section heading" "names the Plan"
 assert_eq "0" "$(grep -c '^## Plan' "$repo/.task/task/noplan.md")" "fixture really has no Plan"
 
 t_case "a byte that is not UTF-8 changes nothing under a UTF-8 locale"
+t_utf8_locale
 # macOS awk decodes by locale and aborts on an invalid byte (`towc: multibyte
 # conversion failure`); each section check is a negated awk, so an abort once
 # read as a missing Plan or Tests block, and a dangling Spec: WARN went quiet.
@@ -105,15 +106,26 @@ t_case "a byte that is not UTF-8 changes nothing under a UTF-8 locale"
   sed '1d' "$repo/.task/task/good.md" | LC_ALL=C sed $'s/^\\*\\*Goal:\\*\\* it is done$/**Goal:** caf\351 is done/'
 } >"$repo/.task/task/latin1.md"
 assert_eq "2" "$(LC_ALL=C grep -c $'\351' "$repo/.task/task/latin1.md")" "fixture holds the byte"
-LC_ALL=en_US.UTF-8 v "$repo" task latin1
+LC_ALL=$T_UTF8 v "$repo" task latin1
 assert_exit 0 "$V_EXIT" "still clean"
 assert_contains "$V_OUT" "OK 0 errors" "no false section error"
 assert_contains "$V_OUT" "Spec: nosuch" "dangling spec still warned"
 
+t_case "a Spec: header that is both dangling and mis-targeted gets both WARNs"
+{
+  printf '# Two warns task\nSpec: [nosuch](../spec/other.md)\n'
+  sed '1d' "$repo/.task/task/good.md"
+} >"$repo/.task/task/twowarn.md"
+v "$repo" task twowarn
+assert_exit 0 "$V_EXIT" "warnings only"
+assert_contains "$V_OUT" "(dangling reference)" "dangling WARN"
+assert_contains "$V_OUT" "does not match the slug" "target WARN"
+
 t_case "duplicate item numbers are still caught past a non-UTF-8 byte"
+t_utf8_locale
 mkdir -p "$repo/.task/roadmap"
 printf '# R\n\n### 1. Caf\351\n\n- [ ] Done\n\n### 1. Again\n\n- [ ] Done\n' >"$repo/.task/roadmap/latin1.md"
-LC_ALL=en_US.UTF-8 v "$repo" roadmap latin1
+LC_ALL=$T_UTF8 v "$repo" roadmap latin1
 assert_exit 1 "$V_EXIT" "duplicate is an error"
 assert_contains "$V_OUT" "duplicate" "names the duplicate"
 
@@ -354,6 +366,7 @@ assert_contains "$V_OUT" "OK 0 errors, 1 warning(s)" "the awk WARN is counted in
 # Runs under a UTF-8 locale on purpose: that is where macOS awk decodes the `→`
 # and, before the checks ran byte-wise, aborted the pass on it.
 t_case "a heading with trailing text is still the section, and '#N' after an arrow counts"
+t_utf8_locale
 arch_roadmap "$repo/.task/roadmap/arch-suffix.md" '## Architecture — draft
 
 ### Components
@@ -363,7 +376,7 @@ arch_roadmap "$repo/.task/roadmap/arch-suffix.md" '## Architecture — draft
 - #1 — adds it.
 - #2→#9 — a reference glued to an arrow.
 '
-LC_ALL=en_US.UTF-8 v "$repo" roadmap arch-suffix
+LC_ALL=$T_UTF8 v "$repo" roadmap arch-suffix
 assert_exit 0 "$V_EXIT" "WARN only"
 assert_contains "$V_OUT" "cites #9, which has no item heading" "suffixed heading is scanned, glued ref counted"
 

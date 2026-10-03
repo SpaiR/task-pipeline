@@ -137,7 +137,7 @@ t_case "a write that fails partway exits 5 and leaves the old file alone"
 w "$repo" --slug lambda --title "Lambda task" --description "$body/desc.md" --plan "$body/plan.md"
 before=$(cat "$repo/.task/task/lambda.md")
 shim=$(t_tmpdir)
-for tool in mkdir mktemp chmod awk mv; do
+for tool in mkdir mktemp chmod mv; do
   rm -f "$shim"/*
   printf '#!/bin/sh\nexit 1\n' >"$shim/$tool" && chmod +x "$shim/$tool"
   PATH="$shim:$PATH" w "$repo" --force --slug lambda --title "Replaced" \
@@ -147,6 +147,19 @@ for tool in mkdir mktemp chmod awk mv; do
   assert_eq "$before" "$(cat "$repo/.task/task/lambda.md")" "$tool: target untouched"
   assert_eq "" "$(find "$repo/.task/task" -name '.lambda.*')" "$tool: no staging file left"
 done
+
+t_case "an awk that cannot read a body is a usage error, not a failed write"
+# Both bodies are read before anything is written, so a failing awk is the
+# `cannot read:` class (exit 2) and touches neither the target nor `.task/task`.
+before=$(cat "$repo/.task/task/lambda.md")
+shim=$(t_tmpdir)
+printf '#!/bin/sh\nexit 1\n' >"$shim/awk" && chmod +x "$shim/awk"
+PATH="$shim:$PATH" w "$repo" --force --slug lambda --title "Replaced" \
+  --description "$body/desc.md" --plan "$body/plan.md"
+assert_exit 2 "$W_EXIT" "awk failed"
+assert_eq "0" "$(grep -c 'WROTE:' <<<"$W_OUT")" "no success line"
+assert_eq "$before" "$(cat "$repo/.task/task/lambda.md")" "target untouched"
+assert_eq "" "$(find "$repo/.task/task" -name '.lambda.*')" "no staging file left"
 
 t_case "a staged file that cannot be written exits 5 and leaves the old file alone"
 # The group redirection into the staged file is the one write no tool shim
@@ -198,14 +211,67 @@ assert_exit 0 "$W_EXIT" "falls back to the rename"
 assert_contains "$(head -1 "$repo/.task/task/rho.md")" "# Rho task" "written"
 
 t_case "a byte that is not UTF-8 survives a UTF-8 locale"
+t_utf8_locale
 # macOS awk decodes by locale and aborts on an invalid byte (`towc: multibyte
 # conversion failure`), which surfaced as a write failure. The helper's awk
 # runs under LC_ALL=C.
 printf 'Caf\351, saved as Latin-1.\n' >"$body/latin1.md"
-LC_ALL=en_US.UTF-8 w "$repo" --slug xi --title "Xi task" \
+LC_ALL=$T_UTF8 w "$repo" --slug xi --title "Xi task" \
   --description "$body/latin1.md" --plan "$body/plan.md"
 assert_exit 0 "$W_EXIT" "fresh"
 assert_eq "1" "$(LC_ALL=C grep -c $'Caf\351' "$repo/.task/task/xi.md")" "byte kept"
+
+t_case "a blank or empty --plan is a usage error and writes nothing"
+printf '\n  \n\t\n' >"$body/blank.md"
+: >"$body/empty.md"
+for f in blank empty; do
+  w "$repo" --slug blankplan --title T --description "$body/desc.md" --plan "$body/$f.md"
+  assert_exit 2 "$W_EXIT" "$f plan"
+  assert_contains "$W_OUT" "--plan is empty" "$f plan: says so"
+  assert_eq "no" "$([ -e "$repo/.task/task/blankplan.md" ] && echo yes || echo no)" "$f plan: nothing written"
+done
+
+t_case "a directory as --plan is a usage error, never the exit 5 of a failed write"
+mkdir "$body/plan.d"
+w "$repo" --slug dirplan --title T --description "$body/desc.md" --plan "$body/plan.d"
+assert_exit 2 "$W_EXIT" "directory plan"
+assert_eq "no" "$([ -e "$repo/.task/task/dirplan.md" ] && echo yes || echo no)" "nothing written"
+
+t_case "a directory as --description or --tests is a usage error and writes nothing"
+# BSD awk exits 0 with no output on a directory, which wrote an empty section.
+mkdir "$body/desc.d"
+w "$repo" --slug dirdesc --title T --description "$body/desc.d" --plan "$body/plan.md"
+assert_exit 2 "$W_EXIT" "directory description"
+assert_contains "$W_OUT" "cannot read: $body/desc.d" "names the path"
+assert_eq "0" "$(grep -c 'WROTE:' <<<"$W_OUT")" "no success line"
+assert_eq "no" "$([ -e "$repo/.task/task/dirdesc.md" ] && echo yes || echo no)" "nothing written"
+w "$repo" --slug dirtests --title T --description "$body/desc.md" --plan "$body/plan.md" --tests "$body/desc.d"
+assert_exit 2 "$W_EXIT" "directory tests"
+assert_eq "no" "$([ -e "$repo/.task/task/dirtests.md" ] && echo yes || echo no)" "nothing written"
+
+t_case "a plan of several hundred lines is written in bounded time under a UTF-8 locale"
+# A pattern substitution over the whole body is quadratic on stock macOS bash
+# 3.2: an 18 KB plan took minutes. Real plans are 6-19 KB; the watchdog turns a
+# regression into a failure on the macOS runner instead of a hung suite.
+t_utf8_locale
+for n in $(seq 1 400); do
+  printf -- '- step %s — touches `src/module-%s.ts`, then re-runs the build\n' "$n" "$n"
+done >"$body/big.md"
+printf 'LAST-PLAN-LINE\n' >>"$body/big.md"
+LC_ALL=$T_UTF8 w_bounded "$repo" --slug bigplan --title "Big plan" \
+  --description "$body/desc.md" --plan "$body/big.md" --tests "$body/big.md"
+assert_eq "0" "$W_EXIT" "a large plan finishes"
+assert_eq "2" "$(grep -c '^LAST-PLAN-LINE$' "$repo/.task/task/bigplan.md")" "the last plan line is in the file (Plan and Tests)"
+
+t_case "a blank --tests body drops the Tests section and validate stays clean"
+for f in blank empty; do
+  w "$repo" --slug blanktests-$f --title T --description "$body/desc.md" \
+    --plan "$body/plan.md" --tests "$body/$f.md"
+  assert_exit 0 "$W_EXIT" "$f tests"
+  assert_eq "## Description ## Plan ## Execution" \
+    "$(grep '^## ' "$repo/.task/task/blanktests-$f.md" | tr '\n' ' ' | sed 's/ $//')" "$f tests: no Tests heading"
+  assert_eq "0" "$(grep -c 'ERROR' <<<"$W_OUT")" "$f tests: no validate ERROR"
+done
 
 t_case "a slug that is a path is a usage error"
 w "$repo" --slug ../escape --title T --description "$body/desc.md" --plan "$body/plan.md"

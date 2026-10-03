@@ -130,15 +130,31 @@ assert_contains "$out" "MARK-FAIL #1" "stdout outcome"
 assert_eq "$before" "$(cat "$f")" "file unchanged"
 
 t_case "a byte that is not UTF-8 in an item title still ticks under a UTF-8 locale"
+t_utf8_locale
 # macOS awk decodes by locale and exits 2 on an invalid byte, which read as a
 # missing heading. It trips on a record the heading pattern does not match, so
 # the byte sits in another item's title. Every other roadmap parser pins
 # LC_ALL=C; so does the flip.
 f="$dir/l.md"; roadmap "$f"
 printf '\n### 6. Caf\351e item\n\n- [ ] Done\n\n### 7. Seventh item\n\n- [ ] Done\n' >>"$f"
-out=$(LC_ALL=en_US.UTF-8 flip 7 "$f")
+out=$(LC_ALL=$T_UTF8 flip 7 "$f")
 assert_contains "$out" "MARK-OK #7" "stdout outcome"
 assert_eq "- [x] Done" "$(LC_ALL=C status 7 "$f")" "status line ticked"
+
+t_case "a roadmap in a read-only directory fails and leaves the file untouched"
+# The flip stages `$ROADMAP.tmp` beside the roadmap, so an unwritable directory
+# fails the write, not the heading check. As root the chmod does not bite.
+mkdir -p "$dir/ro"; f="$dir/ro/r.md"; roadmap "$f"; before=$(cat "$f")
+chmod a-w "$dir/ro"
+if [[ -w "$dir/ro" ]]; then
+  echo "$T_NAME: SKIP — the directory stays writable after chmod (running as root)"
+else
+  out=$(flip 1 "$f")
+  assert_contains "$out" "MARK-FAIL #1" "stdout outcome"
+  assert_contains "$out" "exit=1" "exit code"
+  assert_eq "$before" "$(cat "$f")" "file unchanged"
+fi
+chmod u+w "$dir/ro"
 
 t_case "a missing roadmap file fails"
 out=$(flip 1 "$dir/nope.md")

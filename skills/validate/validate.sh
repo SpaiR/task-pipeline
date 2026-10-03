@@ -83,17 +83,14 @@ require_config() {
 # WARNS directly — the same reason `err`/`warn` are plain functions. `$label` is
 # read from the caller's scope, as those two do.
 #
-# The awk runs under LC_ALL=C, byte-wise (the script-wide pin above, repeated
-# here because this is where it once went missing): in a UTF-8 locale a
-# match()/substr() walk across the `→` of an `## Architecture` interface line
-# aborted the whole pass, silently dropping every finding it would have printed.
+# The awk runs byte-wise under the script-wide `LC_ALL=C` pin above.
 awk_report() {
   local line
   while IFS= read -r line; do
     echo "$line" >&2
     [[ "$line" == ERROR* ]] && ERRORS=$((ERRORS + 1))
     [[ "$line" == WARN* ]] && WARNS=$((WARNS + 1))
-  done < <(LC_ALL=C awk -v label="$label" "$1" "$2")
+  done < <(awk -v label="$label" "$1" "$2")
 }
 
 # Task and spec path resolution reuse `resolve_artifact_path <kind> <arg>` from
@@ -144,7 +141,10 @@ check_spec_refs() {
     [[ -z "$slug" ]] && continue
     if [[ ! -f "$AI_DIR/spec/$slug.md" ]]; then
       warn "$label" "Spec: $slug — no such spec at $AI_DIR/spec/$slug.md (dangling reference)"
-    elif [[ -n "$target" && "$target" != "../spec/$slug.md" ]]; then
+    fi
+    # Its own check, not an `elif`: a header both dangling and mis-targeted
+    # reports both, as the contract describes two independent WARNs.
+    if [[ -n "$target" && "$target" != "../spec/$slug.md" ]]; then
       warn "$label" "Spec: $slug — link target '$target' does not match the slug (expected '../spec/$slug.md'); agents follow the label, so only a human clicking the link would land on the wrong file"
     fi
   done < <(awk '
@@ -283,7 +283,7 @@ validate_roadmap() {
   # into the driver's `**Dependencies:**` / `**Model:**` values, where it becomes
   # a phantom dependency on a missing item and silently drops the model hint.
   # Flag the file once here instead of normalizing CR in every parser.
-  if LC_ALL=C grep -q $'\r' "$file"; then
+  if grep -q $'\r' "$file"; then
     err "$label" "file has CRLF line endings — the driver keeps the trailing CR in **Dependencies:** / **Model:** values, turning a dependency into a phantom one and dropping the model hint; convert the file to LF"
   fi
 

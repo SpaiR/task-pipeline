@@ -4,14 +4,13 @@
 #
 # Usage: bash detect-project.sh [dir]     (default: cwd)
 #
-# Everything here is a lookup: which manifests exist, which commands they
-# already declare, where the project documents its commit convention, and which
-# natural language its own prose is in. `setup.md` step 2 reads the block and
+# Everything here is a lookup: which commands the project already declares,
+# where it documents its commit convention, and which natural language its own
+# prose is in. `setup.md` step 2 reads the block and
 # picks; it never has to guess a build command that is written down.
 #
 # Output (fixed line prefixes, English, always in this order):
 #   ROOT: <abs>
-#   MANIFEST: <file> …                  | none
 #   COMMANDS: <source>: <name> …        | none          (one line per source)
 #   COMMIT_FORMAT_DOC: <path>           | none
 #   TEST_CONVENTION: <path>: <line>     | none          (a documented TDD rule)
@@ -32,19 +31,6 @@ dir="${1:-.}"
 cd "$dir" || { echo "ERROR usage: cannot enter $dir" >&2; exit 2; }
 
 echo "ROOT: $(pwd)"
-
-# --- manifests ---------------------------------------------------------------
-manifests=()
-for f in package.json pyproject.toml setup.py requirements.txt Cargo.toml go.mod \
-         build.gradle build.gradle.kts pom.xml Gemfile composer.json Makefile \
-         justfile Taskfile.yml CMakeLists.txt mix.exs deno.json; do
-  [[ -f "$f" ]] && manifests+=("$f")
-done
-if (( ${#manifests[@]} == 0 )); then
-  echo "MANIFEST: none"
-else
-  echo "MANIFEST: ${manifests[*]}"
-fi
 
 # --- commands the project already declares -----------------------------------
 # Names only. The model composes the actual invocation (`npm run test`,

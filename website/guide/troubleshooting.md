@@ -123,7 +123,7 @@ Nothing was written when this fires, so re-running the command after fixing the 
 
 **Fix** — read the failure digest, fix the item (edit `.task/task/<item-slug>.md`, or re-implement it by hand), tick its checkbox, then rerun `/task:roadmap-to-workflow <slug>`. Completed items stay checked, so the rerun only picks up the unchecked remainder. An item left unchecked is re-planned from the roadmap, and its task file regenerated — hand edits to it are lost, so change the item in the roadmap instead.
 
-One digest is worth reading closely: a review `FAIL` that says `no unique '### N.' heading with a status line` means the item's work already landed and was committed, and only the checkbox is behind. The flip is idempotent, so this is never "the box was already ticked" — it means the roadmap has no unique `### N.` heading with a `- [ ] Done` line under it for that item, because it was renumbered, duplicated, or lost its status line. Tick it by hand and rerun; there is nothing to re-implement.
+One digest is worth reading closely: a review `FAIL` that says `no unique '### N.' heading with a status line, or the roadmap's directory could not be written` means the item's work already landed and was committed, and only the checkbox is behind. The flip is idempotent, so this is never "the box was already ticked" — it means either the roadmap has no unique `### N.` heading with a `- [ ] Done` line under it for that item (it was renumbered, duplicated, or lost its status line), or the roadmap's directory could not be written (read-only directory or filesystem, full disk). Fix the cause, tick the box by hand and rerun; there is nothing to re-implement.
 
 ### A worktree can't find .task/ {#a-worktree-cant-find-task}
 

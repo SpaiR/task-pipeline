@@ -225,7 +225,7 @@ The `footer` is optional. The [Commit Message Footer](#commit-message-footer) fo
   └─⫸ Commit Type: feat | fix | refactor | perf | docs | test | chore | revert
 ```
 
-The `<type>` and `<summary>` fields are mandatory; the `(<scope>)` field is optional but strongly preferred. Append `!` after the type or scope (e.g. `feat!:`, `refactor(plan)!:`) to signal a breaking change — this also requires a `BREAKING CHANGE:` footer.
+The `<type>` and `<summary>` fields are mandatory; the `(<scope>)` field is optional but strongly preferred. Append `!` after the type or scope (e.g. `feat!:`, `refactor(lib)!:`) to signal a breaking change — this also requires a `BREAKING CHANGE:` footer.
 
 #### Type
 
