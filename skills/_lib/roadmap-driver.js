@@ -143,6 +143,12 @@ function runReport(headline, landed) {
 function flipReported(text, n) {
   return (text || '').split('\n').some((l) => l.trim() === `MARK-OK #${n}`)
 }
+// The flip's failure line is the only proof the FAIL came from the checkbox: the
+// reviewer's FAIL summary is free text, so a defect reported as "no unique index"
+// must not be routed to the tick-by-hand remedy. Whole line `MARK-FAIL #N` only.
+function flipFailed(text, n) {
+  return (text || '').split('\n').some((l) => l.trim() === `MARK-FAIL #${n}`)
+}
 // --- end flipReported -------------------------------------------------------
 
 const sorted = computeWaves(items, done, scope)
@@ -223,7 +229,7 @@ async function runReview(n, itemSlug, phase) {
        FAIL #${n} ${itemSlug} <what failed>         (review failed)`,
     { agentType: 'task:code-reviewer', label: '3/3 review', phase }
   )
-  return { line: lastLine(r), flipped: flipReported(r, n) }
+  return { line: lastLine(r), flipped: flipReported(r, n), flipFailed: flipFailed(r, n) }
 }
 
 // The run's shape, up front: which items, in which waves, waiting on what —
@@ -285,12 +291,12 @@ for (const [wIdx, items] of waves.entries()) {
       return runReport(`roadmap-to-workflow stopped in wave ${w}, item #${n}: ${
         !status ? 'implement agent returned nothing' : status.startsWith('FAIL') ? status : `unparsable implement digest: ${status}`}`, landed)
 
-    const { line: review, flipped } = await runReview(n, itemSlug, phases[i])
+    const { line: review, flipped, flipFailed: markFailed } = await runReview(n, itemSlug, phases[i])
     log(`[W${w} review] ${review || `FAIL #${n} ${itemSlug} review agent returned nothing`}`)
     if (!digestPassed(review, n, itemSlug))
       return runReport(`roadmap-to-workflow stopped in wave ${w} (review), item #${n}: ${
         !review ? 'review agent returned nothing' : review.startsWith('FAIL') ? review : `unparsable review digest: ${review}`}${
-        (review || '').includes('no unique') ? ` — tick #${n} in ${ROADMAP} by hand, then rerun /task:roadmap-to-workflow ${slug}` : ''}`, landed)
+        markFailed ? ` — tick #${n} in ${ROADMAP} by hand, then rerun /task:roadmap-to-workflow ${slug}` : ''}`, landed)
     if (!flipped)
       return runReport(`roadmap-to-workflow stopped in wave ${w} (review), item #${n}: the review passed but never reported MARK-OK #${n}, so its checkbox may not be flipped. The item's work is in the tree: check ${ROADMAP}, tick #${n} by hand if it is still unchecked, then rerun /task:roadmap-to-workflow ${slug}`, landed)
 

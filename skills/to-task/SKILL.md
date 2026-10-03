@@ -31,20 +31,18 @@ The entry state, gathered before this skill reached you — no tool call of your
 
 If that block arrived unexpanded — the command line itself rather than its output — the preprocessing did not fire: run that command yourself and continue exactly as above.
 
-There is no full-scan validate call here — the file this run writes is validated after the write (Step 7), and pre-existing artifacts are checked on demand with `validate.sh all`, never as an entry gate.
-
 ## Step 1: Entry
 
 No pointer to resolve — the artifact path is the handle, and every run is a fresh capture. Branch on `$ARGUMENTS`:
 
-1. `$ARGUMENTS` names a `ROADMAPS:` slug, with or without `#<N>` → **from-roadmap mode**, Step 1a.
+1. `$ARGUMENTS` names a `ROADMAPS:` slug, with or without `#<N>`, or, when `ROADMAPS:` is not `none`, is shaped `<kebab-slug>#<digits>` whatever the slug → **from-roadmap mode**, Step 1a. (A mistyped slug stops at `roadmap-item.md` step 1, which lists the real ones, rather than being captured as a chat draft.) With `ROADMAPS: none` and no chat discussion to draft from, such an argument is a **stop**, writing nothing: "no roadmaps found under `.task/roadmap/` — create one, or describe the task in chat. → Next: `/task:to-roadmap`". With chat discussion, it is free-form context for rule 2.
 2. Otherwise, chat discussion **or** free-form `$ARGUMENTS` to draft from — either alone is enough → **chat-draft mode**, Step 2.
 3. Neither, but some `ROADMAPS:` line carries an `unchecked=` list other than `none` or `unreadable` → **from-roadmap mode** on a roadmap with open items: `AskUserQuestion` (convention (c)), "Which roadmap?", one chip per such slug — or take it when there is only one — then Step 1a.
 4. Nothing at all → **stop** rather than drafting from nothing: "nothing to capture yet — describe the task in chat, or name it directly. → Next: `/task:to-task <what to capture>`"
 
 ### Step 1a: From-roadmap mode
 
-1. Follow `${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap-item.md` — the one owner of the from-roadmap block, shared with the driver's plan agent: resolve the roadmap, pick `#<N>`, read the ready description, collect the spec slugs, derive `<item-slug>`, check whose file it is, and note the roadmap's `## Architecture` if it has one. Its footers take this skill's own command, so a stop reads `→ Next: \`/task:to-task <slug>#3\``.
+1. Follow `${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap-item.md` — the one owner of the from-roadmap block, shared with the driver's plan agent: resolve the roadmap, pick `#<N>`, read the ready description, collect the spec slugs, derive `<item-slug>`, and check whose file it is. Its footers take this skill's own command, so a stop reads `→ Next: \`/task:to-task <slug>#3\``.
 
 2. **Slug collision.** `roadmap-item.md` step 5 already separated this item's earlier capture from an unrelated namesake (the namesake gets a disambiguated slug and is never touched). When the file is **this item's own**, run the one sanctioned chip (convention (b)) before writing anything: state the existing file's headings as message text first ("Existing `.task/task/<item-slug>.md` has: Description, Plan (4 steps), Tests (2)."), then pose an `AskUserQuestion`: **Regenerate from the item** *(Recommended — the Description is re-derived from the ready description, so only the old Plan and any hand edits are replaced)* / **Decline — stop without writing**. Only the first chip earns `--force` in Step 7. **Decline** says plainly that nothing was written and closes with `→ Next: implement the existing file in a fresh session: \`implement .task/task/<item-slug>.md\``.
 
@@ -55,7 +53,7 @@ No pointer to resolve — the artifact path is the handle, and every run is a fr
 1. **Title, then slug.** Settle the task's title first — a short plain title from the chat's essence, in the language `.task/CLAUDE.md` → Language names (read it in the next item before you do). Then derive the slug from that title: a short kebab-case slug (2–4 words), in English whatever Language says — it is a filename, a parser-stable string. This is both the filename and the task's identity — no task-id, no bracket.
 
    **Slug collision.** If it is already in `TASKS:`, surface that before writing — this is the one sanctioned chip (convention (b)), a pre-write guard on a destructive action. State the existing file's headings as message text first, so the user knows what an overwrite costs ("Existing `.task/task/<slug>.md` has: Description, Plan (4 steps)."), then pose an `AskUserQuestion`: **Pick a different slug** *(Recommended)* / **Overwrite it** / **Decline — stop without writing**. `.task/` is ignored by its own `.task/.gitignore` and never committed, so an overwritten file cannot be restored. Only the middle chip earns `--force` in Step 7; an unrelated namesake is always better disambiguated than overwritten. **Decline** says plainly that nothing was written and closes with `→ Next: \`/task:to-task <a different slug>\`` (convention (a)).
-2. **Read `.task/CLAUDE.md`** for Language and Testing Policy. Step 0 only *reports* that it exists; the platform's auto-load fires for file-read tools only, so its contents are not in front of you yet.
+2. **Read `.task/CLAUDE.md`** for Language (a `**Source:**` pointer there means: read the named file, only the named heading when one is given). Step 0 only *reports* that it exists; the platform's auto-load fires for file-read tools only, so its contents are not in front of you yet.
 3. **Distil the chat** — not the codebase yet — into the `## Description` body: the why + what in the user's own framing, per `.task/CLAUDE.md` → Language (section labels stay English). Use `### Problem` / `### Outcome` / `### Scope` / `### Constraints` where the discussion gives signal; omit a sub-header rather than inventing content, and fabricate nothing that was not discussed.
 4. Hold the title and that body for Step 7, plus a spec slug for each `SPECS:` entry the discussion clearly relies on — the executing session reads them as fixed anchors. Never invent a reference, and never author the spec — that is `to-spec`'s job. Continue to Steps 3–6.
 

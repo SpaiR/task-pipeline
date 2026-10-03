@@ -140,12 +140,13 @@ fi
 chmod u+w "$locked/.task"
 
 t_case "a byte that is not UTF-8 in a roadmap keeps its progress"
+t_utf8_locale
 # macOS awk decodes by locale and aborts on an invalid byte: the counts came
 # back empty and the open list fell back to `none`, a finished roadmap.
 latin=$(make_repo --config)
 mkdir -p "$latin/.task/roadmap"
 printf '# L\n\n### 1. Caf\351\n\n- [x] Done\n\n### 2. Open\n\n- [ ] Done\n' >"$latin/.task/roadmap/latin1.md"
-LC_ALL=en_US.UTF-8 p "$latin" capture
+LC_ALL=$T_UTF8 p "$latin" capture
 assert_contains "$P_OUT" "ROADMAPS: latin1 1/2 unchecked=2" "progress survives the byte"
 
 t_case "an unreadable roadmap is never reported as complete"
