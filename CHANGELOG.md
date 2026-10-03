@@ -4,6 +4,34 @@ All notable changes to this project are documented here. Format — [Keep a Chan
 
 This file is maintained in **English** — see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-policy).
 
+## [Unreleased]
+
+Captured artifacts now read cleanly in a Markdown preview. A roadmap item's checkbox moves out of its heading onto a status line under it, the Ready description trades quoted headings for bold lines, and fields that used to merge into one paragraph each get their own. The parsers read only the new roadmap grammar, so a roadmap captured before this release needs a one-time conversion. Breaking — see **Migration** below.
+
+### Changed (breaking)
+- **The roadmap item grammar.** An item is now a `### N. <title>` heading whose first non-blank line is a `- [ ] Done` status line, which a preview renders as a real checkbox; the status keeps the five states `[ ]`, `[x]`, `[~]`, `[>]` and `[-]`. Inside the `**Ready description:**` quote the sub-headings are bold lines — `> **Context**`, `> **Goal**`, `> **Outcomes**`, `> **Acceptance criteria**` — and the spec citation is `> **Spec references:**`. `validate.sh`, `roadmap-to-workflow` and the reviewer's tick read only this form. An item heading that still carries its checkbox (`### - [ ] 3. Title`) is reported by `validate.sh` as an error naming that heading, and `roadmap-to-workflow` stops on such a roadmap before running anything.
+
+### Changed
+- **Task files, plans and specs render cleanly too.** Task headers, plan steps, spec sections and roadmap item fields each sit in a paragraph of their own, so the task header no longer turns into a setext heading over `---`, and **Touches** is a list. The templates the models copy changed with the format, since they were where the merged layout came from. Existing task files and specs need no migration: the old layout still reads.
+- **Capture digests print as flat Markdown lists.** A spec or roadmap pin no longer shows as an empty dash over a lettered list, and the lines after a list (`Left for…`, `validate:`, `architecture:`) no longer fold into its last item.
+- **`preflight.sh` prints `TASKS:` and `SPECS:` for captures only.** `roadmap-to-workflow` never read them, and they grow with every task ever written.
+
+### Fixed
+- **A roadmap item whose heading drifted out of the grammar vanished silently.** An item under `#### N.` or `## N.` validated clean while every parser dropped it from the run; `validate.sh` now names a `- [ ] Done` status line that no item heading owns.
+- **Non-UTF-8 bytes still broke two parsers on macOS.** A Latin-1 byte in a `Makefile` or `package.json` read as `COMMANDS: none`, so first-run setup wrote `None declared.` into **Build and Tests**; one in another roadmap item's title made the reviewer's checkbox flip fail and turned an OK review into a `FAIL`. Both now parse byte-wise.
+- **The driver misread a failed checkbox flip** — it keyed on the words "no unique" anywhere in the review's free-text summary; it now matches the whole `MARK-FAIL #N` line.
+- **`roadmap-to-workflow` had no defined output for unborn and interrupted runs.** In a repository with no commit yet the `Commits:` range now comes from `git log HEAD`; a Workflow call that errors or is interrupted prints the tool's error, the `Commits:` range and a resume-or-rerun footer; and the `0/0` footer is pasteable, with no backslashes inside its code span.
+- **`to-task` took the slug from the chat instead of the title.** It now settles the title first, so the filename comes from it as the slug rule requires. With no chat and no arguments it goes straight to picking a roadmap item instead of offering a chip that could only stop, and a mistyped or roadmap-less `slug#N` stops instead of capturing an empty draft.
+- **`write-task.sh` input** — a blank `--plan`, or a directory passed as a body, is a usage error (exit 2); a blank `--tests` drops the section. Bodies no longer go through a whole-body pattern substitution, which was quadratic on macOS's bash 3.2.
+- **`resolve-ws.sh`** keeps an inherited `AI_DIR` only when it holds a `CLAUDE.md`, and resolves an absolute root on git older than 2.31, which echoes `--path-format` back instead of honoring it.
+- **The reviewer** defines its diff base when the task's commit is the repository's root commit, and names an unwritable roadmap directory as a `MARK-FAIL` cause. It and the planner follow a `**Source:**` pointer in `.task/CLAUDE.md` to the file it names, rather than treating the section as empty.
+- **Docs realigned with what ships** — the contract drops notes about earlier versions and features that are long gone, states each repeated fact once, and corrects three statements that had drifted from the code; the website's landing card no longer says "git-excluded", a mechanism the pipeline stopped using.
+
+### Migration
+- **Convert each in-flight roadmap once.** `validate.sh roadmap <slug>` names every item heading still in the old form. In each item, move the checkbox out of the heading onto a status line under it, keeping its state: `### - [x] 3. Title` becomes `### 3. Title`, a blank line, then `- [x] Done`. Inside the Ready description quote, turn each `> ### Context`-style heading into a bold line, `> **Context**`, in a paragraph of its own; turn a `### Spec references → …` heading into a `**Spec references:** …` line, quoted if the heading was. Then rerun `validate.sh` until it is clean. Every item keeps its number, title and state. `.task/` is not under version control, so copy the file aside first if you want something to diff against.
+- A fully shipped roadmap you will not run again can stay as it is; only `validate.sh all` will keep reporting it.
+- Task files and specs need nothing.
+
 ## [4.0.0] — 2026-09-29
 
 Two capture skills fold into the two that remain: a task is always captured with its plan, and a roadmap always with its architecture. Five skills instead of seven, and the promote / revise / enrich branches that served two capture depths are gone — in `write-task.sh` too, which now only writes whole files, so every task file carries a `## Plan`. Breaking — see **Migration** below.
