@@ -15,7 +15,8 @@
 # `--description` / `--plan` / `--tests` take a file holding the section BODY
 # ONLY — no `## Description` / `## Plan` / `## Tests` heading. Every heading is
 # emitted here, which is what keeps them parser-stable. Repeat `--spec` once per
-# cited spec.
+# cited spec. A blank `--plan` is a usage error (validate.sh rejects an empty
+# `## Plan`); a blank `--tests` body just drops the `## Tests` section.
 #
 # The file is always written whole, never edited in place. An existing file is
 # left untouched and the run exits 4 unless `--force` is given — the caller's
@@ -75,9 +76,10 @@ done
 # Every task file carries a Plan: validate.sh errors on a file without one.
 [[ -n "$plan" ]]  || die "--plan is required"
 # `-r`, not `-f`: a caller may hand us a process substitution (`<(cat <<'EOF' …)`)
-# instead of a temp file, and that is a pipe.
+# instead of a temp file, and that is a pipe. A directory is readable too, and
+# BSD awk exits 0 with no output on one, so it is refused here.
 for f in "$desc" "$plan" "$tests"; do
-  [[ -z "$f" || -r "$f" ]] || die "cannot read: $f"
+  [[ -z "$f" || ( -r "$f" && ! -d "$f" ) ]] || die "cannot read: $f"
 done
 
 # shellcheck source=./resolve-ws.sh
@@ -92,6 +94,19 @@ emit_body() { # <file>
     for (i = 1; i <= last; i++) print lines[i]
   }' "$1"
 }
+
+# Read all three bodies before anything is written: a body awk cannot read is a
+# usage error (exit 2, like the `cannot read:` check above), never the exit 5
+# reserved for a failed write. `emit_body` drops trailing whitespace-only lines,
+# so a blank body comes back as the empty string; no pattern substitution over a
+# whole body (quadratic on macOS bash 3.2).
+desc_body=$(emit_body "$desc") || die "cannot read: $desc"
+plan_body=$(emit_body "$plan") || die "cannot read: $plan"
+[[ -z "$plan_body" ]] && die "--plan is empty: $plan"
+tests_body=""
+if [[ -n "$tests" ]]; then
+  tests_body=$(emit_body "$tests") || die "cannot read: $tests"
+fi
 
 if [[ -e "$target" && "$force" -ne 1 ]]; then
   echo "EXISTS: $target — pass --force to overwrite" >&2
@@ -132,10 +147,12 @@ chmod "$(printf '%o' $(( 0666 & ~0$(umask) )))" "$work" || write_failed
   done
   printf '%s\n' '---' || write_failed
   printf '## Description\n\n' || write_failed
-  emit_body "$desc" || write_failed
-  printf '\n## Plan\n\n' && emit_body "$plan" || write_failed
-  if [[ -n "$tests" ]]; then
-    printf '\n## Tests\n\n' && emit_body "$tests" || write_failed
+  if [[ -n "$desc_body" ]]; then
+    printf '%s\n' "$desc_body" || write_failed
+  fi
+  printf '\n## Plan\n\n%s\n' "$plan_body" || write_failed
+  if [[ -n "$tests_body" ]]; then
+    printf '\n## Tests\n\n%s\n' "$tests_body" || write_failed
   fi
   printf '\n## Execution\n%s\n' "$EXECUTION_POINTER" || write_failed
 } >"$work" || write_failed

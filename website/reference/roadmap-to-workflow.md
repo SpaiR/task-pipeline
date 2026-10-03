@@ -80,7 +80,7 @@ A stop during **planning** (the headline says `(planning)`, for example two item
 
 Two stops get a different footer, because re-planning the item would be wrong there:
 
-- **The checkbox was not flipped** (`no unique` heading, or no `MARK-OK` reported) — the item's reviewed work is already committed, so the footer says to tick it by hand and rerun.
+- **The checkbox was not flipped** (the review's flip reported `MARK-FAIL`, or no `MARK-OK` at all) — the item's reviewed work is already committed, so the footer says to tick it by hand and rerun.
 - **The implementation was never committed** — the footer says to commit it, tick the item by hand, and rerun.
 
 Rerun a stopped run plainly. Resuming it from its run id replays the cached failing stage and stops at the same place; that is only for a run interrupted before it returned.

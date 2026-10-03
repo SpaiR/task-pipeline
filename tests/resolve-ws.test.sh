@@ -9,7 +9,7 @@ RESOLVE="$T_REPO_ROOT/skills/_lib/resolve-ws.sh"
 
 # Source resolve-ws.sh in a fresh shell whose cwd is <dir>, print the AI_DIR it
 # exports. A fresh process each time because sourcing is a one-shot: find_ai_dir
-# no-ops once AI_DIR is set.
+# no-ops once AI_DIR is set and holds a CLAUDE.md.
 resolve_in() {
   (cd "$1" && env -u AI_DIR -u CLAUDE_PROJECT_DIR \
     bash -c 'source "$0"; printf "%s" "$AI_DIR"' "$RESOLVE")
@@ -127,5 +127,49 @@ assert_eq "$repo/.task" "$(resolve_in "$wt/linked")" "main worktree root"
 t_case "outside any git repo the historical relative default is used"
 plain=$(t_tmpdir)
 assert_eq ".task" "$(resolve_in "$plain")" "relative fallback"
+
+t_case "git older than 2.31 (--path-format echoed back) still resolves absolutely"
+repo=$(make_repo --config)
+git -C "$repo" commit -q --allow-empty -m seed
+mkdir -p "$repo/sub"
+real_git=$(command -v git)
+shim=$(t_tmpdir)
+# An old git does not reject `--path-format=absolute`; rev-parse prints it back
+# as a line of output ahead of the real answer, which is what this shim does.
+cat >"$shim/git" <<SHIM
+#!/usr/bin/env bash
+args=()
+echoed=0
+for a in "\$@"; do
+  if [[ "\$a" == --path-format=* ]]; then echoed=1; else args+=("\$a"); fi
+done
+[[ "\$echoed" -eq 1 ]] && echo "--path-format=absolute"
+exec "$real_git" "\${args[@]}"
+SHIM
+chmod +x "$shim/git"
+got=$(cd "$repo/sub" && env -u AI_DIR -u CLAUDE_PROJECT_DIR PATH="$shim:$PATH" \
+  bash -c 'source "$0"; printf "%s" "$AI_DIR"' "$RESOLVE")
+assert_eq "$repo/.task" "$got" "single absolute AI_DIR"
+repo=$(make_repo)
+git -C "$repo" commit -q --allow-empty -m seed
+mkdir -p "$repo/sub"
+got=$(cd "$repo/sub" && env -u AI_DIR -u CLAUDE_PROJECT_DIR PATH="$shim:$PATH" \
+  bash -c 'source "$0"; printf "%s" "$AI_DIR"' "$RESOLVE")
+assert_eq "$repo/.task" "$got" "step 3 root without a config"
+
+t_case "a pre-set AI_DIR holding CLAUDE.md is kept"
+repo=$(make_repo --config)
+pinned=$(t_tmpdir)
+config_at "$pinned"
+got=$(cd "$repo" && env -u CLAUDE_PROJECT_DIR AI_DIR="$pinned/.task" \
+  bash -c 'source "$0"; printf "%s" "$AI_DIR"' "$RESOLVE")
+assert_eq "$pinned/.task" "$got" "inherited AI_DIR with evidence wins over the repo's own"
+
+t_case "a pre-set AI_DIR without CLAUDE.md is ignored"
+bare=$(t_tmpdir)
+mkdir -p "$bare/.task"
+got=$(cd "$repo" && env -u CLAUDE_PROJECT_DIR AI_DIR="$bare/.task" \
+  bash -c 'source "$0"; printf "%s" "$AI_DIR"' "$RESOLVE")
+assert_eq "$repo/.task" "$got" "no evidence: normal resolution wins"
 
 t_summary

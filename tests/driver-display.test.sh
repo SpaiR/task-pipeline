@@ -96,6 +96,11 @@ const agent = async (prompt, opts) => {
   const head = `OK #${n} ${SLUG[n]}`
   if (BREAK === `${stage}${n}`) return `FAIL #${n} ${SLUG[n]} tests red`
   if (BREAK === `nomark${n}` && stage === 'review') return `${head} done`
+  if (BREAK === `markfail${n}` && stage === 'review')
+    return `MARK-FAIL #${n}\nFAIL #${n} ${SLUG[n]} roadmap item #${n}: no unique '### ${n}.' heading with a status line`
+  if (BREAK === `nouniq${n}` && stage === 'review') return `FAIL #${n} ${SLUG[n]} no unique index on users.email`
+  if (BREAK === `emptyimpl${n}` && stage === 'implement') return ''
+  if (BREAK === `driftimpl${n}` && stage === 'implement') return 'Built it.'
   if (BREAK === `drift${n}` && stage === 'plan') return 'Plan written.'
   if (BREAK === `dup${n}` && stage === 'plan') return `OK #${n} ${SLUG[1]} planned`
   if (BREAK === `prompt${n}` && stage === 'plan') console.log(prompt)
@@ -137,6 +142,29 @@ out=$(run_driver "'nomark3'")
 assert_contains "$out" "roadmap-to-workflow stopped in wave 1 (review), item #3: the review passed but never reported MARK-OK #3" "flip stop headline"
 assert_contains "$out" "
 #1 retry-backoff — built; review: ok, ticked" "landed item kept"
+
+t_case "a flip that found no heading stops with the tick-by-hand remedy"
+out=$(run_driver "'markfail3'")
+assert_contains "$out" "roadmap-to-workflow stopped in wave 1 (review), item #3: FAIL #3 config-loader roadmap item #3: no unique '### 3.' heading with a status line — tick #3 in /p/.task/roadmap/retry-work.md by hand, then rerun /task:roadmap-to-workflow retry-work" "MARK-FAIL headline"
+assert_contains "$out" "
+#1 retry-backoff — built; review: ok, ticked" "landed item kept"
+
+t_case "a review FAIL that merely says no unique gets no tick-by-hand remedy"
+# The remedy is keyed on the flip's own MARK-FAIL line, not on the digest's words.
+assert_eq "roadmap-to-workflow stopped in wave 1 (review), item #3: FAIL #3 config-loader no unique index on users.email
+#1 retry-backoff — built; review: ok, ticked" "$(run_driver "'nouniq3'")" "review stop, no remedy"
+
+t_case "an implement FAIL stops with what landed before it"
+assert_eq "roadmap-to-workflow stopped in wave 1, item #3: FAIL #3 config-loader tests red
+#1 retry-backoff — built; review: ok, ticked" "$(run_driver "'implement3'")" "implement stop"
+
+t_case "an empty implement return stops"
+assert_eq "roadmap-to-workflow stopped in wave 1, item #3: implement agent returned nothing
+#1 retry-backoff — built; review: ok, ticked" "$(run_driver "'emptyimpl3'")" "empty implement"
+
+t_case "a drifted implement digest stops"
+assert_eq "roadmap-to-workflow stopped in wave 1, item #3: unparsable implement digest: Built it.
+#1 retry-backoff — built; review: ok, ticked" "$(run_driver "'driftimpl3'")" "drifted implement"
 
 t_case "a plan FAIL before anything landed is the headline alone"
 assert_eq "roadmap-to-workflow stopped in wave 1 (planning), item #1: FAIL #1 retry-backoff tests red" \

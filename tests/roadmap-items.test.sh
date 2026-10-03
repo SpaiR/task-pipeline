@@ -107,11 +107,12 @@ fi
 chmod u+r "$repo/.task/roadmap/shipped.md"
 
 t_case "a byte that is not UTF-8 does not truncate the item list"
+t_utf8_locale
 # macOS awk decodes by locale and aborts on an invalid byte: the list once
 # stopped at that item, with no DONE line and an exit code no caller handles.
 printf '# L\n\n### 1. Done\n\n- [x] Done\n\n**Dependencies:** \342\200\224\n\n### 2. Caf\351\n\n- [ ] Done\n\n**Dependencies:** 1\n\n### 3. After\n\n- [ ] Done\n\n**Dependencies:** \342\200\224\n' \
   >"$repo/.task/roadmap/latin1.md"
-LC_ALL=en_US.UTF-8 i "$repo" latin1
+LC_ALL=$T_UTF8 i "$repo" latin1
 assert_exit 0 "$I_EXIT" "collector ran"
 assert_contains "$I_OUT" "$(printf '3\t\tsonnet\tAfter')" "item past the byte, em dash still no deps"
 assert_contains "$I_OUT" "$(printf 'DONE\t1')" "DONE line"

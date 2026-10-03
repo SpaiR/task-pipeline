@@ -30,8 +30,6 @@ The entry state, gathered before this skill reached you — no tool call of your
 
 If that block arrived unexpanded — the command line itself rather than its output — the preprocessing did not fire: run that command yourself and continue exactly as above.
 
-There is no full-scan validate call here: Step 4 validates the one file it writes, and pre-existing artifacts are checked on demand with `validate.sh all`, never as an entry gate.
-
 ### Preconditions
 
 - **No real decision to pin** — only behavioral outcomes, or details local to one task → **stop and suggest** `/task:to-task`. Say plainly that nothing was written, with the reason: "Nothing here is a cross-task technical anchor — these are outcomes local to one task. Nothing was written. `→ Next: \`/task:to-task\` to capture it as a task with a plan.`"

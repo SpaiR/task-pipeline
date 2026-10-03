@@ -27,7 +27,7 @@ A roadmap driver also names the **roadmap item to tick** — `#N` in an absolute
 1. Read the task artifact named in the invocation.
 2. Extract every `**Touches:**` path from `## Plan` — one per bullet under the label (older files list them inline on the label's line). Union them into the **Touches set**. If the artifact has no `## Plan`, the Touches set is empty — say so, and treat the changed files of the diff (phase 1) as the review scope instead.
 3. If the artifact carries `Spec:` header lines, read each referenced spec. A header is a Markdown link — `Spec: [<slug>](../spec/<slug>.md)` — so take `<slug>` from the link **text** and open `$AI_DIR/spec/<slug>.md`, where `$AI_DIR` is the `.task` directory holding the artifact's `task/` directory; never follow the relative link target, which resolves against your cwd rather than the artifact's directory. An older or hand-edited artifact may carry a bare `Spec: <slug>`; read it the same way. Spec decisions are **fixed anchors**: code that follows a spec decision you personally disagree with is not a defect. Re-litigating a spec is out of scope.
-4. Read `$AI_DIR/CLAUDE.md`, with `$AI_DIR` as in step 3 — never a cwd-relative `.task/CLAUDE.md`, which a linked worktree does not have. Note **Build and Tests** (the command(s) phase 5 runs) and **Commit Format** (phase 6 writes its commit to it). Reading the artifact in step 1 above usually pulls this file into context on its own, since the platform loads a nested `CLAUDE.md` when you read a file under its directory; read it explicitly anyway, so the phase never depends on that.
+4. Read `$AI_DIR/CLAUDE.md`, with `$AI_DIR` as in step 3 — never a cwd-relative `.task/CLAUDE.md`, which a linked worktree does not have. Note **Build and Tests** (the command(s) phase 5 runs) and **Commit Format** (phase 6 writes its commit to it). When a section's body is a `**Source:** <file>` or `**Source:** <file> → <heading>` pointer, read the named file (only that heading when one is named) and use its value — a pointer is not an empty section. Reading the artifact in step 1 above usually pulls this file into context on its own, since the platform loads a nested `CLAUDE.md` when you read a file under its directory; read it explicitly anyway, so the phase never depends on that.
 5. Resolve the **roadmap item** phase 7 ticks. When the invocation named one, take it verbatim. Otherwise read the artifact's header lines above `---`: it needs both `Roadmap:` and `Source item: #N`. `Roadmap:` is a Markdown link, `Roadmap: [<slug>](../roadmap/<slug>.md)` — take `<slug>` from the link text, the same rule as `Spec:` above (a bare `Roadmap: <slug>` reads the same), and the path is `$AI_DIR/roadmap/<slug>.md`, with `$AI_DIR` as in step 3. Only one of the two headers present, or neither → there is no item to tick; that is not a defect.
 
 **Mandatory output:** the artifact path; the Touches set as a list (or `Touches: none — no ## Plan`); the spec slugs read (or `Specs: none`); the Build and Tests command you will run (or `Build and Tests: none declared`); the roadmap item as `Roadmap item: #N in <absolute path>` (or `Roadmap item: none`).
@@ -47,7 +47,7 @@ Walk back from `HEAD` one commit at a time, checking each commit's files against
 git show --name-only --format='%h %an %s' <sha>
 ```
 
-Include a commit while its files intersect the Touches set, and stop at the first one that does not. The base is the parent of the oldest included commit; with only `HEAD` included, the base is `HEAD~1` (`git show --stat HEAD` when `HEAD` has no parent). Two bounds keep the walk from swallowing unrelated history, and two edge cases fix the base without a walk:
+Include a commit while its files intersect the Touches set, and stop at the first one that does not. The base is the parent of the oldest included commit; with only `HEAD` included, the base is `HEAD~1`. When the oldest included commit is a root commit (no parent — a repository's first commits), the base is the empty tree, `git hash-object -t tree /dev/null`: diff against it, report that sha as `<base>`, and count the root commit in `<K>`. Two bounds keep the walk from swallowing unrelated history, and two edge cases fix the base without a walk:
 
 - **Cap it at 10 commits.** A longer run of touching commits means the tree holds more than this task's work; take the 10 and say so.
 - **Stop at a commit that is plainly not this task's** — a different author, or a subject describing unrelated work — even when its files intersect.
@@ -169,7 +169,7 @@ LC_ALL=C awk -v n="$N" '
 It prints exactly one line; decide from **that line**, never from the exit code. The command is idempotent — an item already ticked is the desired end state and prints `MARK-OK` again — so a re-run can never turn a success into a failure.
 
 - **`MARK-OK #N`** → the item is ticked; the verdict stands.
-- **`MARK-FAIL #N`** → the roadmap has no unique `### N.` heading with a status line (`- [ ] Done`, or any of `[x]`/`[~]`/`[>]`/`[-]`) as the first non-blank line under it (renumbered, duplicated, status line missing, or the file is missing or unreadable). The file is left untouched. Your verdict becomes `FAIL <reference string> roadmap item #N: no unique '### N.' heading with a status line — the work is in the tree, tick it by hand`: the code is fine, but a silent miss would make the next roadmap run re-implement work that already landed.
+- **`MARK-FAIL #N`** → the roadmap has no unique `### N.` heading with a status line (`- [ ] Done`, or any of `[x]`/`[~]`/`[>]`/`[-]`) as the first non-blank line under it (renumbered, duplicated, status line missing, or the file is missing or unreadable) — or its directory could not be written (read-only directory or filesystem, full disk), which the same line also reports. The file is left untouched. Your verdict becomes `FAIL <reference string> roadmap item #N: no unique '### N.' heading with a status line, or the roadmap's directory could not be written — the work is in the tree, tick it by hand`: the code is fine, but a silent miss would make the next roadmap run re-implement work that already landed.
 
 **Mandatory output:** the command's stdout line, verbatim and on a line of its own, or `Roadmap: not applicable — no roadmap item` / `Roadmap: skipped — verdict is FAIL`.
 
@@ -196,7 +196,7 @@ Refuted / unproven: <N> candidate(s) dropped — <one line each, or "none raised
 Build and Tests: <command> → <result>       (or: skipped — no command declared in .task/CLAUDE.md)
 Implementation: <sha> <subject>
 Review fixes: <sha> <subject>   (or: none — nothing to fix | left uncommitted — implementation was never committed | left uncommitted — Build and Tests red)
-MARK-OK #N                       (or: Roadmap: not applicable — no roadmap item | Roadmap: skipped — verdict is FAIL)
+MARK-OK #N                       (or: MARK-FAIL #N | Roadmap: not applicable — no roadmap item | Roadmap: skipped — verdict is FAIL)
 
 OK <reference string> <one-line summary>
 ```
@@ -204,7 +204,7 @@ OK <reference string> <one-line summary>
 Rules for the report:
 
 - The **Checked, per Touches** list is mandatory and must name every file in the Touches set, plus every file outside it that this diff changed. A file you did not examine is written as `not reviewed — <why>`, which is itself a `FAIL`. A report without this list is a failed review even when the code is fine.
-- When phase 7 ran, the report repeats the flip's stdout line (`MARK-OK #N`) **verbatim, on a line of its own** — a roadmap driver reads only this report, and it stops the run when a passing review lacks that line.
+- When phase 7 ran, the report repeats the flip's stdout line (`MARK-OK #N` or `MARK-FAIL #N`) **verbatim, on a line of its own** — a roadmap driver reads only this report, it stops the run when a passing review lacks the `MARK-OK` line, and it keys its tick-by-hand remedy on the `MARK-FAIL` line.
 - The **last non-empty line** is the digest, and nothing may follow it:
   - `OK <reference string> <one-line summary>` — review complete: everything confirmed in scope is fixed, Build and Tests is green or explicitly declared absent, and the roadmap item, if any, is ticked over a committed implementation.
   - `FAIL <reference string> <what failed>` — Build and Tests red, a confirmed in-scope defect you could not fix, the task's Goal not reached, nothing to review, a roadmap item whose implementation was never committed, a `MARK-FAIL` from phase 7, or a phase you could not complete.

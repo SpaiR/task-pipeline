@@ -2,21 +2,21 @@
 
 Read and followed by a capture skill's Step 0 (`to-task` / `to-roadmap` / `to-spec` — the intake-capable three) when the resolved `$AI_DIR/CLAUDE.md` does not exist yet. Run it inline, do not defer to another command. **No confirmation chip:** write the file, then report what it says. Detection that came out wrong is fixed by editing the file, not by re-running setup — same grammar as every capture (convention (b)).
 
-1. Determine the pipeline root `ROOT`. When Step 0's `AI_DIR:` is absolute, `ROOT` is the directory that holds it (`AI_DIR` without its trailing `/.task`): the resolver already chose that root, and deriving another one here would leave `task.root` (step 4) naming a directory with no `.task/CLAUDE.md`, which the resolver rejects on the next run. Only for the relative `.task` fallback, derive it yourself: main worktree root; `pwd` for a non-git dir; for a bare repo the default is a best-effort guess — name it in the Step 0 report so the user can move it.
+1. Determine the pipeline root `ROOT`. When Step 0's `AI_DIR:` is absolute, `ROOT` is the directory that holds it (`AI_DIR` without its trailing `/.task`): the resolver already chose that root, and deriving another one here would leave `task.root` (step 4) naming a directory with no `.task/CLAUDE.md`, which the resolver rejects on the next run. For the relative `.task` fallback (no git repository), `ROOT` is `pwd`.
 2. Gather the facts, then choose from them — do not go looking for what a script already reports:
 
    ```bash
    bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/detect-project.sh" "$ROOT"
    ```
 
-   It prints the manifests, the commands the project already declares (`package.json` scripts, `Makefile` targets), the commit-format doc, any documented TDD convention with its file and line, and whether the project's own README prose and commit subjects are ASCII or carry non-ASCII script. Read `CLAUDE.md` yourself when `PROJECT_CLAUDE_MD: present` — that one needs judgement, not a listing.
+   It prints the commands the project already declares (`package.json` scripts, `Makefile` targets), the commit-format doc, any documented TDD convention with its file and line, and whether the project's own README prose and commit subjects are ASCII or carry non-ASCII script. Read `CLAUDE.md` yourself when `PROJECT_CLAUDE_MD: present` — that one needs judgement, not a listing.
 
    Then decide, from the block:
    - **Build and Tests** — compose the invocation from a declared command (`COMMANDS: package.json scripts: test build` → `npm test`, `npm run build`). Never invent a runner the project does not declare; with `COMMANDS: none` and nothing in `CLAUDE.md`, write the literal `None declared.`
    - **Commit Format** — `COMMIT_FORMAT_DOC:` when it names a file, else the rules derived from `git log`, else the shipped fallback template.
    - **Language** — the `README_LANG:` / `COMMIT_LANG:` samples are evidence, not a verdict: name the language yourself. `ascii` on both is an English or mixed repo, where the default is "follow the `task.md` Description".
    - **Testing Policy** — `always` only when `TEST_CONVENTION:` names one; `on-demand` otherwise. Never silently detect `never`.
-3. Write `$AI_DIR/CLAUDE.md` (creating `$AI_DIR/` and `$AI_DIR/task/` if needed) using the template below. It is a nested `CLAUDE.md`: the platform loads it into any session that reads a file under `.task/`, which is how the executing session and `task:code-reviewer` get these settings without being told to.
+3. Write `$AI_DIR/CLAUDE.md` (creating `$AI_DIR/` if needed) using the template below. It is a nested `CLAUDE.md`: the platform loads it into any session that reads a file under `.task/`, which is how the executing session and `task:code-reviewer` get these settings without being told to.
 
    ```markdown
    # task-pipeline
@@ -62,7 +62,8 @@ Read and followed by a capture skill's Step 0 (`to-task` / `to-roadmap` / `to-sp
    3. Implement the `## Plan` (or the `## Description` when there is none) with the tools
       this file declares under Code Navigation / Code Editing, if any. When the file
       carries a `## Tests` section, write the assertions it names as part of the same
-      change. Then commit per Commit Format above.
+      change. Then commit per Commit Format above — when its body is a `**Source:**`
+      pointer, read the named file (only that heading when one is named).
    4. Spawn the `task:code-reviewer` agent on that task file: it proves each finding, fixes
       confirmed defects within **Touches** plus regressions this diff introduced outside
       them, runs Build and Tests, and commits its fixes as a follow-up commit — it never

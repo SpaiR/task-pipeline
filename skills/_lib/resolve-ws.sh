@@ -12,6 +12,24 @@
 #   source "$SCRIPT_DIR/../_lib/resolve-ws.sh"
 #   # now $AI_DIR is set
 
+# _git_abs <rev-parse option> — print git's answer as one absolute path.
+# `--path-format=absolute` needs git >= 2.31; older git does not reject it but
+# echoes it back as a line of output, which would become a multi-line `AI_DIR`.
+# So an answer counts only when it is a single line starting with `/`; anything
+# else falls back to plain rev-parse, made absolute with `cd … && pwd -P`.
+_git_abs() {
+  local out
+  out=$(git rev-parse --path-format=absolute "$@" 2>/dev/null) || out=""
+  if [[ -n "$out" && "$out" != *$'\n'* && "$out" == /* ]]; then
+    printf '%s\n' "$out"
+    return 0
+  fi
+  out=$(git rev-parse "$@" 2>/dev/null) || return 1
+  [[ -n "$out" && "$out" != *$'\n'* ]] || return 1
+  [[ "$out" == /* ]] || out=$(cd "$out" 2>/dev/null && pwd -P) || return 1
+  printf '%s\n' "$out"
+}
+
 # find_ai_dir — discover the pipeline root that holds `.task/`, in four
 # steps, first hit wins: the `task.root` anchor, a ceilinged ancestor walk, the
 # parent of the git common dir, then `$CLAUDE_PROJECT_DIR`. The order, the
@@ -19,12 +37,11 @@
 # resolution; the comments beside each step below only explain the code.
 #
 # AI_DIR is exported as `<root>/.task` with the `.task` component appended
-# literally (never `cd`'d into). It only acts when AI_DIR is unset, so a caller
-# that pins AI_DIR keeps control; write-task.sh and preflight.sh rely on that
-# to hand their root to the validate.sh child. macOS-safe: no `realpath` /
-# `readlink -f`.
+# literally (never `cd`'d into). A pre-set AI_DIR is kept when it holds a
+# CLAUDE.md (step 0 in docs/contract.md § Root resolution). macOS-safe: no
+# `realpath` / `readlink -f`.
 find_ai_dir() {
-  [[ -n "${AI_DIR:-}" ]] && { export AI_DIR; return 0; }
+  [[ -n "${AI_DIR:-}" && -f "$AI_DIR/CLAUDE.md" ]] && { export AI_DIR; return 0; }
 
   local root="" have_git=0
   command -v git >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1 && have_git=1
@@ -47,8 +64,9 @@ find_ai_dir() {
   #        common dir must be ours (main root, subdir-hosted `.task/`, any linked
   #        worktree, a `--separate-git-dir` checkout), or it must be exactly
   #        `dirname(our common dir)` — the container of a bare repo, which is no
-  #        repository itself. Both sides come from `--path-format=absolute`,
-  #        which git canonicalises, so they compare as plain strings.
+  #        repository itself. Both sides come from `_git_abs`, which
+  #        canonicalises (git itself, or `pwd -P` on old git), so they compare as
+  #        plain strings.
   #    A rejected anchor falls through to the ancestor walk. A submodule anchored
   #    at its superproject fails the identity check too, and the walk — whose
   #    ceiling includes the superproject — finds the same `.task/`.
@@ -57,9 +75,9 @@ find_ai_dir() {
     [[ -n "$root" && ! -f "$root/.task/CLAUDE.md" ]] && root=""
     if [[ -n "$root" ]]; then
       local own_common="" anchor_common="" anchor_phys=""
-      own_common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || own_common=""
+      own_common=$(_git_abs --git-common-dir) || own_common=""
       [[ -n "$own_common" ]] && common_root=${own_common%/*}
-      anchor_common=$(git -C "$root" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) \
+      anchor_common=$(cd "$root" 2>/dev/null && _git_abs --git-common-dir) \
         || anchor_common=""
       if [[ -z "$own_common" ]]; then
         root=""                                  # nothing to prove it against
@@ -104,10 +122,10 @@ find_ai_dir() {
     # ceiling existed. Resolving too permissively in that corner is strictly
     # better than failing to find a root that is really there.
     if [[ "$have_git" -eq 1 && "$dir" == "$phys" ]]; then
-      top=$(git rev-parse --path-format=absolute --show-toplevel 2>/dev/null) || top=""
+      top=$(_git_abs --show-toplevel) || top=""
       local common
       if [[ -z "$common_root" ]] \
-         && common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) \
+         && common=$(_git_abs --git-common-dir) \
          && [[ -n "$common" ]]; then
         common_root=$(dirname "$common")
       fi
@@ -142,12 +160,12 @@ find_ai_dir() {
     local top3="${top:-}"      # `local` is function-scoped, but be explicit
     if [[ -z "$common_root" ]]; then
       local common3
-      if common3=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) \
+      if common3=$(_git_abs --git-common-dir) \
          && [[ -n "$common3" ]]; then
         common_root=$(dirname "$common3")
       fi
     fi
-    [[ -n "$top3" ]] || top3=$(git rev-parse --path-format=absolute --show-toplevel 2>/dev/null) || top3=""
+    [[ -n "$top3" ]] || top3=$(_git_abs --show-toplevel) || top3=""
     if [[ -n "$common_root" && -e "$common_root/.git" ]]; then
       # A real main worktree root: normal, nested and sibling worktrees all land
       # here, which is what lets every worktree of a repo share one `.task/`.

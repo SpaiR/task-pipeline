@@ -11,7 +11,7 @@ Interactive `to-task` follows `## Core` and ignores `## Driver mode`; the plan a
 
 ### 1. Read the anchors
 
-Read `$AI_DIR/CLAUDE.md` with a **file-read tool**, not `cat` — the platform's auto-load fires only for file-read tools. Note **Language**, **Testing Policy**, and **Code Navigation** / **Code Editing** if declared.
+Read `$AI_DIR/CLAUDE.md` with a **file-read tool**, not `cat` — the platform's auto-load fires only for file-read tools. Note **Language**, **Testing Policy**, and **Code Navigation** / **Code Editing** if declared. When a section's body is a `**Source:** <file>` or `**Source:** <file> → <heading>` pointer, read the named file (only that heading when one is named) and use its value — a pointer is not an empty section.
 
 Then read every spec the task cites (`Spec:` headers, or the slugs collected from a roadmap item). Their decisions are **fixed anchors**: the Plan honors them and never re-derives a different technical choice. No `Spec:` at all → no anchors, proceed on the Description alone.
 
@@ -122,7 +122,7 @@ Instructions for `roadmap-to-workflow`'s per-item **plan agent**, spawned by `sk
 
 ### D1. Resolve the item
 
-Follow `skills/_lib/roadmap-item.md` — steps 3 to 6 (read the ready description, collect the specs, derive the slug, note the architecture). Its steps 1 and 2 do not apply: the roadmap path and your `#N` arrive in the prompt.
+Follow `skills/_lib/roadmap-item.md` — steps 3 to 5. Its steps 1 and 2 do not apply: the roadmap path and your `#N` arrive in the prompt.
 
 ### D2. Slug collision, without anyone to ask
 
@@ -134,7 +134,7 @@ Follow `skills/_lib/roadmap-item.md` — steps 3 to 6 (read the ready descriptio
 
 ### D3. Run `## Core`, then the digest
 
-Work `## Core` steps 1–6 with the item's ready description as the Description source. A write that exits non-zero — 4 above, 5, or any other status — is a `FAIL` naming the `ERROR write-task:` line, with no digest above it. Otherwise print a 2–4 line digest — path written, step count, validate result. **No `→ Next:` footer, nothing after the last line.** The last non-empty line MUST be exactly one of:
+Work `## Core` steps 1–6 with the item's ready description as the Description source. A write that exits non-zero — 4 above, 5, or any other status — is a `FAIL` with no digest above it, naming the `ERROR write-task:` line on exit 5 or any other status, and the `EXISTS:` line (so, the slug) on exit 4. Otherwise print a 2–4 line digest — path written, step count, validate result. **No `→ Next:` footer, nothing after the last line.** The last non-empty line MUST be exactly one of:
 
 ```
 OK #{N} {item-slug} planned

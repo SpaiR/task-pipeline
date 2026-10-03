@@ -15,7 +15,7 @@ See the [single-task guide](/guide/single-task) for how it fits the everyday flo
 | Form | Behavior |
 |---|---|
 | *(empty)* | Draft from the chat discussion so far. With no chat to draft from, open an item from a roadmap that has open items. |
-| `<roadmap-slug>` or `<roadmap-slug>#<N>` | Open from that roadmap item instead of the chat. |
+| `<roadmap-slug>` or `<roadmap-slug>#<N>` | Open from that roadmap item instead of the chat. When the project has roadmaps, a `<slug>#<N>` that names none stops and lists the ones that exist; with no roadmap and no chat to draft from, it stops and points at `/task:to-roadmap`. |
 | anything else | Free-form context folded into the draft alongside the chat. |
 
 ## When to use it

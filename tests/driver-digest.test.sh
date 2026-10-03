@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Contract under test: digestPassed() and flipReported() in
+# Contract under test: digestPassed(), flipReported() and flipFailed() in
 # skills/_lib/roadmap-driver.js — the gates between an item's implement/review
 # digest and the next stage. Only an exact `OK #N <item-slug>` head passes; a
 # FAIL, an empty line or a drifted line stops the run. A passing review must
 # also carry its phase-7 `MARK-OK #N` line. Extracted verbatim between their
-# marker comments, as driver-waves.test.sh does for computeWaves.
+# marker comments, as driver-waves.test.sh does for computeWaves. flipFailed
+# recognises the flip's own `MARK-FAIL #N` line, never a free-text digest.
 source "$(dirname "$0")/lib.sh"
 
 DRIVER="$T_REPO_ROOT/skills/_lib/roadmap-driver.js"
@@ -68,5 +69,18 @@ assert_eq "false" "$(flipped "'MARK-FAIL #3\\nFAIL #3 retry-backoff no unique he
 assert_eq "false" "$(flipped "'MARK-OK #13\\nOK #3 retry-backoff done'")" "another item's number"
 assert_eq "false" "$(flipped "'Roadmap: MARK-OK #3 expected\\nOK #3 retry-backoff'")" "mentioned mid-sentence"
 assert_eq "false" "$(flipped "undefined")" "undefined"
+
+failed() { # <text> → prints true|false for item #3
+  { cat "$dir/digest.mjs"; printf 'console.log(flipFailed(%s, 3))\n' "$1"; } >"$dir/case.mjs"
+  node "$dir/case.mjs" 2>&1
+}
+
+t_case "only the flip's own MARK-FAIL line counts as a failed flip"
+assert_eq "true" "$(failed "'## Review\\nMARK-FAIL #3\\nFAIL #3 retry-backoff roadmap item #3: no unique heading'")" "bare line"
+assert_eq "true" "$(failed "'  MARK-FAIL #3  \\nFAIL #3 retry-backoff x'")" "indented line"
+assert_eq "false" "$(failed "'FAIL #3 retry-backoff no unique index on users.email'")" "a defect whose text says no unique"
+assert_eq "false" "$(failed "'MARK-FAIL #13\\nFAIL #3 retry-backoff x'")" "another item's number"
+assert_eq "false" "$(failed "'MARK-OK #3\\nOK #3 retry-backoff done'")" "a successful flip"
+assert_eq "false" "$(failed "undefined")" "undefined"
 
 t_summary
