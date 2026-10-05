@@ -58,6 +58,8 @@ An item backlog, each item shaped like:
 
 Every block is its own paragraph, so the roadmap reads cleanly in a Markdown preview: the `- [ ] Done` status line renders as a checkbox, and the Ready description's sub-headings are bold lines inside one quote.
 
+`**Size:**` is how much judgment the work needs, not how important it is. `S` is a change the item text fully describes, in one or a few obvious files, with no new abstraction: a rename, config, docs, a point fix. `L` spans modules, adds a subsystem or a migration, or has design forks. Everything else is `M`, the default, so leave the line off rather than write `M`. [`roadmap-to-workflow`](/reference/roadmap-to-workflow) picks each stage's model and effort from it.
+
 Items describe **observable behavior** — no project-specific file or symbol names; those are decided when the item is picked up in [`to-task`](/reference/to-task).
 
 ## Specs

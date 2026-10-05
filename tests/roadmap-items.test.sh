@@ -74,6 +74,12 @@ Spec: [event-envelope](../spec/event-envelope.md)
 
 **Size:** l
 
+### 9. Off-list size
+
+- [ ] Done
+
+**Size:** XL
+
 ## Out of scope
 
 **Dependencies:** 99
@@ -88,12 +94,13 @@ assert_contains "$I_OUT" "$(printf '4\t\tM\tOpen, no deps, no size hint')" "em d
 t_case "a stale Model hint is ignored and a lowercase Size is accepted"
 assert_contains "$I_OUT" "$(printf '7\t\tM\tStale model hint only')" "Model is no longer read"
 assert_contains "$I_OUT" "$(printf '8\t\tL\tLowercase size')" "size is upper-cased"
+assert_contains "$I_OUT" "$(printf '9\t\tM\tOff-list size')" "an off-list size is the default, never passed through"
 
 t_case "the DONE line carries every already-marked number"
 assert_contains "$I_OUT" "$(printf 'DONE\t1,2')" "5-state class counts as marked"
 
 t_case "a stray Dependencies line outside an item is not billed to the last item"
-assert_eq "5" "$(grep -c . <<<"$I_OUT")" "four items plus the DONE line"
+assert_eq "6" "$(grep -c . <<<"$I_OUT")" "five items plus the DONE line"
 
 t_case "a heading without a status line, or with a checkbox in it, is no item and steals no Dependencies"
 assert_eq "0" "$(grep -c -e '^5' -e '^6' <<<"$I_OUT")" "neither is reported"
@@ -103,7 +110,7 @@ t_case "a checked-off roadmap reports no items and a full DONE line"
 sed 's/^- \[ \] Done$/- [x] Done/' "$repo/.task/roadmap/api-v2.md" >"$repo/.task/roadmap/shipped.md"
 i "$repo" shipped
 assert_exit 0 "$I_EXIT" "all marked"
-assert_eq "$(printf 'DONE\t1,2,3,4,7,8')" "$I_OUT" "only the DONE line"
+assert_eq "$(printf 'DONE\t1,2,3,4,7,8,9')" "$I_OUT" "only the DONE line"
 
 t_case "an unresolvable roadmap is an error, never an empty item list"
 i "$repo" nosuchthing

@@ -208,18 +208,17 @@ assert_contains "$out" "/p/.task/CLAUDE.md → Commit Format" "Commit Format by 
 t_case "plan and implement take model and effort from the size table, review takes neither"
 # Item #1 is S, #2 M, #3 L. An omitted effort would inherit the session's, so
 # implement must always carry one; the reviewer pins its own in frontmatter.
-out=$(run_driver "'opts1'")
-assert_contains "$out" "1/3 plan|opus|medium|" "S plan"
-assert_contains "$out" "2/3 implement|sonnet|medium|" "S implement"
-assert_contains "$out" "3/3 review|||task:code-reviewer" "S review"
-out=$(run_driver "'opts2'")
-assert_contains "$out" "1/3 plan|opus|high|" "M plan"
-assert_contains "$out" "2/3 implement|sonnet|medium|" "M implement"
-assert_contains "$out" "3/3 review|||task:code-reviewer" "M review"
-out=$(run_driver "'opts3'")
-assert_contains "$out" "1/3 plan|opus|high|" "L plan"
-assert_contains "$out" "2/3 implement|opus|medium|" "L implement"
-assert_contains "$out" "3/3 review|||task:code-reviewer" "L review"
+# Whole lines, compared exactly: the opts lines are the only ones with a `|`.
+opts() { run_driver "'opts$1'" | grep '|'; }
+assert_eq "1/3 plan|opus|medium|
+2/3 implement|sonnet|medium|
+3/3 review|||task:code-reviewer" "$(opts 1)" "S stages"
+assert_eq "1/3 plan|opus|high|
+2/3 implement|sonnet|medium|
+3/3 review|||task:code-reviewer" "$(opts 2)" "M stages"
+assert_eq "1/3 plan|opus|high|
+2/3 implement|opus|medium|
+3/3 review|||task:code-reviewer" "$(opts 3)" "L stages"
 
 t_case "a later wave's slug that matches a landed item's stops too"
 assert_contains "$(run_driver "'dup2'")" \

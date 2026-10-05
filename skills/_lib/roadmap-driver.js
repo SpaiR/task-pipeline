@@ -35,13 +35,35 @@ if (!Array.isArray(specPaths) || specPaths.some((p) => typeof p !== 'string' || 
   return bad('specPaths must be an array of absolute paths ([] when the roadmap has no Spec: headers)')
 if (!Array.isArray(items) || items.length === 0)
   return bad('items must be a non-empty array of {n, title, size, deps} objects — was it passed as a JSON string instead of a real array?')
-const SIZES = ['S', 'M', 'L']
+
+// Model and effort per stage, keyed by the item's size (its roadmap `**Size:**`
+// hint, M when absent). Review is absent on purpose: task:code-reviewer pins its
+// own in frontmatter, see runReview.
+// Why this shape: on well-specified changes sonnet at medium matches opus's pass
+// rate at a third of the cost, while opus stays ahead where judgment is needed
+// (planning, finding defects); effort moves results more than the model does.
+// Plan is never below implement — its errors reach two downstream agents.
+// Implement stays at medium and xhigh/max are not used anywhere: in implement
+// runs, opus at high and above started breaking passing tests. The planner
+// writes no code, so high is safe there.
+// Switching rule for M/implement, the cell the evidence supports least: if M
+// items come back from the reviewer with fix commits of the "missed a file /
+// skipped the ## Tests section / did not read the Spec" kind, raise it to
+// sonnet/high; if the fixes are "wrong approach / missed a side effect", switch
+// it to opus/medium.
+const STAGES = {
+  S: { plan: { model: 'opus', effort: 'medium' }, implement: { model: 'sonnet', effort: 'medium' } },
+  M: { plan: { model: 'opus', effort: 'high' }, implement: { model: 'sonnet', effort: 'medium' } },
+  L: { plan: { model: 'opus', effort: 'high' }, implement: { model: 'opus', effort: 'medium' } },
+}
+const SIZES = Object.keys(STAGES)
+
 const isItemNo = (v) => Number.isInteger(v) && v >= 1
 for (const it of items) {
   if (!it || typeof it !== 'object' || Array.isArray(it)) return bad('every entry of items must be an {n, title, size, deps} object')
   if (!isItemNo(it.n)) return bad('every item needs an integer n >= 1')
   if (typeof it.title !== 'string' || !it.title) return bad(`item #${it.n} needs a non-empty title`)
-  if (!SIZES.includes(it.size)) return bad(`item #${it.n} size must be S|M|L, got ${JSON.stringify(it.size)}`)
+  if (!SIZES.includes(it.size)) return bad(`item #${it.n} size must be ${SIZES.join('|')}, got ${JSON.stringify(it.size)}`)
   if (!Array.isArray(it.deps) || it.deps.some((d) => !isItemNo(d))) return bad(`item #${it.n} deps must be an array of item numbers ([] for none)`)
 }
 if (items.length !== new Set(items.map((it) => it.n)).size) return bad('items contains the same n twice')
@@ -158,25 +180,6 @@ const waves = sorted.waves
 const ROADMAP = `${aiDir}/roadmap/${slug}.md`
 const SPEC_SLUGS = specPaths.map((p) => p.split('/').pop().replace(/\.md$/, ''))
 const lastLine = (s) => (s || '').trim().split('\n').filter(Boolean).pop() || ''
-
-// Model and effort per stage, keyed by the item's size (its roadmap `**Size:**`
-// hint, M when absent). Review is absent on purpose: task:code-reviewer pins its
-// own in frontmatter, see runReview.
-// Why this shape: on well-specified changes sonnet at medium matches opus's pass
-// rate at a third of the cost, while opus stays ahead where judgment is needed
-// (planning, finding defects); effort moves results more than the model does.
-// Plan is never below implement — its errors reach two downstream agents.
-// xhigh/max are not used: opus at high and above started breaking passing tests.
-// Switching rule for M/implement, the cell the evidence supports least: if M
-// items come back from the reviewer with fix commits of the "missed a file /
-// skipped the ## Tests section / did not read the Spec" kind, raise it to
-// sonnet/high; if the fixes are "wrong approach / missed a side effect", switch
-// it to opus/medium.
-const STAGES = {
-  S: { plan: { model: 'opus', effort: 'medium' }, implement: { model: 'sonnet', effort: 'medium' } },
-  M: { plan: { model: 'opus', effort: 'high' }, implement: { model: 'sonnet', effort: 'medium' } },
-  L: { plan: { model: 'opus', effort: 'high' }, implement: { model: 'opus', effort: 'medium' } },
-}
 
 // PLAN — writes only its own .task/task/<item-slug>.md, never the working tree,
 // so a whole wave plans in parallel. Reads skills/_lib/plan-driver.md instead of
