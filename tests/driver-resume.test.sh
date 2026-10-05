@@ -55,7 +55,7 @@ assert_eq "${BAD}recover must be true or false — the recovery mode picked at l
   "$(run_args "delete args.recover")" "recover missing"
 assert_eq "${BAD}recover must be true or false — the recovery mode picked at launch" \
   "$(run_args "args.recover = 'on'")" "recover as a string"
-assert_eq "${BAD}resume must be an array of {n, slug, from, attempt, note?} objects ([] when no item is resumed)" \
+assert_eq "${BAD}resume must be an array of {n, slug, from, attempt, note?, deviations?} objects ([] when no item is resumed)" \
   "$(run_args "delete args.resume")" "resume missing"
 assert_eq "${BAD}resume names #7, which is not an unchecked item in items" \
   "$(run_args "args.resume = [{ n: 7, slug: 'x', from: 'review', attempt: 1 }]")" "n not in items"
@@ -69,6 +69,10 @@ assert_eq "${BAD}resume #1 needs the kebab-case slug of its task file, got \"../
   "$(run_args "args.resume = [{ n: 1, slug: '../x', from: 'review', attempt: 1 }]")" "slug that is a path"
 assert_eq "${BAD}resume #1 note must be a string when given" \
   "$(run_args "args.resume = [{ n: 1, slug: 'a', from: 'review', attempt: 1, note: 5 }]")" "note not a string"
+assert_eq "${BAD}resume #1 deviations must be an array of non-empty strings when given" \
+  "$(run_args "args.resume = [{ n: 1, slug: 'a', from: 'review', attempt: 1, deviations: 'kept it' }]")" "deviations as a string"
+assert_eq "${BAD}resume #1 deviations must be an array of non-empty strings when given" \
+  "$(run_args "args.resume = [{ n: 1, slug: 'a', from: 'review', attempt: 1, deviations: ['  '] }]")" "a blank deviation"
 
 t_case "a resumed item outside the run's scope is refused before any agent"
 assert_eq "roadmap-to-workflow: resume names #2, which this run's scope leaves out" \

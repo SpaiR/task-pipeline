@@ -116,7 +116,7 @@ Decisions made during recovery:
 - #3 retry-queue: kept the v1 queue table instead of plan step 2's new one — the migration is out of scope
 ```
 
-When a departure changed what a spec says, the footer points at `/task:to-spec` so you can fold it back into the spec.
+If the item stops again before its review passes, its deviations are kept with the stop and handed to the next attempt, so none is lost. A run that ends stopped lists them as declared but not yet reviewed. When a departure changed what a spec says, the footer points at `/task:to-spec` so you can fold it back into the spec.
 
 If the Workflow call itself errors or is interrupted, there is no headline and no run summary. Recovery tries resuming the run from its run id once in the same session. When it stops instead, the skill quotes the tool's error, prints the `Commits:` range the run made before it died, and closes with a footer that resumes the run in the same session or reruns `/task:roadmap-to-workflow <slug>`.
 

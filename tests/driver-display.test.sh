@@ -63,7 +63,7 @@ assert_eq "roadmap-to-workflow stopped in wave 1 (planning), item #1: FAIL #1 a 
 STATE recover=off attempts=none
 STOPPED #1 - stage=plan" \
   "$(run_js "console.log(runReport('roadmap-to-workflow stopped in wave 1 (planning), item #1: FAIL #1 a b', [],
-    { recover: false, resume: [], stopped: { n: 1, slug: null, stage: 'plan' } }))")" "headline + state"
+    { recover: false, resume: [], stopped: { n: 1, slug: null, stage: 'plan', deviations: [] } }))")" "headline + state"
 
 t_case "runReport lists landed items under the state block, in landing order, deviations indented"
 out=$(run_js "console.log(runReport('roadmap-to-workflow: all items shipped.', [
@@ -274,6 +274,30 @@ const stub = agent
 agent = async (p, o) => { if (o.label === '3/3 review' && p.includes('#1 ')) console.log(p); return stub(p, o) }")
 assert_contains "$out" "The implementation declared these deviations" "deviations announced"
 assert_contains "$out" "       DEVIATION #1 kept the old cache" "deviation listed"
+
+t_case "a review stop after a resumed implement keeps its deviations under STOPPED"
+out=$(run_driver "'deviate1'" "$RESUME1
+const stub = agent
+agent = async (p, o) => o.label === '3/3 review' && p.includes('#1 ') ? 'FAIL #1 retry-backoff tests red' : stub(p, o)")
+assert_eq "roadmap-to-workflow stopped in wave 1 (review), item #1: FAIL #1 retry-backoff tests red
+STATE recover=on attempts=#1:1
+STOPPED #1 retry-backoff stage=review
+  deviation: kept the old cache" "$out" "unjudged deviation travels with the stop"
+
+t_case "a review entry's carried deviations reach the review prompt and the report"
+CARRY='args.recover = true; args.resume = [{ n: 3, slug: "config-loader", from: "review", attempt: 2, deviations: ["kept the old cache"] }]'
+out=$(run_driver "'reviewprompt3'" "$CARRY")
+assert_contains "$out" "       DEVIATION #3 kept the old cache" "listed for the reviewer"
+assert_contains "$out" "#3 config-loader — resumed at review; review: ok, ticked
+  deviation: kept the old cache" "listed under the landed item"
+
+t_case "an implement entry's carried deviations are shown to the implement agent, not collected"
+CARRY='args.recover = true; args.resume = [{ n: 1, slug: "retry-backoff", from: "implement", attempt: 2, deviations: ["kept the old cache"] }]'
+out=$(run_driver "'implprompt1'" "$CARRY")
+assert_contains "$out" "Declare again each one the code
+     still makes" "asked to re-declare"
+assert_contains "$out" "       DEVIATION #1 kept the old cache" "earlier deviation listed"
+assert_eq "0" "$(run_driver "''" "$CARRY" | grep -c 'deviation:')" "only re-declared ones count"
 
 t_case "a fresh implement's DEVIATION lines are not collected"
 assert_eq "0" "$(run_driver "'deviate3'" | grep -c 'deviation:')" "only a resumed implement may deviate"

@@ -55,10 +55,10 @@ if (!(scope === 'all' || scope === 'next-wave' || (Array.isArray(scope) && scope
 // invoking session recovers the user's mode after a context compaction.
 if (typeof recover !== 'boolean') return bad('recover must be true or false — the recovery mode picked at launch')
 if (!Array.isArray(resume))
-  return bad('resume must be an array of {n, slug, from, attempt, note?} objects ([] when no item is resumed)')
+  return bad('resume must be an array of {n, slug, from, attempt, note?, deviations?} objects ([] when no item is resumed)')
 const itemNos = new Set(items.map((it) => it.n))
 for (const r of resume) {
-  if (!r || typeof r !== 'object' || Array.isArray(r)) return bad('every entry of resume must be an {n, slug, from, attempt, note?} object')
+  if (!r || typeof r !== 'object' || Array.isArray(r)) return bad('every entry of resume must be an {n, slug, from, attempt, note?, deviations?} object')
   if (!itemNos.has(r.n)) return bad(`resume names #${r.n}, which is not an unchecked item in items`)
   if (typeof r.slug !== 'string' || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(r.slug))
     return bad(`resume #${r.n} needs the kebab-case slug of its task file, got ${JSON.stringify(r.slug)}`)
@@ -67,6 +67,8 @@ for (const r of resume) {
   if (r.attempt !== 1 && r.attempt !== 2)
     return bad(`resume #${r.n} attempt must be 1 or 2, got ${JSON.stringify(r.attempt)} — past the second attempt the user decides`)
   if (r.note !== undefined && typeof r.note !== 'string') return bad(`resume #${r.n} note must be a string when given`)
+  if (r.deviations !== undefined && (!Array.isArray(r.deviations) || r.deviations.some((d) => typeof d !== 'string' || !d.trim())))
+    return bad(`resume #${r.n} deviations must be an array of non-empty strings when given`)
 }
 if (resume.length !== new Set(resume.map((r) => r.n)).size) return bad('resume names the same n twice')
 
@@ -170,7 +172,9 @@ function itemPhase(w, n, title) {
 // git. The state block is what the skill's recovery reads after a compaction:
 // `STATE recover=<on|off> attempts=<#N:k,…|none>` always, and on a stop
 // `STOPPED #N <item-slug|-> stage=<plan|implement|review|mark>`. Every
-// deviation a resumed implement declared follows its item's line, indented.
+// deviation a resumed implement declared follows its item's line, indented —
+// the stopped item's too, under STOPPED, so a rerun from review can carry
+// deviations no review has judged yet.
 function digestSummary(line, n, itemSlug) {
   return (line || '').slice(`OK #${n} ${itemSlug}`.length).trim()
 }
@@ -180,7 +184,8 @@ function runReport(headline, landed, state) {
   return [
     headline,
     `STATE recover=${state.recover ? 'on' : 'off'} attempts=${attempts || 'none'}`,
-    ...(stopped ? [`STOPPED #${stopped.n} ${stopped.slug || '-'} stage=${stopped.stage}`] : []),
+    ...(stopped ? [`STOPPED #${stopped.n} ${stopped.slug || '-'} stage=${stopped.stage}`,
+      ...stopped.deviations.map((d) => `  deviation: ${d}`)] : []),
     ...landed.flatMap(({ n, slug, impl, review, deviations }) => [
       `#${n} ${slug} — ${impl || '(no summary)'}; review: ${review || '(no summary)'}`,
       ...deviations.map((d) => `  deviation: ${d}`),
@@ -275,7 +280,10 @@ async function runImplement(n, itemSlug, model, phase, resumed) {
      ${resumed.attempt} of 2. An earlier attempt may already have done part or all of this work:
      the commits on this branch and the working tree hold it. Read git log, git status and
      git diff first, build on that work, and do not redo or revert it.${resumed.note ? `
-     Why the earlier attempt stopped, and what it left: ${resumed.note}` : ''}
+     Why the earlier attempt stopped, and what it left: ${resumed.note}` : ''}${resumed.deviations && resumed.deviations.length ? `
+     An earlier attempt declared these deviations. Declare again each one the code
+     still makes, and drop each one it no longer makes:
+${resumed.deviations.map((d) => `       DEVIATION #${n} ${d}`).join('\n')}` : ''}
      The task file's acceptance criteria and its ## Tests stand as written: never weaken,
      skip or delete one to reach OK. You may depart from its ## Plan, and from a spec it
      cites as long as the departure breaks none of the invariants that spec states, when
@@ -309,8 +317,9 @@ async function runImplement(n, itemSlug, model, phase, resumed) {
 // (the reviewer's phase 7 turns a failed flip into a FAIL digest). No `model` opt:
 // task:code-reviewer pins its own model/effort, so a haiku item never gets a
 // haiku review. No `isolation`: it must see and commit into this very working tree.
-// A resumed review carries the earlier attempt's note; a review after a resumed
-// implement lists the deviations it declared, for the reviewer to judge.
+// A resumed review carries the earlier attempt's note. Deviations — declared by
+// this run's resumed implement, or carried by a review entry from the stopped
+// run — are listed for the reviewer to judge.
 async function runReview(n, itemSlug, phase, resumed, deviations) {
   const context = [
     resumed && resumed.from === 'review' && resumed.note
@@ -348,8 +357,8 @@ for (const [i, wave] of waves.entries()) log(`  W${i + 1}: ${wave.map(itemLine).
 // Items reviewed AND ticked, in landing order — the body of runReport.
 const landed = []
 // Every return after the first agent: the headline, the state block, the landed items.
-const stop = (n, itemSlug, stage, headline) =>
-  runReport(headline, landed, { recover, resume, stopped: { n, slug: itemSlug, stage } })
+const stop = (n, itemSlug, stage, headline, deviations = []) =>
+  runReport(headline, landed, { recover, resume, stopped: { n, slug: itemSlug, stage, deviations } })
 
 for (const [wIdx, items] of waves.entries()) {
   const w = wIdx + 1
@@ -400,7 +409,7 @@ for (const [wIdx, items] of waves.entries()) {
     const resumed = RESUME.get(n)
 
     let impl = 'resumed at review'
-    let deviations = []
+    let deviations = resumed && resumed.from === 'review' ? resumed.deviations || [] : []
     if (!resumed || resumed.from === 'implement') {
       const { line: status, deviations: declared } = await runImplement(n, itemSlug, model, phases[i], resumed)
       log(`[W${w} implement] ${status || `FAIL #${n} ${itemSlug} implement agent returned nothing`}`)
@@ -417,9 +426,9 @@ for (const [wIdx, items] of waves.entries()) {
     if (!digestPassed(review, n, itemSlug))
       return stop(n, itemSlug, markFailed ? 'mark' : 'review', `roadmap-to-workflow stopped in wave ${w} (review), item #${n}: ${
         !review ? 'review agent returned nothing' : review.startsWith('FAIL') ? review : `unparsable review digest: ${review}`}${
-        markFailed ? ` — its work is committed but the checkbox could not be flipped: fix ${ROADMAP} so #${n} has one heading with a status line, then rerun /task:roadmap-to-workflow ${slug} and resume #${n} at review` : ''}`)
+        markFailed ? ` — its work is committed but the checkbox could not be flipped: fix ${ROADMAP} so #${n} has one heading with a status line, then rerun /task:roadmap-to-workflow ${slug} and resume #${n} at review` : ''}`, deviations)
     if (!flipped)
-      return stop(n, itemSlug, 'mark', `roadmap-to-workflow stopped in wave ${w} (review), item #${n}: the review passed but never reported MARK-OK #${n}, so its checkbox may not be flipped. The item's work is in the tree: if #${n} is still unchecked in ${ROADMAP}, rerun /task:roadmap-to-workflow ${slug} and resume #${n} at review`)
+      return stop(n, itemSlug, 'mark', `roadmap-to-workflow stopped in wave ${w} (review), item #${n}: the review passed but never reported MARK-OK #${n}, so its checkbox may not be flipped. The item's work is in the tree: if #${n} is still unchecked in ${ROADMAP}, rerun /task:roadmap-to-workflow ${slug} and resume #${n} at review`, deviations)
 
     landed.push({ n, slug: itemSlug, impl, review: digestSummary(review, n, itemSlug), deviations })
   }
