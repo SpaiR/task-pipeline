@@ -82,9 +82,9 @@ run_driver() { # <BREAK> [<args override JS>] → prints the driver's return val
     printf 'const BREAK = %s\n' "$1"
     cat <<'JS'
 const args = { slug: 'retry-work', aiDir: '/p/.task', pluginRoot: '/plugin', specPaths: [], done: [], scope: 'all',
-  items: [{ n: 1, title: 'Retry backoff', model: 'sonnet', deps: [] },
-          { n: 2, title: 'Retry metrics', model: 'haiku', deps: [1] },
-          { n: 3, title: 'Config loader', model: 'opus', deps: [] }] }
+  items: [{ n: 1, title: 'Retry backoff', size: 'S', deps: [] },
+          { n: 2, title: 'Retry metrics', size: 'M', deps: [1] },
+          { n: 3, title: 'Config loader', size: 'L', deps: [] }] }
 let noAgent = false
 const SLUG = { 1: 'retry-backoff', 2: 'retry-metrics', 3: 'config-loader' }
 const log = () => {}
@@ -105,6 +105,7 @@ const agent = async (prompt, opts) => {
   if (BREAK === `dup${n}` && stage === 'plan') return `OK #${n} ${SLUG[1]} planned`
   if (BREAK === `prompt${n}` && stage === 'plan') console.log(prompt)
   if (BREAK === `implprompt${n}` && stage === 'implement') console.log(prompt)
+  if (BREAK === `opts${n}`) console.log([opts.label, opts.model, opts.effort, opts.agentType].map((v) => v || '').join('|'))
   return { plan: `${head} planned`, implement: `${head} built`, review: `MARK-OK #${n}\n${head} ok, ticked` }[stage]
 }
 JS
@@ -119,8 +120,12 @@ JS
 t_case "an empty items list is bad args, before any agent runs"
 # With the empty-run return gone from the driver, these two checks are the only
 # guard: relaxing one would let a run that did nothing report "all items shipped".
-assert_eq "roadmap-to-workflow: bad args — items must be a non-empty array of {n, title, model, deps} objects — was it passed as a JSON string instead of a real array?" \
+assert_eq "roadmap-to-workflow: bad args — items must be a non-empty array of {n, title, size, deps} objects — was it passed as a JSON string instead of a real array?" \
   "$(run_driver "''" "args.items = []; noAgent = true")" "items: []"
+
+t_case "a size outside S|M|L is bad args, before any agent runs"
+assert_eq "roadmap-to-workflow: bad args — item #1 size must be S|M|L, got \"haiku\"" \
+  "$(run_driver "''" "args.items[0].size = 'haiku'; noAgent = true")" "size: haiku"
 
 t_case "an empty scope array is bad args, before any agent runs"
 assert_eq "roadmap-to-workflow: bad args — scope must be 'all', 'next-wave', or a non-empty array of item numbers" \
@@ -199,6 +204,21 @@ t_case "the implement prompt names aiDir/CLAUDE.md, not a cwd-relative .task/CLA
 out=$(run_driver "'implprompt1'")
 assert_contains "$out" "sends you to /p/.task/CLAUDE.md → ## Executing a task" "Executing a task by absolute path"
 assert_contains "$out" "/p/.task/CLAUDE.md → Commit Format" "Commit Format by absolute path"
+
+t_case "plan and implement take model and effort from the size table, review takes neither"
+# Item #1 is S, #2 M, #3 L. An omitted effort would inherit the session's, so
+# implement must always carry one; the reviewer pins its own in frontmatter.
+# Whole lines, compared exactly: the opts lines are the only ones with a `|`.
+opts() { run_driver "'opts$1'" | grep '|'; }
+assert_eq "1/3 plan|opus|medium|
+2/3 implement|sonnet|medium|
+3/3 review|||task:code-reviewer" "$(opts 1)" "S stages"
+assert_eq "1/3 plan|opus|high|
+2/3 implement|sonnet|medium|
+3/3 review|||task:code-reviewer" "$(opts 2)" "M stages"
+assert_eq "1/3 plan|opus|high|
+2/3 implement|opus|medium|
+3/3 review|||task:code-reviewer" "$(opts 3)" "L stages"
 
 t_case "a later wave's slug that matches a landed item's stops too"
 assert_contains "$(run_driver "'dup2'")" \

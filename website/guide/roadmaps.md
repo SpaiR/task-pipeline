@@ -12,7 +12,7 @@ Talk through the initiative in chat — phases, dependencies, open questions —
 /task:to-roadmap "migrate the public API to v2"
 # → .task/roadmap/api-v2-migration.md — a phase-grouped backlog where each item
 #   carries a Ready description (Context / Goal / Outcomes / Invariants /
-#   Acceptance criteria) and optional **Dependencies:** and **Model:** hints,
+#   Acceptance criteria) and optional **Dependencies:** and **Size:** hints,
 #   plus a ## Architecture section: components with real module paths,
 #   interfaces between items (#2 → #4), one module-level sketch per item, and
 #   a technical ordering mirrored into the dependent items' **Dependencies:**

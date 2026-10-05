@@ -9,13 +9,13 @@ allowed-tools: 'Bash(bash *skills/_lib/preflight.sh* *) Bash(bash *skills/_lib/w
 
 Drive an approved roadmap through a dynamic Workflow. This skill reports the roadmap's unchecked items and the scope the user picks; the **plugin-shipped driver** (`skills/_lib/roadmap-driver.js`, invoked by name as `task:roadmap-driver`) sorts them into dependency-ordered **waves** and, per wave, plans in parallel then implements, reviews and ticks off one item at a time in the shared working tree. The driver is a static file, inspectable at any time and parameterized only through `args` (Step 2) — never hand-rolled here, never re-authored inline. Without the Workflow tool, Step 2 hard-stops instead of running the items itself.
 
-**Per-item execution is a three-stage split:** opus plans it (sonnet at low effort when the item's `**Model:**` hint is `haiku`), the item's own model implements and commits, and `task:code-reviewer` reviews, commits its fixes on top, and ticks the checkbox once its review passes. The review stage ignores the hint, pinning its own model — a `haiku` item never gets a `haiku` review.
+**Per-item execution is a three-stage split, sized by the item's `**Size:**` hint (`S` / `M` / `L`, `M` when absent):** opus plans it, at medium effort for `S` and high otherwise; sonnet implements and commits at medium effort for `S` and `M`, opus at medium for `L`; and `task:code-reviewer` reviews, commits its fixes on top, and ticks the checkbox once its review passes. The reviewer pins its own model and effort, so an item's size never lowers its review.
 
 **This skill *is* the opt-in** for the Workflow tool: following its Steps is the authorization. No magic keyword, no separate confirmation.
 
 **Input:** `$ARGUMENTS` — optional. A single positional `<roadmap-slug>` (or its path under `.task/roadmap/`) to skip the roadmap picker. No flags — item scope is chosen interactively (Step 0).
 
-**Format contract:** [contract § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd) owns the item grammar (`### N.` plus its `- [ ] Done` status line, `**Dependencies:**`, `**Model:**`), and [§ execution shape](../../docs/contract.md#roadmap-to-workflow-execution-shape-driver-contract) the driver's stages.
+**Format contract:** [contract § Roadmap file format](../../docs/contract.md#roadmap-file-format-taskroadmapslugmd) owns the item grammar (`### N.` plus its `- [ ] Done` status line, `**Dependencies:**`, `**Size:**`), and [§ execution shape](../../docs/contract.md#roadmap-to-workflow-execution-shape-driver-contract) the driver's stages.
 
 ## Step 0: Setup gate, pick roadmap, pick scope
 
@@ -71,9 +71,9 @@ One open item → skip the question, run it. `unchecked=none` → the complete-r
 bash "${CLAUDE_PLUGIN_ROOT}/skills/_lib/roadmap-items.sh" "<slug>"
 ```
 
-One line per unchecked item — `N<TAB>deps<TAB>model<TAB>title` — then `DONE<TAB><n,…>` with the already-marked numbers ([contract § Helpers](../../docs/contract.md#helpers) owns the shape). Exit 1 means the roadmap did not resolve or could not be read: stop, rather than running with zero items, which reads exactly like a finished roadmap — relay the helper's `ERROR` line, then "→ Next: check that `.task/roadmap/<slug>.md` exists and is readable, then rerun `/task:roadmap-to-workflow <slug>`".
+One line per unchecked item — `N<TAB>deps<TAB>size<TAB>title` — then `DONE<TAB><n,…>` with the already-marked numbers ([contract § Helpers](../../docs/contract.md#helpers) owns the shape). Exit 1 means the roadmap did not resolve or could not be read: stop, rather than running with zero items, which reads exactly like a finished roadmap — relay the helper's `ERROR` line, then "→ Next: check that `.task/roadmap/<slug>.md` exists and is readable, then rerun `/task:roadmap-to-workflow <slug>`".
 
-Pass those lines through to Step 2 as data — **every** unchecked item, unsorted and unfiltered: each item line becomes one `items` entry `{n, title, model, deps}`, the `DONE` line becomes `done`, and Step 0's pick becomes `scope`. Numbers are parsed as **integers**, and an empty field is an **empty array**: a dependency-free item is `deps: []`, and a roadmap with nothing marked yet is `done: []`. Narrowing is `scope`'s job; the driver needs the full set to see the dependencies that define a wave.
+Pass those lines through to Step 2 as data — **every** unchecked item, unsorted and unfiltered: each item line becomes one `items` entry `{n, title, size, deps}`, the `DONE` line becomes `done`, and Step 0's pick becomes `scope`. Numbers are parsed as **integers**, and an empty field is an **empty array**: a dependency-free item is `deps: []`, and a roadmap with nothing marked yet is `done: []`. Narrowing is `scope`'s job; the driver needs the full set to see the dependencies that define a wave.
 
 The driver's `computeWaves` sorts them and hard-stops **before spawning anything**, returning one line. Relay it as-is and add the matching footer:
 
@@ -95,9 +95,9 @@ Workflow({
     pluginRoot: "<absolute value of $CLAUDE_PLUGIN_ROOT>",   // echoed in Step 0
     specPaths: ["<absolute $AI_DIR/spec/<slug>.md>"],        // from Step 0 — [] when the roadmap has no Spec: headers
     items: [                                                 // from Step 1 — EVERY unchecked item, unsorted
-      { n: 1, title: "…", model: "sonnet", deps: [] },
-      { n: 2, title: "…", model: "haiku",  deps: [1] },
-      { n: 3, title: "…", model: "opus",   deps: [1] },
+      { n: 1, title: "…", size: "M", deps: [] },
+      { n: 2, title: "…", size: "S", deps: [1] },
+      { n: 3, title: "…", size: "L", deps: [1] },
     ],
     done: [],                                                // from Step 1's DONE line — already-marked numbers
     scope: "all",                                            // from Step 0 — "all" | "next-wave" | [2, 3]

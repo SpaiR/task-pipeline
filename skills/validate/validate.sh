@@ -280,11 +280,11 @@ validate_roadmap() {
 
   # CRLF. The parsers strip different whitespace classes — roadmap-items.sh
   # strips `[ \t]`, this file strips `[[:space:]]` — so a trailing CR survives
-  # into the driver's `**Dependencies:**` / `**Model:**` values, where it becomes
-  # a phantom dependency on a missing item and silently drops the model hint.
+  # into the driver's `**Dependencies:**` / `**Size:**` values, where it becomes
+  # a phantom dependency on a missing item and silently drops the size hint.
   # Flag the file once here instead of normalizing CR in every parser.
   if grep -q $'\r' "$file"; then
-    err "$label" "file has CRLF line endings — the driver keeps the trailing CR in **Dependencies:** / **Model:** values, turning a dependency into a phantom one and dropping the model hint; convert the file to LF"
+    err "$label" "file has CRLF line endings — the driver keeps the trailing CR in **Dependencies:** / **Size:** values, turning a dependency into a phantom one and dropping the size hint; convert the file to LF"
   fi
 
   # --- Item shape ------------------------------------------------------------

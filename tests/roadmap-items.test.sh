@@ -40,7 +40,7 @@ Spec: [event-envelope](../spec/event-envelope.md)
 
 **Dependencies:** 1, 2
 
-**Model:** haiku
+**Size:** S
 
 **Ready description:**
 
@@ -50,7 +50,7 @@ Spec: [event-envelope](../spec/event-envelope.md)
 >
 > **Spec references:** [event-envelope](../spec/event-envelope.md) §2
 
-### 4. Open, no deps, no model hint
+### 4. Open, no deps, no size hint
 - [ ] Done
 **Dependencies:** —
 
@@ -62,32 +62,55 @@ Spec: [event-envelope](../spec/event-envelope.md)
 
 **Dependencies:** 4
 
+### 7. Stale model hint only
+
+- [ ] Done
+
+**Model:** haiku
+
+### 8. Lowercase size
+
+- [ ] Done
+
+**Size:** l
+
+### 9. Off-list size
+
+- [ ] Done
+
+**Size:** XL
+
 ## Out of scope
 
 **Dependencies:** 99
 MD
 
-t_case "unchecked items are reported with number, deps, model and title"
+t_case "unchecked items are reported with number, deps, size and title"
 i "$repo" api-v2
 assert_exit 0 "$I_EXIT" "collector ran"
-assert_contains "$I_OUT" "$(printf '3\t1,2\thaiku\tOpen, depends on one')" "item with deps and hint"
-assert_contains "$I_OUT" "$(printf '4\t\tsonnet\tOpen, no deps, no model hint')" "em dash is no deps, model defaults"
+assert_contains "$I_OUT" "$(printf '3\t1,2\tS\tOpen, depends on one')" "item with deps and hint"
+assert_contains "$I_OUT" "$(printf '4\t\tM\tOpen, no deps, no size hint')" "em dash is no deps, size defaults to M"
+
+t_case "a stale Model hint is ignored and a lowercase Size is accepted"
+assert_contains "$I_OUT" "$(printf '7\t\tM\tStale model hint only')" "Model is no longer read"
+assert_contains "$I_OUT" "$(printf '8\t\tL\tLowercase size')" "size is upper-cased"
+assert_contains "$I_OUT" "$(printf '9\t\tM\tOff-list size')" "an off-list size is the default, never passed through"
 
 t_case "the DONE line carries every already-marked number"
 assert_contains "$I_OUT" "$(printf 'DONE\t1,2')" "5-state class counts as marked"
 
 t_case "a stray Dependencies line outside an item is not billed to the last item"
-assert_eq "3" "$(grep -c . <<<"$I_OUT")" "two items plus the DONE line"
+assert_eq "6" "$(grep -c . <<<"$I_OUT")" "five items plus the DONE line"
 
 t_case "a heading without a status line, or with a checkbox in it, is no item and steals no Dependencies"
 assert_eq "0" "$(grep -c -e '^5' -e '^6' <<<"$I_OUT")" "neither is reported"
-assert_contains "$I_OUT" "$(printf '4\t\tsonnet\tOpen, no deps, no model hint')" "item 4 keeps its own deps, not item 6's"
+assert_contains "$I_OUT" "$(printf '4\t\tM\tOpen, no deps, no size hint')" "item 4 keeps its own deps, not item 6's"
 
 t_case "a checked-off roadmap reports no items and a full DONE line"
 sed 's/^- \[ \] Done$/- [x] Done/' "$repo/.task/roadmap/api-v2.md" >"$repo/.task/roadmap/shipped.md"
 i "$repo" shipped
 assert_exit 0 "$I_EXIT" "all marked"
-assert_eq "$(printf 'DONE\t1,2,3,4')" "$I_OUT" "only the DONE line"
+assert_eq "$(printf 'DONE\t1,2,3,4,7,8,9')" "$I_OUT" "only the DONE line"
 
 t_case "an unresolvable roadmap is an error, never an empty item list"
 i "$repo" nosuchthing
@@ -114,7 +137,7 @@ printf '# L\n\n### 1. Done\n\n- [x] Done\n\n**Dependencies:** \342\200\224\n\n##
   >"$repo/.task/roadmap/latin1.md"
 LC_ALL=$T_UTF8 i "$repo" latin1
 assert_exit 0 "$I_EXIT" "collector ran"
-assert_contains "$I_OUT" "$(printf '3\t\tsonnet\tAfter')" "item past the byte, em dash still no deps"
+assert_contains "$I_OUT" "$(printf '3\t\tM\tAfter')" "item past the byte, em dash still no deps"
 assert_contains "$I_OUT" "$(printf 'DONE\t1')" "DONE line"
 
 t_case "a missing argument is a usage error"

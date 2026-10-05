@@ -28,10 +28,10 @@ run_js() { # <js body> → prints result
 
 # `1(—) 2(1) 3(1) 4(2,3)` — the shape the skill's own worked example used.
 FIXTURE="const items = [
-  { n: 1, title: 'one',   model: 'sonnet', deps: [] },
-  { n: 2, title: 'two',   model: 'sonnet', deps: [1] },
-  { n: 3, title: 'three', model: 'sonnet', deps: [1] },
-  { n: 4, title: 'four',  model: 'sonnet', deps: [2, 3] },
+  { n: 1, title: 'one',   size: 'M', deps: [] },
+  { n: 2, title: 'two',   size: 'M', deps: [1] },
+  { n: 3, title: 'three', size: 'M', deps: [1] },
+  { n: 4, title: 'four',  size: 'M', deps: [2, 3] },
 ]
 const shape = (r) => r.error ? 'ERROR ' + r.error : JSON.stringify(r.waves.map(w => w.map(i => i.n)))"
 
@@ -49,8 +49,8 @@ console.log(shape(computeWaves(items.slice(1), [1], 'all')))")" "done counts as 
 
 t_case "a cycle is reported, not guessed around"
 out=$(run_js "const items = [
-  { n: 1, title: 'one', model: 'sonnet', deps: [2] },
-  { n: 2, title: 'two', model: 'sonnet', deps: [1] },
+  { n: 1, title: 'one', size: 'M', deps: [2] },
+  { n: 2, title: 'two', size: 'M', deps: [1] },
 ]
 const r = computeWaves(items, [], 'all')
 console.log(r.error ? 'ERROR ' + r.error : 'NO ERROR')")

@@ -62,7 +62,7 @@ Two remaining `on-demand` cases, resolved distinctly:
   Each field starts its own paragraph, after a blank line — adjacent lines merge into one paragraph in a Markdown preview. `Touches` is a bulleted list, one file per bullet: full paths from the project root, and where a file holds more than one unrelated concern, the symbol(s) touched in parentheses after the path. A new file: `Goal` states its role, `Touches` still names it. `Logic` is the only place a pseudocode block or a `...` placeholder belongs. Order steps so none depends on a fact only a later step establishes.
 - `## Tests` — only when `tests_required`. `### Test N: {what is asserted}` plus one line: the file path and the arrange/act/assert in prose, no code (the implementing session writes the real test). Each Plan step that satisfies a test references it by number in its `Goal`. When `tests_required` is `false`, omit the heading entirely — never leave an empty one.
 
-**Not part of the format:** no `Implement-Model:` stamp (model hints live only on roadmap items, as `**Model:**`), no `## Verification`, no `## Risks`.
+**Not part of the format:** no `Implement-Model:` stamp (size hints live only on roadmap items, as `**Size:**`), no `## Verification`, no `## Risks`.
 
 ### 5. Self-check
 

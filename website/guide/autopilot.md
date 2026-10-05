@@ -16,7 +16,15 @@ Launched with no argument, it asks which roadmap and how much to cover.
 
 1. **Sorts items into dependency waves.** The skill reports each unchecked item's `**Dependencies:**`; the driver script topologically sorts them, so items with no unmet dependency land in the same wave. Nothing is spawned until that sort succeeds — a cycle, or a scope missing a dependency, stops the run with one line naming the items.
 2. **Plans a wave in parallel, then implements and reviews it one item at a time.** Within a wave, every item is *planned* at once (each plan agent only writes its own `.task/task/<item-slug>.md`, so there's no collision), then each item is *implemented and reviewed* strictly one at a time in the shared working tree — the tree keeps exactly one writer, so item N never starts implementing while item N−1 is still under review. A barrier separates waves — a later wave never starts before every item it depends on has landed, and each implement sees its already-landed wave-mates' reviewed commits.
-3. **Plans, implements, reviews — per item.** The default per-item shape is **opus-plans / sonnet-implements / reviewer-reviews**: a first agent plans the item from the roadmap (writing `.task/task/<item-slug>.md`), a second implements and commits, and a third is `task:code-reviewer`, which reviews that commit, fixes what it proves within the plan's **Touches**, runs your build and tests, commits those fixes on top, and ticks the item's checkbox (next step). If the item has a `**Model:**` hint, the implement agent uses it, and a `haiku` hint also scales the plan agent down to sonnet — the reviewer pins its own model, so a `haiku` item never gets a `haiku` review.
+3. **Plans, implements, reviews — per item.** A first agent plans the item from the roadmap (writing `.task/task/<item-slug>.md`), a second implements and commits, and a third is `task:code-reviewer`, which reviews that commit, fixes what it proves within the plan's **Touches**, runs your build and tests, commits those fixes on top, and ticks the item's checkbox (next step). The item's optional `**Size:**` hint, `M` when absent, picks the model and effort of the first two:
+
+   | Size | plan | implement |
+   |---|---|---|
+   | `S` | opus, medium effort | sonnet, medium effort |
+   | `M` | opus, high effort | sonnet, medium effort |
+   | `L` | opus, high effort | opus, medium effort |
+
+   The reviewer pins its own model and effort, so an item's size never lowers its review.
 4. **Ticks the checkbox — from the review.** Once an item's review passes, `task:code-reviewer` ticks that item's checkbox as its last step; the plan and implement agents never touch it. That's deliberate: the review runs one item at a time, while parallel plan agents would otherwise race on the roadmap file. Ticking is idempotent — if the box is already checked, the reviewer treats that as the desired end state and moves on.
 
 While it runs, the Workflow panel shows one group per item, named after the item — `W1 · #1 Migrate auth endpoints` — with its agents numbered `1/3 plan` through `3/3 review`, so you can see which item is in flight and how far along it is. The narrator lines above the panel start with the run's shape (items, waves, what waits on what) and then log each stage's digest as it lands:

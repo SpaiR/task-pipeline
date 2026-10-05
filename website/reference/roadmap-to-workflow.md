@@ -16,7 +16,15 @@ See the [autopilot guide](/guide/autopilot) for the full walkthrough.
 
 1. **Scope** — asks (via chips) how much to run: all remaining items, just the next dependency-wave, or a picked range like `1,3-5,8`.
 2. **Waves** — the driver topologically sorts the unchecked items on `**Dependencies:**` into waves, before it spawns anything. A dependency cycle among scoped items is a hard stop, and so is a scope that leaves a dependency neither ticked nor included; both come back as one line naming the items.
-3. **Per item, three agents** — the last of which also ticks the checkbox (step 5). The default shape is **opus-plans / sonnet-implements / reviewer-reviews**: a first agent plans the item (per `skills/_lib/plan-driver.md`, on sonnet at low effort when the item's `**Model:**` hint is `haiku`); a second implements and commits, using the item's `**Model:**` hint if present; a third is `task:code-reviewer`, which reviews that commit, proves each finding, fixes the confirmed ones inside the plan's `Touches`, runs `.task/CLAUDE.md` → Build and Tests, commits those fixes on top, and ticks the item's checkbox. Context passes via the on-disk task file, not chat. The reviewer pins its own model, so the item's `**Model:**` hint never downgrades the review.
+3. **Per item, three agents** — the last of which also ticks the checkbox (step 5). A first agent plans the item (per `skills/_lib/plan-driver.md`); a second implements and commits; a third is `task:code-reviewer`, which reviews that commit, proves each finding, fixes the confirmed ones inside the plan's `Touches`, runs `.task/CLAUDE.md` → Build and Tests, commits those fixes on top, and ticks the item's checkbox. Context passes via the on-disk task file, not chat. The item's optional `**Size:**` hint, `M` when absent, picks the model and effort of the first two agents; the implement agent always gets an explicit effort rather than inheriting your session's:
+
+   | Size | plan | implement |
+   |---|---|---|
+   | `S` | opus, medium effort | sonnet, medium effort |
+   | `M` | opus, high effort | sonnet, medium effort |
+   | `L` | opus, high effort | opus, medium effort |
+
+   The reviewer pins its own model and effort, so an item's size never lowers the review. A `**Model:**` line left over from an older roadmap is ignored, and that item runs as `M`.
 4. **Parallel plans, serialized implement-then-review** — within a wave, all items are planned in parallel (plan agents only write their own task files), then each item is implemented and reviewed strictly one at a time in the shared working tree, both inside the same serial loop. A barrier separates waves, so each implement sees its already-landed wave-mates' reviewed commits.
 5. **The review auto-marks** — once an item's review passes, `task:code-reviewer` ticks its checkbox as its last phase; the driver hands it the item number and roadmap path. Never the plan or implement agents, and the review runs one item at a time, so parallel wave-mates never race on the roadmap file. The flip is idempotent: an already-ticked item is the desired end state, not a failure. It fails the review — and stops the wave — only when the roadmap holds no unique `### N.` heading with a `- [ ] Done` status line for that item: renumbered, status line lost, or duplicated.
 

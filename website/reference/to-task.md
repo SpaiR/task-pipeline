@@ -102,4 +102,4 @@ validate: OK — 0 errors, 0 warnings
 - Author a spec file — referencing one via a `Spec:` header is fine; writing it is [`to-spec`](/reference/to-spec)'s job.
 - Leave `## Plan` present with zero steps, or `## Tests` with zero tests — both fail `validate.sh`.
 - Write a task file without a `## Plan` — a Description with no approach is chat, not an artifact.
-- Stamp a model hint — model hints live only on roadmap items as `**Model:**`.
+- Stamp a size hint — size hints live only on roadmap items as `**Size:**`.

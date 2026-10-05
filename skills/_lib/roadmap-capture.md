@@ -173,7 +173,7 @@ Things it is easy to get wrong:
 
 Reserve specs for choices that would break cross-item consistency if a later `/task:to-task` re-derived them differently. A single-item detail is that item's `**Outcomes**` / `**Acceptance criteria**`, never a spec. Observable behavior already lives in the items; restating it in `## Architecture` is drift — drop it there.
 
-**`**Model:**` is optional** — only with a real basis: pure content editing → `haiku`, a new subsystem or cross-module change → `sonnet`. Leave it off rather than guess.
+**`**Size:**` is optional** — only with a real basis. `S` when the change is fully described by the item text, touches one or a few obvious files and adds no abstraction (a rename, config, docs or content, a point fix); `L` when it spans modules, introduces a subsystem or a migration, or has design forks. Never write `M`: it is the default. Size is the judgment the work needs, not its importance. Unsure between `M` and `L` → write `L`; unsure between `S` and `M` → leave it off.
 
 Behavioral discipline: `**Outcomes**` / `**Goal**` / `**Invariants**` state observable properties only, with no project-specific file or symbol names (normative names from a spec or `CLAUDE.md` are fine). The names belong in `## Architecture`; if design work would be free to pick a different symbol, the name is `/task:to-task`'s call, not this file's.
 
