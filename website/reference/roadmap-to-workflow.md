@@ -65,7 +65,7 @@ On failure, the items that landed before the stop are still listed:
 
 ```text
 roadmap-to-workflow stopped in wave 2, item #3: FAIL #3 <item-slug> <what failed>
-STATE recover=off attempts=none
+STATE recover=off scope=all attempts=none
 STOPPED #3 <item-slug> stage=implement
 #1 … — …; review: …
 #2 … — …; review: …
@@ -81,12 +81,13 @@ Stopped at #3 <item-slug> in wave 2. Its work is left in the working tree —
 
 A stop during **planning** (the headline says `(planning)`, for example two items that plan to the same task slug) happens before any implement of that wave ran, so nothing of it is in the tree. The footer relays the headline's own remedy, or says to edit the item in the roadmap, then rerun.
 
-Under the headline, the `STATE` and `STOPPED` lines say which recovery mode the run had, how many recovery attempts each item has used, and where the stopped item stopped. The skill reads them to recover. They are not for you to act on.
+Under the headline, the `STATE` and `STOPPED` lines say which recovery mode the run had, which items it covered (`all`, or the item numbers it kept), how many recovery attempts each item has used, and where the stopped item stopped. The skill reads them to recover. They are not for you to act on.
 
-Two stops get a different footer, because re-planning the item would be wrong there:
+Three stops get a different footer, because re-planning the item would be wrong there, or because rerunning it has stopped helping:
 
-- **The checkbox was not flipped** (the review's flip reported `MARK-FAIL`, or no `MARK-OK` at all) — the item's reviewed work is already committed. The footer says to rerun and pick **Review only** for it, after fixing the item's heading in the roadmap when the flip found none.
+- **The checkbox was not flipped** (the review's flip reported `MARK-FAIL`, or no `MARK-OK` at all) — the item's reviewed work is already committed. The footer says to rerun and pick **Review only** for it, after fixing the cause when the flip reported `MARK-FAIL`: the item's heading in the roadmap, or a roadmap directory that cannot be written.
 - **The implementation was never committed** — the footer says to rerun and pick **Implement this plan**: the implement stage commits the work that is already in the tree.
+- **The item used its two recovery attempts** — the footer says to decide how the item should change: edit it in the roadmap and pick **Re-plan from the roadmap item**, or fix the code yourself and pick **Review only**.
 
 Resuming a stopped run from its run id replays the cached failing stage and stops at the same place; that is only for a run interrupted before it returned.
 
@@ -96,9 +97,9 @@ Every stop goes through a recovery step before the skill prints a footer. It rea
 
 - **from implement** — a failed implement, a failed review, or an implement that never reported back. The implement agent gets a note about what stopped and what is already committed, and builds on that work instead of redoing it.
 - **from review** — the work is committed and complete, and only the review or the checkbox is missing.
-- **a plain rerun** — the item stopped while it was being planned.
+- **from plan** — the item stopped while it was being planned. It is planned again from the roadmap, and the attempt counts like any other.
 
-Some stops always come back to you: two items that plan to the same task slug, a roadmap heading the checkbox flip cannot find, a fix that needs a decision only you can make, and an item that has used its two recovery attempts.
+Some stops always come back to you: two items that plan to the same task slug, a roadmap heading the checkbox flip cannot find or a roadmap it cannot write, a run that died with no item in flight, a fix that needs a decision only you can make, a failure outside the item (such as a red build the review traced to code the item did not touch), and an item that has used its two recovery attempts.
 
 What happens next depends on the mode you picked at launch:
 
@@ -116,7 +117,7 @@ Decisions made during recovery:
 - #3 retry-queue: kept the v1 queue table instead of plan step 2's new one — the migration is out of scope
 ```
 
-If the item stops again before its review passes, its deviations are kept with the stop and handed to the next attempt, so none is lost. A run that ends stopped lists them as declared but not yet reviewed. When a departure changed what a spec says, the footer points at `/task:to-spec` so you can fold it back into the spec.
+If the item stops again before its review passes, its deviations are kept with the stop and handed to the next attempt, so none is lost. A run that ends stopped lists them as declared but not yet reviewed, except after a stop at the checkbox flip: the review had already accepted them, so they are listed as decisions. When a departure changed what a spec says, the footer points at `/task:to-spec` so you can fold it back into the spec.
 
 If the Workflow call itself errors or is interrupted, there is no headline and no run summary. Recovery tries resuming the run from its run id once in the same session. When it stops instead, the skill quotes the tool's error, prints the `Commits:` range the run made before it died, and closes with a footer that resumes the run in the same session or reruns `/task:roadmap-to-workflow <slug>`.
 

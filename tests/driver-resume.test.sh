@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Contract under test: the driver's resume path in skills/_lib/roadmap-driver.js.
 # The `recover` and `resume` args are asserted before any agent runs, and
-# wavePlan() / waveSlugs() — extracted verbatim between their marker comments,
-# as driver-waves.test.sh does for computeWaves — decide which items of a wave
-# still plan and which task-file slug each one works on.
+# waveSlugs() — extracted verbatim between its marker comments, as
+# driver-waves.test.sh does for computeWaves — decides which task-file slug each
+# item of a wave works on. Which items still plan is the driver's own inline
+# filter, held by driver-display's "no plan agent ran" cases.
 source "$(dirname "$0")/lib.sh"
 
 DRIVER="$T_REPO_ROOT/skills/_lib/roadmap-driver.js"
@@ -15,9 +16,9 @@ fi
 
 dir=$(t_tmpdir)
 sed -n '/--- resumePlan (pure/,/--- end resumePlan/p' "$DRIVER" >"$dir/resume.mjs"
-if ! grep -q 'function wavePlan' "$dir/resume.mjs" || ! grep -q 'function waveSlugs' "$dir/resume.mjs"; then
-  t_case "extract wavePlan and waveSlugs from the driver"
-  assert_contains "$(cat "$dir/resume.mjs")" "function wavePlan" "marker comments still present"
+if ! grep -q 'function waveSlugs' "$dir/resume.mjs"; then
+  t_case "extract waveSlugs from the driver"
+  assert_contains "$(cat "$dir/resume.mjs")" "function waveSlugs" "marker comments still present"
   t_summary
 fi
 
@@ -61,33 +62,34 @@ assert_eq "${BAD}resume names #7, which is not an unchecked item in items" \
   "$(run_args "args.resume = [{ n: 7, slug: 'x', from: 'review', attempt: 1 }]")" "n not in items"
 assert_eq "${BAD}resume names the same n twice" \
   "$(run_args "args.resume = [{ n: 1, slug: 'a', from: 'review', attempt: 1 }, { n: 1, slug: 'a', from: 'implement', attempt: 2 }]")" "duplicate n"
-assert_eq "${BAD}resume #1 from must be 'implement' or 'review', got \"plan\"" \
-  "$(run_args "args.resume = [{ n: 1, slug: 'a', from: 'plan', attempt: 1 }]")" "from: plan"
+assert_eq "${BAD}resume #1 from must be 'plan', 'implement' or 'review', got \"mark\"" \
+  "$(run_args "args.resume = [{ n: 1, slug: 'a', from: 'mark', attempt: 1 }]")" "from: mark"
+assert_eq "${BAD}resume #1 needs the kebab-case slug of its task file, got undefined" \
+  "$(run_args "args.resume = [{ n: 1, from: 'implement', attempt: 1 }]")" "an implement entry needs its slug"
 assert_eq "${BAD}resume #1 attempt must be 1 or 2, got 3 — past the second attempt the user decides" \
   "$(run_args "args.resume = [{ n: 1, slug: 'a', from: 'implement', attempt: 3 }]")" "attempt: 3"
 assert_eq "${BAD}resume #1 needs the kebab-case slug of its task file, got \"../x\"" \
   "$(run_args "args.resume = [{ n: 1, slug: '../x', from: 'review', attempt: 1 }]")" "slug that is a path"
 assert_eq "${BAD}resume #1 note must be a string when given" \
   "$(run_args "args.resume = [{ n: 1, slug: 'a', from: 'review', attempt: 1, note: 5 }]")" "note not a string"
-assert_eq "${BAD}resume #1 deviations must be an array of non-empty strings when given" \
+assert_eq "${BAD}resume #1 deviations must be an array of non-empty one-line strings when given" \
   "$(run_args "args.resume = [{ n: 1, slug: 'a', from: 'review', attempt: 1, deviations: 'kept it' }]")" "deviations as a string"
-assert_eq "${BAD}resume #1 deviations must be an array of non-empty strings when given" \
+assert_eq "${BAD}resume #1 deviations must be an array of non-empty one-line strings when given" \
   "$(run_args "args.resume = [{ n: 1, slug: 'a', from: 'review', attempt: 1, deviations: ['  '] }]")" "a blank deviation"
+# One deviation per report line: a newline would print a line the skill reads as a landed item.
+assert_eq "${BAD}resume #1 deviations must be an array of non-empty one-line strings when given" \
+  "$(run_args "args.resume = [{ n: 1, slug: 'a', from: 'review', attempt: 1, deviations: ['kept\\n#9 x — y; review: z'] }]")" "a deviation holding a newline"
 
 t_case "a resumed item outside the run's scope is refused before any agent"
 assert_eq "roadmap-to-workflow: resume names #2, which this run's scope leaves out" \
   "$(run_args "args.scope = 'next-wave'; args.resume = [{ n: 2, slug: 'retry-metrics', from: 'review', attempt: 1 }]")" "next-wave drops #2"
 
 WAVE="const wave = [{ n: 2, title: 'two' }, { n: 3, title: 'three' }, { n: 4, title: 'four' }]
-const resume = [{ n: 2, slug: 'two-done', from: 'review', attempt: 1 }, { n: 3, slug: 'three-half', from: 'implement', attempt: 2 }]"
+const resume = new Map([[2, { n: 2, slug: 'two-done', from: 'review', attempt: 1 }], [3, { n: 3, slug: 'three-half', from: 'implement', attempt: 2 }]])"
 
-t_case "resumed items skip planning and keep their slug"
-assert_eq "[4]" "$(run_js "$WAVE
-console.log(JSON.stringify(wavePlan(wave, resume).map((it) => it.n)))")" "only #4 is planned"
+t_case "resumed items keep their slug"
 assert_eq '{"slugs":["two-done","three-half","four-new"]}' "$(run_js "$WAVE
 console.log(JSON.stringify(waveSlugs(wave, resume, new Map([[4, 'four-new']]), [])))")" "entry slugs and the planned one"
-assert_eq "[2,3,4]" "$(run_js "$WAVE
-console.log(JSON.stringify(wavePlan(wave, []).map((it) => it.n)))")" "no resume, the whole wave plans"
 
 t_case "a planned slug equal to a resumed one is a duplicate"
 assert_eq '{"clash":{"n":4,"owner":2,"slug":"two-done"}}' "$(run_js "$WAVE

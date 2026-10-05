@@ -65,13 +65,12 @@ $newest
 EOF
 if [[ "$ntasks" -gt 0 ]]; then
   { plans=$(LC_ALL=C awk -v rs="$RSLUG" '
-    FNR == 1 { hdr=1; r=""; s="" }
-    !hdr { next }
+    FNR == 1 { r=""; s="" }
+    # The headers end at the first `---`: the body is never read.
     /^---[[:space:]]*$/ {
-      hdr=0
       f=FILENAME; sub(/.*\//,"",f); sub(/\.md$/,"",f)
-      if (r==rs && s!="" && !(s in got) && f ~ /^[a-z0-9][a-z0-9-]*$/) { got[s]=1; out=out (out==""?"":" ") s ":" f }
-      next
+      if (r==rs && s!="" && !(s in got) && f ~ /^[a-z0-9]+(-[a-z0-9]+)*$/) { got[s]=1; out=out (out==""?"":" ") s ":" f }
+      nextfile
     }
     /^Roadmap:[[:space:]]/ {
       r=$0; sub(/^Roadmap:[[:space:]]*/,"",r); sub(/[[:space:]]+$/,"",r)

@@ -188,6 +188,18 @@ else
 fi
 chmod u+r "$repo/.task/task/newer-plan.md"
 
+t_case "a task file whose name is not a driver slug reports no plan"
+rm -f "$repo/.task/task/"*.md
+w_task foo--bar 'Roadmap: [plans](../roadmap/plans.md)' 'Source item: #2'
+w_task foo- 'Roadmap: [plans](../roadmap/plans.md)' 'Source item: #3'
+i "$repo" plans
+assert_exit 0 "$I_EXIT" "collector ran"
+assert_eq "" "$(awk -F'\t' '$1 == "2" { print $5 }' <<<"$I_OUT")" "item 2: a doubled hyphen is no slug"
+assert_eq "" "$(awk -F'\t' '$1 == "3" { print $5 }' <<<"$I_OUT")" "item 3: a trailing hyphen is no slug"
+w_task ok-slug 'Roadmap: [plans](../roadmap/plans.md)' 'Source item: #2'
+i "$repo" plans
+assert_eq "ok-slug" "$(awk -F'\t' '$1 == "2" { print $5 }' <<<"$I_OUT")" "a kebab-case name still counts"
+
 t_case "a missing argument is a usage error"
 i "$repo"
 assert_exit 2 "$I_EXIT" "usage"

@@ -22,7 +22,7 @@ You are spawned with: the task artifact's path, and a reference string to echo i
 
 A roadmap driver also names the **roadmap item to tick** — `#N` in an absolute roadmap path. When given, it wins over the artifact's own headers (phase 0 step 5); phase 7 flips exactly that item.
 
-After a recovery rerun, the driver may also list **declared deviations** — `DEVIATION #N <what departed and why>` lines the implementation printed where it departed from its `## Plan`, or from a cited spec. Phase 0 records them and phase 3 judges each one.
+When it resumes an item at implement or review — after a stop, or at launch for an item that already had a plan — the driver may also list **declared deviations** — `DEVIATION #N <what departed and why>` lines the implementation printed where it departed from its `## Plan`, or from a cited spec. Phase 0 records them and phase 3 judges each one.
 
 ## Phase 0 — Intake
 
@@ -174,7 +174,7 @@ LC_ALL=C awk -v n="$N" '
 It prints exactly one line; decide from **that line**, never from the exit code. The command is idempotent — an item already ticked is the desired end state and prints `MARK-OK` again — so a re-run can never turn a success into a failure.
 
 - **`MARK-OK #N`** → the item is ticked; the verdict stands.
-- **`MARK-FAIL #N`** → the roadmap has no unique `### N.` heading with a status line (`- [ ] Done`, or any of `[x]`/`[~]`/`[>]`/`[-]`) as the first non-blank line under it (renumbered, duplicated, status line missing, or the file is missing or unreadable) — or its directory could not be written (read-only directory or filesystem, full disk), which the same line also reports. The file is left untouched. Your verdict becomes `FAIL <reference string> roadmap item #N: no unique '### N.' heading with a status line, or the roadmap's directory could not be written — the work is committed; fix the heading, then resume the item at review`: the code is fine, but a silent miss would make the next roadmap run re-implement work that already landed.
+- **`MARK-FAIL #N`** → the roadmap has no unique `### N.` heading with a status line (`- [ ] Done`, or any of `[x]`/`[~]`/`[>]`/`[-]`) as the first non-blank line under it (renumbered, duplicated, status line missing, or the file is missing or unreadable) — or its directory could not be written (read-only directory or filesystem, full disk), which the same line also reports. The file is left untouched. Your verdict becomes `FAIL <reference string> roadmap item #N: no unique '### N.' heading with a status line, or the roadmap's directory could not be written — the work is committed, only the checkbox is behind`: the code is fine, but a silent miss would make the next roadmap run re-implement work that already landed.
 
 **Mandatory output:** the command's stdout line, verbatim and on a line of its own, or `Roadmap: not applicable — no roadmap item` / `Roadmap: skipped — verdict is FAIL`.
 

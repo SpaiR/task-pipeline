@@ -65,7 +65,7 @@ The driver is **stop-on-FAIL**: if an item's implement *or* review agent returns
 
 ```text
 roadmap-to-workflow stopped in wave 2, item #3: FAIL #3 <item-slug> <what failed>
-STATE recover=off attempts=none
+STATE recover=off scope=all attempts=none
 STOPPED #3 <item-slug> stage=implement
 #1 … — …; review: …
 #2 … — …; review: …

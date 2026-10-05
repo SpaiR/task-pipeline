@@ -6,7 +6,7 @@ Recovery never repairs anything itself. It diagnoses the stop, then reruns the d
 
 ## 1. Read the state
 
-- **The driver's return.** The first line is the headline. Under it, `STATE recover=<on|off> attempts=<#N:k,…|none>` is always present, and `STOPPED #N <item-slug|-> stage=<plan|implement|review|mark>` names the stopped item on a stop. Indented `  deviation: <text>` lines right under `STOPPED` are deviations the stopped item declared. No review has accepted them yet — except after a `never reported MARK-OK` stop, where the review passed and accepted them, and only the checkbox report is missing. Take the mode and the attempt counts from these lines, not from memory: `recover=on` is **Recover and continue**, `recover=off` is **Stop and ask**, and an item missing from `attempts=` is at 0.
+- **The driver's return.** The first line is the headline. Under it, `STATE recover=<on|off> scope=<all|N,N,…> attempts=<#N:k,…|none>` is always present, and `STOPPED #N <item-slug|-> stage=<plan|implement|review|mark>` names the stopped item on a stop. Indented `  deviation: <text>` lines right under `STOPPED` are deviations the stopped item declared. No review has accepted them yet — except at `stage=mark` (a `never reported MARK-OK`, a `MARK-FAIL`, or an unparsable review digest under a `MARK-OK`), where the review passed and accepted them, and only the checkbox is missing. Take the mode, the scope and the attempt counts from these lines, not from memory: `recover=on` is **Recover and continue**, `recover=off` is **Stop and ask**, `scope=all` is `'all'` and a number list is that explicit list of items, and an item missing from `attempts=` is at 0.
 - **Git.** `git log --oneline <start>..HEAD` from the `HEAD` recorded before the first Workflow call, and `git status --short`. Together they show what the stopped item committed and what it left uncommitted.
 - **The workflow journal**, when the task notification names the run's transcript directory: `<transcriptDir>/journal.jsonl` holds each agent's full result. The driver keeps only the last line of each one, but the reason for a stop is usually in the text above it.
 - **The item's files:** `$AI_DIR/task/<item-slug>.md` (its `## Plan` and acceptance criteria) and the item's status line in `$AI_DIR/roadmap/<slug>.md`.
@@ -17,16 +17,16 @@ All of this is reading. Nothing in this file edits a file.
 
 | The stop | Rerun |
 |---|---|
-| `stage=plan`, a plan `FAIL`, an unparsable plan digest, or a plan agent that returned nothing | **Plain rerun**: no entry for the item. Its plan stage runs again and regenerates its task file. |
+| `stage=plan`, a plan `FAIL`, an unparsable plan digest, or a plan agent that returned nothing | **`from: 'plan'`**: an entry with no `slug`, `note` or `deviations`. Its plan stage runs again and regenerates its task file; the entry only counts the attempt. |
 | `stage=plan`, `#A and #B both planned <slug>` | **Stop and ask**: only a roadmap edit (a more distinct title) fixes it. |
 | `stage=implement`, `implement agent returned nothing` or `unparsable implement digest` | **`from: 'review'`** only when the journal and git show the item's work plainly committed and complete, and `git status` shows none of its files changed. Otherwise **`from: 'implement'`**, the note saying what is committed and what the agent's own text said. |
 | `stage=implement`, a `FAIL` digest | **`from: 'implement'`**, the note quoting the failure and the agent's own diagnosis. |
 | `stage=review`, a `FAIL` digest: defects it could not fix, a red Build and Tests, `implementation never committed`, a rejected deviation | **`from: 'implement'`**, the note quoting the review's *Confirmed, reported, not fixed* lines, the failing output, or the rejected deviation with the invariant it breaks. Uncommitted work is the implement agent's to commit. |
-| `stage=review`, `review agent returned nothing` or `unparsable review digest` | The journal decides. A report that ends in a failure → as a review `FAIL` above. Otherwise **`from: 'review'`**: the reviewer derives its range again and builds on any fix it already committed. |
-| `stage=mark`, `never reported MARK-OK` | Read the item's status line. Already `[x]` → **plain rerun**: the item is no longer unchecked and drops out of the run. It landed after all: its `  deviation:` lines under `STOPPED` were accepted by that review, so the skill's Output lists them with the landed ones. Still `[ ]` → **`from: 'review'`**. The flip is idempotent, and the second review checks the committed work again. |
-| `stage=mark`, a `MARK-FAIL` remedy in the headline | **Stop and ask**: the roadmap has no unique heading with a status line for the item, and the roadmap is the user's to edit. |
+| `stage=review`, `review agent returned nothing` or `unparsable review digest` | The journal decides. A report that ends in a failure → as a review `FAIL` above. Otherwise **`from: 'review'`**, but only when the journal is readable and shows no failure and `git status --short` shows none of the item's files changed: the reviewer derives its range again and builds on any fix it already committed. With no readable journal, or with changed files in the tree, **`from: 'implement'`**, the note naming the uncommitted files — a second review would tick the item over work no commit holds. |
+| `stage=mark`, `never reported MARK-OK`, or an unparsable review digest | Read the item's status line. Already `[x]` → **plain rerun**: the item is no longer unchecked and drops out of the run. It landed after all: its `  deviation:` lines under `STOPPED` were accepted by that review, so the skill's Output lists them with the landed ones. Still `[ ]` → **`from: 'review'`**. The flip is idempotent, and the second review checks the committed work again. |
+| `stage=mark`, a `MARK-FAIL` remedy in the headline | **Stop and ask**: the roadmap has no unique heading with a status line for the item, or its directory could not be written. Either is the user's to fix. |
 | `bad args` from a rerun you built | **Stop and ask**: the args are wrong, not the item. Quote the line. |
-| No driver return at all | `resumeFromRunId` **once**, in the same session (the skill's Step 2 rerun paragraph). If that is not possible or fails again, use the journal or git to find the item in flight: an item with commits since the start and an unchecked box is handled as an implement stop with no digest. When nothing shows an item in flight, a **plain rerun**. |
+| No driver return at all | `resumeFromRunId` **once**, in the same session (the skill's Step 2 rerun paragraph). If that is not possible or fails again, use the journal or git to find the item in flight: an item with commits since the start and an unchecked box is handled as an implement stop with no digest. When nothing shows an item in flight, **stop and ask**: no `resume` entry could count a rerun's attempt. |
 
 **When in doubt between `review` and `implement`, choose `implement`.** The implement agent sees what is already done and builds on it. A review of half-finished work can pass it.
 
@@ -41,16 +41,14 @@ All of this is reading. Nothing in this file edits a file.
 The rerun goes through the skill's Step 1 and Step 2 again, with these args:
 
 - **`items` and `done`**: rebuilt from a fresh `roadmap-items.sh` call. Items that landed are ticked now and drop out.
-- **`scope`**: the stopped run's scope.
-  - `'all'` stays `'all'`.
-  - A picked list keeps only the numbers that are still unchecked. A ticked number in it would be refused as not runnable.
-  - `'next-wave'` becomes an explicit list of the first launch's wave-1 items that are still unchecked. These are the items from the first Step 1 whose dependencies were all already marked then. A plain `'next-wave'` would pull in items whose dependencies landed during this run.
+- **`scope`**: the stopped run's scope, from the `STATE` line's `scope=`.
+  - `all` stays `'all'`.
+  - A number list, which is a picked range or what `'next-wave'` resolved to, keeps only the numbers that are still unchecked. A ticked number in it would be refused as not runnable. It is never turned back into `'next-wave'`, which would pull in items whose dependencies landed during this run.
 - **`recover`**: unchanged, from the `STATE` line.
 - **`resume`** holds two kinds of entry:
-  - **The stopped item**, unless its row above says plain rerun: `{n, slug, from, attempt, note, deviations}`. The `slug` comes from the `STOPPED` line, `from` from the table above, and `attempt` is the item's count on the `STATE` line plus one. `deviations` holds the texts of the `  deviation:` lines under `STOPPED`, the `deviation: ` prefix dropped; leave the field out when there are none. The driver hands them to the review, or asks the implement agent which still hold, so a deviation is never lost between attempts.
+  - **The stopped item**, unless its row above says plain rerun: `{n, slug, from, attempt, note, deviations}`, or `{n, from: 'plan', attempt}` for a plan stop. The `slug` comes from the `STOPPED` line, `from` from the table above, and `attempt` is the item's count on the `STATE` line plus one. `deviations` holds the texts of the `  deviation:` lines under `STOPPED`, the `deviation: ` prefix dropped; leave the field out when there are none. The driver hands them to the review, or asks the implement agent which still hold, so a deviation is never lost between attempts.
   - **Every other entry of the stopped run** whose item is still unchecked, carried over unchanged. Those items never ran, because the driver stops at the first failure, so their attempt does not grow.
 - **The attempt limit.** An item already at `#N:2` gets no third attempt: stop and ask.
-  - **A plain rerun counts too**, though it carries no `resume` entry and so no `STATE` count. Count the plain reruns of this invocation yourself: after two plain reruns for the same item's plan stop, its next plan stop is stop and ask. The same limit holds for a run that never returns: after two plain reruns that each ended without a return, stop and ask.
 
 **The note is facts only.** Write two to five sentences:
 

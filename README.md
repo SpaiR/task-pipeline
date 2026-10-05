@@ -77,7 +77,7 @@ What you capture is the skill you pick — there are no flags.
 | `/task:to-task [<roadmap-slug>[#N] \| context]` | Captures one task into `.task/task/<slug>.md`: description plus a stepwise plan. |
 | `/task:to-roadmap [initiative]` | Captures a multi-task initiative into `.task/roadmap/<slug>.md`: a backlog of items plus its `## Architecture`. |
 | `/task:to-spec [decision area]` | Pins load-bearing technical decisions into `.task/spec/<slug>.md`, which tasks and roadmaps cite via `Spec:`. |
-| `/task:roadmap-to-workflow [<roadmap-slug>]` | Autopilot: plans, implements, reviews and ticks each unchecked roadmap item in dependency order. After a stop it reruns the stopped item from implement or review — on its own, or after asking, as you chose at launch. |
+| `/task:roadmap-to-workflow [<roadmap-slug>]` | Autopilot: plans, implements, reviews and ticks each unchecked roadmap item in dependency order. After a stop it reruns the stopped item from plan, implement or review — on its own, or after asking, as you chose at launch. |
 | `validate` *(utility)* | Optional format check: `bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" all`. |
 
 Full reference: **[Commands](https://spair.github.io/task-pipeline/reference/commands)**.

@@ -60,18 +60,18 @@ assert_eq "[]" "$(run_js "console.log('[' + digestSummary('OK #3 retry-backoff',
 
 t_case "runReport with nothing landed is the headline and the state block"
 assert_eq "roadmap-to-workflow stopped in wave 1 (planning), item #1: FAIL #1 a b
-STATE recover=off attempts=none
+STATE recover=off scope=all attempts=none
 STOPPED #1 - stage=plan" \
   "$(run_js "console.log(runReport('roadmap-to-workflow stopped in wave 1 (planning), item #1: FAIL #1 a b', [],
-    { recover: false, resume: [], stopped: { n: 1, slug: null, stage: 'plan', deviations: [] } }))")" "headline + state"
+    { recover: false, resume: [], scope: 'all', stopped: { n: 1, slug: null, stage: 'plan', deviations: [] } }))")" "headline + state"
 
 t_case "runReport lists landed items under the state block, in landing order, deviations indented"
 out=$(run_js "console.log(runReport('roadmap-to-workflow: all items shipped.', [
   { n: 3, slug: 'config-loader', impl: 'read TOML config', review: 'no findings', deviations: [] },
   { n: 1, slug: 'retry-backoff', impl: '', review: '1 fix, tests green', deviations: ['step 2 kept the old cache', 'spec §3 timeout 5s, not 3s'] },
-], { recover: true, resume: [{ n: 4, attempt: 1 }, { n: 1, attempt: 2 }], stopped: null }))")
+], { recover: true, resume: [{ n: 4, attempt: 1 }, { n: 1, attempt: 2 }], scope: [1, 3], stopped: null }))")
 assert_eq "roadmap-to-workflow: all items shipped.
-STATE recover=on attempts=#1:2,#4:1
+STATE recover=on scope=1,3 attempts=#1:2,#4:1
 #3 config-loader — read TOML config; review: no findings
 #1 retry-backoff — (no summary); review: 1 fix, tests green
   deviation: step 2 kept the old cache
@@ -109,6 +109,9 @@ let agent = async (prompt, opts) => {
   if (BREAK === `nouniq${n}` && stage === 'review') return `FAIL #${n} ${SLUG[n]} no unique index on users.email`
   if (BREAK === `emptyimpl${n}` && stage === 'implement') return ''
   if (BREAK === `driftimpl${n}` && stage === 'implement') return 'Built it.'
+  if (BREAK === `emptyplan${n}` && stage === 'plan') return ''
+  if (BREAK === `emptyreview${n}` && stage === 'review') return ''
+  if (BREAK === `driftreview${n}` && stage === 'review') return 'Reviewed it.'
   if (BREAK === `drift${n}` && stage === 'plan') return 'Plan written.'
   if (BREAK === `dup${n}` && stage === 'plan') return `OK #${n} ${SLUG[1]} planned`
   if (BREAK === `prompt${n}` && stage === 'plan') console.log(prompt)
@@ -139,14 +142,14 @@ assert_eq "roadmap-to-workflow: bad args — scope must be 'all', 'next-wave', o
 
 t_case "a full run returns the headline, the state block and every item in landing order"
 assert_eq "roadmap-to-workflow: all items shipped.
-STATE recover=off attempts=none
+STATE recover=off scope=all attempts=none
 #1 retry-backoff — built; review: ok, ticked
 #3 config-loader — built; review: ok, ticked
 #2 retry-metrics — built; review: ok, ticked" "$(run_driver "''")" "success report"
 
 t_case "a review FAIL still lists the items that landed before it"
 assert_eq "roadmap-to-workflow stopped in wave 2 (review), item #2: FAIL #2 retry-metrics tests red
-STATE recover=off attempts=none
+STATE recover=off scope=all attempts=none
 STOPPED #2 retry-metrics stage=review
 #1 retry-backoff — built; review: ok, ticked
 #3 config-loader — built; review: ok, ticked" "$(run_driver "'review2'")" "review stop"
@@ -161,7 +164,7 @@ assert_contains "$out" "
 
 t_case "a flip that found no heading stops with the fix-the-heading remedy"
 out=$(run_driver "'markfail3'")
-assert_contains "$out" "roadmap-to-workflow stopped in wave 1 (review), item #3: FAIL #3 config-loader roadmap item #3: no unique '### 3.' heading with a status line — its work is committed but the checkbox could not be flipped: fix /p/.task/roadmap/retry-work.md so #3 has one heading with a status line, then rerun /task:roadmap-to-workflow retry-work and resume #3 at review" "MARK-FAIL headline"
+assert_contains "$out" "roadmap-to-workflow stopped in wave 1 (review), item #3: FAIL #3 config-loader roadmap item #3: no unique '### 3.' heading with a status line — its work is committed but the checkbox could not be flipped: fix #3's heading in /p/.task/roadmap/retry-work.md, or the roadmap directory that could not be written, then rerun /task:roadmap-to-workflow retry-work and resume #3 at review" "MARK-FAIL headline"
 assert_contains "$out" "
 STOPPED #3 config-loader stage=mark" "a failed flip is a mark stop"
 assert_contains "$out" "
@@ -170,31 +173,58 @@ assert_contains "$out" "
 t_case "a review FAIL that merely says no unique gets no fix-the-heading remedy"
 # The remedy is keyed on the flip's own MARK-FAIL line, not on the digest's words.
 assert_eq "roadmap-to-workflow stopped in wave 1 (review), item #3: FAIL #3 config-loader no unique index on users.email
-STATE recover=off attempts=none
+STATE recover=off scope=all attempts=none
 STOPPED #3 config-loader stage=review
 #1 retry-backoff — built; review: ok, ticked" "$(run_driver "'nouniq3'")" "review stop, no remedy"
 
 t_case "an implement FAIL stops with what landed before it"
 assert_eq "roadmap-to-workflow stopped in wave 1, item #3: FAIL #3 config-loader tests red
-STATE recover=off attempts=none
+STATE recover=off scope=all attempts=none
 STOPPED #3 config-loader stage=implement
 #1 retry-backoff — built; review: ok, ticked" "$(run_driver "'implement3'")" "implement stop"
 
 t_case "an empty implement return stops"
 assert_eq "roadmap-to-workflow stopped in wave 1, item #3: implement agent returned nothing
-STATE recover=off attempts=none
+STATE recover=off scope=all attempts=none
 STOPPED #3 config-loader stage=implement
 #1 retry-backoff — built; review: ok, ticked" "$(run_driver "'emptyimpl3'")" "empty implement"
 
 t_case "a drifted implement digest stops"
 assert_eq "roadmap-to-workflow stopped in wave 1, item #3: unparsable implement digest: Built it.
-STATE recover=off attempts=none
+STATE recover=off scope=all attempts=none
 STOPPED #3 config-loader stage=implement
 #1 retry-backoff — built; review: ok, ticked" "$(run_driver "'driftimpl3'")" "drifted implement"
 
+t_case "an empty review return stops"
+assert_eq "roadmap-to-workflow stopped in wave 1 (review), item #3: review agent returned nothing
+STATE recover=off scope=all attempts=none
+STOPPED #3 config-loader stage=review
+#1 retry-backoff — built; review: ok, ticked" "$(run_driver "'emptyreview3'")" "empty review"
+
+t_case "a drifted review digest stops"
+assert_eq "roadmap-to-workflow stopped in wave 1 (review), item #3: unparsable review digest: Reviewed it.
+STATE recover=off scope=all attempts=none
+STOPPED #3 config-loader stage=review
+#1 retry-backoff — built; review: ok, ticked" "$(run_driver "'driftreview3'")" "drifted review"
+
+t_case "an empty plan return stops the wave before any of it is implemented"
+assert_eq "roadmap-to-workflow stopped in wave 1 (planning), item #1: plan agent returned nothing
+STATE recover=off scope=all attempts=none
+STOPPED #1 - stage=plan" "$(run_driver "'emptyplan1'")" "empty plan"
+
+t_case "the state block echoes the scope the run actually kept"
+# 'next-wave' is the explicit wave-1 numbers and a picked list is sorted, so a
+# rerun after a context compaction never rebuilds the scope from memory.
+assert_eq "roadmap-to-workflow: all items shipped.
+STATE recover=off scope=1,3 attempts=none
+#1 retry-backoff — built; review: ok, ticked
+#3 config-loader — built; review: ok, ticked" "$(run_driver "''" "args.scope = 'next-wave'")" "next-wave"
+assert_contains "$(run_driver "''" "args.scope = [3, 1]")" "
+STATE recover=off scope=1,3 attempts=none" "a picked list"
+
 t_case "a plan FAIL before anything landed is the headline alone"
 assert_eq "roadmap-to-workflow stopped in wave 1 (planning), item #1: FAIL #1 retry-backoff tests red
-STATE recover=off attempts=none
+STATE recover=off scope=all attempts=none
 STOPPED #1 - stage=plan" \
   "$(run_driver "'plan1'")" "plan stop"
 
@@ -202,7 +232,7 @@ t_case "a drifted plan digest stops the wave before any of it is implemented"
 # The shape check once ran lazily inside the serial loop, so #1 landed before
 # the driver reached #3's unparsable digest.
 assert_eq "roadmap-to-workflow stopped in wave 1 (planning), item #3: unparsable plan digest: Plan written.
-STATE recover=off attempts=none
+STATE recover=off scope=all attempts=none
 STOPPED #3 - stage=plan" \
   "$(run_driver "'drift3'")" "headline and state, nothing landed"
 
@@ -210,8 +240,8 @@ t_case "two items of one wave planned on the same slug stop before either is imp
 # Parallel planners cannot see each other's file, so both can land on one slug:
 # one task file for two items, and the second implement would rebuild the first.
 assert_eq "roadmap-to-workflow stopped in wave 1 (planning), item #3: #1 and #3 both planned retry-backoff — one task file for two items; give one of them a more distinct title, then rerun /task:roadmap-to-workflow retry-work
-STATE recover=off attempts=none
-STOPPED #3 retry-backoff stage=plan" \
+STATE recover=off scope=all attempts=none
+STOPPED #3 - stage=plan" \
   "$(run_driver "'dup3'")" "headline and state, nothing landed"
 
 t_case "the plan prompt names aiDir as the .task directory, not a root above it"
@@ -236,23 +266,38 @@ t_case "a later wave's slug that matches a landed item's stops too"
 assert_contains "$(run_driver "'dup2'")" \
   "roadmap-to-workflow stopped in wave 2 (planning), item #2: #1 and #2 both planned retry-backoff" "clash with a landed item"
 
-# Resumed runs. #1 lands first in every case, so the report always has a body.
+# Resumed runs. A resumed item runs before its wave-mates, so a stop on #3 at
+# review comes before #1 has run, and #1 lands first when #1 is the resumed one.
 RESUME3='args.recover = true; args.resume = [{ n: 3, slug: "config-loader", from: "review", attempt: 2, note: "implement committed, digest missing" }]'
 RESUME1='args.recover = true; args.resume = [{ n: 1, slug: "retry-backoff", from: "implement", attempt: 1, note: "acceptance 2 missed" }]'
 
 t_case "a stop in review of a resumed item carries STATE and STOPPED under the unchanged headline"
 out=$(run_driver "'review3'" "$RESUME3")
 assert_eq "roadmap-to-workflow stopped in wave 1 (review), item #3: FAIL #3 config-loader tests red" "$(head -1 <<<"$out")" "headline byte-identical"
-assert_eq "STATE recover=on attempts=#3:2
-STOPPED #3 config-loader stage=review
-#1 retry-backoff — built; review: ok, ticked" "$(sed 1d <<<"$out")" "state block, then what landed"
+assert_eq "STATE recover=on scope=all attempts=#3:2
+STOPPED #3 config-loader stage=review" "$(sed 1d <<<"$out")" "state block, nothing landed before the resumed item"
+
+t_case "a resumed item runs before its wave-mates"
+# A stopped attempt may leave uncommitted work: a wave-mate implemented first
+# would commit it, or fail its own review on it.
+assert_eq "roadmap-to-workflow: all items shipped.
+STATE recover=on scope=all attempts=#3:2
+#3 config-loader — resumed at review; review: ok, ticked
+#1 retry-backoff — built; review: ok, ticked
+#2 retry-metrics — built; review: ok, ticked" "$(run_driver "''" "$RESUME3")" "landing order"
 
 t_case "an item resumed at review is neither planned nor implemented, and its review gets the note"
 out=$(run_driver "'reviewprompt3'" "$RESUME3")
 assert_contains "$out" "This review resumes a stopped run. What the earlier attempt left: implement committed, digest missing" "note in the review prompt"
 assert_contains "$out" "#3 config-loader — resumed at review; review: ok, ticked" "landed without an implement summary"
-assert_eq "0" "$(run_driver "'plan3'" "$RESUME3" | grep -c 'stopped')" "no plan agent ran for #3"
-assert_eq "0" "$(run_driver "'implement3'" "$RESUME3" | grep -c 'stopped')" "no implement agent ran for #3"
+# A stub that FAILs #3's plan or implement would stop the run had the stage run;
+# the run shipping, and #3's line saying so, is the proof it did not.
+assert_contains "$(run_driver "'plan3'" "$RESUME3")" "roadmap-to-workflow: all items shipped.
+STATE recover=on scope=all attempts=#3:2
+#3 config-loader — resumed at review; review: ok, ticked" "no plan agent ran for #3"
+assert_contains "$(run_driver "'implement3'" "$RESUME3")" "roadmap-to-workflow: all items shipped.
+STATE recover=on scope=all attempts=#3:2
+#3 config-loader — resumed at review; review: ok, ticked" "no implement agent ran for #3"
 
 t_case "a resumed implement gets the continuation prompt, without a plan agent"
 out=$(run_driver "'implprompt1'" "$RESUME1")
@@ -260,11 +305,13 @@ assert_contains "$out" "Item #1: continue implementing /p/.task/task/retry-backo
 assert_contains "$out" "Why the earlier attempt stopped, and what it left: acceptance 2 missed" "note in the implement prompt"
 assert_contains "$out" "DEVIATION #1 <what departed" "deviation format asked for"
 assert_contains "$out" "sends you to /p/.task/CLAUDE.md → ## Executing a task" "Execution pointer kept"
-assert_eq "0" "$(run_driver "'plan1'" "$RESUME1" | grep -c 'stopped')" "no plan agent ran for #1"
+assert_contains "$(run_driver "'plan1'" "$RESUME1")" "roadmap-to-workflow: all items shipped.
+STATE recover=on scope=all attempts=#1:1
+#1 retry-backoff — built; review: ok, ticked" "no plan agent ran for #1"
 
 t_case "a resumed implement's deviations reach the review prompt and the report"
 out=$(run_driver "'deviate1'" "$RESUME1")
-assert_contains "$out" "STATE recover=on attempts=#1:1" "state line"
+assert_contains "$out" "STATE recover=on scope=all attempts=#1:1" "state line"
 assert_contains "$out" "#1 retry-backoff — built; review: ok, ticked
   deviation: kept the old cache
 #3" "one deviation line, the inline mention dropped"
@@ -280,16 +327,43 @@ out=$(run_driver "'deviate1'" "$RESUME1
 const stub = agent
 agent = async (p, o) => o.label === '3/3 review' && p.includes('#1 ') ? 'FAIL #1 retry-backoff tests red' : stub(p, o)")
 assert_eq "roadmap-to-workflow stopped in wave 1 (review), item #1: FAIL #1 retry-backoff tests red
-STATE recover=on attempts=#1:1
+STATE recover=on scope=all attempts=#1:1
 STOPPED #1 retry-backoff stage=review
   deviation: kept the old cache" "$out" "unjudged deviation travels with the stop"
+
+t_case "a MARK-OK under a drifted review digest is a mark stop, not a review stop"
+# The flip runs only on an OK verdict: the item is ticked, so recovery must not
+# build a review entry for an item the next roadmap-items.sh call no longer lists.
+out=$(run_driver "'deviate1'" "$RESUME1
+const stub = agent
+agent = async (p, o) => o.label === '3/3 review' && p.includes('#1 ') ? 'MARK-OK #1\\nOK #1 retry-backoff done\\nThat is all.' : stub(p, o)")
+assert_contains "$out" "item #1: unparsable review digest: That is all." "drifted digest headline"
+assert_contains "$out" "
+STOPPED #1 retry-backoff stage=mark
+  deviation: kept the old cache" "a ticked item stops at mark, its deviation accepted"
+
+t_case "a plan entry plans the item afresh and counts its attempt"
+out=$(run_driver "'prompt1'" 'args.recover = true; args.resume = [{ n: 1, from: "plan", attempt: 2 }]')
+assert_contains "$out" "Read /plugin/skills/_lib/plan-driver.md" "the plan agent ran for #1"
+assert_contains "$out" "STATE recover=on scope=all attempts=#1:2
+#1 retry-backoff — built; review: ok, ticked" "fresh implement, attempt on the STATE line"
+
+t_case "a passing review without MARK-OK keeps the deviations under STOPPED stage=mark"
+out=$(run_driver "'deviate1'" "$RESUME1
+const stub = agent
+agent = async (p, o) => o.label === '3/3 review' && p.includes('#1 ') ? 'OK #1 retry-backoff done' : stub(p, o)")
+assert_contains "$out" "item #1: the review passed but never reported MARK-OK #1" "flip stop headline"
+assert_contains "$out" "
+STATE recover=on scope=all attempts=#1:1
+STOPPED #1 retry-backoff stage=mark
+  deviation: kept the old cache" "the accepted deviation travels with a mark stop"
 
 t_case "an implement stop after a resumed implement keeps the deviations it declared under STOPPED"
 out=$(run_driver "''" "$RESUME1
 const stub = agent
 agent = async (p, o) => o.label === '2/3 implement' && p.includes('#1') ? 'DEVIATION #1 kept the old cache\nBuilt it, committed.' : stub(p, o)")
 assert_eq "roadmap-to-workflow stopped in wave 1, item #1: unparsable implement digest: Built it, committed.
-STATE recover=on attempts=#1:1
+STATE recover=on scope=all attempts=#1:1
 STOPPED #1 retry-backoff stage=implement
   deviation: kept the old cache" "$out" "declared deviation travels with an implement stop"
 
@@ -297,8 +371,10 @@ t_case "an implement entry that returns nothing keeps its carried deviations und
 out=$(run_driver "'emptyimpl1'" 'args.recover = true; args.resume = [{ n: 1, slug: "retry-backoff", from: "implement", attempt: 1, deviations: ["kept the old cache"] }]')
 assert_contains "$out" "STOPPED #1 retry-backoff stage=implement
   deviation: kept the old cache" "carried deviation survives a silent implement"
-assert_eq "0" "$(run_driver "'implement1'" 'args.recover = true; args.resume = [{ n: 1, slug: "retry-backoff", from: "implement", attempt: 1, deviations: ["kept the old cache"] }]' | grep -c 'deviation:')" \
-  "a FAIL that re-declares none drops them"
+# A failing agent may stop before declaring, while the earlier commits still make them.
+assert_contains "$(run_driver "'implement1'" 'args.recover = true; args.resume = [{ n: 1, slug: "retry-backoff", from: "implement", attempt: 1, deviations: ["kept the old cache"] }]')" \
+  "STOPPED #1 retry-backoff stage=implement
+  deviation: kept the old cache" "a FAIL that re-declares none keeps them"
 
 t_case "a review entry's carried deviations reach the review prompt and the report"
 CARRY='args.recover = true; args.resume = [{ n: 3, slug: "config-loader", from: "review", attempt: 2, deviations: ["kept the old cache"] }]'
