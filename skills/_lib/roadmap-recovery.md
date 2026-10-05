@@ -50,6 +50,7 @@ The rerun goes through the skill's Step 1 and Step 2 again, with these args:
   - **The stopped item**, unless its row above says plain rerun: `{n, slug, from, attempt, note}`. The `slug` comes from the `STOPPED` line, `from` from the table above, and `attempt` is the item's count on the `STATE` line plus one.
   - **Every other entry of the stopped run** whose item is still unchecked, carried over unchanged. Those items never ran, because the driver stops at the first failure, so their attempt does not grow.
 - **The attempt limit.** An item already at `#N:2` gets no third attempt: stop and ask.
+  - **A plain rerun counts too**, though it carries no `resume` entry and so no `STATE` count. Count the plain reruns of this invocation yourself: after two plain reruns for the same item's plan stop, its next plan stop is stop and ask. The same limit holds for a run that never returns: after two plain reruns that each ended without a return, stop and ask.
 
 **The note is facts only.** Write two to five sentences:
 
