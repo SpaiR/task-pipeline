@@ -34,14 +34,14 @@ if (typeof pluginRoot !== 'string' || !pluginRoot.startsWith('/')) return bad('p
 if (!Array.isArray(specPaths) || specPaths.some((p) => typeof p !== 'string' || !p.startsWith('/')))
   return bad('specPaths must be an array of absolute paths ([] when the roadmap has no Spec: headers)')
 if (!Array.isArray(items) || items.length === 0)
-  return bad('items must be a non-empty array of {n, title, model, deps} objects — was it passed as a JSON string instead of a real array?')
-const MODELS = ['haiku', 'sonnet', 'opus']
+  return bad('items must be a non-empty array of {n, title, size, deps} objects — was it passed as a JSON string instead of a real array?')
+const SIZES = ['S', 'M', 'L']
 const isItemNo = (v) => Number.isInteger(v) && v >= 1
 for (const it of items) {
-  if (!it || typeof it !== 'object' || Array.isArray(it)) return bad('every entry of items must be an {n, title, model, deps} object')
+  if (!it || typeof it !== 'object' || Array.isArray(it)) return bad('every entry of items must be an {n, title, size, deps} object')
   if (!isItemNo(it.n)) return bad('every item needs an integer n >= 1')
   if (typeof it.title !== 'string' || !it.title) return bad(`item #${it.n} needs a non-empty title`)
-  if (!MODELS.includes(it.model)) return bad(`item #${it.n} model must be haiku|sonnet|opus, got ${JSON.stringify(it.model)}`)
+  if (!SIZES.includes(it.size)) return bad(`item #${it.n} size must be S|M|L, got ${JSON.stringify(it.size)}`)
   if (!Array.isArray(it.deps) || it.deps.some((d) => !isItemNo(d))) return bad(`item #${it.n} deps must be an array of item numbers ([] for none)`)
 }
 if (items.length !== new Set(items.map((it) => it.n)).size) return bad('items contains the same n twice')
@@ -159,12 +159,29 @@ const ROADMAP = `${aiDir}/roadmap/${slug}.md`
 const SPEC_SLUGS = specPaths.map((p) => p.split('/').pop().replace(/\.md$/, ''))
 const lastLine = (s) => (s || '').trim().split('\n').filter(Boolean).pop() || ''
 
+// Model and effort per stage, keyed by the item's size (its roadmap `**Size:**`
+// hint, M when absent). Review is absent on purpose: task:code-reviewer pins its
+// own in frontmatter, see runReview.
+// Why this shape: on well-specified changes sonnet at medium matches opus's pass
+// rate at a third of the cost, while opus stays ahead where judgment is needed
+// (planning, finding defects); effort moves results more than the model does.
+// Plan is never below implement — its errors reach two downstream agents.
+// xhigh/max are not used: opus at high and above started breaking passing tests.
+// Switching rule for M/implement, the cell the evidence supports least: if M
+// items come back from the reviewer with fix commits of the "missed a file /
+// skipped the ## Tests section / did not read the Spec" kind, raise it to
+// sonnet/high; if the fixes are "wrong approach / missed a side effect", switch
+// it to opus/medium.
+const STAGES = {
+  S: { plan: { model: 'opus', effort: 'medium' }, implement: { model: 'sonnet', effort: 'medium' } },
+  M: { plan: { model: 'opus', effort: 'high' }, implement: { model: 'sonnet', effort: 'medium' } },
+  L: { plan: { model: 'opus', effort: 'high' }, implement: { model: 'opus', effort: 'medium' } },
+}
+
 // PLAN — writes only its own .task/task/<item-slug>.md, never the working tree,
 // so a whole wave plans in parallel. Reads skills/_lib/plan-driver.md instead of
-// the full to-task skill. Planner tier: opus by default, sonnet for an item the
-// roadmap hints as `haiku` (with effort scaled down) — the review stage never
-// scales down, see runReview.
-async function runPlan(n, title, model, phase) {
+// the full to-task skill. Model and effort come from STAGES by size.
+async function runPlan(n, title, size, phase) {
   const r = await agent(
     `Read ${pluginRoot}/skills/_lib/plan-driver.md and follow it. Your item:
      - roadmap file: ${ROADMAP}
@@ -178,21 +195,17 @@ async function runPlan(n, title, model, phase) {
      Last non-empty line MUST be exactly:
        OK #${n} <item-slug> planned            (on success)
        FAIL #${n} <item-slug> <what failed>    (on failure)`,
-    {
-      model: model === 'haiku' ? 'sonnet' : 'opus',
-      effort: model === 'haiku' ? 'low' : 'medium',
-      label: '1/3 plan',
-      phase,
-    }
+    { ...STAGES[size].plan, label: '1/3 plan', phase }
   )
   return lastLine(r)
 }
 
-// IMPLEMENT + COMMIT on the item's own model, reading the task file fresh from
+// IMPLEMENT + COMMIT on the size's model and an explicit effort — never the
+// session's, which an omitted effort would inherit. Reads the task file fresh from
 // disk (no chat carries over from the plan agent). Runs one at a time within a
 // wave — the sole mutator of the shared working tree, so each implement sees its
 // already-landed wave-mates' reviewed commits.
-async function runImplement(n, itemSlug, model, phase) {
+async function runImplement(n, itemSlug, size, phase) {
   const r = await agent(
     `Implement ${aiDir}/task/${itemSlug}.md. Follow its ## Execution pointer —
      it sends you to ${aiDir}/CLAUDE.md → ## Executing a task — with two carve-outs:
@@ -205,7 +218,7 @@ async function runImplement(n, itemSlug, model, phase) {
      Last non-empty line MUST be exactly:
        OK #${n} ${itemSlug} <one-line summary>      (on success)
        FAIL #${n} ${itemSlug} <what failed>         (on failure)`,
-    { model, label: '2/3 implement', phase }
+    { ...STAGES[size].implement, label: '2/3 implement', phase }
   )
   return lastLine(r)
 }
@@ -214,9 +227,9 @@ async function runImplement(n, itemSlug, model, phase) {
 // inside the serial per-item loop, right after that item's implement. The item
 // to tick is passed explicitly, so the flip never depends on the plan agent
 // having stamped Roadmap:/Source item: headers; OK means the checkbox is ticked
-// (the reviewer's phase 7 turns a failed flip into a FAIL digest). No `model` opt:
-// task:code-reviewer pins its own model/effort, so a haiku item never gets a
-// haiku review. No `isolation`: it must see and commit into this very working tree.
+// (the reviewer's phase 7 turns a failed flip into a FAIL digest). No `model` or
+// `effort` opt: task:code-reviewer pins its own, so an item's size never lowers
+// its review. No `isolation`: it must see and commit into this very working tree.
 async function runReview(n, itemSlug, phase) {
   const r = await agent(
     `Review the implementation of ${aiDir}/task/${itemSlug}.md, which was just
@@ -255,7 +268,7 @@ for (const [wIdx, items] of waves.entries()) {
   // 1) PLAN the whole wave in parallel. A single plan FAIL — or a digest of the
   //    wrong shape — stops the run before any implement of this wave starts
   //    (plans are cheap to rerun).
-  const plans = await parallel(items.map(({ n, title, model }, i) => () => runPlan(n, title, model, phases[i])))
+  const plans = await parallel(items.map(({ n, title, size }, i) => () => runPlan(n, title, size, phases[i])))
   // Every digest is logged before any is judged, so a stop on one item still
   // shows how its wave-mates' plans came out.
   for (const [i, status] of plans.entries())
@@ -282,10 +295,10 @@ for (const [wIdx, items] of waves.entries()) {
   //    serial loop, so the shared tree and the roadmap file each keep exactly
   //    one writer, and item N never starts implementing while item N−1 is
   //    still under review.
-  for (const [i, { n, model }] of items.entries()) {
+  for (const [i, { n, size }] of items.entries()) {
     const itemSlug = itemSlugs[i]
 
-    const status = await runImplement(n, itemSlug, model, phases[i])
+    const status = await runImplement(n, itemSlug, size, phases[i])
     log(`[W${w} implement] ${status || `FAIL #${n} ${itemSlug} implement agent returned nothing`}`)
     if (!digestPassed(status, n, itemSlug))
       return runReport(`roadmap-to-workflow stopped in wave ${w}, item #${n}: ${

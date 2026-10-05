@@ -5,7 +5,7 @@
 #
 # Prints one TAB-separated line per UNCHECKED item, then one DONE line:
 #
-#   <N>\t<deps>\t<model>\t<title>      deps: "" or "1,2"; model: haiku|sonnet|opus
+#   <N>\t<deps>\t<size>\t<title>       deps: "" or "1,2"; size: S|M|L (default M)
 #   DONE\t<n,n,…>                       the already-marked numbers ("" if none)
 #
 # `roadmap-to-workflow` Step 1 turns those lines into the driver's `items` and
@@ -40,7 +40,7 @@ ROADMAP=$(resolve_artifact_path roadmap "$arg")
 # token is an exact string compare, so bytes lose nothing. A pass that still
 # fails (an unreadable file) is exit 1 too: its partial list must never run.
 LC_ALL=C awk '
-  function flush() { if (pend) { print n "\t" deps "\t" (model==""?"sonnet":model) "\t" title; pend=0 } }
+  function flush() { if (pend) { print n "\t" deps "\t" (size==""?"M":size) "\t" title; pend=0 } }
   # An item is a `### N. <title>` heading plus its status line, the first
   # non-blank line under it. The heading arms the pass; the status line decides
   # whether the item is captured or only counted as met. A heading with no
@@ -48,7 +48,7 @@ LC_ALL=C awk '
   wait && /^[[:space:]]*$/ { next }
   wait {
     wait=0
-    if ($0 ~ /^- \[ \]([[:space:]]|$)/) { model=""; deps=""; pend=1; next }   # unchecked — capture
+    if ($0 ~ /^- \[ \]([[:space:]]|$)/) { size=""; deps=""; pend=1; next }   # unchecked — capture
     if ($0 ~ /^- \[[x~>-]\]([[:space:]]|$)/) {                                # marked — the driver
       donelist = (donelist=="" ? n : donelist "," n)                          # needs these to know
       next                                                                    # which deps are met
@@ -63,8 +63,8 @@ LC_ALL=C awk '
   }
   # A heading that ATTEMPTED to be an item and drifted (a checkbox left in the
   # heading, a bullet before the number) closes the current item.
-  # Otherwise its Dependencies/Model are attributed to the item ABOVE it — a
-  # phantom dependency, a wrong wave, or the wrong model, with no signal.
+  # Otherwise its Dependencies/Size are attributed to the item ABOVE it — a
+  # phantom dependency, a wrong wave, or the wrong size, with no signal.
   # Matched the same way `validate.sh` reports it, so both parsers agree on what
   # counts as an item attempt.
   /^#+[[:space:]]*[-*+]?[[:space:]]*\[[^]]?\]/ { flush(); next }
@@ -72,11 +72,14 @@ LC_ALL=C awk '
   # The section terminators the validate.sh block parser uses. Deliberately NOT
   # every `#`-prefixed line: a `#### Notes` sub-heading, or a `#` comment inside
   # a fenced block, sits INSIDE an item — flushing on those would drop that
-  # an item Dependencies/Model on a file that validates perfectly clean.
+  # an item Dependencies/Size on a file that validates perfectly clean.
   /^### / { flush(); next }
   /^## /  { flush(); next }
   /^---[[:space:]]*$/ { flush(); next }
   /^\*\*Dependencies:\*\*/ && pend { deps=$0; sub(/^\*\*Dependencies:\*\* */,"",deps); gsub(/[ \t]/,"",deps); if (deps=="—"||deps=="-"||tolower(deps)=="none"||tolower(deps)=="n/a") deps="" }
-  /^\*\*Model:\*\*/       && pend { model=$0; sub(/^\*\*Model:\*\* */,"",model); gsub(/[ \t]/,"",model); if (model!="haiku" && model!="sonnet" && model!="opus") model="" }
+  # Size is upper-cased so a hand-typed `s` counts; anything else is the default.
+  # A stale `**Model:**` line from an older roadmap matches no rule: it is an
+  # ordinary body line and the item runs at the default size.
+  /^\*\*Size:\*\*/        && pend { size=$0; sub(/^\*\*Size:\*\* */,"",size); gsub(/[ \t]/,"",size); size=toupper(size); if (size!="S" && size!="M" && size!="L") size="" }
   END { flush(); print "DONE\t" donelist }
 ' "$ROADMAP" || { echo "ERROR cannot read roadmap: $ROADMAP" >&2; exit 1; }

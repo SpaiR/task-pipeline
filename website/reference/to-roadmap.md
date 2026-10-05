@@ -1,6 +1,6 @@
 # to-roadmap
 
-Fixes a multi-task initiative into `.task/roadmap/<slug>.md` — a phase-grouped backlog of ready-to-pick-up items, each with optional `**Dependencies:**` and `**Model:**` hints, **together with its `## Architecture`**: components, interfaces between items, a module-level sketch per item, and technical ordering.
+Fixes a multi-task initiative into `.task/roadmap/<slug>.md` — a phase-grouped backlog of ready-to-pick-up items, each with optional `**Dependencies:**` and `**Size:**` hints, **together with its `## Architecture`**: components, interfaces between items, a module-level sketch per item, and technical ordering.
 
 See the [roadmaps guide](/guide/roadmaps) for the end-to-end flow.
 
@@ -31,7 +31,7 @@ An item backlog, each item shaped like:
 
 **Dependencies:** — / 1, 2, …
 
-**Model:** haiku | sonnet | opus      (optional per-item hint)
+**Size:** S | M | L      (optional per-item hint)
 
 **Ready description:**
 

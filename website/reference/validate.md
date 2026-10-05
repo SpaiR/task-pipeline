@@ -25,7 +25,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/validate/validate.sh" [ all | task <slug> | r
 - a heading that *nearly* matches is an error too — a checkbox in the heading (`### - [ ] N.`), a bullet before the number, a missing space after the dot, or a heading at the wrong level (`#### N.`), which shows up as a `- [ ] Done` line with no item heading above it. Such a heading is invisible to the autopilot, so catching it here is what stops an item from silently dropping out of a run. It is reported even when *every* heading has drifted;
 - item numbers are unique and start at 1 (an item `0.` or a `0` dependency is an error);
 - `**Dependencies:**` on an *unchecked* item is a no-dependency token (`—`, `-`, `none`, `n/a`) or a comma-separated list of item numbers; each number must name an item in the same file, and an item may not list itself. A space-separated `1 2` is reported as such, rather than being read as item `12`;
-- the file uses LF line endings — with CRLF the driver keeps the trailing CR and loses `**Model:**` hints;
+- the file uses LF line endings — with CRLF the driver keeps the trailing CR and loses `**Size:**` hints;
 - each item carries `> **Context**` / `> **Goal**` / `> **Outcomes**` / `> **Acceptance criteria**` inside its Ready description quote (Invariants optional);
 - dangling `Spec:` headers `WARN`;
 - an optional `## Architecture` section only ever `WARN`s, so it never blocks `/task:roadmap-to-workflow`: two such sections, a missing `### Components` (or `### Item sketches` while unchecked items remain), and an `#N` that names no item — what a renumbering leaves behind. A numbered `### 2. …` sub-heading inside it is still an `ERROR`, because it reads as a second copy of an item; write `- #2 — …` instead.

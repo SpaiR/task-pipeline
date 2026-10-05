@@ -12,7 +12,7 @@ The reviewer's invariants are in `CLAUDE.md` § Invariants and `docs/contract.md
 
 - **The flip command is tested verbatim.** `tests/reviewer-mark.test.sh` extracts the block between the `roadmap-flip:start` and `roadmap-flip:end` marker comments and runs it with only its two value lines substituted. Change the block, its markers or phase 7 together with that test.
 - **Its report is parsed.** The digest last line (`OK|FAIL <reference string> <summary>`) and the repeated `MARK-OK #N` line are read by the driver's `digestPassed` and `flipReported`. Change their shape with the driver and `tests/driver-digest.test.sh`.
-- **Keep `model` and `effort` pinned** in the frontmatter, so a `haiku` roadmap item never gets a `haiku` review.
+- **Keep `model` and `effort` pinned** in the frontmatter, so an item's `**Size:**` never lowers its review.
 - **Plugin agents ignore `permissionMode`, `hooks` and `mcpServers`.** Adding one does nothing; enforce behavior in the prompt or the tool list.
 
 **The self-audit lens agents, `.claude/agents/self-*-auditor.md`:**

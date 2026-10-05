@@ -81,7 +81,7 @@ Each item:
 
 **Dependencies:** — / 1, 2, …
 
-**Model:** haiku | sonnet | opus      (optional)
+**Size:** S | M | L      (optional)
 
 **Ready description:**
 
