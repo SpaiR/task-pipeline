@@ -5,7 +5,8 @@
 # FAIL, an empty line or a drifted line stops the run. A passing review must
 # also carry its phase-7 `MARK-OK #N` line. Extracted verbatim between their
 # marker comments, as driver-waves.test.sh does for computeWaves. flipFailed
-# recognises the flip's own `MARK-FAIL #N` line, never a free-text digest.
+# recognises the flip's own `MARK-FAIL #N` line, never a free-text digest, and
+# deviationsReported collects a resumed implement's whole `DEVIATION #N` lines.
 source "$(dirname "$0")/lib.sh"
 
 DRIVER="$T_REPO_ROOT/skills/_lib/roadmap-driver.js"
@@ -17,11 +18,14 @@ fi
 
 dir=$(t_tmpdir)
 sed -n -e '/--- digestPassed (pure/,/--- end digestPassed/p' \
-  -e '/--- flipReported (pure/,/--- end flipReported/p' "$DRIVER" >"$dir/digest.mjs"
-if ! grep -q 'function digestPassed' "$dir/digest.mjs" || ! grep -q 'function flipReported' "$dir/digest.mjs"; then
-  t_case "extract digestPassed and flipReported from the driver"
+  -e '/--- flipReported (pure/,/--- end flipReported/p' \
+  -e '/--- deviationsReported (pure/,/--- end deviationsReported/p' "$DRIVER" >"$dir/digest.mjs"
+if ! grep -q 'function digestPassed' "$dir/digest.mjs" || ! grep -q 'function flipReported' "$dir/digest.mjs" ||
+  ! grep -q 'function deviationsReported' "$dir/digest.mjs"; then
+  t_case "extract digestPassed, flipReported and deviationsReported from the driver"
   assert_contains "$(cat "$dir/digest.mjs")" "function digestPassed" "digestPassed marker comments still present"
   assert_contains "$(cat "$dir/digest.mjs")" "function flipReported" "flipReported marker comments still present"
+  assert_contains "$(cat "$dir/digest.mjs")" "function deviationsReported" "deviationsReported marker comments still present"
   t_summary
 fi
 
@@ -82,5 +86,19 @@ assert_eq "false" "$(failed "'FAIL #3 retry-backoff no unique index on users.ema
 assert_eq "false" "$(failed "'MARK-FAIL #13\\nFAIL #3 retry-backoff x'")" "another item's number"
 assert_eq "false" "$(failed "'MARK-OK #3\\nOK #3 retry-backoff done'")" "a successful flip"
 assert_eq "false" "$(failed "undefined")" "undefined"
+
+deviations() { # <text> → prints the JSON of deviationsReported(text, 3)
+  { cat "$dir/digest.mjs"; printf 'console.log(JSON.stringify(deviationsReported(%s, 3)))\n' "$1"; } >"$dir/case.mjs"
+  node "$dir/case.mjs" 2>&1
+}
+
+t_case "deviations are collected by whole line and item number only"
+assert_eq '["kept the v1 cache key","spec 2 retry cap 5, not 3; invariant 1 holds"]' \
+  "$(deviations "'## Notes\\nDEVIATION #3 kept the v1 cache key\\n  DEVIATION #3 spec 2 retry cap 5, not 3; invariant 1 holds  \\nOK #3 retry-backoff done'")" "two lines, trimmed, in order"
+assert_eq '[]' "$(deviations "'DEVIATION #13 another item\\nOK #3 retry-backoff done'")" "another item's number"
+assert_eq '[]' "$(deviations "'Note: DEVIATION #3 mentioned mid-line\\nOK #3 retry-backoff'")" "an inline mention"
+assert_eq '[]' "$(deviations "'**DEVIATION** #3 bolded\\nOK #3 retry-backoff'")" "a bolded marker"
+assert_eq '[]' "$(deviations "'DEVIATION #3   \\nOK #3 retry-backoff'")" "a marker with no text"
+assert_eq '[]' "$(deviations "undefined")" "undefined"
 
 t_summary

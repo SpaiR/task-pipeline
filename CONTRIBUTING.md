@@ -51,10 +51,14 @@ skills/                          SKILL.md per skill + shared bash helpers
                                    write-task.sh (the single task.md writer, whole files
                                      only — driver reruns regenerate),
                                    detect-project.sh (the facts first-run setup picks from),
-                                   roadmap-items.sh (a roadmap's unchecked items, for the driver args),
+                                   roadmap-items.sh (a roadmap's unchecked items, for the driver args,
+                                     each with the slug of a plan already written for it),
                                    roadmap-driver.js (the static Workflow script roadmap-to-workflow
-                                     invokes; computes the dependency waves in computeWaves and
-                                     gates each implement/review digest in digestPassed),
+                                     invokes; computes the dependency waves in computeWaves,
+                                     gates each implement/review digest in digestPassed, and
+                                     resumes a stopped item at implement or review),
+                                   roadmap-recovery.md (what roadmap-to-workflow does after a stop:
+                                     classify it, rebuild the args, rerun with resume),
                                    plan-driver.md (the plan pipeline: § Core, followed by both
                                      to-task Steps 3-7 and the driver's plan agent, plus
                                      § Driver mode for the non-interactive deltas),

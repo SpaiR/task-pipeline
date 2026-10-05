@@ -121,9 +121,15 @@ Nothing was written when this fires, so re-running the command after fixing the 
 
 **Cause** — by design: the driver is stop-on-FAIL. A later wave never starts if an earlier item didn't land cleanly, since a later item may depend on it.
 
-**Fix** — read the failure digest, fix the item (edit `.task/task/<item-slug>.md`, or re-implement it by hand), tick its checkbox, then rerun `/task:roadmap-to-workflow <slug>`. Completed items stay checked, so the rerun only picks up the unchecked remainder. An item left unchecked is re-planned from the roadmap, and its task file regenerated — hand edits to it are lost, so change the item in the roadmap instead.
+**Fix** — with **Recover and continue** picked at launch, the skill reruns the stopped item itself, up to two attempts. With **Stop and ask**, it offers that rerun as a chip. When the run ends stopped anyway, rerun `/task:roadmap-to-workflow <slug>`. It finds the stopped item's task file and asks how to take it:
 
-One digest is worth reading closely: a review `FAIL` that says `no unique '### N.' heading with a status line, or the roadmap's directory could not be written` means the item's work already landed and was committed, and only the checkbox is behind. The flip is idempotent, so this is never "the box was already ticked" — it means either the roadmap has no unique `### N.` heading with a `- [ ] Done` line under it for that item (it was renumbered, duplicated, or lost its status line), or the roadmap's directory could not be written (read-only directory or filesystem, full disk). Fix the cause, tick the box by hand and rerun; there is nothing to re-implement.
+- **Implement this plan** continues from what is already committed.
+- **Review only** fits work that is committed and complete.
+- **Re-plan from the roadmap item** regenerates the task file from the item, so hand edits to that file are lost. Change the item in the roadmap first if the plan itself was wrong.
+
+Completed items stay checked, so the rerun only picks up the unchecked remainder. Don't tick a failed item by hand: it would skip the review, and nothing would check the work.
+
+One digest is worth reading closely: a review `FAIL` that says `no unique '### N.' heading with a status line, or the roadmap's directory could not be written` means the item's work already landed and was committed, and only the checkbox is behind. The flip is idempotent, so this is never "the box was already ticked". It means either the roadmap has no unique `### N.` heading with a `- [ ] Done` line under it for that item (it was renumbered, duplicated, or lost its status line), or the roadmap's directory could not be written (read-only directory or filesystem, full disk). Fix the cause, then rerun and pick **Review only** for the item: there is nothing to re-implement.
 
 ### A worktree can't find .task/ {#a-worktree-cant-find-task}
 

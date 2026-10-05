@@ -8,9 +8,11 @@
 /task:roadmap-to-workflow api-v2-migration
 # no flags — it asks (via chips) how much to run:
 #   all remaining items · just the next dependency-wave · a picked range like "1,3-5"
+# and what to do if the run stops:
+#   stop and ask · recover and continue
 ```
 
-Launched with no argument, it asks which roadmap and how much to cover.
+Launched with no argument, it asks which roadmap and how much to cover. An item that already has its task file, because an earlier run stopped after planning it, gets one more question: implement that plan, only review it, or re-plan it. [When an item fails](#when-an-item-fails) covers both.
 
 ## What it does
 
@@ -59,25 +61,34 @@ implement .task/task/<item-1-slug>.md
 
 ## When an item fails
 
-The run is **stop-on-FAIL**: if an item's implement *or* review agent returns `FAIL`, the run prints that item's digest, lists the items that landed before it, and stops instead of starting the next wave (a later item might depend on the failed one). A red build or test run inside the review is a `FAIL`, and the reviewer leaves its fixes uncommitted in that case — the implementation commit stands as it was. So is an implementation that never got committed (a pre-commit hook rejected it, say): nothing is ticked over work no commit holds. Completed items stay checked.
+The driver is **stop-on-FAIL**: if an item's implement *or* review agent returns `FAIL`, the run prints that item's digest, lists the items that landed before it, and stops instead of starting the next wave (a later item might depend on the failed one). A red build or test run inside the review is a `FAIL`, and the reviewer leaves its fixes uncommitted in that case — the implementation commit stands as it was. So is an implementation that never got committed (a pre-commit hook rejected it, say): nothing is ticked over work no commit holds. Completed items stay checked.
 
 ```text
-FAIL #3 <item-slug> <what failed>
+roadmap-to-workflow stopped in wave 2, item #3: FAIL #3 <item-slug> <what failed>
+STATE recover=off attempts=none
+STOPPED #3 <item-slug> stage=implement
 #1 … — …; review: …
 #2 … — …; review: …
 Ran `api-v2-migration`: 2 of 5 items landed and ticked, 3 still unchecked.
   Commits: a1b2c3d..e4f5a6b.
 Stopped at #3 <item-slug> in wave 2. Its work is left in the working tree —
   inspect it with `git status` and `git log --oneline -3`.
-→ Next: fix #3 by hand and tick it, or edit the item in
-  `.task/roadmap/api-v2-migration.md` so the rerun re-plans it from the new text,
-  then rerun `/task:roadmap-to-workflow api-v2-migration` — already-ticked items
-  stay ticked, only the unchecked remainder reruns.
+→ Next: rerun `/task:roadmap-to-workflow api-v2-migration` and pick
+  **Implement this plan** for #3 to continue from what is committed, or edit the
+  item in `.task/roadmap/api-v2-migration.md` and pick **Re-plan from the roadmap
+  item** — already-ticked items stay ticked, only the unchecked remainder reruns.
 ```
 
-Fix the failing item (edit its task file, or re-implement it by hand), tick its box, then rerun — it only picks up the unchecked remainder.
+What happens next is the choice you made at launch, in the same prompt as the scope: *If the run stops?*
 
-An item you leave unchecked is planned again from the roadmap: the rerun regenerates its task file from the item, and hand edits to that file do not survive. To change what the rerun plans, edit the item in the roadmap instead.
+- **Stop and ask** — the skill diagnoses the stop from the driver's return and `git`, then offers the rerun it would make as a chip: **Rerun from implement** or **Rerun from review**, or **Stop here**. The footer above is what **Stop here** prints.
+- **Recover and continue** — the skill makes that rerun itself and carries on with the rest of the run.
+
+Either way the stopped item is rerun through the driver: from **implement**, with a note on what stopped and what is already committed, or from **review** when the work is committed and only the review or the checkbox is missing. A failed item never gets a repair agent the skill writes on its own, and it is never ticked without a passing review. Each item gets two recovery attempts. An item that is still failing after that, or a stop that needs your decision, comes back to you whatever the mode.
+
+A resumed implement may depart from the plan, and from a spec it cites when none of the spec's invariants break. It declares every departure, the reviewer checks it, and the report lists it as a decision you should know about. See [Recovery](/reference/roadmap-to-workflow#recovery).
+
+Stopping is never the end of the item. A later `/task:roadmap-to-workflow <slug>`, in this session or a fresh one, finds the stopped item's task file and asks how to take it: **Implement this plan**, **Review only**, or **Re-plan from the roadmap item**. Re-planning regenerates the task file from the roadmap item, and hand edits to that file do not survive it. To change what a re-plan produces, edit the item in the roadmap instead.
 
 ## No Workflow tool?
 
