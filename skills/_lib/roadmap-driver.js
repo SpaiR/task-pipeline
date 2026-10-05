@@ -413,9 +413,12 @@ for (const [wIdx, items] of waves.entries()) {
     if (!resumed || resumed.from === 'implement') {
       const { line: status, deviations: declared } = await runImplement(n, itemSlug, model, phases[i], resumed)
       log(`[W${w} implement] ${status || `FAIL #${n} ${itemSlug} implement agent returned nothing`}`)
+      // A stopped implement still hands on its deviations: the ones it declared,
+      // or, when it returned nothing and so re-declared none, the carried ones.
       if (!digestPassed(status, n, itemSlug))
         return stop(n, itemSlug, 'implement', `roadmap-to-workflow stopped in wave ${w}, item #${n}: ${
-          !status ? 'implement agent returned nothing' : status.startsWith('FAIL') ? status : `unparsable implement digest: ${status}`}`)
+          !status ? 'implement agent returned nothing' : status.startsWith('FAIL') ? status : `unparsable implement digest: ${status}`}`,
+          status ? declared : (resumed && resumed.deviations) || [])
       impl = digestSummary(status, n, itemSlug)
       deviations = declared
       for (const d of deviations) log(`[W${w} implement] DEVIATION #${n} ${d}`)

@@ -284,6 +284,22 @@ STATE recover=on attempts=#1:1
 STOPPED #1 retry-backoff stage=review
   deviation: kept the old cache" "$out" "unjudged deviation travels with the stop"
 
+t_case "an implement stop after a resumed implement keeps the deviations it declared under STOPPED"
+out=$(run_driver "''" "$RESUME1
+const stub = agent
+agent = async (p, o) => o.label === '2/3 implement' && p.includes('#1') ? 'DEVIATION #1 kept the old cache\nBuilt it, committed.' : stub(p, o)")
+assert_eq "roadmap-to-workflow stopped in wave 1, item #1: unparsable implement digest: Built it, committed.
+STATE recover=on attempts=#1:1
+STOPPED #1 retry-backoff stage=implement
+  deviation: kept the old cache" "$out" "declared deviation travels with an implement stop"
+
+t_case "an implement entry that returns nothing keeps its carried deviations under STOPPED"
+out=$(run_driver "'emptyimpl1'" 'args.recover = true; args.resume = [{ n: 1, slug: "retry-backoff", from: "implement", attempt: 1, deviations: ["kept the old cache"] }]')
+assert_contains "$out" "STOPPED #1 retry-backoff stage=implement
+  deviation: kept the old cache" "carried deviation survives a silent implement"
+assert_eq "0" "$(run_driver "'implement1'" 'args.recover = true; args.resume = [{ n: 1, slug: "retry-backoff", from: "implement", attempt: 1, deviations: ["kept the old cache"] }]' | grep -c 'deviation:')" \
+  "a FAIL that re-declares none drops them"
+
 t_case "a review entry's carried deviations reach the review prompt and the report"
 CARRY='args.recover = true; args.resume = [{ n: 3, slug: "config-loader", from: "review", attempt: 2, deviations: ["kept the old cache"] }]'
 out=$(run_driver "'reviewprompt3'" "$CARRY")
