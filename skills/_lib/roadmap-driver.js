@@ -4,25 +4,15 @@ export const meta = {
   whenToUse: "Do not call this directly. Only the task-pipeline plugin's /task:roadmap-to-workflow skill invokes it, building {slug, aiDir, pluginRoot, specPaths, items, done, scope} from a validated roadmap file and a scope the user confirmed — hand-assembled args skip that and can commit work against a stale item list. To run a roadmap, invoke that skill instead.",
 }
 
-// The task-pipeline roadmap driver. The roadmap-to-workflow skill reports what
-// the roadmap SAYS — the unchecked items with their dependencies, the numbers
-// already marked, and the user's chosen scope — and this script derives the
-// dependency waves itself (computeWaves below). Invoked as
-// Workflow({name: 'task:roadmap-driver', args}): the plugin manifest declares
-// this file under "workflows", so the platform registers it and reads it
-// itself. A scriptPath into the plugin cannot work — the tool checks it for
-// read permission against the session's cwd, and a plugin never sits inside
-// it. The script never changes between runs, so resumeFromRunId replays
-// completed stages from cache — a failing stage included, so it resumes only
-// an interrupted run, never one that returned a stop. Contract:
-// docs/contract.md § roadmap-to-workflow execution shape (driver contract).
-//
-// The Workflow sandbox has no filesystem access — every write (the task files,
-// the code, the roadmap checkbox) happens inside an agent() stage. Auto-mark is
-// the review stage's last phase (task:code-reviewer phase 7), handed the item
-// number and roadmap path by runReview: the review already runs inside the
-// serial per-item loop, so the flip has one writer without a stage of its own —
-// a dedicated mark agent cost a whole agent spawn for one awk call.
+// The task-pipeline roadmap driver, reached as Workflow({name:
+// 'task:roadmap-driver', args}) from /task:roadmap-to-workflow. The skill reports
+// what the roadmap SAYS — the unchecked items, the numbers already marked, the
+// user's scope — and the driver derives the dependency waves itself. The Workflow
+// sandbox has no filesystem, so every write (task files, code, the roadmap
+// checkbox) happens inside an agent(). The checkbox is ticked by the review's own
+// phase 7, not by a stage of its own, which would cost an agent spawn for one awk
+// call. Registration, resume and the rest of the contract: docs/contract.md
+// § roadmap-to-workflow execution shape (driver contract).
 
 // --- pure (extracted verbatim by tests/driver-*.test.sh) --------------------
 // Everything down to `end pure` must stand alone: no args, no agent(), no log().
