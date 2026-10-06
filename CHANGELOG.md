@@ -4,6 +4,20 @@ All notable changes to this project are documented here. Format — [Keep a Chan
 
 This file is maintained in **English** — see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-policy).
 
+## [6.0.0] — 2026-10-06
+
+Roadmap items carry a `**Size:**` hint instead of `**Model:**`, and `roadmap-to-workflow` picks each stage's model and effort from it, so a hint no longer names a model that ages with every generation. Breaking — see **Migration** below.
+
+### Changed (breaking)
+- **`**Size:**` replaces `**Model:**` on roadmap items.** An item takes `**Size:** S | M | L`, `M` when absent, and one table in the driver maps the size to a model and effort for the plan and implement stages: opus plans every item, at medium effort for `S` and high otherwise; sonnet implements `S` and `M` at medium effort, opus implements `L` at medium. The reviewer keeps its own model and effort, so an item's size never lowers its review. `**Model:**` is no longer read: a leftover line is ordinary body text and the item runs as `M`. `to-roadmap` writes `**Size:**` only with a real basis, and its reference page says what `S`, `M` and `L` mean.
+
+### Changed
+- **The implement stage always runs at an explicit effort.** It used to get none and inherited the session's, so a session on low effort implemented every item on low.
+
+### Migration
+- **Replace `**Model:**` with `**Size:**` in in-flight roadmaps.** An old `haiku` item is roughly `S`, an old `sonnet` or `opus` item roughly `L`; drop the line for the default `M`. Skipping the edit breaks nothing — every item just runs as `M`.
+- **A `roadmap-to-workflow` run interrupted on 5.0.0 cannot be resumed on 6.0.0**: the driver's items now take a `size` field instead of `model`. Rerun `/task:roadmap-to-workflow <slug>` instead; items the review already ticked are skipped.
+
 ## [5.0.0] — 2026-10-03
 
 Captured artifacts now read cleanly in a Markdown preview. A roadmap item's checkbox moves out of its heading onto a status line under it, the Ready description trades quoted headings for bold lines, and fields that used to merge into one paragraph each get their own. The parsers read only the new roadmap grammar, so a roadmap captured before this release needs a one-time conversion. Breaking — see **Migration** below.
