@@ -192,19 +192,19 @@ const argError = checkArgs(args)
 if (argError) return `roadmap-to-workflow: bad args — ${argError}`
 const { slug, aiDir, pluginRoot, specPaths, items, done, scope } = args
 
-const sorted = computeWaves(items, done, scope)
-if (sorted.error) return `roadmap-to-workflow: ${sorted.error}`
-const waves = sorted.waves
+const { error, waves } = computeWaves(items, done, scope)
+if (error) return `roadmap-to-workflow: ${error}`
 
 const ROADMAP = `${aiDir}/roadmap/${slug}.md`
 const SPEC_SLUGS = specPaths.map((p) => p.split('/').pop().replace(/\.md$/, ''))
+const RERUN = `then rerun /task:roadmap-to-workflow ${slug}`
 const lastLine = (s) => (s || '').trim().split('\n').filter(Boolean).pop() || ''
 
 // PLAN — writes only its own .task/task/<item-slug>.md, never the working tree,
 // so a whole wave plans in parallel. Reads skills/_lib/plan-driver.md instead of
 // the full to-task skill. Model and effort come from STAGES by size.
 async function runPlan(n, title, size, phase) {
-  const r = await agent(
+  const report = await agent(
     `Read ${pluginRoot}/skills/_lib/plan-driver.md and follow it. Your item:
      - roadmap file: ${ROADMAP}
      - roadmap slug: ${slug}
@@ -219,7 +219,7 @@ async function runPlan(n, title, size, phase) {
        FAIL #${n} <item-slug> <what failed>    (on failure)`,
     { ...STAGES[size].plan, label: '1/3 plan', phase }
   )
-  return lastLine(r)
+  return lastLine(report)
 }
 
 // IMPLEMENT + COMMIT on the size's model and an explicit effort — never the
@@ -228,7 +228,7 @@ async function runPlan(n, title, size, phase) {
 // wave — the sole mutator of the shared working tree, so each implement sees its
 // already-landed wave-mates' reviewed commits.
 async function runImplement(n, itemSlug, size, phase) {
-  const r = await agent(
+  const report = await agent(
     `Implement ${aiDir}/task/${itemSlug}.md. Follow its ## Execution pointer —
      it sends you to ${aiDir}/CLAUDE.md → ## Executing a task — with two carve-outs:
      implement the ## Plan plus any ## Tests it carries, then commit per
@@ -242,7 +242,7 @@ async function runImplement(n, itemSlug, size, phase) {
        FAIL #${n} ${itemSlug} <what failed>         (on failure)`,
     { ...STAGES[size].implement, label: '2/3 implement', phase }
   )
-  return lastLine(r)
+  return lastLine(report)
 }
 
 // REVIEW + FIX + BUILD/TESTS + COMMIT + MARK via the plugin's own agent. Runs
@@ -253,7 +253,7 @@ async function runImplement(n, itemSlug, size, phase) {
 // `effort` opt: task:code-reviewer pins its own, so an item's size never lowers
 // its review. No `isolation`: it must see and commit into this very working tree.
 async function runReview(n, itemSlug, phase) {
-  const r = await agent(
+  const report = await agent(
     `Review the implementation of ${aiDir}/task/${itemSlug}.md, which was just
      implemented and committed in this working tree. Reference string for your
      digest: "#${n} ${itemSlug}". Roadmap item to tick when your verdict is
@@ -264,74 +264,88 @@ async function runReview(n, itemSlug, phase) {
        FAIL #${n} ${itemSlug} <what failed>         (review failed)`,
     { agentType: 'task:code-reviewer', label: '3/3 review', phase }
   )
-  return { line: lastLine(r), flipped: flipReported(r, n), flipFailed: flipFailed(r, n) }
+  return { digest: lastLine(report), marked: flipReported(report, n), markFailed: flipFailed(report, n) }
 }
+
+// Items reviewed AND ticked, in landing order — the body of every report. Only
+// the wave loop at the bottom writes it.
+const landed = []
+
+// The parser-stable stop headline. tag names the stage the skill routes on:
+// ' (planning)', ' (review)', or '' for implement.
+const stopped = (w, tag, n, reason) => `roadmap-to-workflow stopped in wave ${w}${tag}, item #${n}: ${reason}`
+const logDigest = (w, stage, digest, ref) => log(`[W${w} ${stage}] ${digest || `FAIL ${ref} ${stage} agent returned nothing`}`)
 
 // The run's shape, up front: which items, in which waves, waiting on what —
 // one line per wave, so a long roadmap is not clipped to one terminal width. A
 // dependency already marked before this run is not worth naming.
-const doneSet = new Set(done)
-const itemLine = (it) => {
-  const open = it.deps.filter((d) => !doneSet.has(d))
-  return `#${it.n} ${it.title.replace(/\s+/g, ' ').trim()}${open.length ? ` (after #${open.join(', #')})` : ''}`
+function logRunShape() {
+  const doneSet = new Set(done)
+  const describeItem = (it) => {
+    const open = it.deps.filter((d) => !doneSet.has(d))
+    return `#${it.n} ${it.title.replace(/\s+/g, ' ').trim()}${open.length ? ` (after #${open.join(', #')})` : ''}`
+  }
+  const total = waves.reduce((k, wave) => k + wave.length, 0)
+  log(`${slug}: ${total} item(s) in ${waves.length} wave(s)${scope === 'next-wave' ? ' (next wave only)' : ''}`)
+  for (const [i, wave] of waves.entries()) log(`  W${i + 1}: ${wave.map(describeItem).join(', ')}`)
 }
-const total = waves.reduce((k, wave) => k + wave.length, 0)
-log(`${slug}: ${total} item(s) in ${waves.length} wave(s)${scope === 'next-wave' ? ' (next wave only)' : ''}`)
-for (const [i, wave] of waves.entries()) log(`  W${i + 1}: ${wave.map(itemLine).join(', ')}`)
 
-// Items reviewed AND ticked, in landing order — the body of runReport.
-const landed = []
-
-for (const [wIdx, items] of waves.entries()) {
-  const w = wIdx + 1
-  const phases = items.map(({ n, title }) => itemPhase(w, n, title))
-  log(`Wave ${w}/${waves.length} — planning #${items.map((it) => it.n).join(', #')}${items.length > 1 ? ' in parallel' : ''}`)
-
-  // 1) PLAN the whole wave in parallel. A single plan FAIL — or a digest of the
-  //    wrong shape — stops the run before any implement of this wave starts
-  //    (plans are cheap to rerun).
-  const plans = await parallel(items.map(({ n, title, size }, i) => () => runPlan(n, title, size, phases[i])))
+// PLAN the whole wave in parallel. A single plan FAIL — or a digest of the wrong
+// shape — stops the run before any implement of this wave starts (plans are
+// cheap to rerun). Returns { slugs, phases }, index-aligned with wave, or { stop }.
+async function planWave(w, wave) {
+  const phases = wave.map(({ n, title }) => itemPhase(w, n, title))
+  log(`Wave ${w}/${waves.length} — planning #${wave.map((it) => it.n).join(', #')}${wave.length > 1 ? ' in parallel' : ''}`)
+  const digests = await parallel(wave.map(({ n, title, size }, i) => () => runPlan(n, title, size, phases[i])))
   // Every digest is logged before any is judged, so a stop on one item still
   // shows how its wave-mates' plans came out.
-  for (const [i, status] of plans.entries())
-    log(`[W${w} plan] ${status || `FAIL #${items[i].n} plan agent returned nothing`}`)
-  const itemSlugs = []
-  for (const [i, status] of plans.entries()) {
-    const n = items[i].n
+  for (const [i, digest] of digests.entries()) logDigest(w, 'plan', digest, `#${wave[i].n}`)
+  const slugs = []
+  for (const [i, digest] of digests.entries()) {
+    const { n } = wave[i]
     // The digest is LLM output — assert its shape, never index into it blindly.
-    const itemSlug = parsePlanDigest(status, n)
-    if (!itemSlug)
-      return runReport(`roadmap-to-workflow stopped in wave ${w} (planning), item #${n}: ${whyNot('plan', status)}`, landed)
+    const itemSlug = parsePlanDigest(digest, n)
+    if (!itemSlug) return { stop: stopped(w, ' (planning)', n, whyNot('plan', digest)) }
     // Each planner derives its slug alone, and parallel ones cannot see each
     // other's file. Two items on one slug share one task file: implementing
     // both would build one plan twice and tick the other item unbuilt.
-    const owner = landed.find((l) => l.slug === itemSlug) || items[itemSlugs.indexOf(itemSlug)]
+    const owner = landed.find((l) => l.slug === itemSlug) || wave[slugs.indexOf(itemSlug)]
     if (owner)
-      return runReport(`roadmap-to-workflow stopped in wave ${w} (planning), item #${n}: #${owner.n} and #${n} both planned ${itemSlug} — one task file for two items; give one of them a more distinct title, then rerun /task:roadmap-to-workflow ${slug}`, landed)
-    itemSlugs.push(itemSlug)
+      return { stop: stopped(w, ' (planning)', n, `#${owner.n} and #${n} both planned ${itemSlug} — one task file for two items; give one of them a more distinct title, ${RERUN}`) }
+    slugs.push(itemSlug)
   }
+  return { slugs, phases }
+}
 
-  // 2) IMPLEMENT → REVIEW strictly one item at a time — both inside this one
-  //    serial loop, so the shared tree and the roadmap file each keep exactly
-  //    one writer, and item N never starts implementing while item N−1 is
-  //    still under review.
-  for (const [i, { n, size }] of items.entries()) {
-    const itemSlug = itemSlugs[i]
+// IMPLEMENT → REVIEW for one item. Returns { entry } for landed, or { stop }.
+async function shipItem(w, { n, size }, itemSlug, phase) {
+  const implDigest = await runImplement(n, itemSlug, size, phase)
+  logDigest(w, 'implement', implDigest, `#${n} ${itemSlug}`)
+  if (!digestPassed(implDigest, n, itemSlug)) return { stop: stopped(w, '', n, whyNot('implement', implDigest)) }
 
-    const status = await runImplement(n, itemSlug, size, phases[i])
-    log(`[W${w} implement] ${status || `FAIL #${n} ${itemSlug} implement agent returned nothing`}`)
-    if (!digestPassed(status, n, itemSlug))
-      return runReport(`roadmap-to-workflow stopped in wave ${w}, item #${n}: ${whyNot('implement', status)}`, landed)
+  const { digest: reviewDigest, marked, markFailed } = await runReview(n, itemSlug, phase)
+  logDigest(w, 'review', reviewDigest, `#${n} ${itemSlug}`)
+  if (!digestPassed(reviewDigest, n, itemSlug)) {
+    const remedy = markFailed ? ` — tick #${n} in ${ROADMAP} by hand, ${RERUN}` : ''
+    return { stop: stopped(w, ' (review)', n, whyNot('review', reviewDigest) + remedy) }
+  }
+  if (!marked)
+    return { stop: stopped(w, ' (review)', n, `the review passed but never reported MARK-OK #${n}, so its checkbox may not be flipped. The item's work is in the tree: check ${ROADMAP}, tick #${n} by hand if it is still unchecked, ${RERUN}`) }
+  return { entry: { n, slug: itemSlug, impl: digestSummary(implDigest, n, itemSlug), review: digestSummary(reviewDigest, n, itemSlug) } }
+}
 
-    const { line: review, flipped, flipFailed: markFailed } = await runReview(n, itemSlug, phases[i])
-    log(`[W${w} review] ${review || `FAIL #${n} ${itemSlug} review agent returned nothing`}`)
-    if (!digestPassed(review, n, itemSlug))
-      return runReport(`roadmap-to-workflow stopped in wave ${w} (review), item #${n}: ${whyNot('review', review)}${
-        markFailed ? ` — tick #${n} in ${ROADMAP} by hand, then rerun /task:roadmap-to-workflow ${slug}` : ''}`, landed)
-    if (!flipped)
-      return runReport(`roadmap-to-workflow stopped in wave ${w} (review), item #${n}: the review passed but never reported MARK-OK #${n}, so its checkbox may not be flipped. The item's work is in the tree: check ${ROADMAP}, tick #${n} by hand if it is still unchecked, then rerun /task:roadmap-to-workflow ${slug}`, landed)
-
-    landed.push({ n, slug: itemSlug, impl: digestSummary(status, n, itemSlug), review: digestSummary(review, n, itemSlug) })
+logRunShape()
+for (const [i, wave] of waves.entries()) {
+  const w = i + 1
+  const planned = await planWave(w, wave)
+  if (planned.stop) return runReport(planned.stop, landed)
+  // IMPLEMENT → REVIEW strictly one item at a time, so the shared tree and the
+  // roadmap file each keep exactly one writer, and item N never starts
+  // implementing while item N−1 is still under review.
+  for (const [j, item] of wave.entries()) {
+    const shipped = await shipItem(w, item, planned.slugs[j], planned.phases[j])
+    if (shipped.stop) return runReport(shipped.stop, landed)
+    landed.push(shipped.entry)
   }
   // Barrier: the next wave starts only after every item above is reviewed and ticked.
 }
