@@ -4,7 +4,8 @@
 # stages of one item share, and runReport() + digestSummary(), the value the
 # invoking skill gets back once any agent has run. runReport's first line is the
 # parser-stable headline and must come through untouched. Extracted verbatim
-# between their marker comments, as driver-waves.test.sh does for computeWaves.
+# from the driver's `// --- pure` block, as driver-waves.test.sh does for
+# computeWaves.
 # The last cases run the whole driver on stubbed agents, so every return
 # after the first agent is held to runReport — landed items included on a stop.
 source "$(dirname "$0")/lib.sh"
@@ -17,14 +18,11 @@ if ! command -v node >/dev/null 2>&1; then
 fi
 
 dir=$(t_tmpdir)
-{
-  sed -n '/--- itemPhase (pure/,/--- end itemPhase/p' "$DRIVER"
-  sed -n '/--- runReport (pure/,/--- end runReport/p' "$DRIVER"
-} >"$dir/display.mjs"
+sed -n '/^\/\/ --- pure (/,/^\/\/ --- end pure/p' "$DRIVER" >"$dir/display.mjs"
 for fn in itemPhase digestSummary runReport; do
   if ! grep -q "function $fn" "$dir/display.mjs"; then
     t_case "extract $fn from the driver"
-    assert_contains "$(cat "$dir/display.mjs")" "function $fn" "marker comments still present"
+    assert_contains "$(cat "$dir/display.mjs")" "function $fn" "the pure block's marker comments still present"
     t_summary
   fi
 done

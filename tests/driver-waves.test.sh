@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Contract under test: computeWaves() in skills/_lib/roadmap-driver.js — the
-# dependency sort the skill used to do by hand. Extracted verbatim between its
-# marker comments, because the driver is a Workflow script (top-level `return`,
-# injected globals) and cannot be imported.
+# dependency sort the skill used to do by hand. Extracted verbatim with the rest
+# of the driver's `// --- pure` block, because the driver is a Workflow script
+# (top-level `return`, injected globals) and cannot be imported.
 source "$(dirname "$0")/lib.sh"
 
 DRIVER="$T_REPO_ROOT/skills/_lib/roadmap-driver.js"
@@ -13,10 +13,10 @@ if ! command -v node >/dev/null 2>&1; then
 fi
 
 dir=$(t_tmpdir)
-sed -n '/--- computeWaves (pure/,/--- end computeWaves/p' "$DRIVER" >"$dir/waves.mjs"
+sed -n '/^\/\/ --- pure (/,/^\/\/ --- end pure/p' "$DRIVER" >"$dir/waves.mjs"
 if ! grep -q 'function computeWaves' "$dir/waves.mjs"; then
   t_case "extract computeWaves from the driver"
-  assert_contains "$(cat "$dir/waves.mjs")" "function computeWaves" "marker comments still present"
+  assert_contains "$(cat "$dir/waves.mjs")" "function computeWaves" "the pure block's marker comments still present"
   t_summary
 fi
 

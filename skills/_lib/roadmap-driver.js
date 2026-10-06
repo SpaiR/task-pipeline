@@ -24,17 +24,8 @@ export const meta = {
 // serial per-item loop, so the flip has one writer without a stage of its own —
 // a dedicated mark agent cost a whole agent spawn for one awk call.
 
-// ---- args (real JSON values, absolute paths — asserted, not trusted) ----
-const bad = (msg) => `roadmap-to-workflow: bad args — ${msg}`
-if (!args || typeof args !== 'object' || Array.isArray(args)) return bad(`args must be an object, got ${Array.isArray(args) ? 'array' : typeof args}`)
-const { slug, aiDir, pluginRoot, specPaths, items, done, scope } = args
-if (typeof slug !== 'string' || !slug) return bad('slug must be a non-empty string')
-if (typeof aiDir !== 'string' || !aiDir.startsWith('/')) return bad('aiDir must be an absolute path')
-if (typeof pluginRoot !== 'string' || !pluginRoot.startsWith('/')) return bad('pluginRoot must be an absolute path')
-if (!Array.isArray(specPaths) || specPaths.some((p) => typeof p !== 'string' || !p.startsWith('/')))
-  return bad('specPaths must be an array of absolute paths ([] when the roadmap has no Spec: headers)')
-if (!Array.isArray(items) || items.length === 0)
-  return bad('items must be a non-empty array of {n, title, size, deps} objects — was it passed as a JSON string instead of a real array?')
+// --- pure (extracted verbatim by tests/driver-*.test.sh) --------------------
+// Everything down to `end pure` must stand alone: no args, no agent(), no log().
 
 // Model and effort per stage, keyed by the item's size (its roadmap `**Size:**`
 // hint, M when absent). Review is absent on purpose: task:code-reviewer pins its
@@ -58,21 +49,35 @@ const STAGES = {
 }
 const SIZES = Object.keys(STAGES)
 
-const isItemNo = (v) => Number.isInteger(v) && v >= 1
-for (const it of items) {
-  if (!it || typeof it !== 'object' || Array.isArray(it)) return bad('every entry of items must be an {n, title, size, deps} object')
-  if (!isItemNo(it.n)) return bad('every item needs an integer n >= 1')
-  if (typeof it.title !== 'string' || !it.title) return bad(`item #${it.n} needs a non-empty title`)
-  if (!SIZES.includes(it.size)) return bad(`item #${it.n} size must be ${SIZES.join('|')}, got ${JSON.stringify(it.size)}`)
-  if (!Array.isArray(it.deps) || it.deps.some((d) => !isItemNo(d))) return bad(`item #${it.n} deps must be an array of item numbers ([] for none)`)
+// The args are real JSON values with absolute paths — asserted, not trusted.
+// Returns null, or what is wrong with them for the `bad args` headline.
+function checkArgs(args) {
+  if (!args || typeof args !== 'object' || Array.isArray(args))
+    return `args must be an object, got ${Array.isArray(args) ? 'array' : typeof args}`
+  const { slug, aiDir, pluginRoot, specPaths, items, done, scope } = args
+  if (typeof slug !== 'string' || !slug) return 'slug must be a non-empty string'
+  if (typeof aiDir !== 'string' || !aiDir.startsWith('/')) return 'aiDir must be an absolute path'
+  if (typeof pluginRoot !== 'string' || !pluginRoot.startsWith('/')) return 'pluginRoot must be an absolute path'
+  if (!Array.isArray(specPaths) || specPaths.some((p) => typeof p !== 'string' || !p.startsWith('/')))
+    return 'specPaths must be an array of absolute paths ([] when the roadmap has no Spec: headers)'
+  if (!Array.isArray(items) || items.length === 0)
+    return 'items must be a non-empty array of {n, title, size, deps} objects — was it passed as a JSON string instead of a real array?'
+  const isItemNo = (v) => Number.isInteger(v) && v >= 1
+  for (const it of items) {
+    if (!it || typeof it !== 'object' || Array.isArray(it)) return 'every entry of items must be an {n, title, size, deps} object'
+    if (!isItemNo(it.n)) return 'every item needs an integer n >= 1'
+    if (typeof it.title !== 'string' || !it.title) return `item #${it.n} needs a non-empty title`
+    if (!SIZES.includes(it.size)) return `item #${it.n} size must be ${SIZES.join('|')}, got ${JSON.stringify(it.size)}`
+    if (!Array.isArray(it.deps) || it.deps.some((d) => !isItemNo(d))) return `item #${it.n} deps must be an array of item numbers ([] for none)`
+  }
+  if (items.length !== new Set(items.map((it) => it.n)).size) return 'items contains the same n twice'
+  if (!Array.isArray(done) || done.some((n) => !isItemNo(n)))
+    return 'done must be an array of already-marked item numbers ([] when none are)'
+  if (!(scope === 'all' || scope === 'next-wave' || (Array.isArray(scope) && scope.length > 0 && scope.every(isItemNo))))
+    return "scope must be 'all', 'next-wave', or a non-empty array of item numbers"
+  return null
 }
-if (items.length !== new Set(items.map((it) => it.n)).size) return bad('items contains the same n twice')
-if (!Array.isArray(done) || done.some((n) => !isItemNo(n)))
-  return bad('done must be an array of already-marked item numbers ([] when none are)')
-if (!(scope === 'all' || scope === 'next-wave' || (Array.isArray(scope) && scope.length > 0 && scope.every(isItemNo))))
-  return bad("scope must be 'all', 'next-wave', or a non-empty array of item numbers")
 
-// --- computeWaves (pure; extracted verbatim by tests/driver-waves.test.sh) ---
 // items are the roadmap's UNCHECKED items, done the numbers already marked, and
 // scope the user's pick. Returns { waves } — an array of arrays of items — or
 // { error } with a message meant for the operator.
@@ -111,21 +116,7 @@ function computeWaves(items, done, scope) {
   }
   return { waves: scope === 'next-wave' ? waves.slice(0, 1) : waves }
 }
-// --- end computeWaves -------------------------------------------------------
 
-// --- digestPassed (pure; extracted verbatim by tests/driver-digest.test.sh) --
-// The implement and review stages end on `OK|FAIL #N <item-slug> <summary>`.
-// Only an exact `OK #N <item-slug>` head counts as a pass. Anything else — a
-// FAIL, an empty line, or a drifted one (`**FAIL** #3 …`, a closing code fence,
-// `Review: FAIL`) — is a stop: a bare startsWith('FAIL') test would read those
-// drifted lines as passes and let the next item build on one whose review failed.
-function digestPassed(line, n, itemSlug) {
-  const head = `OK #${n} ${itemSlug}`
-  return line === head || (line || '').startsWith(`${head} `)
-}
-// --- end digestPassed -------------------------------------------------------
-
-// --- itemPhase (pure; extracted verbatim by tests/driver-display.test.sh) ----
 // The progress-group title every stage of one item shares, so an item's three
 // agents land in one box named after what it IS, not just its number. The
 // Phases pane is narrow, so the title is cut — by code point, never mid-way
@@ -137,9 +128,50 @@ function itemPhase(w, n, title) {
   const short = chars.length > MAX ? `${chars.slice(0, MAX - 1).join('').trimEnd()}…` : chars.join('')
   return `W${w} · #${n} ${short}`
 }
-// --- end itemPhase ----------------------------------------------------------
 
-// --- runReport (pure; extracted verbatim by tests/driver-display.test.sh) ----
+// The plan stage ends on `OK #N <item-slug> planned`, and that slug becomes the
+// next two agents' file path. Returns the slug, or null for anything else — a
+// FAIL, an empty line, another item's number, or a drifted shape.
+function parsePlanDigest(line, n) {
+  const m = (line || '').match(/^OK #(\d+) (\S+) planned$/)
+  return m && Number(m[1]) === n ? m[2] : null
+}
+
+// The implement and review stages end on `OK|FAIL #N <item-slug> <summary>`.
+// Only an exact `OK #N <item-slug>` head counts as a pass. Anything else — a
+// FAIL, an empty line, or a drifted one (`**FAIL** #3 …`, a closing code fence,
+// `Review: FAIL`) — is a stop: a bare startsWith('FAIL') test would read those
+// drifted lines as passes and let the next item build on one whose review failed.
+function digestPassed(line, n, itemSlug) {
+  const head = `OK #${n} ${itemSlug}`
+  return line === head || (line || '').startsWith(`${head} `)
+}
+
+// Why a digest that did not pass stops the run, for the headline: the FAIL line
+// itself when the agent reported one, else what was wrong with it.
+function whyNot(stage, line) {
+  if (!line) return `${stage} agent returned nothing`
+  return line.startsWith('FAIL') ? line : `unparsable ${stage} digest: ${line}`
+}
+
+// The review's OK digest is not proof the checkbox was ticked: the reviewer's
+// phase 7 prints the flip command's own stdout line, so the driver asks for it.
+// Only a whole line counts — `MARK-OK #13` is not item 1's, and a passing digest
+// without `MARK-OK #N` means phase 7 never ran, which would leave the item
+// unchecked and have the next run re-implement work already committed.
+// `MARK-FAIL #N` is the only proof a FAIL came from the checkbox: the reviewer's
+// FAIL summary is free text, so a defect reported as "no unique index" must not
+// be routed to the tick-by-hand remedy.
+function hasOwnLine(text, line) {
+  return (text || '').split('\n').some((l) => l.trim() === line)
+}
+function flipReported(text, n) {
+  return hasOwnLine(text, `MARK-OK #${n}`)
+}
+function flipFailed(text, n) {
+  return hasOwnLine(text, `MARK-FAIL #${n}`)
+}
+
 // What the invoking skill gets back once any agent has run: the parser-stable
 // headline first and unchanged, then one line per item that landed (reviewed
 // AND ticked), in landing order — on a stop too, so the skill can say what made
@@ -154,24 +186,11 @@ function runReport(headline, landed) {
       `#${n} ${slug} — ${impl || '(no summary)'}; review: ${review || '(no summary)'}`),
   ].join('\n')
 }
-// --- end runReport ----------------------------------------------------------
+// --- end pure ---------------------------------------------------------------
 
-// --- flipReported (pure; extracted verbatim by tests/driver-digest.test.sh) -
-// The review's OK digest is not proof the checkbox was ticked: the reviewer's
-// phase 7 prints the flip command's own stdout line, so the driver asks for it.
-// Only a whole line `MARK-OK #N` counts — `MARK-OK #13` is not item 1's, and a
-// passing digest without it means phase 7 never ran, which would leave the item
-// unchecked and have the next run re-implement work already committed.
-function flipReported(text, n) {
-  return (text || '').split('\n').some((l) => l.trim() === `MARK-OK #${n}`)
-}
-// The flip's failure line is the only proof the FAIL came from the checkbox: the
-// reviewer's FAIL summary is free text, so a defect reported as "no unique index"
-// must not be routed to the tick-by-hand remedy. Whole line `MARK-FAIL #N` only.
-function flipFailed(text, n) {
-  return (text || '').split('\n').some((l) => l.trim() === `MARK-FAIL #${n}`)
-}
-// --- end flipReported -------------------------------------------------------
+const argError = checkArgs(args)
+if (argError) return `roadmap-to-workflow: bad args — ${argError}`
+const { slug, aiDir, pluginRoot, specPaths, items, done, scope } = args
 
 const sorted = computeWaves(items, done, scope)
 if (sorted.error) return `roadmap-to-workflow: ${sorted.error}`
@@ -279,19 +298,17 @@ for (const [wIdx, items] of waves.entries()) {
   const itemSlugs = []
   for (const [i, status] of plans.entries()) {
     const n = items[i].n
-    if (!status || status.startsWith('FAIL'))
-      return runReport(`roadmap-to-workflow stopped in wave ${w} (planning), item #${n}: ${status || 'plan agent returned nothing'}`, landed)
     // The digest is LLM output — assert its shape, never index into it blindly.
-    const m = status.match(/^OK #(\d+) (\S+) planned$/)
-    if (!m || Number(m[1]) !== n)
-      return runReport(`roadmap-to-workflow stopped in wave ${w} (planning), item #${n}: unparsable plan digest: ${status}`, landed)
+    const itemSlug = parsePlanDigest(status, n)
+    if (!itemSlug)
+      return runReport(`roadmap-to-workflow stopped in wave ${w} (planning), item #${n}: ${whyNot('plan', status)}`, landed)
     // Each planner derives its slug alone, and parallel ones cannot see each
     // other's file. Two items on one slug share one task file: implementing
     // both would build one plan twice and tick the other item unbuilt.
-    const owner = landed.find((l) => l.slug === m[2]) || items.find((_, j) => j < i && itemSlugs[j] === m[2])
+    const owner = landed.find((l) => l.slug === itemSlug) || items[itemSlugs.indexOf(itemSlug)]
     if (owner)
-      return runReport(`roadmap-to-workflow stopped in wave ${w} (planning), item #${n}: #${owner.n} and #${n} both planned ${m[2]} — one task file for two items; give one of them a more distinct title, then rerun /task:roadmap-to-workflow ${slug}`, landed)
-    itemSlugs.push(m[2])
+      return runReport(`roadmap-to-workflow stopped in wave ${w} (planning), item #${n}: #${owner.n} and #${n} both planned ${itemSlug} — one task file for two items; give one of them a more distinct title, then rerun /task:roadmap-to-workflow ${slug}`, landed)
+    itemSlugs.push(itemSlug)
   }
 
   // 2) IMPLEMENT → REVIEW strictly one item at a time — both inside this one
@@ -304,14 +321,12 @@ for (const [wIdx, items] of waves.entries()) {
     const status = await runImplement(n, itemSlug, size, phases[i])
     log(`[W${w} implement] ${status || `FAIL #${n} ${itemSlug} implement agent returned nothing`}`)
     if (!digestPassed(status, n, itemSlug))
-      return runReport(`roadmap-to-workflow stopped in wave ${w}, item #${n}: ${
-        !status ? 'implement agent returned nothing' : status.startsWith('FAIL') ? status : `unparsable implement digest: ${status}`}`, landed)
+      return runReport(`roadmap-to-workflow stopped in wave ${w}, item #${n}: ${whyNot('implement', status)}`, landed)
 
     const { line: review, flipped, flipFailed: markFailed } = await runReview(n, itemSlug, phases[i])
     log(`[W${w} review] ${review || `FAIL #${n} ${itemSlug} review agent returned nothing`}`)
     if (!digestPassed(review, n, itemSlug))
-      return runReport(`roadmap-to-workflow stopped in wave ${w} (review), item #${n}: ${
-        !review ? 'review agent returned nothing' : review.startsWith('FAIL') ? review : `unparsable review digest: ${review}`}${
+      return runReport(`roadmap-to-workflow stopped in wave ${w} (review), item #${n}: ${whyNot('review', review)}${
         markFailed ? ` — tick #${n} in ${ROADMAP} by hand, then rerun /task:roadmap-to-workflow ${slug}` : ''}`, landed)
     if (!flipped)
       return runReport(`roadmap-to-workflow stopped in wave ${w} (review), item #${n}: the review passed but never reported MARK-OK #${n}, so its checkbox may not be flipped. The item's work is in the tree: check ${ROADMAP}, tick #${n} by hand if it is still unchecked, then rerun /task:roadmap-to-workflow ${slug}`, landed)

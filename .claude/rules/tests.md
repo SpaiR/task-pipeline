@@ -12,7 +12,7 @@ paths:
 - **Naming.** One `tests/<helper>.test.sh` per `skills/_lib/*.sh` helper, `validate.sh` and `.claude/hooks/*.sh` script (`tests/xref.test.sh` fails a helper without one); driver cases are `tests/driver-*.test.sh`. `bash tests/run.sh <substring>` runs the files whose names contain it.
 - **Some tests read text out of other files**, so renaming what they read breaks them:
   - `reviewer-mark.test.sh` runs the flip between the `roadmap-flip` marker comments in `agents/code-reviewer.md`;
-  - `driver-waves`, `driver-digest` and `driver-display` extract the driver's pure functions between their `// --- <name>` and `// --- end <name>` markers;
+  - `driver-args`, `driver-waves`, `driver-digest` and `driver-display` extract the driver's pure functions, the block between its `// --- pure (` and `// --- end pure` markers;
   - `driver-registration.test.sh` matches the manifest `name`, its `"workflows"` path, the driver's `meta.name` and the skill's invocation;
   - `skill-injections.test.sh` counts injections in every `skills/*/SKILL.md` and `.claude/skills/*/SKILL.md`;
   - `xref.test.sh` checks links, anchors, backticked paths, `§` citations, `Step N`, helper coverage and rule globs over the repo's Markdown outside `website/` and `CHANGELOG.md`.
