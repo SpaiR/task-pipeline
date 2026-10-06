@@ -10,22 +10,13 @@
 # driver-waves.test.sh does for computeWaves.
 source "$(dirname "$0")/lib.sh"
 
-DRIVER="$T_REPO_ROOT/skills/_lib/roadmap-driver.js"
-
 if ! command -v node >/dev/null 2>&1; then
   echo "$T_NAME: SKIP — node is not installed"
   exit 0
 fi
 
 dir=$(t_tmpdir)
-sed -n '/^\/\/ --- pure (/,/^\/\/ --- end pure/p' "$DRIVER" >"$dir/digest.mjs"
-for fn in digestPassed flipReported flipFailed parsePlanDigest whyNot; do
-  if ! grep -q "function $fn" "$dir/digest.mjs"; then
-    t_case "extract $fn from the driver"
-    assert_contains "$(cat "$dir/digest.mjs")" "function $fn" "the pure block's marker comments still present"
-    t_summary
-  fi
-done
+t_driver_pure "$dir/digest.mjs" digestPassed flipReported flipFailed parsePlanDigest whyNot
 
 passes() { # <line> → prints true|false for item #3 retry-backoff
   { cat "$dir/digest.mjs"; printf 'console.log(digestPassed(%s, 3, "retry-backoff"))\n' "$1"; } >"$dir/case.mjs"

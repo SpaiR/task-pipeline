@@ -15,7 +15,8 @@ export const meta = {
 // § roadmap-to-workflow execution shape (driver contract).
 
 // --- pure (extracted verbatim by tests/driver-*.test.sh) --------------------
-// Everything down to `end pure` must stand alone: no args, no agent(), no log().
+// Everything down to `end pure` must stand alone: no Workflow globals — the
+// args global, agent(), parallel(), log() — only its own parameters.
 
 // Model and effort per stage, keyed by the item's size (its roadmap `**Size:**`
 // hint, M when absent). Review is absent on purpose: task:code-reviewer pins its
@@ -107,6 +108,11 @@ function computeWaves(items, done, scope) {
   return { waves: scope === 'next-wave' ? waves.slice(0, 1) : waves }
 }
 
+// A title as one display line: whitespace runs collapsed, ends trimmed.
+function oneLine(title) {
+  return title.replace(/\s+/g, ' ').trim()
+}
+
 // The progress-group title every stage of one item shares, so an item's three
 // agents land in one box named after what it IS, not just its number. The
 // Phases pane is narrow, so the title is cut — by code point, never mid-way
@@ -114,7 +120,7 @@ function computeWaves(items, done, scope) {
 // with the same cut title in separate groups.
 function itemPhase(w, n, title) {
   const MAX = 32
-  const chars = Array.from(title.replace(/\s+/g, ' ').trim())
+  const chars = Array.from(oneLine(title))
   const short = chars.length > MAX ? `${chars.slice(0, MAX - 1).join('').trimEnd()}…` : chars.join('')
   return `W${w} · #${n} ${short}`
 }
@@ -127,13 +133,18 @@ function parsePlanDigest(line, n) {
   return m && Number(m[1]) === n ? m[2] : null
 }
 
+// The head an implement or review digest must open with to count as a pass.
+function okHead(n, itemSlug) {
+  return `OK #${n} ${itemSlug}`
+}
+
 // The implement and review stages end on `OK|FAIL #N <item-slug> <summary>`.
 // Only an exact `OK #N <item-slug>` head counts as a pass. Anything else — a
 // FAIL, an empty line, or a drifted one (`**FAIL** #3 …`, a closing code fence,
 // `Review: FAIL`) — is a stop: a bare startsWith('FAIL') test would read those
 // drifted lines as passes and let the next item build on one whose review failed.
 function digestPassed(line, n, itemSlug) {
-  const head = `OK #${n} ${itemSlug}`
+  const head = okHead(n, itemSlug)
   return line === head || (line || '').startsWith(`${head} `)
 }
 
@@ -167,7 +178,7 @@ function flipFailed(text, n) {
 // AND ticked), in landing order — on a stop too, so the skill can say what made
 // it in before the failure without re-deriving it from git.
 function digestSummary(line, n, itemSlug) {
-  return (line || '').slice(`OK #${n} ${itemSlug}`.length).trim()
+  return (line || '').slice(okHead(n, itemSlug).length).trim()
 }
 function runReport(headline, landed) {
   return [
@@ -273,7 +284,7 @@ function logRunShape() {
   const doneSet = new Set(done)
   const describeItem = (it) => {
     const open = it.deps.filter((d) => !doneSet.has(d))
-    return `#${it.n} ${it.title.replace(/\s+/g, ' ').trim()}${open.length ? ` (after #${open.join(', #')})` : ''}`
+    return `#${it.n} ${oneLine(it.title)}${open.length ? ` (after #${open.join(', #')})` : ''}`
   }
   const total = waves.reduce((k, wave) => k + wave.length, 0)
   log(`${slug}: ${total} item(s) in ${waves.length} wave(s)${scope === 'next-wave' ? ' (next wave only)' : ''}`)
@@ -299,7 +310,7 @@ async function planWave(w, wave) {
     // Each planner derives its slug alone, and parallel ones cannot see each
     // other's file. Two items on one slug share one task file: implementing
     // both would build one plan twice and tick the other item unbuilt.
-    const owner = landed.find((l) => l.slug === itemSlug) || wave[slugs.indexOf(itemSlug)]
+    const owner = landed.find((l) => l.slug === itemSlug) || wave.find((_, j) => slugs[j] === itemSlug)
     if (owner)
       return { stop: stopped(w, ' (planning)', n, `#${owner.n} and #${n} both planned ${itemSlug} — one task file for two items; give one of them a more distinct title, ${RERUN}`) }
     slugs.push(itemSlug)

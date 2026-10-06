@@ -9,21 +9,13 @@
 # computeWaves.
 source "$(dirname "$0")/lib.sh"
 
-DRIVER="$T_REPO_ROOT/skills/_lib/roadmap-driver.js"
-
 if ! command -v node >/dev/null 2>&1; then
   echo "$T_NAME: SKIP — node is not installed"
   exit 0
 fi
 
 dir=$(t_tmpdir)
-sed -n '/^\/\/ --- pure (/,/^\/\/ --- end pure/p' "$DRIVER" >"$dir/pure.mjs"
-if ! grep -q 'function checkArgs' "$dir/pure.mjs" || ! grep -q 'const STAGES' "$dir/pure.mjs"; then
-  t_case "extract checkArgs and STAGES from the driver"
-  assert_contains "$(cat "$dir/pure.mjs")" "function checkArgs" "the pure block's marker comments still present"
-  assert_contains "$(cat "$dir/pure.mjs")" "const STAGES" "STAGES inside the pure block"
-  t_summary
-fi
+t_driver_pure "$dir/pure.mjs" checkArgs STAGES SIZES
 
 # One node run per case keeps a thrown error from masking later assertions.
 run_js() { # <js body> → prints result

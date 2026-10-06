@@ -18,14 +18,7 @@ if ! command -v node >/dev/null 2>&1; then
 fi
 
 dir=$(t_tmpdir)
-sed -n '/^\/\/ --- pure (/,/^\/\/ --- end pure/p' "$DRIVER" >"$dir/display.mjs"
-for fn in itemPhase digestSummary runReport; do
-  if ! grep -q "function $fn" "$dir/display.mjs"; then
-    t_case "extract $fn from the driver"
-    assert_contains "$(cat "$dir/display.mjs")" "function $fn" "the pure block's marker comments still present"
-    t_summary
-  fi
-done
+t_driver_pure "$dir/display.mjs" itemPhase digestSummary runReport
 
 # One node run per case keeps a thrown error from masking later assertions.
 run_js() { # <js body> → prints result

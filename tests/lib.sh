@@ -21,6 +21,9 @@
 #                                       …`); with none installed, print a SKIP
 #                                       line once and fall back to the ambient
 #                                       locale, where those cases prove nothing
+#   t_driver_pure <out> <name>...     — write the roadmap driver's `// --- pure`
+#                                       block to <out>; fail the file at once
+#                                       unless each <name> is defined in it
 #   t_summary                         — print the file's tally, exit 0/1
 #
 # Paths are physical (`pwd -P`) on purpose: on macOS `mktemp -d` hands back a
@@ -117,6 +120,21 @@ t_utf8_locale() {
   done
   echo "$T_NAME: SKIP — no UTF-8 locale installed; the byte cases below run in the ambient locale and cannot show a locale regression"
   T_UTF8=${LC_ALL:-${LANG:-C}}
+}
+
+# Call it in the case file's own shell, never inside `$(…)`: a missing name ends
+# the file through t_summary.
+t_driver_pure() {
+  local out="$1" name
+  shift
+  sed -n '/^\/\/ --- pure (/,/^\/\/ --- end pure/p' "$T_REPO_ROOT/skills/_lib/roadmap-driver.js" >"$out"
+  for name in "$@"; do
+    if ! grep -q -e "function $name(" -e "const $name " "$out"; then
+      t_case "extract $name from the driver"
+      assert_eq "defined" "missing" "$name in the pure block (markers moved, or the definition renamed)"
+      t_summary
+    fi
+  done
 }
 
 t_summary() {

@@ -13,12 +13,7 @@ if ! command -v node >/dev/null 2>&1; then
 fi
 
 dir=$(t_tmpdir)
-sed -n '/^\/\/ --- pure (/,/^\/\/ --- end pure/p' "$DRIVER" >"$dir/waves.mjs"
-if ! grep -q 'function computeWaves' "$dir/waves.mjs"; then
-  t_case "extract computeWaves from the driver"
-  assert_contains "$(cat "$dir/waves.mjs")" "function computeWaves" "the pure block's marker comments still present"
-  t_summary
-fi
+t_driver_pure "$dir/waves.mjs" computeWaves
 
 # One node run per case keeps a thrown error from masking later assertions.
 run_js() { # <js body> → prints result
