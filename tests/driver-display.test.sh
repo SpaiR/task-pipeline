@@ -102,6 +102,9 @@ const agent = async (prompt, opts) => {
   if (BREAK === `emptyimpl${n}` && stage === 'implement') return ''
   if (BREAK === `driftimpl${n}` && stage === 'implement') return 'Built it.'
   if (BREAK === `drift${n}` && stage === 'plan') return 'Plan written.'
+  if (BREAK === `emptyplan${n}` && stage === 'plan') return ''
+  if (BREAK === `emptyreview${n}` && stage === 'review') return ''
+  if (BREAK === `driftreview${n}` && stage === 'review') return `MARK-OK #${n}\nLooks good.`
   if (BREAK === `dup${n}` && stage === 'plan') return `OK #${n} ${SLUG[1]} planned`
   if (BREAK === `prompt${n}` && stage === 'plan') console.log(prompt)
   if (BREAK === `implprompt${n}` && stage === 'implement') console.log(prompt)
@@ -170,6 +173,18 @@ assert_eq "roadmap-to-workflow stopped in wave 1, item #3: implement agent retur
 t_case "a drifted implement digest stops"
 assert_eq "roadmap-to-workflow stopped in wave 1, item #3: unparsable implement digest: Built it.
 #1 retry-backoff — built; review: ok, ticked" "$(run_driver "'driftimpl3'")" "drifted implement"
+
+t_case "an empty review return stops"
+assert_eq "roadmap-to-workflow stopped in wave 1 (review), item #3: review agent returned nothing
+#1 retry-backoff — built; review: ok, ticked" "$(run_driver "'emptyreview3'")" "empty review"
+
+t_case "a drifted review digest stops, even after a MARK-OK line"
+assert_eq "roadmap-to-workflow stopped in wave 1 (review), item #3: unparsable review digest: Looks good.
+#1 retry-backoff — built; review: ok, ticked" "$(run_driver "'driftreview3'")" "drifted review"
+
+t_case "an empty plan return stops the wave before any of it is implemented"
+assert_eq "roadmap-to-workflow stopped in wave 1 (planning), item #3: plan agent returned nothing" \
+  "$(run_driver "'emptyplan3'")" "empty plan"
 
 t_case "a plan FAIL before anything landed is the headline alone"
 assert_eq "roadmap-to-workflow stopped in wave 1 (planning), item #1: FAIL #1 retry-backoff tests red" \
