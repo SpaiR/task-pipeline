@@ -3,12 +3,12 @@
 # skills/_lib/roadmap-driver.js — the gates between an item's implement/review
 # digest and the next stage. Only an exact `OK #N <item-slug>` head passes; a
 # FAIL, an empty line or a drifted line stops the run. A passing review must
-# also carry its phase-7 `MARK-OK #N` line. Extracted verbatim between their
-# marker comments, as driver-waves.test.sh does for computeWaves. flipFailed
-# recognises the flip's own `MARK-FAIL #N` line, never a free-text digest.
+# also carry its phase-7 `MARK-OK #N` line. flipFailed recognises the flip's own
+# `MARK-FAIL #N` line, never a free-text digest. parsePlanDigest() reads the
+# plan stage's slug, and whyNot() words a failed digest for the stop headline.
+# Extracted verbatim from the driver's `// --- pure` block, as
+# driver-waves.test.sh does for computeWaves.
 source "$(dirname "$0")/lib.sh"
-
-DRIVER="$T_REPO_ROOT/skills/_lib/roadmap-driver.js"
 
 if ! command -v node >/dev/null 2>&1; then
   echo "$T_NAME: SKIP — node is not installed"
@@ -16,14 +16,7 @@ if ! command -v node >/dev/null 2>&1; then
 fi
 
 dir=$(t_tmpdir)
-sed -n -e '/--- digestPassed (pure/,/--- end digestPassed/p' \
-  -e '/--- flipReported (pure/,/--- end flipReported/p' "$DRIVER" >"$dir/digest.mjs"
-if ! grep -q 'function digestPassed' "$dir/digest.mjs" || ! grep -q 'function flipReported' "$dir/digest.mjs"; then
-  t_case "extract digestPassed and flipReported from the driver"
-  assert_contains "$(cat "$dir/digest.mjs")" "function digestPassed" "digestPassed marker comments still present"
-  assert_contains "$(cat "$dir/digest.mjs")" "function flipReported" "flipReported marker comments still present"
-  t_summary
-fi
+t_driver_pure "$dir/digest.mjs" digestPassed flipReported flipFailed parsePlanDigest whyNot
 
 passes() { # <line> → prints true|false for item #3 retry-backoff
   { cat "$dir/digest.mjs"; printf 'console.log(digestPassed(%s, 3, "retry-backoff"))\n' "$1"; } >"$dir/case.mjs"
@@ -82,5 +75,33 @@ assert_eq "false" "$(failed "'FAIL #3 retry-backoff no unique index on users.ema
 assert_eq "false" "$(failed "'MARK-FAIL #13\\nFAIL #3 retry-backoff x'")" "another item's number"
 assert_eq "false" "$(failed "'MARK-OK #3\\nOK #3 retry-backoff done'")" "a successful flip"
 assert_eq "false" "$(failed "undefined")" "undefined"
+
+planned() { # <line> → prints the slug parsePlanDigest reads for item #3, or null
+  { cat "$dir/digest.mjs"; printf 'console.log(parsePlanDigest(%s, 3))\n' "$1"; } >"$dir/case.mjs"
+  node "$dir/case.mjs" 2>&1
+}
+
+t_case "an exact plan digest yields its slug"
+assert_eq "retry-backoff" "$(planned "'OK #3 retry-backoff planned'")" "exact digest"
+
+t_case "any other plan line yields no slug"
+assert_eq "null" "$(planned "'FAIL #3 retry-backoff no Touches'")" "FAIL"
+assert_eq "null" "$(planned "'OK #4 retry-backoff planned'")" "another item's number"
+assert_eq "null" "$(planned "'OK #3 retry-backoff planned twice'")" "trailing text"
+assert_eq "null" "$(planned "'**OK** #3 retry-backoff planned'")" "bolded OK"
+assert_eq "null" "$(planned "'OK #3  planned'")" "no slug"
+assert_eq "null" "$(planned "''")" "empty string"
+assert_eq "null" "$(planned "undefined")" "undefined"
+
+why() { # <stage> <line> → prints whyNot's headline reason
+  { cat "$dir/digest.mjs"; printf 'console.log(whyNot(%s, %s))\n' "$1" "$2"; } >"$dir/case.mjs"
+  node "$dir/case.mjs" 2>&1
+}
+
+t_case "whyNot passes a FAIL line through, and names an empty or drifted one"
+assert_eq "FAIL #3 retry-backoff tests red" "$(why "'review'" "'FAIL #3 retry-backoff tests red'")" "FAIL"
+assert_eq "implement agent returned nothing" "$(why "'implement'" "''")" "empty"
+assert_eq "plan agent returned nothing" "$(why "'plan'" "undefined")" "undefined"
+assert_eq "unparsable review digest: **FAIL** #3 x" "$(why "'review'" "'**FAIL** #3 x'")" "drifted"
 
 t_summary

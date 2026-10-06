@@ -4,37 +4,19 @@ export const meta = {
   whenToUse: "Do not call this directly. Only the task-pipeline plugin's /task:roadmap-to-workflow skill invokes it, building {slug, aiDir, pluginRoot, specPaths, items, done, scope} from a validated roadmap file and a scope the user confirmed — hand-assembled args skip that and can commit work against a stale item list. To run a roadmap, invoke that skill instead.",
 }
 
-// The task-pipeline roadmap driver. The roadmap-to-workflow skill reports what
-// the roadmap SAYS — the unchecked items with their dependencies, the numbers
-// already marked, and the user's chosen scope — and this script derives the
-// dependency waves itself (computeWaves below). Invoked as
-// Workflow({name: 'task:roadmap-driver', args}): the plugin manifest declares
-// this file under "workflows", so the platform registers it and reads it
-// itself. A scriptPath into the plugin cannot work — the tool checks it for
-// read permission against the session's cwd, and a plugin never sits inside
-// it. The script never changes between runs, so resumeFromRunId replays
-// completed stages from cache — a failing stage included, so it resumes only
-// an interrupted run, never one that returned a stop. Contract:
-// docs/contract.md § roadmap-to-workflow execution shape (driver contract).
-//
-// The Workflow sandbox has no filesystem access — every write (the task files,
-// the code, the roadmap checkbox) happens inside an agent() stage. Auto-mark is
-// the review stage's last phase (task:code-reviewer phase 7), handed the item
-// number and roadmap path by runReview: the review already runs inside the
-// serial per-item loop, so the flip has one writer without a stage of its own —
-// a dedicated mark agent cost a whole agent spawn for one awk call.
+// The task-pipeline roadmap driver, reached as Workflow({name:
+// 'task:roadmap-driver', args}) from /task:roadmap-to-workflow. The skill reports
+// what the roadmap SAYS — the unchecked items, the numbers already marked, the
+// user's scope — and the driver derives the dependency waves itself. The Workflow
+// sandbox has no filesystem, so every write (task files, code, the roadmap
+// checkbox) happens inside an agent(). The checkbox is ticked by the review's own
+// phase 7, not by a stage of its own, which would cost an agent spawn for one awk
+// call. Registration, resume and the rest of the contract: docs/contract.md
+// § roadmap-to-workflow execution shape (driver contract).
 
-// ---- args (real JSON values, absolute paths — asserted, not trusted) ----
-const bad = (msg) => `roadmap-to-workflow: bad args — ${msg}`
-if (!args || typeof args !== 'object' || Array.isArray(args)) return bad(`args must be an object, got ${Array.isArray(args) ? 'array' : typeof args}`)
-const { slug, aiDir, pluginRoot, specPaths, items, done, scope } = args
-if (typeof slug !== 'string' || !slug) return bad('slug must be a non-empty string')
-if (typeof aiDir !== 'string' || !aiDir.startsWith('/')) return bad('aiDir must be an absolute path')
-if (typeof pluginRoot !== 'string' || !pluginRoot.startsWith('/')) return bad('pluginRoot must be an absolute path')
-if (!Array.isArray(specPaths) || specPaths.some((p) => typeof p !== 'string' || !p.startsWith('/')))
-  return bad('specPaths must be an array of absolute paths ([] when the roadmap has no Spec: headers)')
-if (!Array.isArray(items) || items.length === 0)
-  return bad('items must be a non-empty array of {n, title, size, deps} objects — was it passed as a JSON string instead of a real array?')
+// --- pure (extracted verbatim by tests/driver-*.test.sh) --------------------
+// Everything down to `end pure` must stand alone: no Workflow globals — the
+// args global, agent(), parallel(), log() — only its own parameters.
 
 // Model and effort per stage, keyed by the item's size (its roadmap `**Size:**`
 // hint, M when absent). Review is absent on purpose: task:code-reviewer pins its
@@ -58,21 +40,35 @@ const STAGES = {
 }
 const SIZES = Object.keys(STAGES)
 
-const isItemNo = (v) => Number.isInteger(v) && v >= 1
-for (const it of items) {
-  if (!it || typeof it !== 'object' || Array.isArray(it)) return bad('every entry of items must be an {n, title, size, deps} object')
-  if (!isItemNo(it.n)) return bad('every item needs an integer n >= 1')
-  if (typeof it.title !== 'string' || !it.title) return bad(`item #${it.n} needs a non-empty title`)
-  if (!SIZES.includes(it.size)) return bad(`item #${it.n} size must be ${SIZES.join('|')}, got ${JSON.stringify(it.size)}`)
-  if (!Array.isArray(it.deps) || it.deps.some((d) => !isItemNo(d))) return bad(`item #${it.n} deps must be an array of item numbers ([] for none)`)
+// The args are real JSON values with absolute paths — asserted, not trusted.
+// Returns null, or what is wrong with them for the `bad args` headline.
+function checkArgs(args) {
+  if (!args || typeof args !== 'object' || Array.isArray(args))
+    return `args must be an object, got ${Array.isArray(args) ? 'array' : typeof args}`
+  const { slug, aiDir, pluginRoot, specPaths, items, done, scope } = args
+  if (typeof slug !== 'string' || !slug) return 'slug must be a non-empty string'
+  if (typeof aiDir !== 'string' || !aiDir.startsWith('/')) return 'aiDir must be an absolute path'
+  if (typeof pluginRoot !== 'string' || !pluginRoot.startsWith('/')) return 'pluginRoot must be an absolute path'
+  if (!Array.isArray(specPaths) || specPaths.some((p) => typeof p !== 'string' || !p.startsWith('/')))
+    return 'specPaths must be an array of absolute paths ([] when the roadmap has no Spec: headers)'
+  if (!Array.isArray(items) || items.length === 0)
+    return 'items must be a non-empty array of {n, title, size, deps} objects — was it passed as a JSON string instead of a real array?'
+  const isItemNo = (v) => Number.isInteger(v) && v >= 1
+  for (const it of items) {
+    if (!it || typeof it !== 'object' || Array.isArray(it)) return 'every entry of items must be an {n, title, size, deps} object'
+    if (!isItemNo(it.n)) return 'every item needs an integer n >= 1'
+    if (typeof it.title !== 'string' || !it.title) return `item #${it.n} needs a non-empty title`
+    if (!SIZES.includes(it.size)) return `item #${it.n} size must be ${SIZES.join('|')}, got ${JSON.stringify(it.size)}`
+    if (!Array.isArray(it.deps) || it.deps.some((d) => !isItemNo(d))) return `item #${it.n} deps must be an array of item numbers ([] for none)`
+  }
+  if (items.length !== new Set(items.map((it) => it.n)).size) return 'items contains the same n twice'
+  if (!Array.isArray(done) || done.some((n) => !isItemNo(n)))
+    return 'done must be an array of already-marked item numbers ([] when none are)'
+  if (!(scope === 'all' || scope === 'next-wave' || (Array.isArray(scope) && scope.length > 0 && scope.every(isItemNo))))
+    return "scope must be 'all', 'next-wave', or a non-empty array of item numbers"
+  return null
 }
-if (items.length !== new Set(items.map((it) => it.n)).size) return bad('items contains the same n twice')
-if (!Array.isArray(done) || done.some((n) => !isItemNo(n)))
-  return bad('done must be an array of already-marked item numbers ([] when none are)')
-if (!(scope === 'all' || scope === 'next-wave' || (Array.isArray(scope) && scope.length > 0 && scope.every(isItemNo))))
-  return bad("scope must be 'all', 'next-wave', or a non-empty array of item numbers")
 
-// --- computeWaves (pure; extracted verbatim by tests/driver-waves.test.sh) ---
 // items are the roadmap's UNCHECKED items, done the numbers already marked, and
 // scope the user's pick. Returns { waves } — an array of arrays of items — or
 // { error } with a message meant for the operator.
@@ -111,21 +107,12 @@ function computeWaves(items, done, scope) {
   }
   return { waves: scope === 'next-wave' ? waves.slice(0, 1) : waves }
 }
-// --- end computeWaves -------------------------------------------------------
 
-// --- digestPassed (pure; extracted verbatim by tests/driver-digest.test.sh) --
-// The implement and review stages end on `OK|FAIL #N <item-slug> <summary>`.
-// Only an exact `OK #N <item-slug>` head counts as a pass. Anything else — a
-// FAIL, an empty line, or a drifted one (`**FAIL** #3 …`, a closing code fence,
-// `Review: FAIL`) — is a stop: a bare startsWith('FAIL') test would read those
-// drifted lines as passes and let the next item build on one whose review failed.
-function digestPassed(line, n, itemSlug) {
-  const head = `OK #${n} ${itemSlug}`
-  return line === head || (line || '').startsWith(`${head} `)
+// A title as one display line: whitespace runs collapsed, ends trimmed.
+function oneLine(title) {
+  return title.replace(/\s+/g, ' ').trim()
 }
-// --- end digestPassed -------------------------------------------------------
 
-// --- itemPhase (pure; extracted verbatim by tests/driver-display.test.sh) ----
 // The progress-group title every stage of one item shares, so an item's three
 // agents land in one box named after what it IS, not just its number. The
 // Phases pane is narrow, so the title is cut — by code point, never mid-way
@@ -133,19 +120,65 @@ function digestPassed(line, n, itemSlug) {
 // with the same cut title in separate groups.
 function itemPhase(w, n, title) {
   const MAX = 32
-  const chars = Array.from(title.replace(/\s+/g, ' ').trim())
+  const chars = Array.from(oneLine(title))
   const short = chars.length > MAX ? `${chars.slice(0, MAX - 1).join('').trimEnd()}…` : chars.join('')
   return `W${w} · #${n} ${short}`
 }
-// --- end itemPhase ----------------------------------------------------------
 
-// --- runReport (pure; extracted verbatim by tests/driver-display.test.sh) ----
+// The plan stage ends on `OK #N <item-slug> planned`, and that slug becomes the
+// next two agents' file path. Returns the slug, or null for anything else — a
+// FAIL, an empty line, another item's number, or a drifted shape.
+function parsePlanDigest(line, n) {
+  const m = (line || '').match(/^OK #(\d+) (\S+) planned$/)
+  return m && Number(m[1]) === n ? m[2] : null
+}
+
+// The head an implement or review digest must open with to count as a pass.
+function okHead(n, itemSlug) {
+  return `OK #${n} ${itemSlug}`
+}
+
+// The implement and review stages end on `OK|FAIL #N <item-slug> <summary>`.
+// Only an exact `OK #N <item-slug>` head counts as a pass. Anything else — a
+// FAIL, an empty line, or a drifted one (`**FAIL** #3 …`, a closing code fence,
+// `Review: FAIL`) — is a stop: a bare startsWith('FAIL') test would read those
+// drifted lines as passes and let the next item build on one whose review failed.
+function digestPassed(line, n, itemSlug) {
+  const head = okHead(n, itemSlug)
+  return line === head || (line || '').startsWith(`${head} `)
+}
+
+// Why a digest that did not pass stops the run, for the headline: the FAIL line
+// itself when the agent reported one, else what was wrong with it.
+function whyNot(stage, line) {
+  if (!line) return `${stage} agent returned nothing`
+  return line.startsWith('FAIL') ? line : `unparsable ${stage} digest: ${line}`
+}
+
+// The review's OK digest is not proof the checkbox was ticked: the reviewer's
+// phase 7 prints the flip command's own stdout line, so the driver asks for it.
+// Only a whole line counts — `MARK-OK #13` is not item 1's, and a passing digest
+// without `MARK-OK #N` means phase 7 never ran, which would leave the item
+// unchecked and have the next run re-implement work already committed.
+// `MARK-FAIL #N` is the only proof a FAIL came from the checkbox: the reviewer's
+// FAIL summary is free text, so a defect reported as "no unique index" must not
+// be routed to the tick-by-hand remedy.
+function hasOwnLine(text, line) {
+  return (text || '').split('\n').some((l) => l.trim() === line)
+}
+function flipReported(text, n) {
+  return hasOwnLine(text, `MARK-OK #${n}`)
+}
+function flipFailed(text, n) {
+  return hasOwnLine(text, `MARK-FAIL #${n}`)
+}
+
 // What the invoking skill gets back once any agent has run: the parser-stable
 // headline first and unchanged, then one line per item that landed (reviewed
 // AND ticked), in landing order — on a stop too, so the skill can say what made
 // it in before the failure without re-deriving it from git.
 function digestSummary(line, n, itemSlug) {
-  return (line || '').slice(`OK #${n} ${itemSlug}`.length).trim()
+  return (line || '').slice(okHead(n, itemSlug).length).trim()
 }
 function runReport(headline, landed) {
   return [
@@ -154,38 +187,25 @@ function runReport(headline, landed) {
       `#${n} ${slug} — ${impl || '(no summary)'}; review: ${review || '(no summary)'}`),
   ].join('\n')
 }
-// --- end runReport ----------------------------------------------------------
+// --- end pure ---------------------------------------------------------------
 
-// --- flipReported (pure; extracted verbatim by tests/driver-digest.test.sh) -
-// The review's OK digest is not proof the checkbox was ticked: the reviewer's
-// phase 7 prints the flip command's own stdout line, so the driver asks for it.
-// Only a whole line `MARK-OK #N` counts — `MARK-OK #13` is not item 1's, and a
-// passing digest without it means phase 7 never ran, which would leave the item
-// unchecked and have the next run re-implement work already committed.
-function flipReported(text, n) {
-  return (text || '').split('\n').some((l) => l.trim() === `MARK-OK #${n}`)
-}
-// The flip's failure line is the only proof the FAIL came from the checkbox: the
-// reviewer's FAIL summary is free text, so a defect reported as "no unique index"
-// must not be routed to the tick-by-hand remedy. Whole line `MARK-FAIL #N` only.
-function flipFailed(text, n) {
-  return (text || '').split('\n').some((l) => l.trim() === `MARK-FAIL #${n}`)
-}
-// --- end flipReported -------------------------------------------------------
+const argError = checkArgs(args)
+if (argError) return `roadmap-to-workflow: bad args — ${argError}`
+const { slug, aiDir, pluginRoot, specPaths, items, done, scope } = args
 
-const sorted = computeWaves(items, done, scope)
-if (sorted.error) return `roadmap-to-workflow: ${sorted.error}`
-const waves = sorted.waves
+const { error, waves } = computeWaves(items, done, scope)
+if (error) return `roadmap-to-workflow: ${error}`
 
 const ROADMAP = `${aiDir}/roadmap/${slug}.md`
 const SPEC_SLUGS = specPaths.map((p) => p.split('/').pop().replace(/\.md$/, ''))
+const RERUN = `then rerun /task:roadmap-to-workflow ${slug}`
 const lastLine = (s) => (s || '').trim().split('\n').filter(Boolean).pop() || ''
 
 // PLAN — writes only its own .task/task/<item-slug>.md, never the working tree,
 // so a whole wave plans in parallel. Reads skills/_lib/plan-driver.md instead of
 // the full to-task skill. Model and effort come from STAGES by size.
 async function runPlan(n, title, size, phase) {
-  const r = await agent(
+  const report = await agent(
     `Read ${pluginRoot}/skills/_lib/plan-driver.md and follow it. Your item:
      - roadmap file: ${ROADMAP}
      - roadmap slug: ${slug}
@@ -200,7 +220,7 @@ async function runPlan(n, title, size, phase) {
        FAIL #${n} <item-slug> <what failed>    (on failure)`,
     { ...STAGES[size].plan, label: '1/3 plan', phase }
   )
-  return lastLine(r)
+  return lastLine(report)
 }
 
 // IMPLEMENT + COMMIT on the size's model and an explicit effort — never the
@@ -209,7 +229,7 @@ async function runPlan(n, title, size, phase) {
 // wave — the sole mutator of the shared working tree, so each implement sees its
 // already-landed wave-mates' reviewed commits.
 async function runImplement(n, itemSlug, size, phase) {
-  const r = await agent(
+  const report = await agent(
     `Implement ${aiDir}/task/${itemSlug}.md. Follow its ## Execution pointer —
      it sends you to ${aiDir}/CLAUDE.md → ## Executing a task — with two carve-outs:
      implement the ## Plan plus any ## Tests it carries, then commit per
@@ -223,7 +243,7 @@ async function runImplement(n, itemSlug, size, phase) {
        FAIL #${n} ${itemSlug} <what failed>         (on failure)`,
     { ...STAGES[size].implement, label: '2/3 implement', phase }
   )
-  return lastLine(r)
+  return lastLine(report)
 }
 
 // REVIEW + FIX + BUILD/TESTS + COMMIT + MARK via the plugin's own agent. Runs
@@ -234,7 +254,7 @@ async function runImplement(n, itemSlug, size, phase) {
 // `effort` opt: task:code-reviewer pins its own, so an item's size never lowers
 // its review. No `isolation`: it must see and commit into this very working tree.
 async function runReview(n, itemSlug, phase) {
-  const r = await agent(
+  const report = await agent(
     `Review the implementation of ${aiDir}/task/${itemSlug}.md, which was just
      implemented and committed in this working tree. Reference string for your
      digest: "#${n} ${itemSlug}". Roadmap item to tick when your verdict is
@@ -245,78 +265,88 @@ async function runReview(n, itemSlug, phase) {
        FAIL #${n} ${itemSlug} <what failed>         (review failed)`,
     { agentType: 'task:code-reviewer', label: '3/3 review', phase }
   )
-  return { line: lastLine(r), flipped: flipReported(r, n), flipFailed: flipFailed(r, n) }
+  return { digest: lastLine(report), marked: flipReported(report, n), markFailed: flipFailed(report, n) }
 }
+
+// Items reviewed AND ticked, in landing order — the body of every report. Only
+// the wave loop at the bottom writes it.
+const landed = []
+
+// The parser-stable stop headline. tag names the stage the skill routes on:
+// ' (planning)', ' (review)', or '' for implement.
+const stopped = (w, tag, n, reason) => `roadmap-to-workflow stopped in wave ${w}${tag}, item #${n}: ${reason}`
+const logDigest = (w, stage, digest, ref) => log(`[W${w} ${stage}] ${digest || `FAIL ${ref} ${stage} agent returned nothing`}`)
 
 // The run's shape, up front: which items, in which waves, waiting on what —
 // one line per wave, so a long roadmap is not clipped to one terminal width. A
 // dependency already marked before this run is not worth naming.
-const doneSet = new Set(done)
-const itemLine = (it) => {
-  const open = it.deps.filter((d) => !doneSet.has(d))
-  return `#${it.n} ${it.title.replace(/\s+/g, ' ').trim()}${open.length ? ` (after #${open.join(', #')})` : ''}`
+function logRunShape() {
+  const doneSet = new Set(done)
+  const describeItem = (it) => {
+    const open = it.deps.filter((d) => !doneSet.has(d))
+    return `#${it.n} ${oneLine(it.title)}${open.length ? ` (after #${open.join(', #')})` : ''}`
+  }
+  const total = waves.reduce((k, wave) => k + wave.length, 0)
+  log(`${slug}: ${total} item(s) in ${waves.length} wave(s)${scope === 'next-wave' ? ' (next wave only)' : ''}`)
+  for (const [i, wave] of waves.entries()) log(`  W${i + 1}: ${wave.map(describeItem).join(', ')}`)
 }
-const total = waves.reduce((k, wave) => k + wave.length, 0)
-log(`${slug}: ${total} item(s) in ${waves.length} wave(s)${scope === 'next-wave' ? ' (next wave only)' : ''}`)
-for (const [i, wave] of waves.entries()) log(`  W${i + 1}: ${wave.map(itemLine).join(', ')}`)
 
-// Items reviewed AND ticked, in landing order — the body of runReport.
-const landed = []
-
-for (const [wIdx, items] of waves.entries()) {
-  const w = wIdx + 1
-  const phases = items.map(({ n, title }) => itemPhase(w, n, title))
-  log(`Wave ${w}/${waves.length} — planning #${items.map((it) => it.n).join(', #')}${items.length > 1 ? ' in parallel' : ''}`)
-
-  // 1) PLAN the whole wave in parallel. A single plan FAIL — or a digest of the
-  //    wrong shape — stops the run before any implement of this wave starts
-  //    (plans are cheap to rerun).
-  const plans = await parallel(items.map(({ n, title, size }, i) => () => runPlan(n, title, size, phases[i])))
+// PLAN the whole wave in parallel. A single plan FAIL — or a digest of the wrong
+// shape — stops the run before any implement of this wave starts (plans are
+// cheap to rerun). Returns { slugs, phases }, index-aligned with wave, or { stop }.
+async function planWave(w, wave) {
+  const phases = wave.map(({ n, title }) => itemPhase(w, n, title))
+  log(`Wave ${w}/${waves.length} — planning #${wave.map((it) => it.n).join(', #')}${wave.length > 1 ? ' in parallel' : ''}`)
+  const digests = await parallel(wave.map(({ n, title, size }, i) => () => runPlan(n, title, size, phases[i])))
   // Every digest is logged before any is judged, so a stop on one item still
   // shows how its wave-mates' plans came out.
-  for (const [i, status] of plans.entries())
-    log(`[W${w} plan] ${status || `FAIL #${items[i].n} plan agent returned nothing`}`)
-  const itemSlugs = []
-  for (const [i, status] of plans.entries()) {
-    const n = items[i].n
-    if (!status || status.startsWith('FAIL'))
-      return runReport(`roadmap-to-workflow stopped in wave ${w} (planning), item #${n}: ${status || 'plan agent returned nothing'}`, landed)
+  for (const [i, digest] of digests.entries()) logDigest(w, 'plan', digest, `#${wave[i].n}`)
+  const slugs = []
+  for (const [i, digest] of digests.entries()) {
+    const { n } = wave[i]
     // The digest is LLM output — assert its shape, never index into it blindly.
-    const m = status.match(/^OK #(\d+) (\S+) planned$/)
-    if (!m || Number(m[1]) !== n)
-      return runReport(`roadmap-to-workflow stopped in wave ${w} (planning), item #${n}: unparsable plan digest: ${status}`, landed)
+    const itemSlug = parsePlanDigest(digest, n)
+    if (!itemSlug) return { stop: stopped(w, ' (planning)', n, whyNot('plan', digest)) }
     // Each planner derives its slug alone, and parallel ones cannot see each
     // other's file. Two items on one slug share one task file: implementing
     // both would build one plan twice and tick the other item unbuilt.
-    const owner = landed.find((l) => l.slug === m[2]) || items.find((_, j) => j < i && itemSlugs[j] === m[2])
+    const owner = landed.find((l) => l.slug === itemSlug) || wave.find((_, j) => slugs[j] === itemSlug)
     if (owner)
-      return runReport(`roadmap-to-workflow stopped in wave ${w} (planning), item #${n}: #${owner.n} and #${n} both planned ${m[2]} — one task file for two items; give one of them a more distinct title, then rerun /task:roadmap-to-workflow ${slug}`, landed)
-    itemSlugs.push(m[2])
+      return { stop: stopped(w, ' (planning)', n, `#${owner.n} and #${n} both planned ${itemSlug} — one task file for two items; give one of them a more distinct title, ${RERUN}`) }
+    slugs.push(itemSlug)
   }
+  return { slugs, phases }
+}
 
-  // 2) IMPLEMENT → REVIEW strictly one item at a time — both inside this one
-  //    serial loop, so the shared tree and the roadmap file each keep exactly
-  //    one writer, and item N never starts implementing while item N−1 is
-  //    still under review.
-  for (const [i, { n, size }] of items.entries()) {
-    const itemSlug = itemSlugs[i]
+// IMPLEMENT → REVIEW for one item. Returns { entry } for landed, or { stop }.
+async function shipItem(w, { n, size }, itemSlug, phase) {
+  const implDigest = await runImplement(n, itemSlug, size, phase)
+  logDigest(w, 'implement', implDigest, `#${n} ${itemSlug}`)
+  if (!digestPassed(implDigest, n, itemSlug)) return { stop: stopped(w, '', n, whyNot('implement', implDigest)) }
 
-    const status = await runImplement(n, itemSlug, size, phases[i])
-    log(`[W${w} implement] ${status || `FAIL #${n} ${itemSlug} implement agent returned nothing`}`)
-    if (!digestPassed(status, n, itemSlug))
-      return runReport(`roadmap-to-workflow stopped in wave ${w}, item #${n}: ${
-        !status ? 'implement agent returned nothing' : status.startsWith('FAIL') ? status : `unparsable implement digest: ${status}`}`, landed)
+  const { digest: reviewDigest, marked, markFailed } = await runReview(n, itemSlug, phase)
+  logDigest(w, 'review', reviewDigest, `#${n} ${itemSlug}`)
+  if (!digestPassed(reviewDigest, n, itemSlug)) {
+    const remedy = markFailed ? ` — tick #${n} in ${ROADMAP} by hand, ${RERUN}` : ''
+    return { stop: stopped(w, ' (review)', n, whyNot('review', reviewDigest) + remedy) }
+  }
+  if (!marked)
+    return { stop: stopped(w, ' (review)', n, `the review passed but never reported MARK-OK #${n}, so its checkbox may not be flipped. The item's work is in the tree: check ${ROADMAP}, tick #${n} by hand if it is still unchecked, ${RERUN}`) }
+  return { entry: { n, slug: itemSlug, impl: digestSummary(implDigest, n, itemSlug), review: digestSummary(reviewDigest, n, itemSlug) } }
+}
 
-    const { line: review, flipped, flipFailed: markFailed } = await runReview(n, itemSlug, phases[i])
-    log(`[W${w} review] ${review || `FAIL #${n} ${itemSlug} review agent returned nothing`}`)
-    if (!digestPassed(review, n, itemSlug))
-      return runReport(`roadmap-to-workflow stopped in wave ${w} (review), item #${n}: ${
-        !review ? 'review agent returned nothing' : review.startsWith('FAIL') ? review : `unparsable review digest: ${review}`}${
-        markFailed ? ` — tick #${n} in ${ROADMAP} by hand, then rerun /task:roadmap-to-workflow ${slug}` : ''}`, landed)
-    if (!flipped)
-      return runReport(`roadmap-to-workflow stopped in wave ${w} (review), item #${n}: the review passed but never reported MARK-OK #${n}, so its checkbox may not be flipped. The item's work is in the tree: check ${ROADMAP}, tick #${n} by hand if it is still unchecked, then rerun /task:roadmap-to-workflow ${slug}`, landed)
-
-    landed.push({ n, slug: itemSlug, impl: digestSummary(status, n, itemSlug), review: digestSummary(review, n, itemSlug) })
+logRunShape()
+for (const [i, wave] of waves.entries()) {
+  const w = i + 1
+  const planned = await planWave(w, wave)
+  if (planned.stop) return runReport(planned.stop, landed)
+  // IMPLEMENT → REVIEW strictly one item at a time, so the shared tree and the
+  // roadmap file each keep exactly one writer, and item N never starts
+  // implementing while item N−1 is still under review.
+  for (const [j, item] of wave.entries()) {
+    const shipped = await shipItem(w, item, planned.slugs[j], planned.phases[j])
+    if (shipped.stop) return runReport(shipped.stop, landed)
+    landed.push(shipped.entry)
   }
   // Barrier: the next wave starts only after every item above is reviewed and ticked.
 }
